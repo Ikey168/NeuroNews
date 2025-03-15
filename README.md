@@ -90,7 +90,7 @@ python nlp_processor.py
 
 🔗 **GitHub Issues:** Report bugs & request features.  
 🔗 **Pull Requests:** Contributions welcome! See **CONTRIBUTING.md** for guidelines.  
-📧 **Email:** your-email@example.com  
+📧 **Email:** ikey168@proton.me
 
 🔖 **License:** MIT  
 
