@@ -1,4 +1,4 @@
-# NewsGraph AI – AI-Powered News Intelligence Pipeline
+# NeuroNews – AI-Powered News Intelligence Pipeline
 
 📡 **Real-Time ETL Pipeline for Politics & Technology News** | 🚀 **AI-Driven Insights** | 📊 **Sentiment & Trend Analysis**  
 
@@ -6,7 +6,7 @@
 
 ## 🔍 Overview
 
-**NewsGraph AI** is an advanced **ETL pipeline** designed to **scrape, analyze, and visualize** politics and technology news using **AI-powered NLP, sentiment analysis, and knowledge graph-based insights**. Built on **AWS cloud infrastructure**, it enables **real-time event detection, entity linking, and customizable dashboards** for deeper news intelligence.
+**NeuroNews** is an advanced **ETL pipeline** designed to **scrape, analyze, and visualize** politics and technology news using **AI-powered NLP, sentiment analysis, and knowledge graph-based insights**. Built on **AWS cloud infrastructure**, it enables **real-time event detection, entity linking, and customizable dashboards** for deeper news intelligence.
 
 ---
 
