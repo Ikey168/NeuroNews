@@ -76,3 +76,65 @@ variable "redshift_skip_final_snapshot" {
   type        = bool
   default     = true # Set to false in production
 }
+
+# Neptune variables
+variable "neptune_cluster_identifier" {
+  description = "Identifier for the Neptune cluster"
+  type        = string
+  default     = "neuronews-neptune"
+}
+
+variable "neptune_instance_class" {
+  description = "Instance class for the Neptune cluster"
+  type        = string
+  default     = "db.t3.medium" # Smallest instance class for development
+}
+
+variable "neptune_instance_count" {
+  description = "Number of instances in the Neptune cluster"
+  type        = number
+  default     = 1 # Single instance for development
+}
+
+variable "neptune_master_username" {
+  description = "Master username for the Neptune cluster"
+  type        = string
+  default     = "neptune_admin"
+}
+
+variable "neptune_master_password" {
+  description = "Master password for the Neptune cluster (should be provided via environment variables in production)"
+  type        = string
+  default     = "ChangeMe456!" # This is just a placeholder, should be overridden in production
+  sensitive   = true
+}
+
+variable "neptune_port" {
+  description = "Port for the Neptune cluster"
+  type        = number
+  default     = 8182 # Default Neptune port
+}
+
+variable "neptune_preferred_backup_window" {
+  description = "Preferred backup window for the Neptune cluster"
+  type        = string
+  default     = "02:00-03:00" # 2-3 AM UTC
+}
+
+variable "neptune_backup_retention_period" {
+  description = "Backup retention period for the Neptune cluster in days"
+  type        = number
+  default     = 7 # 7 days for development
+}
+
+variable "neptune_skip_final_snapshot" {
+  description = "Whether to skip the final snapshot when destroying the cluster"
+  type        = bool
+  default     = true # Set to false in production
+}
+
+variable "neptune_apply_immediately" {
+  description = "Whether to apply changes immediately"
+  type        = bool
+  default     = true # Set to false in production
+}

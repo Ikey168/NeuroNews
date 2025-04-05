@@ -21,6 +21,15 @@ The following AWS resources are provisioned:
   - Security group with restricted access
   - Parameter group with SSL required
 
+- **Neptune Cluster**: For storing and querying knowledge graphs
+  - Graph database optimized for relationship data
+  - Encrypted storage
+  - IAM authentication enabled
+  - CloudWatch logs for auditing
+  - Automated backups
+  - S3 bucket for bulk loading data
+  - Security group with restricted access
+
 ## Usage
 
 ### Prerequisites
@@ -70,6 +79,16 @@ terraform destroy -var="environment=dev"
 | redshift_cluster_type | Cluster type (single-node or multi-node) | single-node |
 | redshift_number_of_nodes | Number of nodes in the Redshift cluster | 1 |
 | redshift_skip_final_snapshot | Whether to skip the final snapshot | true (false in prod) |
+| neptune_cluster_identifier | Identifier for the Neptune cluster | neuronews-neptune |
+| neptune_instance_class | Instance class for the Neptune cluster | db.t3.medium |
+| neptune_instance_count | Number of instances in the Neptune cluster | 1 |
+| neptune_master_username | Master username for the Neptune cluster | neptune_admin |
+| neptune_master_password | Master password for the Neptune cluster | ChangeMe456! (should be overridden) |
+| neptune_port | Port for the Neptune cluster | 8182 |
+| neptune_preferred_backup_window | Preferred backup window for the Neptune cluster | 02:00-03:00 |
+| neptune_backup_retention_period | Backup retention period in days | 7 |
+| neptune_skip_final_snapshot | Whether to skip the final snapshot | true (false in prod) |
+| neptune_apply_immediately | Whether to apply changes immediately | true (false in prod) |
 
 ## Outputs
 
@@ -83,5 +102,12 @@ terraform destroy -var="environment=dev"
 | redshift_database_name | Name of the database in the Redshift cluster |
 | redshift_port | Port of the Redshift cluster |
 | redshift_iam_role_arn | ARN of the IAM role for Redshift to access S3 |
+| neptune_cluster_id | ID of the Neptune cluster |
+| neptune_cluster_endpoint | Writer endpoint of the Neptune cluster |
+| neptune_reader_endpoint | Reader endpoint of the Neptune cluster |
+| neptune_port | Port of the Neptune cluster |
+| neptune_iam_role_arn | ARN of the IAM role for Neptune to access S3 |
+| neptune_load_bucket_name | Name of the S3 bucket for Neptune bulk load data |
+| neptune_load_bucket_arn | ARN of the S3 bucket for Neptune bulk load data |
 | environment | Deployment environment |
 | region | AWS region |

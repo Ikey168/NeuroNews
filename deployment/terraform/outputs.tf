@@ -42,6 +42,42 @@ output "redshift_iam_role_arn" {
   value       = aws_iam_role.redshift_s3_access.arn
 }
 
+# Neptune outputs
+output "neptune_cluster_id" {
+  description = "ID of the Neptune cluster"
+  value       = aws_neptune_cluster.knowledge_graphs.id
+}
+
+output "neptune_cluster_endpoint" {
+  description = "Writer endpoint of the Neptune cluster"
+  value       = aws_neptune_cluster.knowledge_graphs.endpoint
+}
+
+output "neptune_reader_endpoint" {
+  description = "Reader endpoint of the Neptune cluster"
+  value       = aws_neptune_cluster.knowledge_graphs.reader_endpoint
+}
+
+output "neptune_port" {
+  description = "Port of the Neptune cluster"
+  value       = aws_neptune_cluster.knowledge_graphs.port
+}
+
+output "neptune_iam_role_arn" {
+  description = "ARN of the IAM role for Neptune to access S3"
+  value       = aws_iam_role.neptune_s3_access.arn
+}
+
+output "neptune_load_bucket_name" {
+  description = "Name of the S3 bucket for Neptune bulk load data"
+  value       = aws_s3_bucket.neptune_load.bucket
+}
+
+output "neptune_load_bucket_arn" {
+  description = "ARN of the S3 bucket for Neptune bulk load data"
+  value       = aws_s3_bucket.neptune_load.arn
+}
+
 # General outputs
 output "environment" {
   description = "Deployment environment"
