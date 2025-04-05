@@ -1,0 +1,16 @@
+{
+  "app_name": "NeuroNews",
+  "version": "0.1.0",
+  "debug": true,
+  "api": {
+    "host": "localhost",
+    "port": 8000
+  },
+  "scraping": {
+    "interval_minutes": 60,
+    "sources": [
+      "https://example.com/news",
+      "https://example.org/tech"
+    ]
+  }
+}
