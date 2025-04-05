@@ -172,3 +172,67 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# AWS specific ignores
+# AWS SAM
+.aws-sam/
+samconfig.toml
+
+# AWS CDK
+cdk.out/
+cdk.context.json
+.cdk.staging/
+
+# AWS Credentials
+aws-credentials.csv
+credentials.csv
+.aws/credentials
+.aws/config
+
+# AWS Lambda package directories
+lambda/*/package/
+lambda/*/node_modules/
+
+# CloudFormation
+cloudformation-template-*.json
+
+# Serverless
+.serverless/
+serverless.env.yml
+
+# Terraform specific ignores
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Exclude all .tfvars files, which are likely to contain sensitive data
+*.tfvars
+*.tfvars.json
+
+# Ignore override files as they are usually used for local dev
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Ignore CLI configuration files
+.terraformrc
+terraform.rc
+
+# Terraform lock files
+.terraform.lock.hcl
+
+# Terraform plan output
+tfplan
+*.tfplan
+
+# Terraform variable files that might contain sensitive data
+terraform.tfvars
+terraform.tfvars.json
