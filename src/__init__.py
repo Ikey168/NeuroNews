@@ -1,0 +1,3 @@
+"""
+NeuroNews package initialization.
+"""
