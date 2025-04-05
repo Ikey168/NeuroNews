@@ -81,6 +81,45 @@ Destroy the infrastructure:
 terraform destroy -var="environment=dev"
 ```
 
+## Testing
+
+### Local Testing
+
+A test script is provided to validate the Terraform configuration:
+
+```bash
+# Make the script executable (if not already)
+chmod +x test_deployment.sh
+
+# Run the test script
+./test_deployment.sh
+```
+
+The test script will:
+1. Check if Terraform is installed
+2. Initialize Terraform
+3. Validate the configuration
+4. Create a plan with the "test" environment
+5. Display the plan
+
+### CI/CD Testing
+
+This repository includes a GitHub Actions workflow that automatically tests the Terraform configuration on push and pull requests. The workflow:
+
+1. Formats the Terraform code
+2. Initializes Terraform
+3. Validates the configuration
+4. Creates a plan (for pull requests)
+5. Comments on the pull request with the results
+
+To use the CI/CD testing, you need to set up the following GitHub secrets:
+- `AWS_ACCESS_KEY_ID`: AWS access key with permissions to create the resources
+- `AWS_SECRET_ACCESS_KEY`: AWS secret key
+- `TF_API_TOKEN`: Terraform Cloud API token (if using Terraform Cloud)
+- `TF_VAR_TRUSTED_ACCOUNT_ID`: AWS account ID for cross-account access
+- `TF_VAR_REDSHIFT_MASTER_PASSWORD`: Master password for Redshift
+- `TF_VAR_NEPTUNE_MASTER_PASSWORD`: Master password for Neptune
+
 ## Variables
 
 | Name | Description | Default |
