@@ -39,6 +39,15 @@ The following AWS resources are provisioned:
   - CloudWatch logs for monitoring
   - Event-driven triggers (S3 events, CloudWatch scheduled events)
 
+- **IAM Roles and Permissions**: For secure access control
+  - EC2 instance role and profile for compute resources
+  - ECS task and execution roles for containerized workloads
+  - Lambda execution role for serverless functions
+  - Cross-account role for multi-account architectures
+  - IAM groups for developers and administrators
+  - CI/CD user for automated deployments
+  - Least privilege policies for all roles
+
 ## Usage
 
 ### Prerequisites
@@ -105,6 +114,11 @@ terraform destroy -var="environment=dev"
 | lambda_concurrent_executions | Maximum concurrent executions | 10 |
 | lambda_log_retention_days | Number of days to retain Lambda logs | 14 |
 | lambda_s3_key_prefix | Prefix for Lambda function code in S3 | lambda-functions |
+| trusted_account_id | AWS account ID for cross-account access | 123456789012 (placeholder) |
+| create_admin_group | Whether to create an administrators group | true |
+| create_developer_group | Whether to create a developers group | true |
+| create_cicd_user | Whether to create a CI/CD user | true |
+| create_cross_account_role | Whether to create a cross-account role | false |
 
 ## Outputs
 
@@ -134,5 +148,14 @@ terraform destroy -var="environment=dev"
 | knowledge_graph_generator_function_arn | ARN of the knowledge graph generator Lambda function |
 | article_notifier_function_name | Name of the article notifier Lambda function |
 | article_notifier_function_arn | ARN of the article notifier Lambda function |
+| ec2_role_arn | ARN of the IAM role for EC2 instances |
+| ec2_instance_profile_name | Name of the IAM instance profile for EC2 instances |
+| ecs_task_role_arn | ARN of the IAM role for ECS tasks |
+| ecs_execution_role_arn | ARN of the IAM role for ECS task execution |
+| cicd_user_name | Name of the IAM user for CI/CD |
+| cicd_user_arn | ARN of the IAM user for CI/CD |
+| developers_group_name | Name of the IAM group for developers |
+| administrators_group_name | Name of the IAM group for administrators |
+| cross_account_role_arn | ARN of the IAM role for cross-account access |
 | environment | Deployment environment |
 | region | AWS region |

@@ -181,3 +181,34 @@ variable "lambda_s3_key_prefix" {
   type        = string
   default     = "lambda-functions"
 }
+
+# IAM variables
+variable "trusted_account_id" {
+  description = "AWS account ID that is trusted for cross-account access"
+  type        = string
+  default     = "123456789012" # Replace with actual account ID in production
+}
+
+variable "create_admin_group" {
+  description = "Whether to create an administrators group"
+  type        = bool
+  default     = true
+}
+
+variable "create_developer_group" {
+  description = "Whether to create a developers group"
+  type        = bool
+  default     = true
+}
+
+variable "create_cicd_user" {
+  description = "Whether to create a CI/CD user"
+  type        = bool
+  default     = true
+}
+
+variable "create_cross_account_role" {
+  description = "Whether to create a cross-account role"
+  type        = bool
+  default     = false # Disabled by default for security
+}

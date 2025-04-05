@@ -124,6 +124,52 @@ output "article_notifier_function_arn" {
   value       = aws_lambda_function.article_notifier.arn
 }
 
+# IAM outputs
+output "ec2_role_arn" {
+  description = "ARN of the IAM role for EC2 instances"
+  value       = aws_iam_role.ec2_role.arn
+}
+
+output "ec2_instance_profile_name" {
+  description = "Name of the IAM instance profile for EC2 instances"
+  value       = aws_iam_instance_profile.ec2_profile.name
+}
+
+output "ecs_task_role_arn" {
+  description = "ARN of the IAM role for ECS tasks"
+  value       = aws_iam_role.ecs_task_role.arn
+}
+
+output "ecs_execution_role_arn" {
+  description = "ARN of the IAM role for ECS task execution"
+  value       = aws_iam_role.ecs_execution_role.arn
+}
+
+output "cicd_user_name" {
+  description = "Name of the IAM user for CI/CD"
+  value       = aws_iam_user.cicd_user.name
+}
+
+output "cicd_user_arn" {
+  description = "ARN of the IAM user for CI/CD"
+  value       = aws_iam_user.cicd_user.arn
+}
+
+output "developers_group_name" {
+  description = "Name of the IAM group for developers"
+  value       = aws_iam_group.developers.name
+}
+
+output "administrators_group_name" {
+  description = "Name of the IAM group for administrators"
+  value       = aws_iam_group.administrators.name
+}
+
+output "cross_account_role_arn" {
+  description = "ARN of the IAM role for cross-account access"
+  value       = aws_iam_role.cross_account_role.arn
+}
+
 # General outputs
 output "environment" {
   description = "Deployment environment"
