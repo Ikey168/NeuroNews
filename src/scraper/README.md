@@ -8,6 +8,7 @@ A Scrapy-based news scraper for the NeuroNews project.
 - Extracts article content, metadata, and categorizes news
 - Filters out duplicate articles
 - Saves scraped data to JSON files
+- Supports JavaScript-heavy pages using Playwright
 
 ## Usage
 
@@ -22,6 +23,7 @@ python -m src.scraper.run
 Options:
 - `--output`, `-o`: Specify the output file path (default: data/news_articles.json)
 - `--list-sources`, `-l`: List the configured news sources
+- `--playwright`, `-p`: Use Playwright for JavaScript-heavy pages
 
 ### From the Main Application
 
@@ -33,6 +35,7 @@ python src/main.py --scrape
 
 Options:
 - `--output`, `-o`: Specify the output file path (default: data/news_articles.json)
+- `--playwright`, `-p`: Use Playwright for JavaScript-heavy pages
 
 ### As a Library
 
@@ -44,6 +47,9 @@ articles = scrape_news()
 
 # Or specify a custom output file
 articles = scrape_news('path/to/output.json')
+
+# Use Playwright for JavaScript-heavy pages
+articles = scrape_news('path/to/output.json', use_playwright=True)
 ```
 
 ## Configuration
@@ -64,7 +70,9 @@ The scraper uses the settings defined in `config/settings.json`. The relevant se
 
 ## Customization
 
-To add support for specific news sites, you may need to customize the selectors in the `NewsSpider` class in `src/scraper/spiders/news_spider.py`.
+To add support for specific news sites, you may need to customize the selectors in the spider classes:
+- `NewsSpider` in `src/scraper/spiders/news_spider.py` for regular sites
+- `PlaywrightNewsSpider` in `src/scraper/spiders/playwright_spider.py` for JavaScript-heavy sites
 
 ## Structure
 
@@ -75,4 +83,5 @@ To add support for specific news sites, you may need to customize the selectors 
 - `run.py`: Command-line interface
 - `spiders/`: Directory containing spider implementations
   - `__init__.py`: Package initialization
-  - `news_spider.py`: News spider implementation
+  - `news_spider.py`: Regular news spider implementation
+  - `playwright_spider.py`: Playwright-based spider for JavaScript-heavy pages

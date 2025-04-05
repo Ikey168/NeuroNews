@@ -9,20 +9,23 @@ import os
 from scraper.run import run_spider
 
 
-def scrape_news(output_file='data/news_articles.json'):
+def scrape_news(output_file='data/news_articles.json', use_playwright=False):
     """
     Scrape news articles from configured sources.
     
     Args:
         output_file (str): Path to save the scraped articles.
+        use_playwright (bool): Whether to use Playwright for JavaScript-heavy pages.
         
     Returns:
         list: List of scraped news articles.
     """
     print("Scraping news using Scrapy-based scraper...")
+    if use_playwright:
+        print("Using Playwright for JavaScript-heavy pages")
     
     # Run the spider and save results to the output file
-    run_spider(output_file)
+    run_spider(output_file, use_playwright)
     
     # Read the results from the output file
     if os.path.exists(output_file):

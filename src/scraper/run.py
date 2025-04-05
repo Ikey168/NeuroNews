@@ -7,10 +7,17 @@ import sys
 from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
 from .spiders.news_spider import NewsSpider
+from .spiders.playwright_spider import PlaywrightNewsSpider
 
 
-def run_spider(output_file=None):
-    """Run the news spider."""
+def run_spider(output_file=None, use_playwright=False):
+    """
+    Run the news spider.
+    
+    Args:
+        output_file (str, optional): Path to save the scraped data.
+        use_playwright (bool, optional): Whether to use Playwright for JavaScript-heavy pages.
+    """
     settings = get_project_settings()
     
     # Override the output file if specified
@@ -20,7 +27,13 @@ def run_spider(output_file=None):
         settings.set('FEED_FORMAT', 'json')
     
     process = CrawlerProcess(settings)
-    process.crawl(NewsSpider)
+    
+    # Choose which spider to run
+    if use_playwright:
+        process.crawl(PlaywrightNewsSpider)
+    else:
+        process.crawl(NewsSpider)
+    
     process.start()
 
 
@@ -37,6 +50,11 @@ def main():
         action='store_true',
         help='List the configured news sources'
     )
+    parser.add_argument(
+        '--playwright', '-p',
+        action='store_true',
+        help='Use Playwright for JavaScript-heavy pages'
+    )
     
     args = parser.parse_args()
     
@@ -48,8 +66,11 @@ def main():
         return
     
     print(f"Starting NeuroNews scraper...")
+    if args.playwright:
+        print("Using Playwright for JavaScript-heavy pages")
     print(f"Output will be saved to: {args.output}")
-    run_spider(args.output)
+    
+    run_spider(args.output, args.playwright)
     print("Scraping completed.")
 
 
