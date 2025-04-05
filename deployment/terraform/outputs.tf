@@ -78,6 +78,52 @@ output "neptune_load_bucket_arn" {
   value       = aws_s3_bucket.neptune_load.arn
 }
 
+# Lambda outputs
+output "lambda_code_bucket_name" {
+  description = "Name of the S3 bucket for Lambda function code"
+  value       = aws_s3_bucket.lambda_code.bucket
+}
+
+output "lambda_code_bucket_arn" {
+  description = "ARN of the S3 bucket for Lambda function code"
+  value       = aws_s3_bucket.lambda_code.arn
+}
+
+output "lambda_execution_role_arn" {
+  description = "ARN of the IAM role for Lambda functions"
+  value       = aws_iam_role.lambda_execution_role.arn
+}
+
+output "article_processor_function_name" {
+  description = "Name of the article processor Lambda function"
+  value       = aws_lambda_function.article_processor.function_name
+}
+
+output "article_processor_function_arn" {
+  description = "ARN of the article processor Lambda function"
+  value       = aws_lambda_function.article_processor.arn
+}
+
+output "knowledge_graph_generator_function_name" {
+  description = "Name of the knowledge graph generator Lambda function"
+  value       = aws_lambda_function.knowledge_graph_generator.function_name
+}
+
+output "knowledge_graph_generator_function_arn" {
+  description = "ARN of the knowledge graph generator Lambda function"
+  value       = aws_lambda_function.knowledge_graph_generator.arn
+}
+
+output "article_notifier_function_name" {
+  description = "Name of the article notifier Lambda function"
+  value       = aws_lambda_function.article_notifier.function_name
+}
+
+output "article_notifier_function_arn" {
+  description = "ARN of the article notifier Lambda function"
+  value       = aws_lambda_function.article_notifier.arn
+}
+
 # General outputs
 output "environment" {
   description = "Deployment environment"

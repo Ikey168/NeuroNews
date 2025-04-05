@@ -30,6 +30,15 @@ The following AWS resources are provisioned:
   - S3 bucket for bulk loading data
   - Security group with restricted access
 
+- **Lambda Functions**: For serverless processing
+  - Article processor: Processes raw articles and stores results in Redshift
+  - Knowledge graph generator: Generates knowledge graphs from processed articles
+  - Article notifier: Sends notifications when new articles are available
+  - S3 bucket for Lambda function code
+  - IAM role with appropriate permissions
+  - CloudWatch logs for monitoring
+  - Event-driven triggers (S3 events, CloudWatch scheduled events)
+
 ## Usage
 
 ### Prerequisites
@@ -89,6 +98,13 @@ terraform destroy -var="environment=dev"
 | neptune_backup_retention_period | Backup retention period in days | 7 |
 | neptune_skip_final_snapshot | Whether to skip the final snapshot | true (false in prod) |
 | neptune_apply_immediately | Whether to apply changes immediately | true (false in prod) |
+| lambda_function_prefix | Prefix for Lambda function names | neuronews |
+| lambda_runtime | Runtime for Lambda functions | python3.9 |
+| lambda_timeout | Timeout for Lambda functions in seconds | 300 (5 minutes) |
+| lambda_memory_size | Memory size for Lambda functions in MB | 512 |
+| lambda_concurrent_executions | Maximum concurrent executions | 10 |
+| lambda_log_retention_days | Number of days to retain Lambda logs | 14 |
+| lambda_s3_key_prefix | Prefix for Lambda function code in S3 | lambda-functions |
 
 ## Outputs
 
@@ -109,5 +125,14 @@ terraform destroy -var="environment=dev"
 | neptune_iam_role_arn | ARN of the IAM role for Neptune to access S3 |
 | neptune_load_bucket_name | Name of the S3 bucket for Neptune bulk load data |
 | neptune_load_bucket_arn | ARN of the S3 bucket for Neptune bulk load data |
+| lambda_code_bucket_name | Name of the S3 bucket for Lambda function code |
+| lambda_code_bucket_arn | ARN of the S3 bucket for Lambda function code |
+| lambda_execution_role_arn | ARN of the IAM role for Lambda functions |
+| article_processor_function_name | Name of the article processor Lambda function |
+| article_processor_function_arn | ARN of the article processor Lambda function |
+| knowledge_graph_generator_function_name | Name of the knowledge graph generator Lambda function |
+| knowledge_graph_generator_function_arn | ARN of the knowledge graph generator Lambda function |
+| article_notifier_function_name | Name of the article notifier Lambda function |
+| article_notifier_function_arn | ARN of the article notifier Lambda function |
 | environment | Deployment environment |
 | region | AWS region |

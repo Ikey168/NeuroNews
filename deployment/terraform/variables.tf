@@ -138,3 +138,46 @@ variable "neptune_apply_immediately" {
   type        = bool
   default     = true # Set to false in production
 }
+
+# Lambda variables
+variable "lambda_function_prefix" {
+  description = "Prefix for Lambda function names"
+  type        = string
+  default     = "neuronews"
+}
+
+variable "lambda_runtime" {
+  description = "Runtime for Lambda functions"
+  type        = string
+  default     = "python3.9"
+}
+
+variable "lambda_timeout" {
+  description = "Timeout for Lambda functions in seconds"
+  type        = number
+  default     = 300 # 5 minutes
+}
+
+variable "lambda_memory_size" {
+  description = "Memory size for Lambda functions in MB"
+  type        = number
+  default     = 512
+}
+
+variable "lambda_concurrent_executions" {
+  description = "Maximum concurrent executions for Lambda functions"
+  type        = number
+  default     = 10
+}
+
+variable "lambda_log_retention_days" {
+  description = "Number of days to retain Lambda logs"
+  type        = number
+  default     = 14
+}
+
+variable "lambda_s3_key_prefix" {
+  description = "Prefix for Lambda function code in S3"
+  type        = string
+  default     = "lambda-functions"
+}
