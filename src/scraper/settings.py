@@ -43,8 +43,20 @@ S3_PIPELINE_PRIORITY = 400  # Run after JsonWriterPipeline
 # AWS settings (override these with environment variables or command line arguments)
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', '')
 AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
+AWS_REGION = os.environ.get('AWS_REGION', 'us-east-1')
 S3_BUCKET = os.environ.get('S3_BUCKET', '')
 S3_PREFIX = os.environ.get('S3_PREFIX', 'news_articles')
+
+# CloudWatch logging settings (disabled by default, enabled with --cloudwatch flag)
+CLOUDWATCH_LOGGING_ENABLED = False
+CLOUDWATCH_LOG_GROUP = os.environ.get('CLOUDWATCH_LOG_GROUP', 'NeuroNews-Scraper')
+CLOUDWATCH_LOG_STREAM_PREFIX = os.environ.get('CLOUDWATCH_LOG_STREAM_PREFIX', 'scraper')
+CLOUDWATCH_LOG_LEVEL = os.environ.get('CLOUDWATCH_LOG_LEVEL', 'INFO')
+
+# Configure extensions
+EXTENSIONS = {
+    'src.scraper.extensions.cloudwatch_logging.CloudWatchLoggingExtension': 100,
+}
 
 # Enable and configure the AutoThrottle extension
 AUTOTHROTTLE_ENABLED = True
