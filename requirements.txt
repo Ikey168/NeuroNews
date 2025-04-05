@@ -1,0 +1,6 @@
+scrapy
+selenium
+playwright
+boto3
+fastapi
+transformers
