@@ -36,6 +36,16 @@ ITEM_PIPELINES = {
     'src.scraper.pipelines.JsonWriterPipeline': 300,
 }
 
+# S3 storage pipeline (disabled by default, enabled with --s3 flag)
+# When enabled, this will be inserted into the pipeline
+S3_PIPELINE_PRIORITY = 400  # Run after JsonWriterPipeline
+
+# AWS settings (override these with environment variables or command line arguments)
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', '')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
+S3_BUCKET = os.environ.get('S3_BUCKET', '')
+S3_PREFIX = os.environ.get('S3_PREFIX', 'news_articles')
+
 # Enable and configure the AutoThrottle extension
 AUTOTHROTTLE_ENABLED = True
 AUTOTHROTTLE_START_DELAY = 5
