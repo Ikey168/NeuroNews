@@ -14,6 +14,24 @@ A Scrapy-based news scraper for the NeuroNews project.
 
 ## Usage
 
+### Setting Up AWS Credentials and Dev Environment
+
+The project includes a setup script to configure AWS credentials and create a dev environment configuration:
+
+```bash
+# Make the script executable if needed
+chmod +x scripts/setup_aws_dev.py
+
+# Run the setup script
+./scripts/setup_aws_dev.py --access-key YOUR_AWS_ACCESS_KEY --secret-key YOUR_AWS_SECRET_KEY
+```
+
+This script will:
+1. Set up AWS credentials in your `~/.aws/credentials` file
+2. Create a `config/dev_aws.json` configuration file
+3. Check if the required AWS resources (S3 bucket, CloudWatch log group) exist and offer to create them
+4. Generate commands to run the scraper with AWS integration
+
 ### From the Command Line
 
 You can run the scraper directly:
@@ -26,8 +44,10 @@ Options:
 - `--output`, `-o`: Specify the output file path (default: data/news_articles.json)
 - `--list-sources`, `-l`: List the configured news sources
 - `--playwright`, `-p`: Use Playwright for JavaScript-heavy pages
+- `--env`: Environment (dev, staging, prod) for loading AWS config (default: dev)
 
 AWS Credentials:
+- `--aws-profile`: AWS profile name
 - `--aws-key-id`: AWS access key ID
 - `--aws-secret-key`: AWS secret access key
 - `--aws-region`: AWS region (default: us-east-1)
@@ -46,10 +66,8 @@ CloudWatch Logging Options:
 Example with all AWS features:
 ```bash
 python -m src.scraper.run \
-  --aws-key-id YOUR_KEY_ID \
-  --aws-secret-key YOUR_SECRET_KEY \
-  --aws-region us-west-2 \
-  --s3 --s3-bucket your-bucket-name \
+  --aws-profile neuronews-dev \
+  --s3 --s3-bucket neuronews-raw-articles-dev \
   --cloudwatch --cloudwatch-log-level DEBUG
 ```
 
@@ -76,6 +94,12 @@ articles = scrape_news('path/to/output.json')
 
 # Use Playwright for JavaScript-heavy pages
 articles = scrape_news('path/to/output.json', use_playwright=True)
+
+# Use AWS profile
+articles = scrape_news(
+    aws_profile='neuronews-dev',
+    env='dev'  # Load config from config/dev_aws.json
+)
 
 # Store articles in S3
 articles = scrape_news(
@@ -115,6 +139,8 @@ articles = scrape_news(
 
 ## Configuration
 
+### Scraping Configuration
+
 The scraper uses the settings defined in `config/settings.json`. The relevant settings are:
 
 ```json
@@ -131,14 +157,19 @@ The scraper uses the settings defined in `config/settings.json`. The relevant se
 
 ### AWS Configuration
 
-For AWS services (S3 storage and CloudWatch logging), you can provide credentials in three ways:
+For AWS services (S3 storage and CloudWatch logging), you can provide credentials in four ways:
 
-1. Command-line arguments:
+1. AWS profile:
+   ```bash
+   --aws-profile neuronews-dev
+   ```
+
+2. Command-line arguments:
    ```bash
    --aws-key-id YOUR_KEY_ID --aws-secret-key YOUR_SECRET_KEY --aws-region us-west-2
    ```
 
-2. Environment variables:
+3. Environment variables:
    ```bash
    export AWS_ACCESS_KEY_ID=YOUR_KEY_ID
    export AWS_SECRET_ACCESS_KEY=YOUR_SECRET_KEY
@@ -147,14 +178,25 @@ For AWS services (S3 storage and CloudWatch logging), you can provide credential
    export CLOUDWATCH_LOG_GROUP=NeuroNews-Scraper
    ```
 
-3. Programmatically when using as a library:
-   ```python
-   scrape_news(
-       aws_access_key_id='YOUR_KEY_ID',
-       aws_secret_access_key='YOUR_SECRET_KEY',
-       ...
-   )
+4. Configuration file:
+   ```json
+   {
+     "aws_profile": "neuronews-dev",
+     "s3_storage": {
+       "enabled": true,
+       "bucket": "neuronews-raw-articles-dev",
+       "prefix": "news_articles"
+     },
+     "cloudwatch_logging": {
+       "enabled": true,
+       "log_group": "NeuroNews-Scraper",
+       "log_stream_prefix": "scraper",
+       "log_level": "INFO"
+     }
+   }
    ```
+
+   You can create this file manually or use the `scripts/setup_aws_dev.py` script to generate it.
 
 ## S3 Storage Structure
 
@@ -190,6 +232,24 @@ Log entries include:
 - Performance metrics
 
 This provides comprehensive monitoring and debugging capabilities for the scraper, especially useful for automated deployments.
+
+## Development Environments
+
+The scraper supports multiple environments (dev, staging, prod) for AWS configuration:
+
+- **Dev**: Used for local development and testing
+  - Configuration file: `config/dev_aws.json`
+  - Command-line option: `--env dev` (default)
+
+- **Staging**: Used for pre-production testing
+  - Configuration file: `config/staging_aws.json`
+  - Command-line option: `--env staging`
+
+- **Prod**: Used for production deployment
+  - Configuration file: `config/prod_aws.json`
+  - Command-line option: `--env prod`
+
+Each environment can have different AWS credentials, S3 buckets, and CloudWatch log groups.
 
 ## Customization
 
