@@ -9,10 +9,12 @@ from .sentiment_analysis import (
     HuggingFaceSentimentAnalyzer,
     AWSComprehendAnalyzer
 )
+from .article_processor import ArticleProcessor
 
 __all__ = [
     'create_analyzer',
     'BaseSentimentAnalyzer',
     'HuggingFaceSentimentAnalyzer',
-    'AWSComprehendAnalyzer'
+    'AWSComprehendAnalyzer',
+    'ArticleProcessor'
 ]

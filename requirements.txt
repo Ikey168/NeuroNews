@@ -5,3 +5,5 @@ playwright
 boto3
 fastapi
 transformers
+psycopg2-binary
+torch
