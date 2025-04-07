@@ -1,0 +1,51 @@
+{
+  "test_cases": [
+    {
+      "text": "The company's revenue grew by 50% this quarter, exceeding all expectations.",
+      "expected_sentiment": "positive",
+      "expected_confidence": 0.9
+    },
+    {
+      "text": "The stock market crashed today, wiping out billions in value.",
+      "expected_sentiment": "negative",
+      "expected_confidence": 0.85
+    },
+    {
+      "text": "The company announced its quarterly earnings report today.",
+      "expected_sentiment": "neutral",
+      "expected_confidence": 0.75
+    },
+    {
+      "text": "Despite recent setbacks, the company remains optimistic about future growth.",
+      "expected_sentiment": "mixed",
+      "expected_confidence": 0.6
+    },
+    {
+      "text": "Breaking news: Major tech company acquires startup for $2 billion.",
+      "expected_sentiment": "neutral",
+      "expected_confidence": 0.7
+    },
+    {
+      "text": "Investors are concerned about rising inflation rates and market volatility.",
+      "expected_sentiment": "negative",
+      "expected_confidence": 0.8
+    }
+  ],
+  "edge_cases": [
+    {
+      "text": "",
+      "should_raise": true,
+      "description": "Empty text"
+    },
+    {
+      "text": "   ",
+      "should_raise": true,
+      "description": "Whitespace only"
+    },
+    {
+      "text": "This is a very long text that exceeds normal length limits...",
+      "should_raise": false,
+      "description": "Long text"
+    }
+  ]
+}

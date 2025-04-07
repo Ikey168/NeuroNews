@@ -4,4 +4,10 @@ selenium
 playwright
 boto3
 fastapi
+vaderSentiment
+pytest
+pytest-mock
+pytest-cov
+psycopg2-binary
 transformers
+torch
