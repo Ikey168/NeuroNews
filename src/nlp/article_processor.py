@@ -32,7 +32,7 @@ class ArticleProcessor:
             redshift_database: Database name
             redshift_user: Database user
             redshift_password: Database password
-            sentiment_provider: Which sentiment analyzer to use ("aws" or "huggingface")
+            sentiment_provider: Which sentiment analyzer to use ("vader", "aws", or "transformers")
             batch_size: Size of batches for processing
             **sentiment_kwargs: Additional arguments for sentiment analyzer
         """

@@ -1,18 +1,17 @@
 """
 Sentiment Analysis Pipeline for NeuroNews
-Supports both Hugging Face transformers and AWS Comprehend for sentiment analysis.
+Uses VADER, AWS Comprehend, and Transformers for sentiment analysis on news articles.
 """
 
-from typing import Dict, Union, List, Optional, Literal
+from typing import Dict, Union, List, Optional
+from transformers import pipeline
 import logging
 import boto3
-from abc import ABC, abstractmethod
-from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassification
-from botocore.exceptions import BotoCoreError, ClientError
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 logger = logging.getLogger(__name__)
 
-class BaseSentimentAnalyzer(ABC):
+class BaseSentimentAnalyzer:
     """Base class for sentiment analysis implementations."""
     
     def preprocess_text(self, text: str) -> str:
@@ -36,42 +35,17 @@ class BaseSentimentAnalyzer(ABC):
         
         return text
 
-    @abstractmethod
-    def analyze_sentiment(self, text: str, return_all_scores: bool = False) -> Dict[str, Union[str, float, List[Dict]]]:
-        """Analyze sentiment of given text."""
-        pass
-
-    @abstractmethod
-    def batch_analyze(self, texts: List[str], batch_size: Optional[int] = 32) -> List[Dict]:
-        """Analyze sentiment of multiple texts."""
-        pass
-
-class HuggingFaceSentimentAnalyzer(BaseSentimentAnalyzer):
-    """Sentiment analysis using Hugging Face transformers."""
+class VaderSentimentAnalyzer(BaseSentimentAnalyzer):
+    """Sentiment analysis using VADER."""
     
-    def __init__(self, model_name: str = "finiteautomata/bertweet-base-sentiment-analysis"):
-        """
-        Initialize the Hugging Face sentiment analyzer.
-        
-        Args:
-            model_name (str): Name of the pre-trained model to use.
-        """
-        try:
-            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-            self.model = AutoModelForSequenceClassification.from_pretrained(model_name)
-            self.sentiment_pipeline = pipeline(
-                "sentiment-analysis",
-                model=self.model,
-                tokenizer=self.tokenizer
-            )
-            logger.info(f"Successfully initialized HuggingFace pipeline with model: {model_name}")
-        except Exception as e:
-            logger.error(f"Failed to initialize HuggingFace pipeline: {str(e)}")
-            raise
+    def __init__(self):
+        """Initialize VADER sentiment analyzer."""
+        self.analyzer = SentimentIntensityAnalyzer()
+        logger.info("Initialized VADER sentiment analyzer")
 
-    def analyze_sentiment(self, text: str, return_all_scores: bool = False) -> Dict[str, Union[str, float, List[Dict]]]:
+    def analyze_sentiment(self, text: str, return_all_scores: bool = False) -> Dict[str, Union[str, float, Dict]]:
         """
-        Analyze sentiment using Hugging Face model.
+        Analyze sentiment using VADER.
         
         Args:
             text (str): Text to analyze.
@@ -86,27 +60,35 @@ class HuggingFaceSentimentAnalyzer(BaseSentimentAnalyzer):
             if not processed_text:
                 raise ValueError("Text is empty after preprocessing")
 
-            result = self.sentiment_pipeline(processed_text, return_all_scores=return_all_scores)[0]
+            scores = self.analyzer.polarity_scores(processed_text)
             
+            # Determine sentiment label based on compound score
+            if scores['compound'] >= 0.05:
+                sentiment = 'positive'
+            elif scores['compound'] <= -0.05:
+                sentiment = 'negative'
+            else:
+                sentiment = 'neutral'
+
             response = {
                 "text": text,
-                "sentiment": result["label"],
-                "confidence": result["score"],
-                "provider": "huggingface"
+                "sentiment": sentiment,
+                "confidence": abs(scores['compound']),
+                "provider": "vader"
             }
             
             if return_all_scores:
-                response["all_scores"] = result
+                response["all_scores"] = scores
                 
             return response
             
         except Exception as e:
-            logger.error(f"Error during HuggingFace sentiment analysis: {str(e)}")
+            logger.error(f"Error during VADER sentiment analysis: {str(e)}")
             raise
 
     def batch_analyze(self, texts: List[str], batch_size: Optional[int] = 32) -> List[Dict]:
         """
-        Perform batch sentiment analysis using Hugging Face model.
+        Perform batch sentiment analysis using VADER.
         
         Args:
             texts (List[str]): List of texts to analyze.
@@ -117,61 +99,33 @@ class HuggingFaceSentimentAnalyzer(BaseSentimentAnalyzer):
         """
         try:
             results = []
-            for i in range(0, len(texts), batch_size):
-                batch = texts[i:i + batch_size]
-                processed_batch = [self.preprocess_text(text) for text in batch]
-                batch_results = self.sentiment_pipeline(processed_batch)
-                
-                for text, result in zip(batch, batch_results):
-                    results.append({
-                        "text": text,
-                        "sentiment": result["label"],
-                        "confidence": result["score"],
-                        "provider": "huggingface"
-                    })
-                    
+            for text in texts:
+                result = self.analyze_sentiment(text)
+                results.append(result)
             return results
             
         except Exception as e:
-            logger.error(f"Error during batch HuggingFace sentiment analysis: {str(e)}")
+            logger.error(f"Error during batch VADER sentiment analysis: {str(e)}")
             raise
 
 class AWSComprehendAnalyzer(BaseSentimentAnalyzer):
     """Sentiment analysis using AWS Comprehend."""
     
-    def __init__(self, region_name: Optional[str] = None, aws_access_key_id: Optional[str] = None,
-                 aws_secret_access_key: Optional[str] = None):
+    def __init__(self, region_name: Optional[str] = None):
         """
         Initialize AWS Comprehend client.
         
         Args:
             region_name (str, optional): AWS region name.
-            aws_access_key_id (str, optional): AWS access key ID.
-            aws_secret_access_key (str, optional): AWS secret access key.
         """
         try:
-            self.client = boto3.client(
-                'comprehend',
-                region_name=region_name,
-                aws_access_key_id=aws_access_key_id,
-                aws_secret_access_key=aws_secret_access_key
-            )
-            logger.info("Successfully initialized AWS Comprehend client")
+            self.client = boto3.client('comprehend', region_name=region_name)
+            logger.info("Initialized AWS Comprehend client")
         except Exception as e:
             logger.error(f"Failed to initialize AWS Comprehend client: {str(e)}")
             raise
 
-    def _map_aws_sentiment(self, aws_sentiment: str) -> str:
-        """Map AWS sentiment labels to standard format."""
-        mapping = {
-            'POSITIVE': 'positive',
-            'NEGATIVE': 'negative',
-            'NEUTRAL': 'neutral',
-            'MIXED': 'mixed'
-        }
-        return mapping.get(aws_sentiment, aws_sentiment.lower())
-
-    def analyze_sentiment(self, text: str, return_all_scores: bool = False) -> Dict[str, Union[str, float, List[Dict]]]:
+    def analyze_sentiment(self, text: str, return_all_scores: bool = False) -> Dict[str, Union[str, float, Dict]]:
         """
         Analyze sentiment using AWS Comprehend.
         
@@ -192,7 +146,7 @@ class AWSComprehendAnalyzer(BaseSentimentAnalyzer):
             
             response = {
                 "text": text,
-                "sentiment": self._map_aws_sentiment(result['Sentiment']),
+                "sentiment": result['Sentiment'].lower(),
                 "confidence": max(result['SentimentScore'].values()),
                 "provider": "aws"
             }
@@ -204,9 +158,6 @@ class AWSComprehendAnalyzer(BaseSentimentAnalyzer):
                 
             return response
             
-        except (BotoCoreError, ClientError) as e:
-            logger.error(f"AWS Comprehend API error: {str(e)}")
-            raise
         except Exception as e:
             logger.error(f"Error during AWS sentiment analysis: {str(e)}")
             raise
@@ -224,62 +175,159 @@ class AWSComprehendAnalyzer(BaseSentimentAnalyzer):
         """
         try:
             results = []
-            for i in range(0, len(texts), batch_size):
-                batch = texts[i:i + min(batch_size, 25)]  # AWS limit is 25
+            for i in range(0, len(texts), min(batch_size, 25)):
+                batch = texts[i:i + min(batch_size, 25)]
                 processed_batch = [self.preprocess_text(text) for text in batch]
                 
-                batch_results = self.client.batch_detect_sentiment(
+                response = self.client.batch_detect_sentiment(
                     TextList=processed_batch,
                     LanguageCode='en'
                 )
                 
-                for text, result in zip(batch, batch_results['ResultList']):
+                for text, result in zip(batch, response['ResultList']):
                     results.append({
                         "text": text,
-                        "sentiment": self._map_aws_sentiment(result['Sentiment']),
+                        "sentiment": result['Sentiment'].lower(),
                         "confidence": max(result['SentimentScore'].values()),
                         "provider": "aws"
                     })
                     
             return results
             
-        except (BotoCoreError, ClientError) as e:
-            logger.error(f"AWS Comprehend API error: {str(e)}")
-            raise
         except Exception as e:
             logger.error(f"Error during batch AWS sentiment analysis: {str(e)}")
             raise
 
-def create_analyzer(provider: Literal["huggingface", "aws"] = "huggingface", **kwargs) -> BaseSentimentAnalyzer:
+class TransformersSentimentAnalyzer(BaseSentimentAnalyzer):
+    """Sentiment analysis using Hugging Face Transformers."""
+    
+    def __init__(self, model_name: str = "distilbert-base-uncased-finetuned-sst-2-english"):
+        """
+        Initialize Transformers sentiment analyzer.
+        
+        Args:
+            model_name (str): Name of the pre-trained model to use
+        """
+        try:
+            self.sentiment_pipeline = pipeline("sentiment-analysis", model=model_name)
+            logger.info(f"Initialized Transformers sentiment analyzer with model: {model_name}")
+        except Exception as e:
+            logger.error(f"Failed to initialize Transformers sentiment analyzer: {str(e)}")
+            raise
+
+    def analyze_sentiment(self, text: str, return_all_scores: bool = False) -> Dict[str, Union[str, float, Dict]]:
+        """
+        Analyze sentiment using Transformers.
+        
+        Args:
+            text (str): Text to analyze.
+            return_all_scores (bool): Whether to return scores for all sentiment classes.
+            
+        Returns:
+            dict: Sentiment analysis results.
+        """
+        try:
+            processed_text = self.preprocess_text(text)
+            
+            if not processed_text:
+                raise ValueError("Text is empty after preprocessing")
+
+            result = self.sentiment_pipeline(processed_text)[0]
+            
+            # Map sentiment labels to match our standard format
+            sentiment_map = {
+                'POSITIVE': 'positive',
+                'NEGATIVE': 'negative',
+                'NEUTRAL': 'neutral'
+            }
+            
+            response = {
+                "text": text,
+                "sentiment": sentiment_map.get(result['label'], result['label'].lower()),
+                "confidence": result['score'],
+                "provider": "transformers"
+            }
+            
+            if return_all_scores:
+                # For binary classification models, compute inverse score
+                response["all_scores"] = {
+                    "positive": result['score'] if result['label'] == 'POSITIVE' else 1 - result['score'],
+                    "negative": result['score'] if result['label'] == 'NEGATIVE' else 1 - result['score']
+                }
+                
+            return response
+            
+        except Exception as e:
+            logger.error(f"Error during Transformers sentiment analysis: {str(e)}")
+            raise
+
+    def batch_analyze(self, texts: List[str], batch_size: Optional[int] = 32) -> List[Dict]:
+        """
+        Perform batch sentiment analysis using Transformers.
+        
+        Args:
+            texts (List[str]): List of texts to analyze.
+            batch_size (int, optional): Size of batches for processing.
+            
+        Returns:
+            List[Dict]: List of sentiment analysis results.
+        """
+        try:
+            processed_texts = [self.preprocess_text(text) for text in texts]
+            results = []
+            
+            for i in range(0, len(processed_texts), batch_size):
+                batch = processed_texts[i:i + batch_size]
+                predictions = self.sentiment_pipeline(batch)
+                
+                for text, pred in zip(texts[i:i + batch_size], predictions):
+                    sentiment_map = {
+                        'POSITIVE': 'positive',
+                        'NEGATIVE': 'negative',
+                        'NEUTRAL': 'neutral'
+                    }
+                    
+                    results.append({
+                        "text": text,
+                        "sentiment": sentiment_map.get(pred['label'], pred['label'].lower()),
+                        "confidence": pred['score'],
+                        "provider": "transformers"
+                    })
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"Error during batch Transformers sentiment analysis: {str(e)}")
+            raise
+
+def create_analyzer(provider: str = "vader", **kwargs) -> BaseSentimentAnalyzer:
     """
     Factory function to create sentiment analyzer instance.
     
     Args:
-        provider (str): The provider to use ("huggingface" or "aws")
+        provider (str): The provider to use ("vader", "aws", or "transformers")
         **kwargs: Additional arguments passed to the analyzer constructor
         
     Returns:
         BaseSentimentAnalyzer: Configured sentiment analyzer instance
     """
-    if provider == "huggingface":
-        return HuggingFaceSentimentAnalyzer(**kwargs)
+    if provider == "vader":
+        return VaderSentimentAnalyzer()
     elif provider == "aws":
         return AWSComprehendAnalyzer(**kwargs)
+    elif provider == "transformers":
+        return TransformersSentimentAnalyzer(**kwargs)
     else:
         raise ValueError(f"Unknown provider: {provider}")
 
 # Example usage
 if __name__ == "__main__":
-    # Initialize analyzers
-    hf_analyzer = create_analyzer("huggingface")
-    aws_analyzer = create_analyzer("aws", region_name="us-west-2")
+    # Initialize analyzer
+    analyzer = create_analyzer("vader")
     
     # Example text
     sample_text = "The company reported strong earnings growth and positive outlook for the next quarter."
     
-    # Compare results from both providers
-    hf_result = hf_analyzer.analyze_sentiment(sample_text, return_all_scores=True)
-    aws_result = aws_analyzer.analyze_sentiment(sample_text, return_all_scores=True)
-    
-    print(f"HuggingFace Result: {hf_result}")
-    print(f"AWS Comprehend Result: {aws_result}")
+    # Analyze sentiment
+    result = analyzer.analyze_sentiment(sample_text, return_all_scores=True)
+    print(f"Sentiment Analysis Result: {result}")

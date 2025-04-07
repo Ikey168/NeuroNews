@@ -4,10 +4,10 @@ selenium
 playwright
 boto3
 fastapi
-transformers
-psycopg2-binary
-torch
+vaderSentiment
 pytest
 pytest-mock
 pytest-cov
-moto
+psycopg2-binary
+transformers
+torch
