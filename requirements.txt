@@ -11,3 +11,4 @@ pytest-cov
 psycopg2-binary
 transformers
 torch
+mangum
