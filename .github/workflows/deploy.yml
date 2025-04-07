@@ -9,6 +9,8 @@ on:
 
 env:
   AWS_REGION: us-east-1
+  AWS_CODEDEPLOY_APP: neuronews
+  AWS_CODEDEPLOY_GROUP: neuronews-group
 
 jobs:
   deploy:
@@ -44,19 +46,39 @@ jobs:
         cd deployment/terraform
         terraform apply -auto-approve tfplan
 
-    - name: Package Lambda Functions
+    - name: Create deployment package
       run: |
-        cd src/api
-        zip -r ../../lambda.zip .
+        zip -r deploy.zip . -x "*.git*" "*.terraform*" "*.zip"
 
-    - name: Deploy Lambda Functions
+    - name: Create S3 bucket if not exists
       run: |
-        aws lambda update-function-code \
-          --function-name neuronews-api \
-          --zip-file fileb://lambda.zip
+        aws s3api head-bucket --bucket ${{ env.AWS_CODEDEPLOY_APP }}-artifacts 2>/dev/null || \
+        aws s3 mb s3://${{ env.AWS_CODEDEPLOY_APP }}-artifacts
 
-    - name: Update API Gateway
+    - name: Upload to S3
       run: |
-        aws apigateway create-deployment \
-          --rest-api-id $(aws apigateway get-rest-apis --query "items[?name=='NeuroNews'].id" --output text) \
-          --stage-name prod
+        aws s3 cp deploy.zip s3://${{ env.AWS_CODEDEPLOY_APP }}-artifacts/deploy.zip
+
+    - name: Create CodeDeploy Application
+      run: |
+        aws deploy get-application --application-name ${{ env.AWS_CODEDEPLOY_APP }} 2>/dev/null || \
+        aws deploy create-application --application-name ${{ env.AWS_CODEDEPLOY_APP }}
+
+    - name: Create CodeDeploy Deployment Group
+      run: |
+        aws deploy get-deployment-group \
+          --application-name ${{ env.AWS_CODEDEPLOY_APP }} \
+          --deployment-group-name ${{ env.AWS_CODEDEPLOY_GROUP }} 2>/dev/null || \
+        aws deploy create-deployment-group \
+          --application-name ${{ env.AWS_CODEDEPLOY_APP }} \
+          --deployment-group-name ${{ env.AWS_CODEDEPLOY_GROUP }} \
+          --service-role-arn ${{ secrets.AWS_CODEDEPLOY_SERVICE_ROLE }} \
+          --deployment-style deploymentType=IN_PLACE,deploymentOption=WITH_TRAFFIC_CONTROL \
+          --ec2-tag-set Key=Environment,Value=Production
+
+    - name: Deploy to EC2
+      run: |
+        aws deploy create-deployment \
+          --application-name ${{ env.AWS_CODEDEPLOY_APP }} \
+          --deployment-group-name ${{ env.AWS_CODEDEPLOY_GROUP }} \
+          --s3-location bucket=${{ env.AWS_CODEDEPLOY_APP }}-artifacts,key=deploy.zip,bundleType=zip
