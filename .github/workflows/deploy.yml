@@ -1,0 +1,62 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["Tests"]
+    types:
+      - completed
+    branches: [main]
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    environment: production
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+    
+    - name: Terraform Init
+      run: |
+        cd deployment/terraform
+        terraform init
+
+    - name: Terraform Plan
+      run: |
+        cd deployment/terraform
+        terraform plan -out=tfplan
+
+    - name: Terraform Apply
+      run: |
+        cd deployment/terraform
+        terraform apply -auto-approve tfplan
+
+    - name: Package Lambda Functions
+      run: |
+        cd src/api
+        zip -r ../../lambda.zip .
+
+    - name: Deploy Lambda Functions
+      run: |
+        aws lambda update-function-code \
+          --function-name neuronews-api \
+          --zip-file fileb://lambda.zip
+
+    - name: Update API Gateway
+      run: |
+        aws apigateway create-deployment \
+          --rest-api-id $(aws apigateway get-rest-apis --query "items[?name=='NeuroNews'].id" --output text) \
+          --stage-name prod
