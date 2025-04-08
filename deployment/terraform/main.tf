@@ -12,7 +12,7 @@ resource "aws_s3_bucket" "raw_articles" {
   tags = merge(
     var.tags,
     {
-      Name        = "NeuroNews Raw Articles"
+      Name        = "NeuroNews Raw Articles",
       Environment = var.environment
     }
   )
@@ -55,6 +55,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "raw_articles_lifecycle" {
   rule {
     id     = "archive-old-articles"
     status = "Enabled"
+    prefix = "" # Apply to all objects
 
     transition {
       days          = 90

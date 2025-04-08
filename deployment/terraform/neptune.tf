@@ -24,7 +24,7 @@ resource "aws_security_group" "neptune" {
   tags = merge(
     var.tags,
     {
-      Name        = "${var.neptune_cluster_identifier}-${var.environment}-sg",
+      Name        = "${var.neptune_cluster_identifier}-${var.environment}-sg"
       Environment = var.environment
     }
   )
@@ -50,7 +50,7 @@ resource "aws_iam_role" "neptune_s3_access" {
   tags = merge(
     var.tags,
     {
-      Name        = "${var.neptune_cluster_identifier}-${var.environment}-s3-access",
+      Name        = "${var.neptune_cluster_identifier}-${var.environment}-s3-access"
       Environment = var.environment
     }
   )
@@ -71,7 +71,7 @@ resource "aws_neptune_parameter_group" "neptune" {
   tags = merge(
     var.tags,
     {
-      Name        = "${var.neptune_cluster_identifier}-${var.environment}-params",
+      Name        = "${var.neptune_cluster_identifier}-${var.environment}-params"
       Environment = var.environment
     }
   )
@@ -86,7 +86,7 @@ resource "aws_neptune_subnet_group" "neptune" {
   tags = merge(
     var.tags,
     {
-      Name        = "${var.neptune_cluster_identifier}-${var.environment}-subnet-group",
+      Name        = "${var.neptune_cluster_identifier}-${var.environment}-subnet-group"
       Environment = var.environment
     }
   )
@@ -106,9 +106,6 @@ resource "aws_neptune_cluster" "knowledge_graphs" {
   neptune_subnet_group_name           = aws_neptune_subnet_group.neptune.name
   iam_database_authentication_enabled = true
   
-  master_username = var.neptune_master_username
-  master_password = var.neptune_master_password
-  
   storage_encrypted = true
   
   enable_cloudwatch_logs_exports = ["audit"]
@@ -116,7 +113,7 @@ resource "aws_neptune_cluster" "knowledge_graphs" {
   tags = merge(
     var.tags,
     {
-      Name        = "${var.neptune_cluster_identifier}-${var.environment}",
+      Name        = "${var.neptune_cluster_identifier}-${var.environment}"
       Environment = var.environment
     }
   )
@@ -139,7 +136,7 @@ resource "aws_neptune_cluster_instance" "knowledge_graphs" {
   tags = merge(
     var.tags,
     {
-      Name        = "${var.neptune_cluster_identifier}-${var.environment}-${count.index}",
+      Name        = "${var.neptune_cluster_identifier}-${var.environment}-${count.index}"
       Environment = var.environment
     }
   )
@@ -156,7 +153,7 @@ resource "aws_s3_bucket" "neptune_load" {
   tags = merge(
     var.tags,
     {
-      Name        = "NeuroNews Neptune Load Data",
+      Name        = "NeuroNews Neptune Load Data"
       Environment = var.environment
     }
   )
