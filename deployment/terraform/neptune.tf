@@ -24,7 +24,7 @@ resource "aws_security_group" "neptune" {
   tags = merge(
     var.tags,
     {
-      Name        = "${var.neptune_cluster_identifier}-${var.environment}-sg"
+      Name        = "${var.neptune_cluster_identifier}-${var.environment}-sg",
       Environment = var.environment
     }
   )
@@ -50,7 +50,7 @@ resource "aws_iam_role" "neptune_s3_access" {
   tags = merge(
     var.tags,
     {
-      Name        = "${var.neptune_cluster_identifier}-${var.environment}-s3-access"
+      Name        = "${var.neptune_cluster_identifier}-${var.environment}-s3-access",
       Environment = var.environment
     }
   )
@@ -68,21 +68,16 @@ resource "aws_neptune_parameter_group" "neptune" {
   family      = "neptune1"
   description = "Parameter group for ${var.neptune_cluster_identifier} Neptune cluster"
   
-  # Neptune doesn't have many modifiable parameters at the parameter group level
-  # Most configurations are done at the cluster level
-  
   tags = merge(
     var.tags,
     {
-      Name        = "${var.neptune_cluster_identifier}-${var.environment}-params"
+      Name        = "${var.neptune_cluster_identifier}-${var.environment}-params",
       Environment = var.environment
     }
   )
 }
 
 # Create a subnet group for Neptune
-# Note: This requires existing VPC and subnets, which would typically be defined in a separate network.tf file
-# For simplicity, we're using the default VPC and subnets here
 resource "aws_neptune_subnet_group" "neptune" {
   name        = "${var.neptune_cluster_identifier}-${var.environment}-subnet-group"
   description = "Subnet group for ${var.neptune_cluster_identifier} Neptune cluster"
@@ -91,7 +86,7 @@ resource "aws_neptune_subnet_group" "neptune" {
   tags = merge(
     var.tags,
     {
-      Name        = "${var.neptune_cluster_identifier}-${var.environment}-subnet-group"
+      Name        = "${var.neptune_cluster_identifier}-${var.environment}-subnet-group",
       Environment = var.environment
     }
   )
@@ -101,7 +96,7 @@ resource "aws_neptune_subnet_group" "neptune" {
 resource "aws_neptune_cluster" "knowledge_graphs" {
   cluster_identifier                  = "${var.neptune_cluster_identifier}-${var.environment}"
   engine                              = "neptune"
-  engine_version                      = "1.2.0.0" # Use the latest version available
+  engine_version                      = "1.2.0.0"
   backup_retention_period             = var.neptune_backup_retention_period
   preferred_backup_window             = var.neptune_preferred_backup_window
   skip_final_snapshot                 = var.neptune_skip_final_snapshot
@@ -111,29 +106,23 @@ resource "aws_neptune_cluster" "knowledge_graphs" {
   neptune_subnet_group_name           = aws_neptune_subnet_group.neptune.name
   iam_database_authentication_enabled = true
   
-  # Optional: Set master credentials
-  # Neptune can operate without credentials using IAM authentication
-  # But we'll set them for compatibility with tools that require basic auth
   master_username = var.neptune_master_username
   master_password = var.neptune_master_password
   
-  # Enable storage encryption
   storage_encrypted = true
   
-  # Enable CloudWatch logs export
   enable_cloudwatch_logs_exports = ["audit"]
   
   tags = merge(
     var.tags,
     {
-      Name        = "${var.neptune_cluster_identifier}-${var.environment}"
+      Name        = "${var.neptune_cluster_identifier}-${var.environment}",
       Environment = var.environment
     }
   )
   
-  # Prevent destruction in production
   lifecycle {
-    prevent_destroy = var.environment == "prod" ? true : false
+    prevent_destroy = false
   }
 }
 
@@ -150,14 +139,13 @@ resource "aws_neptune_cluster_instance" "knowledge_graphs" {
   tags = merge(
     var.tags,
     {
-      Name        = "${var.neptune_cluster_identifier}-${var.environment}-${count.index}"
+      Name        = "${var.neptune_cluster_identifier}-${var.environment}-${count.index}",
       Environment = var.environment
     }
   )
   
-  # Prevent destruction in production
   lifecycle {
-    prevent_destroy = var.environment == "prod" ? true : false
+    prevent_destroy = false
   }
 }
 
@@ -168,7 +156,7 @@ resource "aws_s3_bucket" "neptune_load" {
   tags = merge(
     var.tags,
     {
-      Name        = "NeuroNews Neptune Load Data"
+      Name        = "NeuroNews Neptune Load Data",
       Environment = var.environment
     }
   )

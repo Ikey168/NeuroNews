@@ -24,7 +24,7 @@ resource "aws_security_group" "redshift" {
   tags = merge(
     var.tags,
     {
-      Name        = "${var.redshift_cluster_identifier}-${var.environment}-sg"
+      Name        = "${var.redshift_cluster_identifier}-${var.environment}-sg",
       Environment = var.environment
     }
   )
@@ -50,7 +50,7 @@ resource "aws_iam_role" "redshift_s3_access" {
   tags = merge(
     var.tags,
     {
-      Name        = "${var.redshift_cluster_identifier}-${var.environment}-s3-access"
+      Name        = "${var.redshift_cluster_identifier}-${var.environment}-s3-access",
       Environment = var.environment
     }
   )
@@ -111,7 +111,7 @@ resource "aws_redshift_parameter_group" "redshift" {
   tags = merge(
     var.tags,
     {
-      Name        = "${var.redshift_cluster_identifier}-${var.environment}-params"
+      Name        = "${var.redshift_cluster_identifier}-${var.environment}-params",
       Environment = var.environment
     }
   )
@@ -139,7 +139,7 @@ resource "aws_redshift_subnet_group" "redshift" {
   tags = merge(
     var.tags,
     {
-      Name        = "${var.redshift_cluster_identifier}-${var.environment}-subnet-group"
+      Name        = "${var.redshift_cluster_identifier}-${var.environment}-subnet-group",
       Environment = var.environment
     }
   )
@@ -174,13 +174,13 @@ resource "aws_redshift_cluster" "processed_texts" {
   tags = merge(
     var.tags,
     {
-      Name        = "${var.redshift_cluster_identifier}-${var.environment}"
+      Name        = "${var.redshift_cluster_identifier}-${var.environment}",
       Environment = var.environment
     }
   )
   
-  # Prevent destruction in production
+  # Set prevent_destroy to false to allow testing
   lifecycle {
-    prevent_destroy = var.environment == "prod" ? true : false
+    prevent_destroy = false
   }
 }
