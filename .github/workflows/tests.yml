@@ -9,6 +9,10 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+      contents: read
     
     steps:
     - uses: actions/checkout@v3
@@ -22,7 +26,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest pytest-cov coverage boto3
+        pip install pytest pytest-cov coverage pytest-html boto3
 
     - name: Run base pipeline tests
       run: |
@@ -30,13 +34,17 @@ jobs:
 
     - name: Run all tests
       run: |
-        python -m pytest tests/ -v --cov=src --cov-report=xml
-    
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+        python -m pytest tests/ -v --cov=src --cov-report=html
+        
+    - name: Upload coverage report
+      uses: actions/upload-pages-artifact@v3
       with:
-        file: ./coverage.xml
-        fail_ci_if_error: true
+        path: htmlcov
+
+    - name: Deploy to GitHub Pages
+      uses: actions/deploy-pages@v4
+      with:
+        artifact_name: github-pages
 
   terraform:
     runs-on: ubuntu-latest
