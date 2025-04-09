@@ -487,3 +487,59 @@ resource "aws_iam_role_policy_attachment" "cross_account_policy_attachment" {
   role       = aws_iam_role.cross_account_role.name
   policy_arn = aws_iam_policy.cross_account_policy.arn
 }
+
+# Create an IAM user for the scraper
+resource "aws_iam_user" "scraper_user" {
+  name = "${var.bucket_name_prefix}-${var.environment}-scraper"
+  
+  tags = merge(
+    var.tags,
+    {
+      Name        = "${var.bucket_name_prefix}-${var.environment}-scraper"
+      Environment = var.environment
+      Purpose     = "News article scraping"
+    }
+  )
+}
+
+# Create a policy for the scraper
+resource "aws_iam_policy" "scraper_policy" {
+  name        = "${var.bucket_name_prefix}-${var.environment}-scraper-policy"
+  description = "Policy for the news scraper to store articles and logs"
+  
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:ListBucket"
+        ]
+        Resource = [
+          aws_s3_bucket.raw_articles.arn,
+          "${aws_s3_bucket.raw_articles.arn}/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogStreams"
+        ]
+        Resource = [
+          "arn:aws:logs:*:*:log-group:${var.bucket_name_prefix}-${var.environment}-scraper:*"
+        ]
+      }
+    ]
+  })
+}
+
+# Attach the policy to the scraper user
+resource "aws_iam_user_policy_attachment" "scraper_policy_attachment" {
+  user       = aws_iam_user.scraper_user.name
+  policy_arn = aws_iam_policy.scraper_policy.arn
+}

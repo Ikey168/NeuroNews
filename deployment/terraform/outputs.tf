@@ -180,3 +180,14 @@ output "region" {
   description = "AWS region"
   value       = var.aws_region
 }
+
+# Scraper IAM outputs
+output "scraper_user_name" {
+  description = "Name of the IAM user for the scraper"
+  value       = aws_iam_user.scraper_user.name
+}
+
+output "scraper_user_arn" {
+  description = "ARN of the IAM user for the scraper"
+  value       = aws_iam_user.scraper_user.arn
+}
