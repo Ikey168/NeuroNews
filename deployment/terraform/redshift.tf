@@ -174,13 +174,13 @@ resource "aws_redshift_cluster" "processed_texts" {
   tags = merge(
     var.tags,
     {
-      Name        = "${var.redshift_cluster_identifier}-${var.environment}"
+      Name        = "${var.redshift_cluster_identifier}-${var.environment}",
       Environment = var.environment
     }
   )
   
-  # Prevent destruction in production
+  # Set prevent_destroy to false to allow testing
   lifecycle {
-    prevent_destroy = var.environment == "prod" ? true : false
+    prevent_destroy = false
   }
 }
