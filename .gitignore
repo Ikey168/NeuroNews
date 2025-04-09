@@ -236,3 +236,4 @@ tfplan
 # Terraform variable files that might contain sensitive data
 terraform.tfvars
 terraform.tfvars.json
+codecov
