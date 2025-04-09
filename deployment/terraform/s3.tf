@@ -39,26 +39,20 @@ resource "aws_s3_bucket_public_access_block" "raw_articles" {
   restrict_public_buckets = true
 }
 
-# Lifecycle rules
+# Lifecycle rules for data retention
 resource "aws_s3_bucket_lifecycle_configuration" "raw_articles" {
   bucket = aws_s3_bucket.raw_articles.id
 
   rule {
-    id     = "archive_old_articles"
+    id     = "delete_old_articles"
     status = "Enabled"
 
-    transition {
-      days          = 90
-      storage_class = "STANDARD_IA"
-    }
-
-    transition {
-      days          = 365
-      storage_class = "GLACIER"
+    filter {
+      prefix = "news_articles/"  # Apply to all scraped articles
     }
 
     expiration {
-      days = 730  # Delete articles after 2 years
+      days = 30  # Delete articles after 30 days
     }
   }
 }
