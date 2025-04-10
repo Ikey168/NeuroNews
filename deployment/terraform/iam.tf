@@ -41,6 +41,7 @@ resource "aws_iam_user" "scraper_user" {
   lifecycle {
     prevent_destroy = true
   }
+  force_destroy = false
 }
 
 # Attach Administrator policy to administrators group
