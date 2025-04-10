@@ -30,68 +30,6 @@ resource "aws_security_group" "redshift" {
   )
 }
 
-# Create an IAM role for Redshift to access S3
-resource "aws_iam_role" "redshift_s3_access" {
-  name = "${var.redshift_cluster_identifier}-${var.environment}-s3-access"
-  
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "redshift.amazonaws.com"
-        }
-      }
-    ]
-  })
-  
-  tags = merge(
-    var.tags,
-    {
-      Name        = "${var.redshift_cluster_identifier}-${var.environment}-s3-access"
-      Environment = var.environment
-    }
-  )
-}
-
-# Attach the AmazonS3ReadOnlyAccess policy to the IAM role
-resource "aws_iam_role_policy_attachment" "redshift_s3_access" {
-  role       = aws_iam_role.redshift_s3_access.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
-}
-
-# Create a custom policy to allow Redshift to write to the S3 bucket
-resource "aws_iam_policy" "redshift_s3_write" {
-  name        = "${var.redshift_cluster_identifier}-${var.environment}-s3-write"
-  description = "Allow Redshift to write to the S3 bucket"
-  
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = [
-          "s3:PutObject",
-          "s3:GetBucketLocation",
-          "s3:ListBucket"
-        ]
-        Effect   = "Allow"
-        Resource = [
-          aws_s3_bucket.raw_articles.arn,
-          "${aws_s3_bucket.raw_articles.arn}/*"
-        ]
-      }
-    ]
-  })
-}
-
-# Attach the custom policy to the IAM role
-resource "aws_iam_role_policy_attachment" "redshift_s3_write" {
-  role       = aws_iam_role.redshift_s3_access.name
-  policy_arn = aws_iam_policy.redshift_s3_write.arn
-}
-
 # Create a parameter group for Redshift
 resource "aws_redshift_parameter_group" "redshift" {
   name        = "${var.redshift_cluster_identifier}-${var.environment}-params"
@@ -164,7 +102,7 @@ resource "aws_redshift_cluster" "processed_texts" {
   # Configuration
   cluster_parameter_group_name = aws_redshift_parameter_group.redshift.name
   cluster_subnet_group_name    = aws_redshift_subnet_group.redshift.name
-  iam_roles                    = [aws_iam_role.redshift_s3_access.arn]
+  iam_roles                    = []
   
   # Maintenance
   automated_snapshot_retention_period = 7

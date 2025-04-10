@@ -43,44 +43,6 @@ resource "aws_s3_bucket_public_access_block" "lambda_code_public_access_block" {
   restrict_public_buckets = true
 }
 
-# Create an IAM role for Lambda functions
-resource "aws_iam_role" "lambda_execution_role" {
-  name = "${var.lambda_function_prefix}-${var.environment}-lambda-role"
-  
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "lambda.amazonaws.com"
-        }
-      }
-    ]
-  })
-  
-  tags = merge(
-    var.tags,
-    {
-      Name        = "${var.lambda_function_prefix}-${var.environment}-lambda-role"
-      Environment = var.environment
-    }
-  )
-}
-
-# Attach the AWSLambdaBasicExecutionRole policy to the IAM role
-resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
-  role       = aws_iam_role.lambda_execution_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-}
-
-# Attach the AmazonS3ReadOnlyAccess policy to the IAM role
-resource "aws_iam_role_policy_attachment" "lambda_s3_read" {
-  role       = aws_iam_role.lambda_execution_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
-}
-
 # Create a custom policy for Lambda to write to S3
 resource "aws_iam_policy" "lambda_s3_write" {
   name        = "${var.lambda_function_prefix}-${var.environment}-s3-write"
@@ -110,60 +72,6 @@ resource "aws_iam_role_policy_attachment" "lambda_s3_write" {
   policy_arn = aws_iam_policy.lambda_s3_write.arn
 }
 
-# Create a custom policy for Lambda to access Redshift
-resource "aws_iam_policy" "lambda_redshift_access" {
-  name        = "${var.lambda_function_prefix}-${var.environment}-redshift-access"
-  description = "Allow Lambda to access Redshift"
-  
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = [
-          "redshift:DescribeClusters",
-          "redshift:GetClusterCredentials",
-          "redshift-data:ExecuteStatement",
-          "redshift-data:DescribeStatement",
-          "redshift-data:GetStatementResult"
-        ]
-        Effect   = "Allow"
-        Resource = "*"
-      }
-    ]
-  })
-}
-
-# Attach the Redshift access policy to the IAM role
-resource "aws_iam_role_policy_attachment" "lambda_redshift_access" {
-  role       = aws_iam_role.lambda_execution_role.name
-  policy_arn = aws_iam_policy.lambda_redshift_access.arn
-}
-
-# Create a custom policy for Lambda to access Neptune
-resource "aws_iam_policy" "lambda_neptune_access" {
-  name        = "${var.lambda_function_prefix}-${var.environment}-neptune-access"
-  description = "Allow Lambda to access Neptune"
-  
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = [
-          "neptune-db:*"
-        ]
-        Effect   = "Allow"
-        Resource = "*"
-      }
-    ]
-  })
-}
-
-# Attach the Neptune access policy to the IAM role
-resource "aws_iam_role_policy_attachment" "lambda_neptune_access" {
-  role       = aws_iam_role.lambda_execution_role.name
-  policy_arn = aws_iam_policy.lambda_neptune_access.arn
-}
-
 # Create a dummy Lambda function code file for article processing
 resource "local_file" "article_processor_code" {
   content = <<EOF
@@ -190,7 +98,7 @@ def lambda_handler(event, context):
     }
 EOF
 
-  filename = "${path.module}/lambda_functions/article_processor.py"
+  filename = "lambda_functions/article_processor.py"
 }
 
 # Create a dummy Lambda function code file for knowledge graph generation
@@ -220,7 +128,7 @@ def lambda_handler(event, context):
     }
 EOF
 
-  filename = "${path.module}/lambda_functions/knowledge_graph_generator.py"
+  filename = "lambda_functions/knowledge_graph_generator.py"
 }
 
 # Create a dummy Lambda function code file for article notification
@@ -249,37 +157,35 @@ def lambda_handler(event, context):
     }
 EOF
 
-  filename = "${path.module}/lambda_functions/article_notifier.py"
+  filename = "lambda_functions/article_notifier.py"
 }
 
-# Create a zip file for the article processor Lambda function
+# Create zip files for Lambda functions
 data "archive_file" "article_processor_zip" {
   type        = "zip"
   source_file = local_file.article_processor_code.filename
-  output_path = "${path.module}/lambda_functions/article_processor.zip"
+  output_path = "lambda_functions/article_processor.zip"
   
   depends_on = [local_file.article_processor_code]
 }
 
-# Create a zip file for the knowledge graph generator Lambda function
 data "archive_file" "knowledge_graph_generator_zip" {
   type        = "zip"
   source_file = local_file.knowledge_graph_generator_code.filename
-  output_path = "${path.module}/lambda_functions/knowledge_graph_generator.zip"
+  output_path = "lambda_functions/knowledge_graph_generator.zip"
   
   depends_on = [local_file.knowledge_graph_generator_code]
 }
 
-# Create a zip file for the article notifier Lambda function
 data "archive_file" "article_notifier_zip" {
   type        = "zip"
   source_file = local_file.article_notifier_code.filename
-  output_path = "${path.module}/lambda_functions/article_notifier.zip"
+  output_path = "lambda_functions/article_notifier.zip"
   
   depends_on = [local_file.article_notifier_code]
 }
 
-# Upload the article processor Lambda function code to S3
+# Upload Lambda function code to S3
 resource "aws_s3_object" "article_processor_code" {
   bucket = aws_s3_bucket.lambda_code.id
   key    = "${var.lambda_s3_key_prefix}/article_processor.zip"
@@ -287,7 +193,6 @@ resource "aws_s3_object" "article_processor_code" {
   etag   = filemd5(data.archive_file.article_processor_zip.output_path)
 }
 
-# Upload the knowledge graph generator Lambda function code to S3
 resource "aws_s3_object" "knowledge_graph_generator_code" {
   bucket = aws_s3_bucket.lambda_code.id
   key    = "${var.lambda_s3_key_prefix}/knowledge_graph_generator.zip"
@@ -295,7 +200,6 @@ resource "aws_s3_object" "knowledge_graph_generator_code" {
   etag   = filemd5(data.archive_file.knowledge_graph_generator_zip.output_path)
 }
 
-# Upload the article notifier Lambda function code to S3
 resource "aws_s3_object" "article_notifier_code" {
   bucket = aws_s3_bucket.lambda_code.id
   key    = "${var.lambda_s3_key_prefix}/article_notifier.zip"
@@ -303,7 +207,7 @@ resource "aws_s3_object" "article_notifier_code" {
   etag   = filemd5(data.archive_file.article_notifier_zip.output_path)
 }
 
-# Create the article processor Lambda function
+# Create Lambda functions
 resource "aws_lambda_function" "article_processor" {
   function_name = "${var.lambda_function_prefix}-article-processor-${var.environment}"
   description   = "Process articles from S3 and store results in Redshift"
@@ -337,7 +241,6 @@ resource "aws_lambda_function" "article_processor" {
   )
 }
 
-# Create the knowledge graph generator Lambda function
 resource "aws_lambda_function" "knowledge_graph_generator" {
   function_name = "${var.lambda_function_prefix}-knowledge-graph-generator-${var.environment}"
   description   = "Generate knowledge graphs from processed articles and store in Neptune"
@@ -373,7 +276,6 @@ resource "aws_lambda_function" "knowledge_graph_generator" {
   )
 }
 
-# Create the article notifier Lambda function
 resource "aws_lambda_function" "article_notifier" {
   function_name = "${var.lambda_function_prefix}-article-notifier-${var.environment}"
   description   = "Send notifications when new articles are available"
@@ -403,7 +305,7 @@ resource "aws_lambda_function" "article_notifier" {
   )
 }
 
-# Create CloudWatch Log Groups for Lambda functions
+# Create CloudWatch Log Groups
 resource "aws_cloudwatch_log_group" "article_processor_logs" {
   name              = "/aws/lambda/${aws_lambda_function.article_processor.function_name}"
   retention_in_days = var.lambda_log_retention_days
@@ -443,7 +345,7 @@ resource "aws_cloudwatch_log_group" "article_notifier_logs" {
   )
 }
 
-# Create S3 event notification for the article processor Lambda function
+# Set up event triggers
 resource "aws_s3_bucket_notification" "raw_articles_notification" {
   bucket = aws_s3_bucket.raw_articles.id
   
@@ -457,7 +359,6 @@ resource "aws_s3_bucket_notification" "raw_articles_notification" {
   depends_on = [aws_lambda_permission.allow_s3_invoke_article_processor]
 }
 
-# Grant S3 permission to invoke the article processor Lambda function
 resource "aws_lambda_permission" "allow_s3_invoke_article_processor" {
   statement_id  = "AllowExecutionFromS3"
   action        = "lambda:InvokeFunction"
@@ -466,7 +367,6 @@ resource "aws_lambda_permission" "allow_s3_invoke_article_processor" {
   source_arn    = aws_s3_bucket.raw_articles.arn
 }
 
-# Create a CloudWatch Events rule to trigger the knowledge graph generator Lambda function
 resource "aws_cloudwatch_event_rule" "knowledge_graph_generator_rule" {
   name                = "${var.lambda_function_prefix}-knowledge-graph-generator-rule-${var.environment}"
   description         = "Trigger knowledge graph generator Lambda function on a schedule"
@@ -481,14 +381,12 @@ resource "aws_cloudwatch_event_rule" "knowledge_graph_generator_rule" {
   )
 }
 
-# Set the knowledge graph generator Lambda function as the target for the CloudWatch Events rule
 resource "aws_cloudwatch_event_target" "knowledge_graph_generator_target" {
   rule      = aws_cloudwatch_event_rule.knowledge_graph_generator_rule.name
   target_id = "KnowledgeGraphGeneratorTarget"
   arn       = aws_lambda_function.knowledge_graph_generator.arn
 }
 
-# Grant CloudWatch Events permission to invoke the knowledge graph generator Lambda function
 resource "aws_lambda_permission" "allow_cloudwatch_invoke_knowledge_graph_generator" {
   statement_id  = "AllowExecutionFromCloudWatch"
   action        = "lambda:InvokeFunction"
