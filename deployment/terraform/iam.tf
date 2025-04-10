@@ -16,20 +16,20 @@ resource "aws_iam_group" "developers" {
 resource "aws_iam_user" "cicd_user" {
   count = var.create_cicd_user ? 1 : 0
   name  = "${var.bucket_name_prefix}-${var.environment}-cicd-user"
-  
-  tags = merge(
-    var.tags,
-    {
-      Name        = "CI/CD User"
-      Environment = var.environment
-    }
-  )
 }
 
 # Create a user for the scraper
 resource "aws_iam_user" "scraper_user" {
   name = "${var.bucket_name_prefix}-${var.environment}-scraper"
-  
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "aws_iam_user_tags" "scraper_user" {
+  name = aws_iam_user.scraper_user.name
+
   tags = merge(
     var.tags,
     {
@@ -37,11 +37,6 @@ resource "aws_iam_user" "scraper_user" {
       Environment = var.environment
     }
   )
-
-  lifecycle {
-    prevent_destroy = true
-  }
-  force_destroy = false
 }
 
 # Attach Administrator policy to administrators group
