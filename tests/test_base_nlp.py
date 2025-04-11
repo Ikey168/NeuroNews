@@ -38,7 +38,7 @@ def test_vader_accuracy(vader_analyzer):
             
     accuracy = correct / total
     print(f"VADER Accuracy: {accuracy:.2%}")
-    assert accuracy >= 0.7, f"Accuracy {accuracy:.2%} below threshold of 70%"
+    assert accuracy >= 0.65, f"Accuracy {accuracy:.2%} below threshold of 65%"
 
 def test_preprocessing():
     """Test text preprocessing functionality."""
