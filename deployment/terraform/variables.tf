@@ -57,12 +57,6 @@ variable "create_cicd_user" {
   default     = true
 }
 
-#variable "create_scraper_user" {
-#  type        = bool
-#  description = "Whether to create a scraper IAM user"
-#  default     = true
-#}
-
 variable "tags" {
   type        = map(string)
   description = "Tags to apply to all resources"
@@ -148,4 +142,70 @@ variable "redshift_skip_final_snapshot" {
   type        = bool
   description = "Whether to skip the final snapshot for the Redshift cluster"
   default     = true
+}
+
+variable "neptune_cluster_identifier" {
+  type        = string
+  description = "Identifier for the Neptune cluster"
+  default     = "neuronews-neptune"
+}
+
+variable "neptune_port" {
+  type        = number
+  description = "Port for the Neptune cluster"
+  default     = 8182
+}
+
+variable "neptune_backup_retention_period" {
+  type        = number
+  description = "Backup retention period for the Neptune cluster"
+  default     = 7
+}
+
+variable "neptune_preferred_backup_window" {
+  type        = string
+  description = "Preferred backup window for the Neptune cluster"
+  default     = "07:00-09:00"
+}
+
+variable "neptune_skip_final_snapshot" {
+  type        = bool
+  description = "Whether to skip the final snapshot for the Neptune cluster"
+  default     = true
+}
+
+variable "neptune_apply_immediately" {
+  type        = bool
+  description = "Whether to apply changes immediately for the Neptune cluster"
+  default     = true
+}
+
+variable "neptune_master_username" {
+  type        = string
+  description = "Master username for the Neptune cluster"
+  default     = "admin"
+}
+
+variable "neptune_master_password" {
+  type        = string
+  description = "Master password for the Neptune cluster"
+  sensitive   = true
+}
+
+variable "neptune_instance_count" {
+  type        = number
+  description = "Number of Neptune cluster instances"
+  default     = 1
+}
+
+variable "neptune_instance_class" {
+  type        = string
+  description = "Instance class for the Neptune cluster instances"
+  default     = "db.r5.large"
+}
+
+variable "bucket_name_prefix" {
+  type        = string
+  description = "Prefix for all bucket names"
+  default     = "neuronews"
 }
