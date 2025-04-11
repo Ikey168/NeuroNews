@@ -34,24 +34,23 @@ COOKIES_ENABLED = False
 ITEM_PIPELINES = {
     'src.scraper.pipelines.DuplicateFilterPipeline': 100,
     'src.scraper.pipelines.JsonWriterPipeline': 300,
+    'src.scraper.pipelines.s3_pipeline.S3StoragePipeline': 400,
 }
 
-# S3 storage pipeline (disabled by default, enabled with --s3 flag)
-# When enabled, this will be inserted into the pipeline
-S3_PIPELINE_PRIORITY = 400  # Run after JsonWriterPipeline
+# S3 storage pipeline configuration
 
 # AWS settings (override these with environment variables or command line arguments)
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', '')
 AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
-AWS_REGION = os.environ.get('AWS_REGION', 'us-east-1')
-S3_BUCKET = os.environ.get('S3_BUCKET', '')
-S3_PREFIX = os.environ.get('S3_PREFIX', 'news_articles')
+AWS_REGION = os.environ.get('AWS_REGION', config['aws']['region'])
+S3_BUCKET = os.environ.get('S3_BUCKET', config['aws']['s3']['bucket'])
+S3_PREFIX = os.environ.get('S3_PREFIX', config['aws']['s3']['prefix'])
 
 # CloudWatch logging settings (disabled by default, enabled with --cloudwatch flag)
-CLOUDWATCH_LOGGING_ENABLED = False
-CLOUDWATCH_LOG_GROUP = os.environ.get('CLOUDWATCH_LOG_GROUP', 'NeuroNews-Scraper')
-CLOUDWATCH_LOG_STREAM_PREFIX = os.environ.get('CLOUDWATCH_LOG_STREAM_PREFIX', 'scraper')
-CLOUDWATCH_LOG_LEVEL = os.environ.get('CLOUDWATCH_LOG_LEVEL', 'INFO')
+CLOUDWATCH_LOGGING_ENABLED = True  # Enable CloudWatch logging by default
+CLOUDWATCH_LOG_GROUP = os.environ.get('CLOUDWATCH_LOG_GROUP', config['aws']['cloudwatch']['log_group'])
+CLOUDWATCH_LOG_STREAM_PREFIX = os.environ.get('CLOUDWATCH_LOG_STREAM_PREFIX', config['aws']['cloudwatch']['log_stream_prefix'])
+CLOUDWATCH_LOG_LEVEL = os.environ.get('CLOUDWATCH_LOG_LEVEL', config['aws']['cloudwatch']['log_level'])
 
 # Configure extensions
 EXTENSIONS = {

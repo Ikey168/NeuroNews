@@ -6,6 +6,18 @@
     "host": "localhost",
     "port": 8000
   },
+  "aws": {
+    "region": "us-east-1",
+    "s3": {
+      "bucket": "neuronews-raw-articles-${environment}",
+      "prefix": "news_articles"
+    },
+    "cloudwatch": {
+      "log_group": "NeuroNews-Scraper",
+      "log_stream_prefix": "scraper",
+      "log_level": "INFO"
+    }
+  },
   "scraping": {
     "interval_minutes": 60,
     "sources": [
