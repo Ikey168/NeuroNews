@@ -98,7 +98,7 @@ def lambda_handler(event, context):
     }
 EOF
 
-  filename = "lambda_functions/article_processor.py"
+  filename = "/home/claude/Desktop/projects/NeuroNews/deployment/terraform/lambda_functions/article_processor.py"
 }
 
 # Create a dummy Lambda function code file for knowledge graph generation
@@ -128,7 +128,7 @@ def lambda_handler(event, context):
     }
 EOF
 
-  filename = "lambda_functions/knowledge_graph_generator.py"
+  filename = "/home/claude/Desktop/projects/NeuroNews/deployment/terraform/lambda_functions/knowledge_graph_generator.py"
 }
 
 # Create a dummy Lambda function code file for article notification
@@ -144,7 +144,7 @@ def lambda_handler(event, context):
     
     This is a dummy implementation for Terraform deployment.
     In a real implementation, this would:
-    1. Detect new articles
+    1. Read new articles
     2. Format notification message
     3. Send via SNS/SQS/etc.
     """
@@ -157,14 +157,14 @@ def lambda_handler(event, context):
     }
 EOF
 
-  filename = "lambda_functions/article_notifier.py"
+  filename = "/home/claude/Desktop/projects/NeuroNews/deployment/terraform/lambda_functions/article_notifier.py"
 }
 
 # Create zip files for Lambda functions
 data "archive_file" "article_processor_zip" {
   type        = "zip"
   source_file = local_file.article_processor_code.filename
-  output_path = "lambda_functions/article_processor.zip"
+  output_path = "/home/claude/Desktop/projects/NeuroNews/deployment/terraform/lambda_functions/article_processor.zip"
   
   depends_on = [local_file.article_processor_code]
 }
@@ -172,7 +172,7 @@ data "archive_file" "article_processor_zip" {
 data "archive_file" "knowledge_graph_generator_zip" {
   type        = "zip"
   source_file = local_file.knowledge_graph_generator_code.filename
-  output_path = "lambda_functions/knowledge_graph_generator.zip"
+  output_path = "/home/claude/Desktop/projects/NeuroNews/deployment/terraform/lambda_functions/knowledge_graph_generator.zip"
   
   depends_on = [local_file.knowledge_graph_generator_code]
 }
@@ -180,7 +180,7 @@ data "archive_file" "knowledge_graph_generator_zip" {
 data "archive_file" "article_notifier_zip" {
   type        = "zip"
   source_file = local_file.article_notifier_code.filename
-  output_path = "lambda_functions/article_notifier.zip"
+  output_path = "/home/claude/Desktop/projects/NeuroNews/deployment/terraform/lambda_functions/article_notifier.zip"
   
   depends_on = [local_file.article_notifier_code]
 }

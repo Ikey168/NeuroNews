@@ -1,96 +1,80 @@
 # Outputs for NeuroNews Terraform configuration
 
-# S3 Bucket outputs
-output "raw_articles_bucket_name" {
-  description = "Name of the S3 bucket for raw articles"
-  value       = aws_s3_bucket.raw_articles.bucket
+output "environment" {
+  description = "Deployment environment (dev, staging, prod)"
+  value       = var.environment
 }
 
-output "raw_articles_bucket_arn" {
-  description = "ARN of the S3 bucket for raw articles"
-  value       = aws_s3_bucket.raw_articles.arn
-}
-
-output "raw_articles_bucket_region" {
-  description = "Region of the S3 bucket for raw articles"
+output "region" {
+  description = "AWS region"
   value       = var.aws_region
 }
 
 # Redshift outputs
 output "redshift_cluster_id" {
-  description = "ID of the Redshift cluster"
-  value       = aws_redshift_cluster.processed_texts.id
+  description = "Redshift cluster identifier"
+  value       = aws_redshift_cluster.processed_texts.cluster_identifier
 }
 
 output "redshift_cluster_endpoint" {
-  description = "Endpoint of the Redshift cluster"
+  description = "Redshift cluster endpoint"
   value       = aws_redshift_cluster.processed_texts.endpoint
 }
 
 output "redshift_database_name" {
-  description = "Name of the database in the Redshift cluster"
+  description = "Redshift database name"
   value       = aws_redshift_cluster.processed_texts.database_name
 }
 
 output "redshift_port" {
-  description = "Port of the Redshift cluster"
+  description = "Redshift port"
   value       = aws_redshift_cluster.processed_texts.port
 }
 
 output "redshift_iam_role_arn" {
-  description = "ARN of the IAM role for Redshift to access S3"
+  description = "Redshift IAM role ARN"
   value       = aws_iam_role.redshift_s3_access.arn
 }
 
 # Neptune outputs
 output "neptune_cluster_id" {
-  description = "ID of the Neptune cluster"
-  value       = aws_neptune_cluster.knowledge_graphs.id
+  description = "Neptune cluster identifier"
+  value       = aws_neptune_cluster.knowledge_graphs.cluster_identifier
 }
 
 output "neptune_cluster_endpoint" {
-  description = "Writer endpoint of the Neptune cluster"
+  description = "Neptune cluster endpoint"
   value       = aws_neptune_cluster.knowledge_graphs.endpoint
 }
 
 output "neptune_reader_endpoint" {
-  description = "Reader endpoint of the Neptune cluster"
+  description = "Neptune cluster reader endpoint"
   value       = aws_neptune_cluster.knowledge_graphs.reader_endpoint
 }
 
 output "neptune_port" {
-  description = "Port of the Neptune cluster"
+  description = "Neptune port"
   value       = aws_neptune_cluster.knowledge_graphs.port
 }
 
 output "neptune_iam_role_arn" {
-  description = "ARN of the IAM role for Neptune to access S3"
+  description = "Neptune IAM role ARN"
   value       = aws_iam_role.neptune_s3_access.arn
-}
-
-output "neptune_load_bucket_name" {
-  description = "Name of the S3 bucket for Neptune bulk load data"
-  value       = aws_s3_bucket.neptune_load.bucket
-}
-
-output "neptune_load_bucket_arn" {
-  description = "ARN of the S3 bucket for Neptune bulk load data"
-  value       = aws_s3_bucket.neptune_load.arn
 }
 
 # Lambda outputs
 output "lambda_code_bucket_name" {
-  description = "Name of the S3 bucket for Lambda function code"
+  description = "Name of the S3 bucket for Lambda code"
   value       = aws_s3_bucket.lambda_code.bucket
 }
 
 output "lambda_code_bucket_arn" {
-  description = "ARN of the S3 bucket for Lambda function code"
+  description = "ARN of the S3 bucket for Lambda code"
   value       = aws_s3_bucket.lambda_code.arn
 }
 
 output "lambda_execution_role_arn" {
-  description = "ARN of the IAM role for Lambda functions"
+  description = "ARN of the Lambda execution role"
   value       = aws_iam_role.lambda_execution_role.arn
 }
 
@@ -124,70 +108,74 @@ output "article_notifier_function_arn" {
   value       = aws_lambda_function.article_notifier.arn
 }
 
+# S3 outputs
+output "raw_articles_bucket_name" {
+  description = "Name of the S3 bucket for raw articles"
+  value       = aws_s3_bucket.raw_articles.bucket
+}
+
+output "raw_articles_bucket_arn" {
+  description = "ARN of the S3 bucket for raw articles"
+  value       = aws_s3_bucket.raw_articles.arn
+}
+
+output "raw_articles_bucket_region" {
+  description = "Region of the S3 bucket for raw articles"
+  value       = var.aws_region
+}
+
+output "neptune_load_bucket_name" {
+  description = "Name of the S3 bucket for Neptune load data"
+  value       = aws_s3_bucket.neptune_load.bucket
+}
+
+output "neptune_load_bucket_arn" {
+  description = "ARN of the S3 bucket for Neptune load data"
+  value       = aws_s3_bucket.neptune_load.arn
+}
+
 # IAM outputs
+output "administrators_group_name" {
+  description = "Name of the administrators group"
+  value       = var.create_admin_group ? (length(aws_iam_group.administrators) > 0 ? aws_iam_group.administrators[0].name : "") : ""
+}
+
+output "developers_group_name" {
+  description = "Name of the developers group"
+  value       = var.create_developer_group ? (length(aws_iam_group.developers) > 0 ? aws_iam_group.developers[0].name : "") : ""
+}
+
+output "cicd_user_name" {
+  description = "Name of the CI/CD user"
+  value       = var.create_cicd_user ? (length(aws_iam_user.cicd_user) > 0 ? aws_iam_user.cicd_user[0].name : "") : ""
+}
+
+output "cicd_user_arn" {
+  description = "ARN of the CI/CD user"
+  value       = var.create_cicd_user ? (length(aws_iam_user.cicd_user) > 0 ? aws_iam_user.cicd_user[0].arn : "") : ""
+}
+
 output "ec2_role_arn" {
-  description = "ARN of the IAM role for EC2 instances"
+  description = "ARN of the EC2 role"
   value       = aws_iam_role.ec2_role.arn
 }
 
 output "ec2_instance_profile_name" {
-  description = "Name of the IAM instance profile for EC2 instances"
+  description = "Name of the EC2 instance profile"
   value       = aws_iam_instance_profile.ec2_profile.name
 }
 
-output "ecs_task_role_arn" {
-  description = "ARN of the IAM role for ECS tasks"
-  value       = aws_iam_role.ecs_task_role.arn
-}
-
 output "ecs_execution_role_arn" {
-  description = "ARN of the IAM role for ECS task execution"
+  description = "ARN of the ECS execution role"
   value       = aws_iam_role.ecs_execution_role.arn
 }
 
-output "cicd_user_name" {
-  description = "Name of the IAM user for CI/CD"
-  value       = aws_iam_user.cicd_user.name
-}
-
-output "cicd_user_arn" {
-  description = "ARN of the IAM user for CI/CD"
-  value       = aws_iam_user.cicd_user.arn
-}
-
-output "developers_group_name" {
-  description = "Name of the IAM group for developers"
-  value       = aws_iam_group.developers.name
-}
-
-output "administrators_group_name" {
-  description = "Name of the IAM group for administrators"
-  value       = aws_iam_group.administrators.name
+output "ecs_task_role_arn" {
+  description = "ARN of the ECS task role"
+  value       = aws_iam_role.ecs_task_role.arn
 }
 
 output "cross_account_role_arn" {
-  description = "ARN of the IAM role for cross-account access"
-  value       = aws_iam_role.cross_account_role.arn
-}
-
-# General outputs
-output "environment" {
-  description = "Deployment environment"
-  value       = var.environment
-}
-
-output "region" {
-  description = "AWS region"
-  value       = var.aws_region
-}
-
-# Scraper IAM outputs
-output "scraper_user_name" {
-  description = "Name of the IAM user for the scraper"
-  value       = aws_iam_user.scraper_user.name
-}
-
-output "scraper_user_arn" {
-  description = "ARN of the IAM user for the scraper"
-  value       = aws_iam_user.scraper_user.arn
+  description = "ARN of the cross-account role"
+  value       = var.create_cross_account_role && var.trusted_account_id != "" ? (length(aws_iam_role.cross_account_role) > 0 ? aws_iam_role.cross_account_role[0].arn : "") : ""
 }

@@ -4,7 +4,7 @@
 resource "aws_security_group" "neptune" {
   name        = "${var.neptune_cluster_identifier}-${var.environment}-sg"
   description = "Security group for Neptune cluster"
-  
+
   # Allow inbound traffic on the Neptune port (8182)
   ingress {
     from_port   = var.neptune_port
@@ -12,7 +12,7 @@ resource "aws_security_group" "neptune" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"] # In production, restrict this to specific IPs
   }
-  
+
   # Allow all outbound traffic
   egress {
     from_port   = 0
@@ -20,7 +20,7 @@ resource "aws_security_group" "neptune" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  
+
   tags = merge(
     var.tags,
     {
@@ -33,7 +33,7 @@ resource "aws_security_group" "neptune" {
 # Create an IAM role for Neptune to access S3
 resource "aws_iam_role" "neptune_s3_access" {
   name = "${var.neptune_cluster_identifier}-${var.environment}-s3-access"
-  
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -46,7 +46,7 @@ resource "aws_iam_role" "neptune_s3_access" {
       }
     ]
   })
-  
+
   tags = merge(
     var.tags,
     {
@@ -65,9 +65,9 @@ resource "aws_iam_role_policy_attachment" "neptune_s3_access" {
 # Create a parameter group for Neptune
 resource "aws_neptune_parameter_group" "neptune" {
   name        = "${var.neptune_cluster_identifier}-${var.environment}-params"
-  family      = "neptune1"
+  family      = "neptune1.2"
   description = "Parameter group for ${var.neptune_cluster_identifier} Neptune cluster"
-  
+
   tags = merge(
     var.tags,
     {
@@ -82,7 +82,7 @@ resource "aws_neptune_subnet_group" "neptune" {
   name        = "${var.neptune_cluster_identifier}-${var.environment}-subnet-group"
   description = "Subnet group for ${var.neptune_cluster_identifier} Neptune cluster"
   subnet_ids  = data.aws_subnets.default.ids
-  
+
   tags = merge(
     var.tags,
     {
@@ -96,7 +96,7 @@ resource "aws_neptune_subnet_group" "neptune" {
 resource "aws_neptune_cluster" "knowledge_graphs" {
   cluster_identifier                  = "${var.neptune_cluster_identifier}-${var.environment}"
   engine                              = "neptune"
-  engine_version                      = "1.2.0.0"
+  engine_version                      = "1.2.1.0"
   backup_retention_period             = var.neptune_backup_retention_period
   preferred_backup_window             = var.neptune_preferred_backup_window
   skip_final_snapshot                 = var.neptune_skip_final_snapshot
@@ -105,11 +105,11 @@ resource "aws_neptune_cluster" "knowledge_graphs" {
   vpc_security_group_ids              = [aws_security_group.neptune.id]
   neptune_subnet_group_name           = aws_neptune_subnet_group.neptune.name
   iam_database_authentication_enabled = true
-  
+
   storage_encrypted = true
-  
+
   enable_cloudwatch_logs_exports = ["audit"]
-  
+
   tags = merge(
     var.tags,
     {
@@ -117,7 +117,7 @@ resource "aws_neptune_cluster" "knowledge_graphs" {
       Environment = var.environment
     }
   )
-  
+
   lifecycle {
     prevent_destroy = false
   }
@@ -132,7 +132,7 @@ resource "aws_neptune_cluster_instance" "knowledge_graphs" {
   engine                       = "neptune"
   apply_immediately            = var.neptune_apply_immediately
   neptune_parameter_group_name = aws_neptune_parameter_group.neptune.name
-  
+
   tags = merge(
     var.tags,
     {
@@ -140,7 +140,7 @@ resource "aws_neptune_cluster_instance" "knowledge_graphs" {
       Environment = var.environment
     }
   )
-  
+
   lifecycle {
     prevent_destroy = false
   }
@@ -149,7 +149,7 @@ resource "aws_neptune_cluster_instance" "knowledge_graphs" {
 # Create an S3 bucket for Neptune bulk load data
 resource "aws_s3_bucket" "neptune_load" {
   bucket = "${var.bucket_name_prefix}-neptune-load-${var.environment}"
-  
+
   tags = merge(
     var.tags,
     {
@@ -162,7 +162,7 @@ resource "aws_s3_bucket" "neptune_load" {
 # Enable versioning for the bucket
 resource "aws_s3_bucket_versioning" "neptune_load_versioning" {
   bucket = aws_s3_bucket.neptune_load.id
-  
+
   versioning_configuration {
     status = "Enabled"
   }
@@ -171,7 +171,7 @@ resource "aws_s3_bucket_versioning" "neptune_load_versioning" {
 # Enable server-side encryption for the bucket
 resource "aws_s3_bucket_server_side_encryption_configuration" "neptune_load_encryption" {
   bucket = aws_s3_bucket.neptune_load.id
-  
+
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm = "AES256"
@@ -182,7 +182,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "neptune_load_encr
 # Block public access to the bucket
 resource "aws_s3_bucket_public_access_block" "neptune_load_public_access_block" {
   bucket = aws_s3_bucket.neptune_load.id
-  
+
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
@@ -192,7 +192,7 @@ resource "aws_s3_bucket_public_access_block" "neptune_load_public_access_block" 
 # Create a bucket policy to allow Neptune to access the S3 bucket
 resource "aws_s3_bucket_policy" "neptune_load_policy" {
   bucket = aws_s3_bucket.neptune_load.id
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [

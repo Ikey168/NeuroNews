@@ -3,9 +3,9 @@
 # Bucket for storing raw scraped articles
 resource "aws_s3_bucket" "raw_articles" {
   bucket = "${var.bucket_name_prefix}-raw-articles-${var.environment}"
-  
+
   tags = merge(var.tags, {
-    Name = "Raw Articles Storage"
+    Name        = "Raw Articles Storage"
     Description = "Stores raw scraped news articles before processing"
   })
 }
@@ -48,11 +48,11 @@ resource "aws_s3_bucket_lifecycle_configuration" "raw_articles" {
     status = "Enabled"
 
     filter {
-      prefix = "news_articles/"  # Apply to all scraped articles
+      prefix = "news_articles/" # Apply to all scraped articles
     }
 
     expiration {
-      days = 30  # Delete articles after 30 days
+      days = 30 # Delete articles after 30 days
     }
   }
 }
@@ -64,7 +64,7 @@ resource "aws_s3_bucket_cors_configuration" "raw_articles" {
   cors_rule {
     allowed_headers = ["*"]
     allowed_methods = ["GET", "PUT", "POST"]
-    allowed_origins = ["*"]  # You should restrict this in production
+    allowed_origins = ["*"] # You should restrict this in production
     expose_headers  = ["ETag"]
     max_age_seconds = 3000
   }
