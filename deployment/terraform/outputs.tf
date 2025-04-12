@@ -32,17 +32,17 @@ output "ec2_role_arn" {
 }
 
 output "s3_bucket_name" {
-  value       = aws_s3_bucket.raw_articles.bucket
+  value       = module.s3.raw_articles_bucket_name
   description = "Name of the S3 bucket"
 }
 
 output "s3_bucket_arn" {
-  value       = aws_s3_bucket.raw_articles.arn
+  value       = module.s3.raw_articles_bucket_arn
   description = "ARN of the S3 bucket"
 }
 
 output "s3_bucket_id" {
-  value       = aws_s3_bucket.raw_articles.id
+  value       = module.s3.raw_articles_bucket_id
   description = "ID of the S3 bucket"
 }
 

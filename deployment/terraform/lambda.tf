@@ -14,7 +14,7 @@ resource "aws_lambda_function" "article_processor" {
 
   environment {
     variables = {
-      S3_BUCKET = aws_s3_bucket.raw_articles.bucket
+      S3_BUCKET = module.s3.raw_articles_bucket_name
     }
   }
 
@@ -40,7 +40,7 @@ resource "aws_lambda_function" "knowledge_graph_generator" {
 
   environment {
     variables = {
-      S3_BUCKET = aws_s3_bucket.raw_articles.bucket
+      S3_BUCKET = module.s3.raw_articles_bucket_name
     }
   }
 
@@ -78,7 +78,7 @@ resource "aws_lambda_permission" "allow_s3_invoke_article_processor" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.article_processor.function_name
   principal     = "s3.amazonaws.com"
-  source_arn    = aws_s3_bucket.raw_articles.arn
+  source_arn    = module.s3.raw_articles_bucket_arn
 }
 
 resource "aws_cloudwatch_log_group" "article_processor_logs" {
