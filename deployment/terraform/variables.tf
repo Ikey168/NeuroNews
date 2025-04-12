@@ -203,9 +203,3 @@ variable "neptune_instance_class" {
   description = "Instance class for the Neptune cluster instances"
   default     = "db.r5.large"
 }
-
-variable "bucket_name_prefix" {
-  type        = string
-  description = "Prefix for all bucket names"
-  default     = "neuronews"
-}
