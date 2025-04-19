@@ -45,14 +45,14 @@ GROUP BY entity_type, entities_array
 ORDER BY mention_count DESC
 LIMIT 20;
 
--- Top keywords analysis
+-- Top keywords analysis (simplified)
 SELECT
-    REPLACE(REPLACE(k, '"', ''), ' ', '') as keyword,
+    SUBSTRING(keywords::VARCHAR FROM '"([^"]*)"') as keyword,
     COUNT(*) as usage_count
-FROM news_articles,
-REGEXP_SPLIT_TO_TABLE(TRIM(BOTH '[]' FROM keywords::VARCHAR), ',') as k
-WHERE k != ''
-GROUP BY REPLACE(REPLACE(k, '"', ''), ' ', '')
+FROM news_articles
+CROSS JOIN TABLE(SPLIT_TO_TABLE(keywords::VARCHAR, ','))
+WHERE keyword IS NOT NULL
+GROUP BY keyword
 ORDER BY usage_count DESC
 LIMIT 20;
 
@@ -78,25 +78,16 @@ WHERE sentiment IS NOT NULL
 ORDER BY sentiment ASC
 LIMIT 10;
 
--- Topic co-occurrence based on cleaned keywords
-WITH keyword_list AS (
-    SELECT
-        id,
-        REPLACE(REPLACE(k, '"', ''), ' ', '') as keyword
-    FROM news_articles,
-    REGEXP_SPLIT_TO_TABLE(TRIM(BOTH '[]' FROM keywords::VARCHAR), ',') as k
-    WHERE k != ''
-)
-SELECT 
-    a.keyword as keyword1,
-    b.keyword as keyword2,
-    COUNT(*) as co_occurrence
-FROM keyword_list a
-JOIN keyword_list b ON a.id = b.id AND a.keyword < b.keyword
-GROUP BY a.keyword, b.keyword
-HAVING COUNT(*) > 1
-ORDER BY co_occurrence DESC
-LIMIT 20;
+-- Keywords per source
+SELECT
+    source,
+    LISTAGG(DISTINCT SUBSTRING(keywords::VARCHAR FROM '"([^"]*)"'), ', ') 
+    WITHIN GROUP (ORDER BY SUBSTRING(keywords::VARCHAR FROM '"([^"]*)"')) as keywords,
+    COUNT(DISTINCT SUBSTRING(keywords::VARCHAR FROM '"([^"]*)"')) as keyword_count
+FROM news_articles
+CROSS JOIN TABLE(SPLIT_TO_TABLE(keywords::VARCHAR, ','))
+GROUP BY source
+ORDER BY keyword_count DESC;
 
 -- Daily article count by source
 SELECT
