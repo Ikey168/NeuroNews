@@ -1,5 +1,8 @@
-# S3 bucket configuration for NeuroNews
+# S3 bucket for Lambda code
+resource "aws_s3_bucket" "lambda_code" {
+  bucket = "${var.bucket_name_prefix}-lambda-code-${var.environment}"
 
+<<<<<<< HEAD:deployment/terraform/s3/main.tf
 # Bucket for storing raw scraped articles
 resource "aws_s3_bucket" "raw_articles" {
   bucket = "${var.bucket_name_prefix}-raw-articles-${var.environment}"
@@ -107,4 +110,13 @@ resource "aws_s3_bucket_cors_configuration" "raw_articles" {
     expose_headers  = ["ETag"]
     max_age_seconds = 3000
   }
+=======
+  tags = merge(
+    var.tags,
+    {
+      Name        = "NeuroNews Lambda Code",
+      Environment = var.environment
+    }
+  )
+>>>>>>> 7ddfa7248b922990347983877c08974738dd4bf4:deployment/terraform/s3.tf
 }
