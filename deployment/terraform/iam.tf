@@ -206,29 +206,29 @@ resource "aws_iam_role_policy_attachment" "ec2_s3_read" {
 }
 
 # Create policy for EC2 to access Neptune
-resource "aws_iam_policy" "ec2_neptune_access" {
-  name        = "${var.bucket_name_prefix}-${var.environment}-ec2-neptune-access"
-  description = "Allow EC2 instances to access Neptune database"
-  
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "neptune-db:*"
-        ]
-        Resource = "*"
-      }
-    ]
-  })
-}
+#resource "aws_iam_policy" "ec2_neptune_access" {
+#  name        = "${var.bucket_name_prefix}-${var.environment}-ec2-neptune-access"
+#  description = "Allow EC2 instances to access Neptune database"
+#  
+#  policy = jsonencode({
+#    Version = "2012-10-17"
+#    Statement = [
+#      {
+#        Effect = "Allow"
+#        Action = [
+#          "neptune-db:*"
+#        ]
+#        Resource = "*"
+#      }
+#    ]
+#  })
+#}
 
 # Attach Neptune access policy to EC2 role
-resource "aws_iam_role_policy_attachment" "ec2_neptune_access" {
-  role       = aws_iam_role.ec2_role.name
-  policy_arn = aws_iam_policy.ec2_neptune_access.arn
-}
+#resource "aws_iam_role_policy_attachment" "ec2_neptune_access" {
+#  role       = aws_iam_role.ec2_role.name
+#  policy_arn = aws_iam_policy.ec2_neptune_access.arn
+#}
 
 # Create policy for EC2 to access Redshift
 resource "aws_iam_policy" "ec2_redshift_access" {
@@ -320,29 +320,29 @@ resource "aws_iam_role_policy_attachment" "ecs_s3_read" {
 }
 
 # Create policy for ECS tasks to access Neptune
-resource "aws_iam_policy" "ecs_neptune_access" {
-  name        = "${var.bucket_name_prefix}-${var.environment}-ecs-neptune-access"
-  description = "Allow ECS tasks to access Neptune database"
-  
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "neptune-db:*"
-        ]
-        Resource = "*"
-      }
-    ]
-  })
-}
+#resource "aws_iam_policy" "ecs_neptune_access" {
+#  name        = "${var.bucket_name_prefix}-${var.environment}-ecs-neptune-access"
+#  description = "Allow ECS tasks to access Neptune database"
+#  
+#  policy = jsonencode({
+#    Version = "2012-10-17"
+#    Statement = [
+#      {
+#        Effect = "Allow"
+#        Action = [
+#          "neptune-db:*"
+#        ]
+#        Resource = "*"
+#      }
+#    ]
+#  })
+#}
 
 # Attach Neptune access policy to ECS task role
-resource "aws_iam_role_policy_attachment" "ecs_neptune_access" {
-  role       = aws_iam_role.ecs_task_role.name
-  policy_arn = aws_iam_policy.ecs_neptune_access.arn
-}
+#resource "aws_iam_role_policy_attachment" "ecs_neptune_access" {
+#  role       = aws_iam_role.ecs_task_role.name
+#  policy_arn = aws_iam_policy.ecs_neptune_access.arn
+#}
 
 # Create policy for ECS tasks to access Redshift
 resource "aws_iam_policy" "ecs_redshift_access" {

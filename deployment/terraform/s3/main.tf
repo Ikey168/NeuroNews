@@ -10,7 +10,17 @@ resource "aws_s3_bucket" "raw_articles" {
   })
 }
 
-# Enable versioning
+# Bucket for storing Lambda function code
+resource "aws_s3_bucket" "lambda_code" {
+  bucket = "${var.bucket_name_prefix}-lambda-code-${var.environment}"
+
+  tags = merge(var.tags, {
+    Name        = "Lambda Code Storage"
+    Description = "Stores Lambda function code packages"
+  })
+}
+
+# Enable versioning for raw articles
 resource "aws_s3_bucket_versioning" "raw_articles" {
   bucket = aws_s3_bucket.raw_articles.id
   versioning_configuration {
@@ -18,7 +28,15 @@ resource "aws_s3_bucket_versioning" "raw_articles" {
   }
 }
 
-# Configure server-side encryption
+# Enable versioning for lambda code
+resource "aws_s3_bucket_versioning" "lambda_code" {
+  bucket = aws_s3_bucket.lambda_code.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+# Configure server-side encryption for raw articles
 resource "aws_s3_bucket_server_side_encryption_configuration" "raw_articles" {
   bucket = aws_s3_bucket.raw_articles.id
 
@@ -29,9 +47,30 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "raw_articles" {
   }
 }
 
-# Block public access
+# Configure server-side encryption for lambda code
+resource "aws_s3_bucket_server_side_encryption_configuration" "lambda_code" {
+  bucket = aws_s3_bucket.lambda_code.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+# Block public access for raw articles
 resource "aws_s3_bucket_public_access_block" "raw_articles" {
   bucket = aws_s3_bucket.raw_articles.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# Block public access for lambda code
+resource "aws_s3_bucket_public_access_block" "lambda_code" {
+  bucket = aws_s3_bucket.lambda_code.id
 
   block_public_acls       = true
   block_public_policy     = true
@@ -57,7 +96,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "raw_articles" {
   }
 }
 
-# CORS configuration
+# CORS configuration for raw articles
 resource "aws_s3_bucket_cors_configuration" "raw_articles" {
   bucket = aws_s3_bucket.raw_articles.id
 
