@@ -1,8 +1,5 @@
-# S3 bucket for Lambda code
-resource "aws_s3_bucket" "lambda_code" {
-  bucket = "${var.bucket_name_prefix}-lambda-code-${var.environment}"
+# S3 bucket configuration for NeuroNews
 
-<<<<<<< HEAD:deployment/terraform/s3/main.tf
 # Bucket for storing raw scraped articles
 resource "aws_s3_bucket" "raw_articles" {
   bucket = "${var.bucket_name_prefix}-raw-articles-${var.environment}"
@@ -19,7 +16,7 @@ resource "aws_s3_bucket" "lambda_code" {
 
   tags = merge(var.tags, {
     Name        = "Lambda Code Storage"
-    Description = "Stores Lambda function code packages"
+    Description = "Stores Lambda function deployment packages"
   })
 }
 
@@ -81,7 +78,7 @@ resource "aws_s3_bucket_public_access_block" "lambda_code" {
   restrict_public_buckets = true
 }
 
-# Lifecycle rules for data retention
+# Lifecycle rules for raw articles
 resource "aws_s3_bucket_lifecycle_configuration" "raw_articles" {
   bucket = aws_s3_bucket.raw_articles.id
 
@@ -106,17 +103,8 @@ resource "aws_s3_bucket_cors_configuration" "raw_articles" {
   cors_rule {
     allowed_headers = ["*"]
     allowed_methods = ["GET", "PUT", "POST"]
-    allowed_origins = ["*"] # You should restrict this in production
+    allowed_origins = ["*"] # Should be restricted in production
     expose_headers  = ["ETag"]
     max_age_seconds = 3000
   }
-=======
-  tags = merge(
-    var.tags,
-    {
-      Name        = "NeuroNews Lambda Code",
-      Environment = var.environment
-    }
-  )
->>>>>>> 7ddfa7248b922990347983877c08974738dd4bf4:deployment/terraform/s3.tf
 }
