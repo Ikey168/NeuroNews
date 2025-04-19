@@ -30,7 +30,13 @@ dependencies = [
 pythonpath = ["."]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-addopts = "-v --cov=src"
+addopts = """
+    -v 
+    --cov=src 
+    --cov-report=term-missing 
+    --cov-report=html:coverage_report 
+    --cov-branch
+"""
 
 [tool.hatch.build.targets.wheel]
 packages = ["src"]

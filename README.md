@@ -59,17 +59,32 @@ pip install -r requirements.txt
 - Add your **AWS_ACCESS_KEY_ID** & **AWS_SECRET_ACCESS_KEY**.  
 - Ensure **IAM roles** have permissions for Lambda, S3, Redshift, and Neptune.  
 
-### 4️⃣ Run the Scraper
+### 4️⃣ Run Tests and Generate Coverage Report
+```bash
+# Run tests with coverage reporting
+pytest
+
+# View the coverage report
+# Open coverage_report/index.html in your browser
+```
+
+The coverage report provides:
+- Line-by-line code coverage analysis
+- Branch coverage statistics
+- Untested code identification
+- Module-level coverage summaries
+
+### 5️⃣ Run the Scraper
 ```bash
 python scraper.py
 ```
 
-### 5️⃣ Run the NLP Pipeline
+### 6️⃣ Run the NLP Pipeline
 ```bash
 python nlp_processor.py
 ```
 
-### 6️⃣ Access Dashboards & Reports
+### 7️⃣ Access Dashboards & Reports
 - AWS QuickSight for **visualizations & insights**.  
 - REST API for **news sentiment, event tracking, and historical context**.  
 
@@ -92,5 +107,4 @@ python nlp_processor.py
 🔗 **Pull Requests:** Contributions welcome! See **CONTRIBUTING.md** for guidelines.  
 📧 **Email:** ikey168@proton.me
 
-🔖 **License:** MIT  
-
+🔖 **License:** MIT
