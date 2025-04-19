@@ -58,9 +58,11 @@ def test_init_without_password():
 
 def test_init_with_env_password():
     """Test initialization with password from environment."""
+    mock_s3_storage = MagicMock(spec=S3Storage)
     with patch.dict(os.environ, {'REDSHIFT_PASSWORD': 'test-password'}):
-        loader = RedshiftLoader(host='test-host')
-        assert loader.password == 'test-password'
+        with patch('src.database.redshift_loader.S3Storage', return_value=mock_s3_storage):
+            loader = RedshiftLoader(host='test-host')
+            assert loader.password == 'test-password'
 
 def test_load_article(redshift_loader, mock_redshift_connection):
     """Test loading a single article."""
