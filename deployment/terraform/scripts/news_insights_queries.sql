@@ -47,14 +47,20 @@ LIMIT 20;
 
 -- Top keywords analysis (simplified)
 SELECT
-    SUBSTRING(keywords::VARCHAR FROM '"([^"]*)"') as keyword,
-    COUNT(*) as usage_count
+    source,
+    LISTAGG(DISTINCT 
+        CASE 
+            WHEN keywords::VARCHAR LIKE '%"AI"%' THEN 'AI'
+            WHEN keywords::VARCHAR LIKE '%"technology"%' THEN 'technology'
+            WHEN keywords::VARCHAR LIKE '%"research"%' THEN 'research'
+            WHEN keywords::VARCHAR LIKE '%"science"%' THEN 'science'
+            WHEN keywords::VARCHAR LIKE '%"business"%' THEN 'business'
+            ELSE NULL
+        END, 
+        ', ' 
+    ) WITHIN GROUP (ORDER BY source) as common_keywords
 FROM news_articles
-CROSS JOIN TABLE(SPLIT_TO_TABLE(keywords::VARCHAR, ','))
-WHERE keyword IS NOT NULL
-GROUP BY keyword
-ORDER BY usage_count DESC
-LIMIT 20;
+GROUP BY source;
 
 -- Articles with highest positive sentiment
 SELECT
@@ -78,16 +84,17 @@ WHERE sentiment IS NOT NULL
 ORDER BY sentiment ASC
 LIMIT 10;
 
--- Keywords per source
+-- Source statistics with keyword counts
 SELECT
     source,
-    LISTAGG(DISTINCT SUBSTRING(keywords::VARCHAR FROM '"([^"]*)"'), ', ') 
-    WITHIN GROUP (ORDER BY SUBSTRING(keywords::VARCHAR FROM '"([^"]*)"')) as keywords,
-    COUNT(DISTINCT SUBSTRING(keywords::VARCHAR FROM '"([^"]*)"')) as keyword_count
+    COUNT(*) as article_count,
+    AVG(sentiment) as avg_sentiment,
+    SUM(CASE WHEN keywords::VARCHAR LIKE '%"AI"%' THEN 1 ELSE 0 END) as ai_mentions,
+    SUM(CASE WHEN keywords::VARCHAR LIKE '%"technology"%' THEN 1 ELSE 0 END) as tech_mentions,
+    SUM(CASE WHEN keywords::VARCHAR LIKE '%"research"%' THEN 1 ELSE 0 END) as research_mentions
 FROM news_articles
-CROSS JOIN TABLE(SPLIT_TO_TABLE(keywords::VARCHAR, ','))
 GROUP BY source
-ORDER BY keyword_count DESC;
+ORDER BY article_count DESC;
 
 -- Daily article count by source
 SELECT
