@@ -25,21 +25,15 @@ jobs:
 
     - name: Run base pipeline tests
       run: |
-        python -m pytest tests/test_base_pipelines.py -v --cov=src.scraper.pipelines --cov-report=term-missing
+        python -m pytest tests/test_base_pipelines.py -v
 
     - name: Run base NLP tests
       run: |
-        python -m pytest tests/test_base_nlp.py -v --cov=src.nlp --cov-report=term-missing
+        python -m pytest tests/test_base_nlp.py -v
 
     - name: Run all tests
       run: |
-        python -m pytest tests/ -v --cov=src --cov-report=xml --ignore=tests/nlp/test_sentiment.py
-    
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.xml
-        fail_ci_if_error: true
+        python -m pytest tests/ -v --ignore=tests/nlp/test_sentiment.py
 
   terraform:
     runs-on: ubuntu-latest

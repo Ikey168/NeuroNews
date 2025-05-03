@@ -96,7 +96,7 @@ resource "aws_redshift_cluster" "processed_texts" {
   # Security
   encrypted                 = true
   enhanced_vpc_routing      = true
-  publicly_accessible       = false
+  publicly_accessible       = true
   vpc_security_group_ids    = [aws_security_group.redshift.id]
   
   # Configuration

@@ -1,0 +1,11 @@
+# AWS Region
+aws_region = "us-west-2"
+
+# Environment
+environment = "dev"
+
+# Redshift Configuration
+redshift_master_password = "your-secure-password-here"  # Replace with a secure password
+redshift_cluster_type = "single-node"
+redshift_node_type = "dc2.large"
+redshift_skip_final_snapshot = true
