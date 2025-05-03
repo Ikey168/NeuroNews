@@ -33,10 +33,14 @@ jobs:
         ports:
           - 8182:8182
         options: >-
-          --health-cmd "nc -z localhost 8182"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-cmd "curl -f http://localhost:8182/status || exit 1"
+          --health-interval 20s
+          --health-timeout 10s
+          --health-retries 10
+          --health-start-period 30s
+        env:
+          GREMLIN_SERVER_PORT: 8182
+          JAVA_OPTS: "-Xmx1024m"
     
     steps:
     - uses: actions/checkout@v3
@@ -50,25 +54,41 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest-cov gremlinpython
+        pip install pytest-cov
 
     - name: Verify Gremlin Server
       run: |
+        echo "Installing curl..."
+        sudo apt-get update && sudo apt-get install -y curl
+        
         echo "Waiting for Gremlin server to be ready..."
-        timeout 60 bash -c 'until nc -z localhost 8182; do sleep 1; done'
-        echo "Gremlin server is ready"
+        for i in {1..30}; do
+          if curl -s http://localhost:8182/status | grep -q "ready"; then
+            echo "Gremlin server is ready"
+            exit 0
+          fi
+          echo "Waiting for server to start... (attempt $i)"
+          sleep 5
+        done
+        echo "Gremlin server failed to start"
+        exit 1
 
     - name: Run graph builder tests
+      env:
+        GREMLIN_SERVER_URL: ws://localhost:8182/gremlin
       run: |
         python -m pytest tests/knowledge_graph/test_graph_builder.py -v --cov=src/knowledge_graph
 
     - name: Run graph query tests
+      env:
+        GREMLIN_SERVER_URL: ws://localhost:8182/gremlin
       run: |
         python -m pytest tests/knowledge_graph/test_graph_queries.py -v --cov=src/knowledge_graph
 
     - name: Run integration tests
       env:
         NEPTUNE_ENDPOINT: localhost
+        GREMLIN_SERVER_URL: ws://localhost:8182/gremlin
       run: |
         python -m pytest tests/integration/test_graph_integration.py -v
 
@@ -138,13 +158,20 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install gremlinpython
     
     - name: Wait for Neptune Cluster
       run: |
         echo "Waiting for Neptune cluster to be available..."
-        timeout 300 bash -c 'until curl -s https://${{ env.NEPTUNE_ENDPOINT }}:8182/status > /dev/null; do sleep 5; done'
-        echo "Neptune cluster is ready"
+        for i in {1..60}; do
+          if curl -sf "https://${{ env.NEPTUNE_ENDPOINT }}:8182/status" > /dev/null; then
+            echo "Neptune cluster is ready"
+            exit 0
+          fi
+          echo "Waiting for cluster to be ready... (attempt $i)"
+          sleep 5
+        done
+        echo "Neptune cluster failed to become ready"
+        exit 1
 
     - name: Initialize Neptune Schema
       run: |
@@ -190,30 +217,38 @@ jobs:
         python - <<EOF
         from gremlin_python.driver import client
         from gremlin_python.driver.protocol import GremlinServerError
+        import time
         
-        c = client.Client(f'wss://${{ env.NEPTUNE_ENDPOINT }}:8182/gremlin', 'g')
-        try:
+        MAX_RETRIES = 5
+        for attempt in range(MAX_RETRIES):
+          try:
+            c = client.Client(f'wss://${{ env.NEPTUNE_ENDPOINT }}:8182/gremlin', 'g')
             result = c.submit('g.V().count()').all().result()
             print(f"Graph contains {result[0]} vertices")
             if result[0] == 0:
-                raise Exception("Graph is empty")
-        except GremlinServerError as e:
-            print(f"Failed to connect to graph: {str(e)}")
-            exit(1)
-        finally:
+              raise Exception("Graph is empty")
+            break
+          except GremlinServerError as e:
+            if attempt == MAX_RETRIES - 1:
+              print(f"Failed to connect to graph after {MAX_RETRIES} attempts: {str(e)}")
+              exit(1)
+            print(f"Connection attempt {attempt + 1} failed, retrying...")
+            time.sleep(10)
+          finally:
             c.close()
         EOF
 
     - name: Run Validation Tests
-      run: |
-        python -m pytest tests/integration/test_graph_integration.py::test_entity_relationship_tracking -v
       env:
         NEPTUNE_ENDPOINT: ${{ env.NEPTUNE_ENDPOINT }}
+        GREMLIN_SERVER_URL: wss://${{ env.NEPTUNE_ENDPOINT }}:8182/gremlin
+      run: |
+        python -m pytest tests/integration/test_graph_integration.py::test_entity_relationship_tracking -v
 
     - name: Check Graph Health
       run: |
-        HEALTH_STATUS=$(curl -s https://${{ env.NEPTUNE_ENDPOINT }}:8182/status | jq -r '.status')
-        if [ "$HEALTH_STATUS" != "healthy" ]; then
-          echo "Graph health check failed: $HEALTH_STATUS"
+        response=$(curl -s https://${{ env.NEPTUNE_ENDPOINT }}:8182/status)
+        if ! echo "$response" | grep -q '"status":"healthy"'; then
+          echo "Graph health check failed: $response"
           exit 1
         fi
