@@ -189,3 +189,81 @@ The knowledge graph builder integrates with:
 - News article processing pipeline
 - Entity extraction system
 - Sentiment analysis
+
+## Query Examples
+
+### Gremlin Queries
+
+1. Find organizations mentioned positively in articles:
+```python
+g.V().hasLabel('Article')\
+    .outE('MENTIONS_ORG').has('sentiment', P.gt(0.5))\
+    .inV().valueMap(True).toList()
+```
+
+2. Get organization collaboration network:
+```python
+g.V().hasLabel('Organization')\
+    .outE('PARTNERS_WITH')\
+    .project('org1', 'org2', 'partnership_type')\
+    .by(__.inV().values('orgName'))\
+    .by(__.outV().values('orgName'))\
+    .by('partnership_type')\
+    .toList()
+```
+
+3. Find people participating in the same events:
+```python
+g.V().hasLabel('Person')\
+    .as_('person1')\
+    .out('PARTICIPATED_IN').as_('event')\
+    .in_('PARTICIPATED_IN')\
+    .where(P.neq('person1'))\
+    .project('person1', 'person2', 'event')\
+    .by(__.select('person1').values('name'))\
+    .by(__.values('name'))\
+    .by(__.select('event').values('eventName'))\
+    .toList()
+```
+
+### SPARQL Queries
+
+1. Find organization relationships and events:
+```sparql
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX news: <http://neuronews.org/ontology/>
+
+SELECT ?org ?orgName ?event ?eventName ?relationship
+WHERE {
+    ?org rdf:type news:Organization ;
+        news:orgName ?orgName .
+    ?org ?relationship ?event .
+    ?event rdf:type news:Event ;
+        news:eventName ?eventName .
+    FILTER(?relationship IN (news:HOSTED, news:SPONSORED))
+}
+```
+
+2. Analyze sentiment patterns:
+```sparql
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX news: <http://neuronews.org/ontology/>
+
+SELECT ?org
+    (COUNT(?positive) as ?positiveCount)
+    (COUNT(?negative) as ?negativeCount)
+WHERE {
+    ?org rdf:type news:Organization .
+    OPTIONAL {
+        ?article news:MENTIONS_ORG ?org .
+        ?mention news:sentiment ?sentiment .
+        BIND(IF(?sentiment > 0.5, 1, 0) as ?positive)
+        BIND(IF(?sentiment < -0.5, 1, 0) as ?negative)
+    }
+}
+GROUP BY ?org
+HAVING (?positiveCount + ?negativeCount > 0)
+ORDER BY DESC(?positiveCount)
+```
+
+See `examples/graph_queries.py` for more query examples and patterns.
