@@ -1,11 +1,28 @@
-# AWS Region
+# General Variables
 aws_region = "us-west-2"
-
-# Environment
 environment = "dev"
+bucket_name_prefix = "neuronews"
 
-# Redshift Configuration
-redshift_master_password = "your-secure-password-here"  # Replace with a secure password
-redshift_cluster_type = "single-node"
-redshift_node_type = "dc2.large"
-redshift_skip_final_snapshot = true
+# Networking Variables
+vpc_cidr = "10.0.0.0/16"
+availability_zones = ["us-west-2a", "us-west-2b"]
+public_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24"]
+private_subnet_cidrs = ["10.0.10.0/24", "10.0.11.0/24"]
+
+# Neptune Variables
+neptune_cluster_identifier = "neuronews"
+neptune_instance_class = "db.t3.medium"
+neptune_cluster_size = 1
+neptune_port = 8182
+neptune_enable_audit_logs = false
+neptune_backup_retention_period = 7
+neptune_preferred_backup_window = "03:00-04:00"
+neptune_skip_final_snapshot = true
+
+# Tags
+tags = {
+  Project     = "NeuroNews"
+  Environment = "dev"
+  Terraform   = "true"
+  Owner       = "YourName"
+}
