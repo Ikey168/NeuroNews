@@ -10,6 +10,12 @@ jobs:
   test:
     runs-on: ubuntu-latest
     
+    services:
+      neptune-local:
+        image: amazon/neptune-gremlin-server:latest
+        ports:
+          - 8182:8182
+    
     steps:
     - uses: actions/checkout@v3
     
@@ -31,9 +37,24 @@ jobs:
       run: |
         python -m pytest tests/test_base_nlp.py -v
 
-    - name: Run all tests
+    - name: Run unit tests
       run: |
-        python -m pytest tests/ -v --ignore=tests/nlp/test_sentiment.py
+        python -m pytest tests/ -v --ignore=tests/nlp/test_sentiment.py --ignore=tests/integration
+
+    - name: Run integration tests
+      env:
+        NEPTUNE_ENDPOINT: localhost
+      run: |
+        python -m pytest tests/integration/test_graph_integration.py -v
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v2
+      with:
+        name: test-results
+        path: |
+          test-results/
+          coverage/
 
   terraform:
     runs-on: ubuntu-latest
