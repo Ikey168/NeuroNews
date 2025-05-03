@@ -51,6 +51,37 @@ jobs:
         pip install pytest-cov
         sudo apt-get update && sudo apt-get install -y jq netcat-openbsd
 
+    - name: Debug Container Status
+      run: |
+        echo "Docker version:"
+        docker version
+        
+        echo "\nDocker info:"
+        docker info
+        
+        echo "\nListing all containers:"
+        docker ps -a
+        
+        echo "\nContainer details:"
+        CONTAINER_ID=$(docker ps -q -f "ancestor=tinkerpop/gremlin-server:3.6.2" || \
+                      docker ps -q -f "name=gremlin-server" || \
+                      docker ps -q -f "name=*_gremlin-server_*")
+        if [ -n "$CONTAINER_ID" ]; then
+          echo "Found container: $CONTAINER_ID"
+          echo "\nContainer logs:"
+          docker logs $CONTAINER_ID
+          echo "\nContainer inspection:"
+          docker inspect $CONTAINER_ID | jq '.[0].State'
+          echo "\nContainer network settings:"
+          docker inspect $CONTAINER_ID | jq '.[0].NetworkSettings'
+        else
+          echo "No Gremlin server container found"
+          echo "\nAll running containers:"
+          docker ps
+          echo "\nAll containers (including stopped):"
+          docker ps -a
+        fi
+
     - name: Monitor Gremlin Server
       run: |
         chmod +x .github/workflows/monitor-container.sh
@@ -141,7 +172,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        sudo apt-get update && sudo apt-get install -y jq
+        sudo apt-get update && sudo apt-get install -y jq netcat-openbsd
     
     - name: Wait for Neptune Cluster
       run: |

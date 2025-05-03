@@ -33,6 +33,24 @@ jobs:
         pip install -r requirements.txt
         sudo apt-get update && sudo apt-get install -y jq netcat-openbsd
 
+    - name: Debug Container Status
+      run: |
+        echo "Listing all containers:"
+        docker ps -a
+        echo "\nContainer details:"
+        CONTAINER_ID=$(docker ps -q -f "ancestor=tinkerpop/gremlin-server:3.6.2" || \
+                      docker ps -q -f "name=gremlin-server" || \
+                      docker ps -q -f "name=*_gremlin-server_*")
+        if [ -n "$CONTAINER_ID" ]; then
+          echo "Found container: $CONTAINER_ID"
+          echo "\nContainer logs:"
+          docker logs $CONTAINER_ID
+          echo "\nContainer inspection:"
+          docker inspect $CONTAINER_ID | jq '.[0].State'
+        else
+          echo "No Gremlin server container found"
+        fi
+
     - name: Monitor Gremlin Server
       run: |
         chmod +x .github/workflows/monitor-container.sh
