@@ -111,8 +111,8 @@ resource "aws_iam_role_policy" "neptune" {
           "s3:ListBucket"
         ]
         Resource = [
-          module.s3.bucket_arn,
-          "${module.s3.bucket_arn}/*"
+          module.s3.raw_articles_bucket_arn,
+          "${module.s3.raw_articles_bucket_arn}/*"
         ]
       }
     ]
@@ -204,7 +204,7 @@ resource "aws_cloudwatch_event_rule" "init_neptune_schema" {
   name                = "${var.environment}-init-neptune-schema"
   description         = "Trigger Neptune schema initialization after cluster creation"
   schedule_expression = "rate(1 minute)"
-  is_enabled         = true
+  state              = "ENABLED"
 
   tags = var.tags
 }
