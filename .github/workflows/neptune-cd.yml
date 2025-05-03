@@ -55,23 +55,12 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pytest-cov
+        sudo apt-get update && sudo apt-get install -y curl jq
 
-    - name: Verify Gremlin Server
+    - name: Monitor Gremlin Server
       run: |
-        echo "Installing curl..."
-        sudo apt-get update && sudo apt-get install -y curl
-        
-        echo "Waiting for Gremlin server to be ready..."
-        for i in {1..30}; do
-          if curl -s http://localhost:8182/status | grep -q "ready"; then
-            echo "Gremlin server is ready"
-            exit 0
-          fi
-          echo "Waiting for server to start... (attempt $i)"
-          sleep 5
-        done
-        echo "Gremlin server failed to start"
-        exit 1
+        chmod +x .github/workflows/monitor-container.sh
+        ./.github/workflows/monitor-container.sh
 
     - name: Run graph builder tests
       env:
@@ -158,17 +147,24 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        sudo apt-get update && sudo apt-get install -y curl jq
     
     - name: Wait for Neptune Cluster
       run: |
         echo "Waiting for Neptune cluster to be available..."
-        for i in {1..60}; do
+        ATTEMPTS=0
+        MAX_ATTEMPTS=30
+        DELAY=10
+
+        while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
           if curl -sf "https://${{ env.NEPTUNE_ENDPOINT }}:8182/status" > /dev/null; then
             echo "Neptune cluster is ready"
             exit 0
           fi
-          echo "Waiting for cluster to be ready... (attempt $i)"
-          sleep 5
+          ATTEMPTS=$((ATTEMPTS + 1))
+          echo "Waiting for cluster to be ready... (attempt $ATTEMPTS/$MAX_ATTEMPTS)"
+          sleep $DELAY
+          DELAY=$(( DELAY < 60 ? DELAY * 2 : 60 ))
         done
         echo "Neptune cluster failed to become ready"
         exit 1
@@ -211,6 +207,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install gremlinpython requests
+        sudo apt-get update && sudo apt-get install -y curl jq
     
     - name: Verify Graph Connectivity
       run: |
@@ -220,8 +217,11 @@ jobs:
         import time
         
         MAX_RETRIES = 5
+        DELAY = 10
+        
         for attempt in range(MAX_RETRIES):
           try:
+            print(f"Connection attempt {attempt + 1}/{MAX_RETRIES}")
             c = client.Client(f'wss://${{ env.NEPTUNE_ENDPOINT }}:8182/gremlin', 'g')
             result = c.submit('g.V().count()').all().result()
             print(f"Graph contains {result[0]} vertices")
@@ -229,13 +229,16 @@ jobs:
               raise Exception("Graph is empty")
             break
           except GremlinServerError as e:
+            print(f"Connection failed: {str(e)}")
             if attempt == MAX_RETRIES - 1:
-              print(f"Failed to connect to graph after {MAX_RETRIES} attempts: {str(e)}")
+              print(f"Failed to connect after {MAX_RETRIES} attempts")
               exit(1)
-            print(f"Connection attempt {attempt + 1} failed, retrying...")
-            time.sleep(10)
+            print(f"Retrying in {DELAY} seconds...")
+            time.sleep(DELAY)
+            DELAY = min(DELAY * 2, 60)
           finally:
-            c.close()
+            if 'c' in locals():
+              c.close()
         EOF
 
     - name: Run Validation Tests
@@ -248,7 +251,9 @@ jobs:
     - name: Check Graph Health
       run: |
         response=$(curl -s https://${{ env.NEPTUNE_ENDPOINT }}:8182/status)
-        if ! echo "$response" | grep -q '"status":"healthy"'; then
-          echo "Graph health check failed: $response"
+        echo "Graph health check response:"
+        echo "$response" | jq '.'
+        if ! echo "$response" | jq -e '.status == "healthy"' > /dev/null; then
+          echo "Graph health check failed"
           exit 1
         fi

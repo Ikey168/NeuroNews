@@ -37,23 +37,12 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        sudo apt-get update && sudo apt-get install -y curl jq
 
-    - name: Verify Gremlin Server
+    - name: Monitor Gremlin Server
       run: |
-        echo "Installing curl..."
-        sudo apt-get update && sudo apt-get install -y curl
-        
-        echo "Waiting for Gremlin server to be ready..."
-        for i in {1..30}; do
-          if curl -s http://localhost:8182/status | grep -q "ready"; then
-            echo "Gremlin server is ready"
-            exit 0
-          fi
-          echo "Waiting for server to start... (attempt $i)"
-          sleep 5
-        done
-        echo "Gremlin server failed to start"
-        exit 1
+        chmod +x .github/workflows/monitor-container.sh
+        ./.github/workflows/monitor-container.sh
 
     - name: Run base pipeline tests
       run: |
