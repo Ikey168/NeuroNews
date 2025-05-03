@@ -32,12 +32,6 @@ jobs:
         image: tinkerpop/gremlin-server:3.6.2
         ports:
           - 8182:8182
-        options: >-
-          --health-cmd "curl -f http://localhost:8182/status || exit 1"
-          --health-interval 20s
-          --health-timeout 10s
-          --health-retries 10
-          --health-start-period 30s
         env:
           GREMLIN_SERVER_PORT: 8182
           JAVA_OPTS: "-Xmx1024m"
@@ -55,12 +49,12 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pytest-cov
-        sudo apt-get update && sudo apt-get install -y curl jq
+        sudo apt-get update && sudo apt-get install -y jq netcat-openbsd
 
     - name: Monitor Gremlin Server
       run: |
         chmod +x .github/workflows/monitor-container.sh
-        ./.github/workflows/monitor-container.sh
+        sudo ./.github/workflows/monitor-container.sh
 
     - name: Run graph builder tests
       env:
@@ -147,27 +141,43 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        sudo apt-get update && sudo apt-get install -y curl jq
+        sudo apt-get update && sudo apt-get install -y jq
     
     - name: Wait for Neptune Cluster
       run: |
         echo "Waiting for Neptune cluster to be available..."
-        ATTEMPTS=0
         MAX_ATTEMPTS=30
+        ATTEMPT=1
         DELAY=10
-
-        while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
-          if curl -sf "https://${{ env.NEPTUNE_ENDPOINT }}:8182/status" > /dev/null; then
+        
+        while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+          echo "Connection attempt $ATTEMPT/$MAX_ATTEMPTS"
+          if python3 - <<EOF
+        from gremlin_python.driver import client
+        try:
+            c = client.Client('wss://${{ env.NEPTUNE_ENDPOINT }}:8182/gremlin', 'g')
+            result = c.submit('g.V().count()').all().result()
+            c.close()
+            exit(0)
+        except Exception as e:
+            print(f"Connection failed: {str(e)}")
+            exit(1)
+        EOF
+          then
             echo "Neptune cluster is ready"
-            exit 0
+            break
           fi
-          ATTEMPTS=$((ATTEMPTS + 1))
-          echo "Waiting for cluster to be ready... (attempt $ATTEMPTS/$MAX_ATTEMPTS)"
+          
+          ATTEMPT=$((ATTEMPT + 1))
+          if [ $ATTEMPT -gt $MAX_ATTEMPTS ]; then
+            echo "Neptune cluster failed to become ready"
+            exit 1
+          fi
+          
+          echo "Waiting ${DELAY} seconds before next attempt..."
           sleep $DELAY
           DELAY=$(( DELAY < 60 ? DELAY * 2 : 60 ))
         done
-        echo "Neptune cluster failed to become ready"
-        exit 1
 
     - name: Initialize Neptune Schema
       run: |
@@ -207,39 +217,44 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install gremlinpython requests
-        sudo apt-get update && sudo apt-get install -y curl jq
     
     - name: Verify Graph Connectivity
       run: |
-        python - <<EOF
+        MAX_RETRIES=5
+        DELAY=10
+        ATTEMPT=1
+        
+        while [ $ATTEMPT -le $MAX_RETRIES ]; do
+          echo "Attempt $ATTEMPT/$MAX_RETRIES"
+          if python3 - <<EOF
         from gremlin_python.driver import client
-        from gremlin_python.driver.protocol import GremlinServerError
-        import time
-        
-        MAX_RETRIES = 5
-        DELAY = 10
-        
-        for attempt in range(MAX_RETRIES):
-          try:
-            print(f"Connection attempt {attempt + 1}/{MAX_RETRIES}")
-            c = client.Client(f'wss://${{ env.NEPTUNE_ENDPOINT }}:8182/gremlin', 'g')
+        try:
+            c = client.Client('wss://${{ env.NEPTUNE_ENDPOINT }}:8182/gremlin', 'g')
             result = c.submit('g.V().count()').all().result()
             print(f"Graph contains {result[0]} vertices")
             if result[0] == 0:
-              raise Exception("Graph is empty")
-            break
-          except GremlinServerError as e:
-            print(f"Connection failed: {str(e)}")
-            if attempt == MAX_RETRIES - 1:
-              print(f"Failed to connect after {MAX_RETRIES} attempts")
-              exit(1)
-            print(f"Retrying in {DELAY} seconds...")
-            time.sleep(DELAY)
-            DELAY = min(DELAY * 2, 60)
-          finally:
-            if 'c' in locals():
-              c.close()
+                raise Exception("Graph is empty")
+            c.close()
+            exit(0)
+        except Exception as e:
+            print(f"Error: {str(e)}")
+            exit(1)
         EOF
+          then
+            echo "Graph connectivity verified"
+            break
+          fi
+          
+          ATTEMPT=$((ATTEMPT + 1))
+          if [ $ATTEMPT -gt $MAX_RETRIES ]; then
+            echo "Failed to verify graph connectivity"
+            exit 1
+          fi
+          
+          echo "Waiting ${DELAY} seconds before retry..."
+          sleep $DELAY
+          DELAY=$(( DELAY < 60 ? DELAY * 2 : 60 ))
+        done
 
     - name: Run Validation Tests
       env:
@@ -250,10 +265,17 @@ jobs:
 
     - name: Check Graph Health
       run: |
-        response=$(curl -s https://${{ env.NEPTUNE_ENDPOINT }}:8182/status)
-        echo "Graph health check response:"
-        echo "$response" | jq '.'
-        if ! echo "$response" | jq -e '.status == "healthy"' > /dev/null; then
-          echo "Graph health check failed"
-          exit 1
-        fi
+        python3 - <<EOF
+        from gremlin_python.driver import client
+        
+        try:
+            c = client.Client('wss://${{ env.NEPTUNE_ENDPOINT }}:8182/gremlin', 'g')
+            # Run a simple query to verify the graph is responsive
+            result = c.submit('g.V().count()').all().result()
+            print(f"Graph health check successful - {result[0]} vertices found")
+            c.close()
+            exit(0)
+        except Exception as e:
+            print(f"Graph health check failed: {str(e)}")
+            exit(1)
+        EOF
