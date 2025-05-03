@@ -1,49 +1,3 @@
-# Network ACL for Neptune
-resource "aws_network_acl" "neptune" {
-  vpc_id = aws_vpc.main.id
-  subnet_ids = aws_subnet.private[*].id
-
-  ingress {
-    protocol   = "tcp"
-    rule_no    = 100
-    action     = "allow"
-    cidr_block = var.vpc_cidr
-    from_port  = var.neptune_port
-    to_port    = var.neptune_port
-  }
-
-  ingress {
-    protocol   = "tcp"
-    rule_no    = 200
-    action     = "allow"
-    cidr_block = var.vpc_cidr
-    from_port  = 1024
-    to_port    = 65535
-  }
-
-  egress {
-    protocol   = "tcp"
-    rule_no    = 100
-    action     = "allow"
-    cidr_block = "0.0.0.0/0"
-    from_port  = 443
-    to_port    = 443
-  }
-
-  egress {
-    protocol   = "tcp"
-    rule_no    = 200
-    action     = "allow"
-    cidr_block = "0.0.0.0/0"
-    from_port  = 1024
-    to_port    = 65535
-  }
-
-  tags = merge(var.tags, {
-    Name = "${var.environment}-neptune-nacl"
-  })
-}
-
 # Neptune Security Group
 resource "aws_security_group" "neptune" {
   name_prefix = "${var.environment}-neptune-"
@@ -51,9 +5,9 @@ resource "aws_security_group" "neptune" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    from_port = var.neptune_port
-    to_port   = var.neptune_port
-    protocol  = "tcp"
+    from_port   = var.neptune_port
+    to_port     = var.neptune_port
+    protocol    = "tcp"
     cidr_blocks = [var.vpc_cidr]
   }
 
@@ -111,9 +65,9 @@ resource "aws_neptune_cluster" "main" {
 
 # Neptune Instances
 resource "aws_neptune_cluster_instance" "main" {
-  count               = var.neptune_cluster_size
-  cluster_identifier  = aws_neptune_cluster.main.id
-  instance_class      = var.neptune_instance_class
+  count              = var.neptune_cluster_size
+  cluster_identifier = aws_neptune_cluster.main.id
+  instance_class     = var.neptune_instance_class
   engine             = "neptune"
   neptune_parameter_group_name = aws_neptune_parameter_group.main.name
 
@@ -165,9 +119,113 @@ resource "aws_iam_role_policy" "neptune" {
   })
 }
 
+# Lambda function to initialize Neptune schema
+resource "aws_lambda_function" "init_neptune_schema" {
+  filename      = "lambda_functions/knowledge_graph_generator.zip"
+  function_name = "${var.environment}-init-neptune-schema"
+  role         = aws_iam_role.neptune_lambda.arn
+  handler      = "knowledge_graph_generator.lambda_handler"
+  runtime      = var.lambda_runtime
+  timeout      = 300
+  memory_size  = 256
+
+  environment {
+    variables = {
+      NEPTUNE_ENDPOINT = aws_neptune_cluster.main.endpoint
+    }
+  }
+
+  depends_on = [aws_neptune_cluster.main]
+
+  tags = var.tags
+}
+
+# IAM role for Lambda to access Neptune
+resource "aws_iam_role" "neptune_lambda" {
+  name = "${var.environment}-neptune-lambda-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = var.tags
+}
+
+# IAM policy for Lambda to access Neptune
+resource "aws_iam_role_policy" "neptune_lambda" {
+  name = "${var.environment}-neptune-lambda-policy"
+  role = aws_iam_role.neptune_lambda.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "neptune-db:*"
+        ]
+        Resource = [
+          aws_neptune_cluster.main.arn,
+          "${aws_neptune_cluster.main.arn}/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:*:*:*"
+      }
+    ]
+  })
+}
+
+# CloudWatch Log Group for Lambda
+resource "aws_cloudwatch_log_group" "init_neptune_schema" {
+  name              = "/aws/lambda/${aws_lambda_function.init_neptune_schema.function_name}"
+  retention_in_days = var.lambda_log_retention_days
+
+  tags = var.tags
+}
+
+# Event rule to trigger schema initialization after cluster creation
+resource "aws_cloudwatch_event_rule" "init_neptune_schema" {
+  name                = "${var.environment}-init-neptune-schema"
+  description         = "Trigger Neptune schema initialization after cluster creation"
+  schedule_expression = "rate(1 minute)"
+  is_enabled         = true
+
+  tags = var.tags
+}
+
+resource "aws_cloudwatch_event_target" "init_neptune_schema" {
+  rule      = aws_cloudwatch_event_rule.init_neptune_schema.name
+  target_id = "InitNeptuneSchema"
+  arn      = aws_lambda_function.init_neptune_schema.arn
+}
+
+resource "aws_lambda_permission" "allow_cloudwatch" {
+  statement_id  = "AllowCloudWatchInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.init_neptune_schema.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.init_neptune_schema.arn
+}
+
 # VPC Endpoint for Neptune
 resource "aws_vpc_endpoint" "neptune" {
-  vpc_id             = aws_vpc.main.vpc_id
+  vpc_id             = aws_vpc.main.id
   service_name       = "com.amazonaws.${var.aws_region}.neptune-db"
   vpc_endpoint_type  = "Interface"
   subnet_ids         = aws_subnet.private[*].id
