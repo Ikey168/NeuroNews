@@ -28,10 +28,15 @@ jobs:
     runs-on: ubuntu-latest
     
     services:
-      neptune-local:
-        image: amazon/neptune-gremlin-server:latest
+      gremlin-server:
+        image: tinkerpop/gremlin-server:3.6.2
         ports:
           - 8182:8182
+        options: >-
+          --health-cmd "nc -z localhost 8182"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     
     steps:
     - uses: actions/checkout@v3
@@ -45,7 +50,13 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest-cov
+        pip install pytest-cov gremlinpython
+
+    - name: Verify Gremlin Server
+      run: |
+        echo "Waiting for Gremlin server to be ready..."
+        timeout 60 bash -c 'until nc -z localhost 8182; do sleep 1; done'
+        echo "Gremlin server is ready"
 
     - name: Run graph builder tests
       run: |
@@ -127,7 +138,14 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        pip install gremlinpython
     
+    - name: Wait for Neptune Cluster
+      run: |
+        echo "Waiting for Neptune cluster to be available..."
+        timeout 300 bash -c 'until curl -s https://${{ env.NEPTUNE_ENDPOINT }}:8182/status > /dev/null; do sleep 5; done'
+        echo "Neptune cluster is ready"
+
     - name: Initialize Neptune Schema
       run: |
         python deployment/terraform/lambda_functions/knowledge_graph_generator.py
@@ -165,7 +183,27 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        pip install gremlinpython requests
     
+    - name: Verify Graph Connectivity
+      run: |
+        python - <<EOF
+        from gremlin_python.driver import client
+        from gremlin_python.driver.protocol import GremlinServerError
+        
+        c = client.Client(f'wss://${{ env.NEPTUNE_ENDPOINT }}:8182/gremlin', 'g')
+        try:
+            result = c.submit('g.V().count()').all().result()
+            print(f"Graph contains {result[0]} vertices")
+            if result[0] == 0:
+                raise Exception("Graph is empty")
+        except GremlinServerError as e:
+            print(f"Failed to connect to graph: {str(e)}")
+            exit(1)
+        finally:
+            c.close()
+        EOF
+
     - name: Run Validation Tests
       run: |
         python -m pytest tests/integration/test_graph_integration.py::test_entity_relationship_tracking -v
@@ -174,4 +212,8 @@ jobs:
 
     - name: Check Graph Health
       run: |
-        curl -X GET "https://${{ env.NEPTUNE_ENDPOINT }}:8182/status"
+        HEALTH_STATUS=$(curl -s https://${{ env.NEPTUNE_ENDPOINT }}:8182/status | jq -r '.status')
+        if [ "$HEALTH_STATUS" != "healthy" ]; then
+          echo "Graph health check failed: $HEALTH_STATUS"
+          exit 1
+        fi

@@ -11,8 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     
     services:
-      neptune-local:
-        image: amazon/neptune-gremlin-server:latest
+      gremlin-server:
+        image: tinkerpop/gremlin-server:3.6.2
         ports:
           - 8182:8182
     
