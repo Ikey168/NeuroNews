@@ -1,0 +1,177 @@
+name: Neptune Knowledge Graph CI/CD
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/knowledge_graph/**'
+      - 'deployment/terraform/neptune.tf'
+      - 'deployment/terraform/scripts/neptune_schema.gremlin'
+      - 'tests/knowledge_graph/**'
+      - 'tests/integration/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/knowledge_graph/**'
+      - 'deployment/terraform/neptune.tf'
+      - 'deployment/terraform/scripts/neptune_schema.gremlin'
+      - 'tests/knowledge_graph/**'
+      - 'tests/integration/**'
+
+env:
+  AWS_REGION: us-west-2
+  TF_WORKSPACE: development
+
+jobs:
+  test:
+    name: Test Knowledge Graph Components
+    runs-on: ubuntu-latest
+    
+    services:
+      neptune-local:
+        image: amazon/neptune-gremlin-server:latest
+        ports:
+          - 8182:8182
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest-cov
+
+    - name: Run graph builder tests
+      run: |
+        python -m pytest tests/knowledge_graph/test_graph_builder.py -v --cov=src/knowledge_graph
+
+    - name: Run graph query tests
+      run: |
+        python -m pytest tests/knowledge_graph/test_graph_queries.py -v --cov=src/knowledge_graph
+
+    - name: Run integration tests
+      env:
+        NEPTUNE_ENDPOINT: localhost
+      run: |
+        python -m pytest tests/integration/test_graph_integration.py -v
+
+  deploy-dev:
+    name: Deploy Neptune Infrastructure (Dev)
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: development
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+    
+    - name: Initialize Terraform
+      run: |
+        cd deployment/terraform
+        terraform init
+    
+    - name: Terraform Plan
+      run: |
+        cd deployment/terraform
+        terraform plan -var-file=terraform.tfvars -out=tfplan
+
+    - name: Terraform Apply
+      run: |
+        cd deployment/terraform
+        terraform apply -auto-approve tfplan
+
+  initialize-schema:
+    name: Initialize Neptune Schema
+    needs: deploy-dev
+    runs-on: ubuntu-latest
+    environment: development
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Get Neptune Endpoint
+      id: get-endpoint
+      run: |
+        ENDPOINT=$(aws neptune describe-db-clusters --query 'DBClusters[0].Endpoint' --output text)
+        echo "NEPTUNE_ENDPOINT=$ENDPOINT" >> $GITHUB_ENV
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Initialize Neptune Schema
+      run: |
+        python deployment/terraform/lambda_functions/knowledge_graph_generator.py
+      env:
+        NEPTUNE_ENDPOINT: ${{ env.NEPTUNE_ENDPOINT }}
+
+  validate-deployment:
+    name: Validate Neptune Deployment
+    needs: initialize-schema
+    runs-on: ubuntu-latest
+    environment: development
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Get Neptune Endpoint
+      id: get-endpoint
+      run: |
+        ENDPOINT=$(aws neptune describe-db-clusters --query 'DBClusters[0].Endpoint' --output text)
+        echo "NEPTUNE_ENDPOINT=$ENDPOINT" >> $GITHUB_ENV
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run Validation Tests
+      run: |
+        python -m pytest tests/integration/test_graph_integration.py::test_entity_relationship_tracking -v
+      env:
+        NEPTUNE_ENDPOINT: ${{ env.NEPTUNE_ENDPOINT }}
+
+    - name: Check Graph Health
+      run: |
+        curl -X GET "https://${{ env.NEPTUNE_ENDPOINT }}:8182/status"
