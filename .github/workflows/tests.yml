@@ -23,20 +23,37 @@ jobs:
     - uses: actions/checkout@v3
     
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.x'
+        python-version: '3.13'
+        cache: 'pip'
     
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
+        pip install gremlinpython==3.6.2  # Explicit installation
         pip install -r requirements.txt
         sudo apt-get update && sudo apt-get install -y jq netcat-openbsd
 
+    - name: Verify Dependencies
+      run: |
+        echo "Checking installed packages:"
+        pip list
+        echo "\nVerifying gremlinpython installation:"
+        python -c "import gremlinpython; print(f'gremlinpython version: {gremlinpython.__version__}')"
+        python -c "from gremlin_python.driver.driver_remote_connection import DriverRemoteConnection; print('gremlin_python imports working')"
+
     - name: Debug Container Status
       run: |
-        echo "Listing all containers:"
+        echo "Docker version:"
+        docker version
+        
+        echo "\nDocker info:"
+        docker info
+        
+        echo "\nListing all containers:"
         docker ps -a
+        
         echo "\nContainer details:"
         CONTAINER_ID=$(docker ps -q -f "ancestor=tinkerpop/gremlin-server:3.6.2" || \
                       docker ps -q -f "name=gremlin-server" || \
@@ -47,6 +64,8 @@ jobs:
           docker logs $CONTAINER_ID
           echo "\nContainer inspection:"
           docker inspect $CONTAINER_ID | jq '.[0].State'
+          echo "\nContainer network settings:"
+          docker inspect $CONTAINER_ID | jq '.[0].NetworkSettings'
         else
           echo "No Gremlin server container found"
         fi

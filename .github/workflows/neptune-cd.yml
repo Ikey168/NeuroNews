@@ -40,16 +40,25 @@ jobs:
     - uses: actions/checkout@v3
     
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.x'
+        python-version: '3.13'
+        cache: 'pip'
     
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
+        pip install gremlinpython==3.6.2  # Explicit installation
         pip install -r requirements.txt
-        pip install pytest-cov
         sudo apt-get update && sudo apt-get install -y jq netcat-openbsd
+
+    - name: Verify Dependencies
+      run: |
+        echo "Checking installed packages:"
+        pip list
+        echo "\nVerifying gremlinpython installation:"
+        python -c "import gremlinpython; print(f'gremlinpython version: {gremlinpython.__version__}')"
+        python -c "from gremlin_python.driver.driver_remote_connection import DriverRemoteConnection; print('gremlin_python imports working')"
 
     - name: Debug Container Status
       run: |
@@ -76,10 +85,6 @@ jobs:
           docker inspect $CONTAINER_ID | jq '.[0].NetworkSettings'
         else
           echo "No Gremlin server container found"
-          echo "\nAll running containers:"
-          docker ps
-          echo "\nAll containers (including stopped):"
-          docker ps -a
         fi
 
     - name: Monitor Gremlin Server
@@ -164,13 +169,15 @@ jobs:
         echo "NEPTUNE_ENDPOINT=$ENDPOINT" >> $GITHUB_ENV
     
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.x'
+        python-version: '3.13'
+        cache: 'pip'
     
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
+        pip install gremlinpython==3.6.2  # Explicit installation
         pip install -r requirements.txt
         sudo apt-get update && sudo apt-get install -y jq netcat-openbsd
     
@@ -239,15 +246,17 @@ jobs:
         echo "NEPTUNE_ENDPOINT=$ENDPOINT" >> $GITHUB_ENV
     
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.x'
+        python-version: '3.13'
+        cache: 'pip'
     
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
+        pip install gremlinpython==3.6.2  # Explicit installation
         pip install -r requirements.txt
-        pip install gremlinpython requests
+        pip install requests
     
     - name: Verify Graph Connectivity
       run: |
@@ -301,7 +310,6 @@ jobs:
         
         try:
             c = client.Client('wss://${{ env.NEPTUNE_ENDPOINT }}:8182/gremlin', 'g')
-            # Run a simple query to verify the graph is responsive
             result = c.submit('g.V().count()').all().result()
             print(f"Graph health check successful - {result[0]} vertices found")
             c.close()
