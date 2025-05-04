@@ -37,27 +37,19 @@ jobs:
           build-essential \
           gcc \
           jq \
-          netcat-openbsd \
-          libffi-dev \
-          libssl-dev \
-          python3.13-dev
+          netcat-openbsd
 
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip wheel setuptools
-        python -m pip install aiohttp==3.7.4  # Using older version
-        python -m pip install gremlinpython==3.6.2
         python -m pip install -r requirements.txt
 
     - name: Verify Dependencies
       run: |
         echo "Checking installed packages:"
         pip list
-        echo "\nVerifying gremlinpython installation:"
-        python -c "import gremlinpython; print(f'gremlinpython version: {gremlinpython.__version__}')"
-        python -c "from gremlin_python.driver.driver_remote_connection import DriverRemoteConnection; print('gremlin_python imports working')"
-        echo "\nVerifying aiohttp installation:"
-        python -c "import aiohttp; print(f'aiohttp version: {aiohttp.__version__}')"
+        echo "\nVerifying websockets installation:"
+        python -c "import websockets; print(f'websockets version: {websockets.__version__}')"
 
     - name: Debug Container Status
       run: |

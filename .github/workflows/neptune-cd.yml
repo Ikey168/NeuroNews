@@ -54,75 +54,31 @@ jobs:
           build-essential \
           gcc \
           jq \
-          netcat-openbsd \
-          libffi-dev \
-          libssl-dev \
-          python3.13-dev
+          netcat-openbsd
 
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip wheel setuptools
-        python -m pip install aiohttp==3.7.4  # Using older version
-        python -m pip install gremlinpython==3.6.2
         python -m pip install -r requirements.txt
 
     - name: Verify Dependencies
       run: |
         echo "Checking installed packages:"
         pip list
-        echo "\nVerifying gremlinpython installation:"
-        python -c "import gremlinpython; print(f'gremlinpython version: {gremlinpython.__version__}')"
-        python -c "from gremlin_python.driver.driver_remote_connection import DriverRemoteConnection; print('gremlin_python imports working')"
-        echo "\nVerifying aiohttp installation:"
-        python -c "import aiohttp; print(f'aiohttp version: {aiohttp.__version__}')"
-
-    - name: Debug Container Status
-      run: |
-        echo "Docker version:"
-        docker version
-        
-        echo "\nDocker info:"
-        docker info
-        
-        echo "\nListing all containers:"
-        docker ps -a
-        
-        echo "\nContainer details:"
-        CONTAINER_ID=$(docker ps -q -f "ancestor=tinkerpop/gremlin-server:3.6.2" || \
-                      docker ps -q -f "name=gremlin-server" || \
-                      docker ps -q -f "name=*_gremlin-server_*")
-        if [ -n "$CONTAINER_ID" ]; then
-          echo "Found container: $CONTAINER_ID"
-          echo "\nContainer logs:"
-          docker logs $CONTAINER_ID
-          echo "\nContainer inspection:"
-          docker inspect $CONTAINER_ID | jq '.[0].State'
-          echo "\nContainer network settings:"
-          docker inspect $CONTAINER_ID | jq '.[0].NetworkSettings'
-        else
-          echo "No Gremlin server container found"
-          echo "\nAll running containers:"
-          docker ps
-          echo "\nAll containers (including stopped):"
-          docker ps -a
-        fi
-
-    - name: Monitor Gremlin Server
-      run: |
-        chmod +x .github/workflows/monitor-container.sh
-        sudo ./.github/workflows/monitor-container.sh
+        echo "\nVerifying websockets installation:"
+        python -c "import websockets; print(f'websockets version: {websockets.__version__}')"
 
     - name: Run graph builder tests
       env:
         GREMLIN_SERVER_URL: ws://localhost:8182/gremlin
       run: |
-        python -m pytest tests/knowledge_graph/test_graph_builder.py -v --cov=src/knowledge_graph
+        python -m pytest tests/knowledge_graph/test_graph_builder_websockets.py -v
 
     - name: Run graph query tests
       env:
         GREMLIN_SERVER_URL: ws://localhost:8182/gremlin
       run: |
-        python -m pytest tests/knowledge_graph/test_graph_queries.py -v --cov=src/knowledge_graph
+        python -m pytest tests/knowledge_graph/test_graph_queries.py -v
 
     - name: Run integration tests
       env:
@@ -201,55 +157,12 @@ jobs:
           python3-dev \
           python3-setuptools \
           build-essential \
-          gcc \
-          jq \
-          netcat-openbsd \
-          libffi-dev \
-          libssl-dev \
-          python3.13-dev
+          gcc
 
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip wheel setuptools
-        python -m pip install aiohttp==3.7.4
-        python -m pip install gremlinpython==3.6.2
         python -m pip install -r requirements.txt
-    
-    - name: Wait for Neptune Cluster
-      run: |
-        echo "Waiting for Neptune cluster to be available..."
-        MAX_ATTEMPTS=30
-        ATTEMPT=1
-        DELAY=10
-        
-        while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
-          echo "Connection attempt $ATTEMPT/$MAX_ATTEMPTS"
-          if python3 - <<EOF
-        from gremlin_python.driver import client
-        try:
-            c = client.Client('wss://${{ env.NEPTUNE_ENDPOINT }}:8182/gremlin', 'g')
-            result = c.submit('g.V().count()').all().result()
-            c.close()
-            exit(0)
-        except Exception as e:
-            print(f"Connection failed: {str(e)}")
-            exit(1)
-        EOF
-          then
-            echo "Neptune cluster is ready"
-            break
-          fi
-          
-          ATTEMPT=$((ATTEMPT + 1))
-          if [ $ATTEMPT -gt $MAX_ATTEMPTS ]; then
-            echo "Neptune cluster failed to become ready"
-            exit 1
-          fi
-          
-          echo "Waiting ${DELAY} seconds before next attempt..."
-          sleep $DELAY
-          DELAY=$(( DELAY < 60 ? DELAY * 2 : 60 ))
-        done
 
     - name: Initialize Neptune Schema
       run: |
@@ -292,56 +205,12 @@ jobs:
           python3-dev \
           python3-setuptools \
           build-essential \
-          gcc \
-          libffi-dev \
-          libssl-dev \
-          python3.13-dev
+          gcc
 
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip wheel setuptools
-        python -m pip install aiohttp==3.7.4
-        python -m pip install gremlinpython==3.6.2
         python -m pip install -r requirements.txt
-        python -m pip install requests
-    
-    - name: Verify Graph Connectivity
-      run: |
-        MAX_RETRIES=5
-        DELAY=10
-        ATTEMPT=1
-        
-        while [ $ATTEMPT -le $MAX_RETRIES ]; do
-          echo "Attempt $ATTEMPT/$MAX_RETRIES"
-          if python3 - <<EOF
-        from gremlin_python.driver import client
-        try:
-            c = client.Client('wss://${{ env.NEPTUNE_ENDPOINT }}:8182/gremlin', 'g')
-            result = c.submit('g.V().count()').all().result()
-            print(f"Graph contains {result[0]} vertices")
-            if result[0] == 0:
-                raise Exception("Graph is empty")
-            c.close()
-            exit(0)
-        except Exception as e:
-            print(f"Error: {str(e)}")
-            exit(1)
-        EOF
-          then
-            echo "Graph connectivity verified"
-            break
-          fi
-          
-          ATTEMPT=$((ATTEMPT + 1))
-          if [ $ATTEMPT -gt $MAX_RETRIES ]; then
-            echo "Failed to verify graph connectivity"
-            exit 1
-          fi
-          
-          echo "Waiting ${DELAY} seconds before retry..."
-          sleep $DELAY
-          DELAY=$(( DELAY < 60 ? DELAY * 2 : 60 ))
-        done
 
     - name: Run Validation Tests
       env:
@@ -349,19 +218,3 @@ jobs:
         GREMLIN_SERVER_URL: wss://${{ env.NEPTUNE_ENDPOINT }}:8182/gremlin
       run: |
         python -m pytest tests/integration/test_graph_integration.py::test_entity_relationship_tracking -v
-
-    - name: Check Graph Health
-      run: |
-        python3 - <<EOF
-        from gremlin_python.driver import client
-        
-        try:
-            c = client.Client('wss://${{ env.NEPTUNE_ENDPOINT }}:8182/gremlin', 'g')
-            result = c.submit('g.V().count()').all().result()
-            print(f"Graph health check successful - {result[0]} vertices found")
-            c.close()
-            exit(0)
-        except Exception as e:
-            print(f"Graph health check failed: {str(e)}")
-            exit(1)
-        EOF
