@@ -1,291 +1,153 @@
-import os
-import logging
 import json
-from datetime import datetime
-from typing import Dict, List, Optional, Tuple, Any
-from gremlin_python.driver.driver_remote_connection import DriverRemoteConnection
-from gremlin_python.structure.graph import Graph
-from gremlin_python.driver.protocol import GremlinServerError
-from gremlin_python.process.traversal import T
-
-logger = logging.getLogger(__name__)
+import asyncio
+import websockets
+from typing import List, Dict, Any
 
 class GraphBuilder:
-    """Handles construction and insertion of knowledge graph data into Neptune."""
-    
-    def __init__(self, neptune_endpoint: str):
-        """Initialize the graph builder with Neptune connection details.
+    def __init__(self, endpoint: str):
+        """Initialize the graph builder with Neptune endpoint.
         
         Args:
-            neptune_endpoint: Neptune cluster endpoint URL
+            endpoint: The Neptune endpoint URL (e.g., ws://localhost:8182/gremlin)
         """
-        self.endpoint = neptune_endpoint
-        self.graph = Graph()
-        self.g = None
-        self._connect()
+        self.endpoint = endpoint
 
-    def _connect(self):
-        """Establish connection to Neptune database."""
-        try:
-            connection = DriverRemoteConnection(
-                f'wss://{self.endpoint}:8182/gremlin',
-                'g'
-            )
-            self.g = self.graph.traversal().withRemote(connection)
-            logger.info("Successfully connected to Neptune")
-        except Exception as e:
-            logger.error(f"Failed to connect to Neptune: {str(e)}")
-            raise
-
-    def _clean_properties(self, props: Dict) -> Dict:
-        """Clean and validate property values for graph insertion.
+    async def _execute_query(self, query: str, bindings: Dict[str, Any] = None) -> Dict:
+        """Execute a Gremlin query using websockets.
         
         Args:
-            props: Dictionary of property key-value pairs
+            query: The Gremlin query string
+            bindings: Optional parameter bindings
             
         Returns:
-            Cleaned properties dictionary
+            Query response as dictionary
         """
-        cleaned = {}
-        for key, value in props.items():
-            # Skip None values
-            if value is None:
-                continue
-                
-            # Convert datetime objects to ISO format strings
-            if isinstance(value, datetime):
-                cleaned[key] = value.isoformat()
-            # Convert lists to JSON strings
-            elif isinstance(value, (list, dict)):
-                cleaned[key] = json.dumps(value)
-            # Keep strings, numbers, and booleans as is
-            elif isinstance(value, (str, int, float, bool)):
-                cleaned[key] = value
-            else:
-                logger.warning(f"Skipping unsupported property type: {key}: {type(value)}")
-                
-        return cleaned
+        request = {
+            "requestId": "123",
+            "op": "eval",
+            "processor": "traversal",
+            "args": {
+                "gremlin": query,
+                "bindings": bindings or {},
+                "language": "gremlin-groovy"
+            }
+        }
+        
+        async with websockets.connect(self.endpoint) as websocket:
+            await websocket.send(json.dumps(request))
+            response = await websocket.recv()
+            return json.loads(response)
 
-    def add_person(self, properties: Dict[str, Any]) -> str:
-        """Add a person vertex to the graph.
+    async def add_article(self, article_data: Dict[str, Any]) -> Dict:
+        """Add a news article vertex to the graph.
         
         Args:
-            properties: Person properties including name, title, etc.
+            article_data: Dictionary containing article properties
             
         Returns:
-            Vertex ID of the created person
+            Response from graph database
         """
-        try:
-            props = self._clean_properties(properties)
-            vertex = self.g.addV('Person').property('name', props['name'])
-            
-            # Add all other properties
-            for key, value in props.items():
-                if key != 'name':  # name already added
-                    vertex = vertex.property(key, value)
-                    
-            result = vertex.next()
-            vertex_id = result.id
-            logger.info(f"Added Person vertex: {props['name']} (ID: {vertex_id})")
-            return vertex_id
-            
-        except Exception as e:
-            logger.error(f"Failed to add person: {str(e)}")
-            raise
+        query = """
+        g.addV('article')
+         .property('id', id)
+         .property('title', title) 
+         .property('url', url)
+         .property('published_date', published_date)
+        """
+        
+        bindings = {
+            'id': article_data['id'],
+            'title': article_data['title'],
+            'url': article_data['url'],
+            'published_date': article_data['published_date']
+        }
+        
+        return await self._execute_query(query, bindings)
 
-    def add_organization(self, properties: Dict[str, Any]) -> str:
-        """Add an organization vertex to the graph.
+    async def add_relationship(self, from_id: str, to_id: str, relationship_type: str) -> Dict:
+        """Add a relationship edge between two vertices.
         
         Args:
-            properties: Organization properties including name, type, etc.
+            from_id: Source vertex ID
+            to_id: Target vertex ID
+            relationship_type: Type of relationship edge
             
         Returns:
-            Vertex ID of the created organization
+            Response from graph database
         """
-        try:
-            props = self._clean_properties(properties)
-            vertex = self.g.addV('Organization').property('orgName', props['orgName'])
-            
-            for key, value in props.items():
-                if key != 'orgName':
-                    vertex = vertex.property(key, value)
-                    
-            result = vertex.next()
-            vertex_id = result.id
-            logger.info(f"Added Organization vertex: {props['orgName']} (ID: {vertex_id})")
-            return vertex_id
-            
-        except Exception as e:
-            logger.error(f"Failed to add organization: {str(e)}")
-            raise
+        query = """
+        g.V(from_id).addE(relationship_type).to(g.V(to_id))
+        """
+        
+        bindings = {
+            'from_id': from_id,
+            'to_id': to_id,
+            'relationship_type': relationship_type
+        }
+        
+        return await self._execute_query(query, bindings)
 
-    def add_event(self, properties: Dict[str, Any]) -> str:
-        """Add an event vertex to the graph.
+    async def get_related_articles(self, article_id: str, relationship_type: str = None) -> List[Dict]:
+        """Get articles related to the given article.
         
         Args:
-            properties: Event properties including name, type, dates, etc.
+            article_id: ID of the article to find relations for
+            relationship_type: Optional relationship type to filter by
             
         Returns:
-            Vertex ID of the created event
+            List of related article data
         """
-        try:
-            props = self._clean_properties(properties)
-            vertex = self.g.addV('Event').property('eventName', props['eventName'])
+        if relationship_type:
+            query = """
+            g.V(article_id).both(relationship_type).valueMap(true)
+            """
+            bindings = {'article_id': article_id, 'relationship_type': relationship_type}
+        else:
+            query = """
+            g.V(article_id).both().valueMap(true)
+            """
+            bindings = {'article_id': article_id}
             
-            for key, value in props.items():
-                if key != 'eventName':
-                    vertex = vertex.property(key, value)
-                    
-            result = vertex.next()
-            vertex_id = result.id
-            logger.info(f"Added Event vertex: {props['eventName']} (ID: {vertex_id})")
-            return vertex_id
-            
-        except Exception as e:
-            logger.error(f"Failed to add event: {str(e)}")
-            raise
+        response = await self._execute_query(query, bindings)
+        return response.get('result', {}).get('data', [])
 
-    def add_article(self, properties: Dict[str, Any]) -> str:
-        """Add an article vertex to the graph.
+    async def get_article_by_id(self, article_id: str) -> Dict:
+        """Get article vertex by ID.
         
         Args:
-            properties: Article properties including headline, URL, etc.
+            article_id: ID of the article to retrieve
             
         Returns:
-            Vertex ID of the created article
+            Article data dictionary
         """
-        try:
-            props = self._clean_properties(properties)
-            vertex = self.g.addV('Article').property('headline', props['headline'])
-            
-            for key, value in props.items():
-                if key != 'headline':
-                    vertex = vertex.property(key, value)
-                    
-            result = vertex.next()
-            vertex_id = result.id
-            logger.info(f"Added Article vertex: {props['headline']} (ID: {vertex_id})")
-            return vertex_id
-            
-        except Exception as e:
-            logger.error(f"Failed to add article: {str(e)}")
-            raise
+        query = """
+        g.V(article_id).valueMap(true)
+        """
+        
+        response = await self._execute_query(query, {'article_id': article_id})
+        results = response.get('result', {}).get('data', [])
+        return results[0] if results else None
 
-    def add_relationship(self, from_id: str, to_id: str, label: str, properties: Optional[Dict] = None) -> str:
-        """Add an edge between two vertices.
+    async def delete_article(self, article_id: str) -> Dict:
+        """Delete an article vertex and its edges from the graph.
         
         Args:
-            from_id: ID of the source vertex
-            to_id: ID of the target vertex
-            label: Edge label (relationship type)
-            properties: Optional edge properties
+            article_id: ID of the article to delete
             
         Returns:
-            Edge ID of the created relationship
+            Response from graph database
         """
-        try:
-            edge = self.g.V(from_id).addE(label).to(self.g.V(to_id))
-            
-            if properties:
-                props = self._clean_properties(properties)
-                for key, value in props.items():
-                    edge = edge.property(key, value)
-                    
-            result = edge.next()
-            edge_id = result.id
-            logger.info(f"Added {label} relationship: {from_id} -> {to_id} (ID: {edge_id})")
-            return edge_id
-            
-        except Exception as e:
-            logger.error(f"Failed to add relationship: {str(e)}")
-            raise
-
-    def get_or_create_person(self, name: str, properties: Optional[Dict] = None) -> str:
-        """Get existing person by name or create new if not exists.
+        query = """
+        g.V(article_id).drop()
+        """
         
-        Args:
-            name: Person's name
-            properties: Additional properties if person needs to be created
-            
+        return await self._execute_query(query, {'article_id': article_id})
+
+    async def clear_graph(self) -> Dict:
+        """Remove all vertices and edges from the graph.
+        
         Returns:
-            Vertex ID of existing or new person
+            Response from graph database
         """
-        try:
-            result = self.g.V().hasLabel('Person').has('name', name).next()
-            return result.id
-        except StopIteration:
-            props = properties or {}
-            props['name'] = name
-            return self.add_person(props)
-
-    def get_or_create_organization(self, name: str, properties: Optional[Dict] = None) -> str:
-        """Get existing organization by name or create new if not exists.
-        
-        Args:
-            name: Organization name
-            properties: Additional properties if org needs to be created
-            
-        Returns:
-            Vertex ID of existing or new organization
-        """
-        try:
-            result = self.g.V().hasLabel('Organization').has('orgName', name).next()
-            return result.id
-        except StopIteration:
-            props = properties or {}
-            props['orgName'] = name
-            return self.add_organization(props)
-
-    def batch_insert(self, entities: List[Dict], relationships: List[Dict]) -> Tuple[List[str], List[str]]:
-        """Insert multiple entities and relationships in batch.
-        
-        Args:
-            entities: List of entity dictionaries with type and properties
-            relationships: List of relationship dictionaries
-            
-        Returns:
-            Tuple of (entity IDs, relationship IDs)
-        """
-        entity_ids = []
-        relationship_ids = []
-        
-        try:
-            # Insert entities
-            for entity in entities:
-                entity_type = entity['type']
-                props = entity['properties']
-                
-                if entity_type == 'Person':
-                    entity_id = self.add_person(props)
-                elif entity_type == 'Organization':
-                    entity_id = self.add_organization(props)
-                elif entity_type == 'Event':
-                    entity_id = self.add_event(props)
-                elif entity_type == 'Article':
-                    entity_id = self.add_article(props)
-                else:
-                    logger.warning(f"Skipping unknown entity type: {entity_type}")
-                    continue
-                    
-                entity_ids.append(entity_id)
-                
-            # Insert relationships
-            for rel in relationships:
-                rel_id = self.add_relationship(
-                    rel['from_id'],
-                    rel['to_id'],
-                    rel['label'],
-                    rel.get('properties')
-                )
-                relationship_ids.append(rel_id)
-                
-            return entity_ids, relationship_ids
-            
-        except Exception as e:
-            logger.error(f"Batch insert failed: {str(e)}")
-            raise
-
-    def close(self):
-        """Close the Neptune connection."""
-        if hasattr(self, 'g') and self.g is not None:
-            self.g.close()
+        query = "g.V().drop()"
+        return await self._execute_query(query)
