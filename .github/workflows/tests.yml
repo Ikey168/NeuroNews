@@ -39,12 +39,13 @@ jobs:
           jq \
           netcat-openbsd \
           libffi-dev \
-          libssl-dev
+          libssl-dev \
+          python3.13-dev
 
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip wheel setuptools
-        python -m pip install aiohttp==3.8.1  # Install aiohttp first
+        python -m pip install aiohttp==3.7.4  # Using older version
         python -m pip install gremlinpython==3.6.2
         python -m pip install -r requirements.txt
 

@@ -4,7 +4,8 @@ pytest-cov>=4.0.0
 httpx>=0.24.0
 
 # Graph Database
-gremlinpython>=3.6.2  # Changed from 'gremlin_python' to 'gremlinpython'
+gremlinpython==3.6.2
+aiohttp==3.7.4  # Pinned to older version for Python 3.13 compatibility
 boto3>=1.26.0
 
 # Web Framework
