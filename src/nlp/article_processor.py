@@ -7,7 +7,7 @@ from typing import List, Dict, Optional
 import psycopg2
 from psycopg2.extras import execute_batch
 from datetime import datetime
-from .sentiment_analysis import create_analyzer, BaseSentimentAnalyzer
+from .sentiment_analysis import create_analyzer
 
 logger = logging.getLogger(__name__)
 

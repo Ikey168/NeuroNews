@@ -5,16 +5,12 @@ Contains modules for natural language processing tasks including sentiment analy
 
 from .sentiment_analysis import (
     create_analyzer,
-    BaseSentimentAnalyzer,
-    TransformersSentimentAnalyzer,
-    AWSComprehendAnalyzer
+    SentimentAnalyzer  # Corrected import
 )
 from .article_processor import ArticleProcessor
 
 __all__ = [
     'create_analyzer',
-    'BaseSentimentAnalyzer',
-    'TransformersSentimentAnalyzer',
-    'AWSComprehendAnalyzer',
+    'SentimentAnalyzer',  # Corrected export
     'ArticleProcessor'
 ]
