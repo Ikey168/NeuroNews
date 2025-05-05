@@ -1,193 +1,152 @@
 import pytest
-from unittest.mock import Mock, patch
-from datetime import datetime
+from unittest.mock import Mock, patch, MagicMock
+from gremlin_python.process.traversal import Binding
 from src.knowledge_graph.graph_builder import GraphBuilder
 
 @pytest.fixture
-def mock_graph():
-    """Create a mock graph with traversal stub."""
-    with patch('src.knowledge_graph.graph_builder.Graph') as mock:
-        # Create mock traversal
-        mock_traversal = Mock()
-        mock.return_value.traversal.return_value.withRemote.return_value = mock_traversal
-        
-        # Create mock vertex/edge for successful operations
-        mock_vertex = Mock()
-        mock_vertex.id = "test-id"
-        mock_traversal.addV.return_value.property.return_value.next.return_value = mock_vertex
-        
-        mock_edge = Mock()
-        mock_edge.id = "edge-id"
-        mock_traversal.V.return_value.addE.return_value.to.return_value.next.return_value = mock_edge
-        
-        return mock_traversal
+def mock_client():
+    with patch('gremlin_python.driver.client.Client') as mock:
+        mock_instance = MagicMock()
+        mock.return_value = mock_instance
+        yield mock_instance
 
 @pytest.fixture
-def graph_builder(mock_graph):
-    """Create a GraphBuilder instance with mocked Neptune connection."""
-    return GraphBuilder("dummy-endpoint")
+def mock_connection():
+    with patch('gremlin_python.driver.driver_remote_connection.DriverRemoteConnection') as mock:
+        mock_instance = MagicMock()
+        mock.return_value = mock_instance
+        yield mock_instance
 
-def test_add_person(graph_builder):
-    """Test adding a person vertex."""
-    person_props = {
-        "name": "John Doe",
-        "title": "CEO",
-        "age": 45,
-        "nationality": "US",
-        "occupation": ["Executive", "Board Member"],
-        "lastUpdated": datetime.now()
+@pytest.fixture
+def mock_traversal():
+    with patch('gremlin_python.process.anonymous_traversal.traversal') as mock:
+        mock_graph = MagicMock()
+        mock.return_value = mock_graph
+        mock_graph.withRemote.return_value = mock_graph
+        yield mock_graph
+
+@pytest.fixture
+def graph_builder(mock_client, mock_connection, mock_traversal):
+    builder = GraphBuilder('ws://localhost:8182/gremlin')
+    builder.connection = mock_connection
+    builder.g = mock_traversal
+    return builder
+
+def test_add_article(graph_builder, mock_traversal):
+    article_data = {
+        'id': '123',
+        'title': 'Test Article',
+        'url': 'http://example.com',
+        'published_date': '2025-01-01'
     }
     
-    vertex_id = graph_builder.add_person(person_props)
-    assert vertex_id == "test-id"
-    
-    # Verify proper vertex creation calls
-    graph_builder.g.addV.assert_called_once_with('Person')
-    graph_builder.g.addV.return_value.property.assert_called_with('name', 'John Doe')
+    # Setup mock chain
+    mock_traversal.addV.return_value = mock_traversal
+    mock_traversal.property.return_value = mock_traversal
+    mock_traversal.next.return_value = {'id': '123'}
 
-def test_add_organization(graph_builder):
-    """Test adding an organization vertex."""
-    org_props = {
-        "orgName": "Tech Corp",
-        "orgType": "Corporation",
-        "industry": ["Technology", "Software"],
-        "founded": datetime(2000, 1, 1),
-        "employeeCount": 1000
-    }
+    # Execute
+    result = graph_builder.add_article(article_data)
     
-    vertex_id = graph_builder.add_organization(org_props)
-    assert vertex_id == "test-id"
-    
-    graph_builder.g.addV.assert_called_once_with('Organization')
-    graph_builder.g.addV.return_value.property.assert_called_with('orgName', 'Tech Corp')
+    # Verify
+    mock_traversal.addV.assert_called_once_with('article')
+    assert mock_traversal.property.call_count == 4
+    assert result == {'id': '123'}
 
-def test_add_event(graph_builder):
-    """Test adding an event vertex."""
-    event_props = {
-        "eventName": "Tech Conference 2025",
-        "eventType": "Conference",
-        "startDate": datetime(2025, 6, 1),
-        "endDate": datetime(2025, 6, 3),
-        "location": "San Francisco",
-        "keywords": ["technology", "innovation"]
-    }
+def test_add_relationship(graph_builder, mock_traversal):
+    from_id = '123'
+    to_id = '456'
+    rel_type = 'RELATED_TO'
     
-    vertex_id = graph_builder.add_event(event_props)
-    assert vertex_id == "test-id"
-    
-    graph_builder.g.addV.assert_called_once_with('Event')
-    graph_builder.g.addV.return_value.property.assert_called_with('eventName', 'Tech Conference 2025')
+    # Setup mock chain
+    mock_traversal.V.return_value = mock_traversal
+    mock_traversal.has.return_value = mock_traversal
+    mock_traversal.addE.return_value = mock_traversal
+    mock_traversal.to.return_value = mock_traversal
+    mock_traversal.next.return_value = {'id': 'edge-1'}
 
-def test_add_article(graph_builder):
-    """Test adding an article vertex."""
-    article_props = {
-        "headline": "New Technology Breakthrough",
-        "url": "https://example.com/article",
-        "publishDate": datetime(2025, 5, 1),
-        "author": ["Jane Smith"],
-        "source": "Tech News"
-    }
+    # Execute
+    result = graph_builder.add_relationship(from_id, to_id, rel_type)
     
-    vertex_id = graph_builder.add_article(article_props)
-    assert vertex_id == "test-id"
-    
-    graph_builder.g.addV.assert_called_once_with('Article')
-    graph_builder.g.addV.return_value.property.assert_called_with('headline', 'New Technology Breakthrough')
+    # Verify
+    mock_traversal.V.assert_called_once_with()
+    mock_traversal.has.assert_called_once_with('id', from_id)
+    mock_traversal.addE.assert_called_once_with(rel_type)
+    assert result == {'id': 'edge-1'}
 
-def test_add_relationship(graph_builder):
-    """Test adding a relationship between vertices."""
-    from_id = "person-1"
-    to_id = "org-1"
-    label = "WORKS_FOR"
-    props = {
-        "role": "CEO",
-        "startDate": datetime(2020, 1, 1)
-    }
+def test_get_related_articles(graph_builder, mock_traversal):
+    article_id = '123'
+    rel_type = 'RELATED_TO'
+    expected_result = [{'id': '456', 'title': 'Related Article'}]
     
-    edge_id = graph_builder.add_relationship(from_id, to_id, label, props)
-    assert edge_id == "edge-id"
-    
-    graph_builder.g.V.assert_called_once_with(from_id)
-    graph_builder.g.V.return_value.addE.assert_called_once_with(label)
+    # Setup mock chain
+    mock_traversal.V.return_value = mock_traversal
+    mock_traversal.has.return_value = mock_traversal
+    mock_traversal.both.return_value = mock_traversal
+    mock_traversal.valueMap.return_value = mock_traversal
+    mock_traversal.toList.return_value = expected_result
 
-def test_batch_insert(graph_builder):
-    """Test batch insertion of entities and relationships."""
-    entities = [
-        {
-            "type": "Person",
-            "properties": {
-                "name": "John Doe",
-                "title": "CEO"
-            }
-        },
-        {
-            "type": "Organization",
-            "properties": {
-                "orgName": "Tech Corp",
-                "industry": ["Technology"]
-            }
-        }
-    ]
+    # Execute
+    result = graph_builder.get_related_articles(article_id, rel_type)
     
-    relationships = [
-        {
-            "from_id": "person-1",
-            "to_id": "org-1",
-            "label": "WORKS_FOR",
-            "properties": {
-                "role": "CEO"
-            }
-        }
-    ]
-    
-    entity_ids, rel_ids = graph_builder.batch_insert(entities, relationships)
-    assert len(entity_ids) == 2
-    assert len(rel_ids) == 1
+    # Verify
+    mock_traversal.V.assert_called_once_with()
+    mock_traversal.has.assert_called_once_with('id', article_id)
+    mock_traversal.both.assert_called_once_with(rel_type)
+    mock_traversal.valueMap.assert_called_once_with(True)
+    assert result == expected_result
 
-def test_property_cleaning(graph_builder):
-    """Test property cleaning and validation."""
-    props = {
-        "name": "John Doe",
-        "age": 45,
-        "skills": ["Python", "AWS"],
-        "startDate": datetime(2020, 1, 1),
-        "metadata": {"key": "value"},
-        "nullField": None,
-        "complexObject": object()
-    }
+def test_get_article_by_id(graph_builder, mock_traversal):
+    article_id = '123'
+    expected_result = [{'id': '123', 'title': 'Test Article'}]
     
-    cleaned = graph_builder._clean_properties(props)
-    
-    assert cleaned["name"] == "John Doe"
-    assert cleaned["age"] == 45
-    assert "nullField" not in cleaned
-    assert "complexObject" not in cleaned
-    assert isinstance(cleaned["skills"], str)
-    assert isinstance(cleaned["metadata"], str)
-    assert isinstance(cleaned["startDate"], str)
+    # Setup mock chain
+    mock_traversal.V.return_value = mock_traversal
+    mock_traversal.has.return_value = mock_traversal
+    mock_traversal.valueMap.return_value = mock_traversal
+    mock_traversal.toList.return_value = expected_result
 
-def test_connection_error():
-    """Test handling of connection errors."""
-    with patch('src.knowledge_graph.graph_builder.DriverRemoteConnection') as mock_conn:
-        mock_conn.side_effect = Exception("Connection failed")
-        
-        with pytest.raises(Exception) as exc:
-            GraphBuilder("bad-endpoint")
-        
-        assert "Connection failed" in str(exc.value)
+    # Execute
+    result = graph_builder.get_article_by_id(article_id)
+    
+    # Verify
+    mock_traversal.V.assert_called_once_with()
+    mock_traversal.has.assert_called_once_with('id', article_id)
+    mock_traversal.valueMap.assert_called_once_with(True)
+    assert result == expected_result[0]
 
-def test_get_or_create_person(graph_builder):
-    """Test get_or_create_person functionality."""
-    # Mock existing person lookup
-    mock_person = Mock()
-    mock_person.id = "existing-id"
-    graph_builder.g.V.return_value.hasLabel.return_value.has.return_value.next.return_value = mock_person
+def test_delete_article(graph_builder, mock_traversal):
+    article_id = '123'
     
-    # Test getting existing person
-    person_id = graph_builder.get_or_create_person("John Doe")
-    assert person_id == "existing-id"
+    # Setup mock chain
+    mock_traversal.V.return_value = mock_traversal
+    mock_traversal.has.return_value = mock_traversal
+    mock_traversal.drop.return_value = mock_traversal
+    mock_traversal.iterate.return_value = None
+
+    # Execute
+    graph_builder.delete_article(article_id)
     
-    # Test creating new person when not found
-    graph_builder.g.V.return_value.hasLabel.return_value.has.return_value.next.side_effect = StopIteration
-    new_id = graph_builder.get_or_create_person("Jane Smith", {"title": "CTO"})
-    assert new_id == "test-id"
+    # Verify
+    mock_traversal.V.assert_called_once_with()
+    mock_traversal.has.assert_called_once_with('id', article_id)
+    mock_traversal.drop.assert_called_once_with()
+    mock_traversal.iterate.assert_called_once_with()
+
+def test_clear_graph(graph_builder, mock_traversal):
+    # Setup mock chain
+    mock_traversal.V.return_value = mock_traversal
+    mock_traversal.drop.return_value = mock_traversal
+    mock_traversal.iterate.return_value = None
+
+    # Execute
+    graph_builder.clear_graph()
+    
+    # Verify
+    mock_traversal.V.assert_called_once_with()
+    mock_traversal.drop.assert_called_once_with()
+    mock_traversal.iterate.assert_called_once_with()
+
+def test_close(graph_builder, mock_connection):
+    graph_builder.close()
+    mock_connection.close.assert_called_once_with()

@@ -2,17 +2,16 @@
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-v"
-asyncio_mode = "strict"
-asyncio_default_fixture_loop_scope = "function"
 
 [project]
 name = "neuronews"
 version = "0.1.0"
 description = "A news aggregation and analysis system"
-requires-python = ">=3.13"
+requires-python = ">=3.8"
 dependencies = [
-    "websockets>=12.0",
-    "pytest-asyncio>=0.21.0",
+    "gremlinpython>=3.6.0",
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
 ]
 
 [build-system]

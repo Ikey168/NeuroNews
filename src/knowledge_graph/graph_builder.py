@@ -1,6 +1,7 @@
-import json
-import asyncio
-import websockets
+from gremlin_python.driver.driver_remote_connection import DriverRemoteConnection
+from gremlin_python.process.anonymous_traversal import traversal
+from gremlin_python.process.graph_traversal import __
+from gremlin_python.driver.client import Client
 from typing import List, Dict, Any
 
 class GraphBuilder:
@@ -11,34 +12,10 @@ class GraphBuilder:
             endpoint: The Neptune endpoint URL (e.g., ws://localhost:8182/gremlin)
         """
         self.endpoint = endpoint
+        self.connection = DriverRemoteConnection(endpoint, 'g')
+        self.g = traversal().withRemote(self.connection)
 
-    async def _execute_query(self, query: str, bindings: Dict[str, Any] = None) -> Dict:
-        """Execute a Gremlin query using websockets.
-        
-        Args:
-            query: The Gremlin query string
-            bindings: Optional parameter bindings
-            
-        Returns:
-            Query response as dictionary
-        """
-        request = {
-            "requestId": "123",
-            "op": "eval",
-            "processor": "traversal",
-            "args": {
-                "gremlin": query,
-                "bindings": bindings or {},
-                "language": "gremlin-groovy"
-            }
-        }
-        
-        async with websockets.connect(self.endpoint) as websocket:
-            await websocket.send(json.dumps(request))
-            response = await websocket.recv()
-            return json.loads(response)
-
-    async def add_article(self, article_data: Dict[str, Any]) -> Dict:
+    def add_article(self, article_data: Dict[str, Any]) -> Dict:
         """Add a news article vertex to the graph.
         
         Args:
@@ -47,24 +24,16 @@ class GraphBuilder:
         Returns:
             Response from graph database
         """
-        query = """
-        g.addV('article')
-         .property('id', id)
-         .property('title', title) 
-         .property('url', url)
-         .property('published_date', published_date)
-        """
-        
-        bindings = {
-            'id': article_data['id'],
-            'title': article_data['title'],
-            'url': article_data['url'],
-            'published_date': article_data['published_date']
-        }
-        
-        return await self._execute_query(query, bindings)
+        vertex = self.g.addV('article')\
+            .property('id', article_data['id'])\
+            .property('title', article_data['title'])\
+            .property('url', article_data['url'])\
+            .property('published_date', article_data['published_date'])\
+            .next()
+            
+        return vertex
 
-    async def add_relationship(self, from_id: str, to_id: str, relationship_type: str) -> Dict:
+    def add_relationship(self, from_id: str, to_id: str, relationship_type: str) -> Dict:
         """Add a relationship edge between two vertices.
         
         Args:
@@ -75,19 +44,14 @@ class GraphBuilder:
         Returns:
             Response from graph database
         """
-        query = """
-        g.V(from_id).addE(relationship_type).to(g.V(to_id))
-        """
-        
-        bindings = {
-            'from_id': from_id,
-            'to_id': to_id,
-            'relationship_type': relationship_type
-        }
-        
-        return await self._execute_query(query, bindings)
+        edge = self.g.V().has('id', from_id)\
+            .addE(relationship_type)\
+            .to(__.V().has('id', to_id))\
+            .next()
+            
+        return edge
 
-    async def get_related_articles(self, article_id: str, relationship_type: str = None) -> List[Dict]:
+    def get_related_articles(self, article_id: str, relationship_type: str = None) -> List[Dict]:
         """Get articles related to the given article.
         
         Args:
@@ -98,20 +62,19 @@ class GraphBuilder:
             List of related article data
         """
         if relationship_type:
-            query = """
-            g.V(article_id).both(relationship_type).valueMap(true)
-            """
-            bindings = {'article_id': article_id, 'relationship_type': relationship_type}
+            vertices = self.g.V().has('id', article_id)\
+                .both(relationship_type)\
+                .valueMap(True)\
+                .toList()
         else:
-            query = """
-            g.V(article_id).both().valueMap(true)
-            """
-            bindings = {'article_id': article_id}
+            vertices = self.g.V().has('id', article_id)\
+                .both()\
+                .valueMap(True)\
+                .toList()
             
-        response = await self._execute_query(query, bindings)
-        return response.get('result', {}).get('data', [])
+        return vertices
 
-    async def get_article_by_id(self, article_id: str) -> Dict:
+    def get_article_by_id(self, article_id: str) -> Dict:
         """Get article vertex by ID.
         
         Args:
@@ -120,34 +83,24 @@ class GraphBuilder:
         Returns:
             Article data dictionary
         """
-        query = """
-        g.V(article_id).valueMap(true)
-        """
-        
-        response = await self._execute_query(query, {'article_id': article_id})
-        results = response.get('result', {}).get('data', [])
-        return results[0] if results else None
+        vertices = self.g.V().has('id', article_id)\
+            .valueMap(True)\
+            .toList()
+            
+        return vertices[0] if vertices else None
 
-    async def delete_article(self, article_id: str) -> Dict:
+    def delete_article(self, article_id: str) -> None:
         """Delete an article vertex and its edges from the graph.
         
         Args:
             article_id: ID of the article to delete
-            
-        Returns:
-            Response from graph database
         """
-        query = """
-        g.V(article_id).drop()
-        """
-        
-        return await self._execute_query(query, {'article_id': article_id})
+        self.g.V().has('id', article_id).drop().iterate()
 
-    async def clear_graph(self) -> Dict:
-        """Remove all vertices and edges from the graph.
-        
-        Returns:
-            Response from graph database
-        """
-        query = "g.V().drop()"
-        return await self._execute_query(query)
+    def clear_graph(self) -> None:
+        """Remove all vertices and edges from the graph."""
+        self.g.V().drop().iterate()
+
+    def close(self) -> None:
+        """Close the graph connection."""
+        self.connection.close()

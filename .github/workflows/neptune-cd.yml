@@ -42,7 +42,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.13'
+        python-version: '3.x'
         cache: 'pip'
 
     - name: Install system dependencies
@@ -65,14 +65,14 @@ jobs:
       run: |
         echo "Checking installed packages:"
         pip list
-        echo "\nVerifying websockets installation:"
-        python -c "import websockets; print(f'websockets version: {websockets.__version__}')"
+        echo "\nVerifying gremlinpython installation:"
+        python -c "from gremlin_python import __version__; print(f'gremlinpython version: {__version__}')"
 
     - name: Run graph builder tests
       env:
         GREMLIN_SERVER_URL: ws://localhost:8182/gremlin
       run: |
-        python -m pytest tests/knowledge_graph/test_graph_builder_websockets.py -v
+        python -m pytest tests/knowledge_graph/test_graph_builder.py -v
 
     - name: Run graph query tests
       env:
@@ -147,7 +147,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.13'
+        python-version: '3.x'
         cache: 'pip'
 
     - name: Install system dependencies
@@ -195,7 +195,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.13'
+        python-version: '3.x'
         cache: 'pip'
 
     - name: Install system dependencies
