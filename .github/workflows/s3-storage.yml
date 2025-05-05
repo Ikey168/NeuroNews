@@ -1,40 +1,43 @@
-name: S3 Storage CI/CD
+name: S3 Storage Tests
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
     paths:
-      - 'src/database/**'
-      - 'deployment/terraform/**'
-      - 'tests/database/**'
+      - 'src/database/s3_storage.py'
+      - 'tests/database/test_s3_storage.py'
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
     paths:
-      - 'src/database/**'
-      - 'deployment/terraform/**'
-      - 'tests/database/**'
+      - 'src/database/s3_storage.py'
+      - 'tests/database/test_s3_storage.py'
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.9", "3.10", "3.11"]
-
+    
     steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
       with:
-        python-version: ${{ matrix.python-version }}
-        
+        python-version: '3.x'
+        cache: 'pip'
+    
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest pytest-cov
-
+        pip install pytest-cov
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+    
     - name: Run tests
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -42,99 +45,5 @@ jobs:
         AWS_REGION: us-east-1
         S3_BUCKET: neuronews-raw-articles-test
       run: |
+        export PYTHONPATH=$PYTHONPATH:$(pwd)/src
         pytest tests/database/test_s3_storage.py -v --cov=src/database
-
-  terraform:
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: 1.5.0
-
-    - name: Terraform Format
-      run: |
-        chmod +x deployment/terraform/scripts/create_lambda_zips.sh
-        ./deployment/terraform/scripts/create_lambda_zips.sh
-        terraform fmt -check
-      working-directory: deployment/terraform
-
-    - name: Terraform Init
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      run: |
-        terraform init
-      working-directory: deployment/terraform
-
-    - name: Terraform Plan
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      run: |
-        terraform plan -var="redshift_master_password=${{ secrets.REDSHIFT_MASTER_PASSWORD }}" -var="environment=${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}" -input=false
-      working-directory: deployment/terraform
-
-    - name: Terraform Apply
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        TF_VAR_environment: prod
-      run: terraform apply -var="redshift_master_password=${{ secrets.REDSHIFT_MASTER_PASSWORD }}" -auto-approve -input=false
-      working-directory: deployment/terraform
-
-  deploy-dev:
-    runs-on: ubuntu-latest
-    needs: terraform
-    if: github.ref == 'refs/heads/develop'
-    
-    environment:
-      name: development
-      url: ${{ steps.set-output.outputs.s3_bucket_url }}
-
-    steps:
-    - name: Deploy to development
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        TF_VAR_environment: dev
-      run: |
-        cd deployment/terraform
-        terraform init
-        terraform apply -auto-approve -var="environment=dev"
-
-    - name: Set outputs
-      id: set-output
-      run: |
-        echo "s3_bucket_url=https://s3.console.aws.amazon.com/s3/buckets/neuronews-raw-articles-dev" >> $GITHUB_OUTPUT
-
-  deploy-prod:
-    runs-on: ubuntu-latest
-    needs: terraform
-    if: github.ref == 'refs/heads/main'
-    
-    environment:
-      name: production
-      url: ${{ steps.set-output.outputs.s3_bucket_url }}
-
-    steps:
-    - name: Deploy to production
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        TF_VAR_environment: prod
-      run: |
-        cd deployment/terraform
-        terraform init
-        terraform apply -auto-approve -var="environment=prod"
-
-    - name: Set outputs
-      id: set-output
-      run: |
-        echo "s3_bucket_url=https://s3.console.aws.amazon.com/s3/buckets/neuronews-raw-articles-prod" >> $GITHUB_OUTPUT

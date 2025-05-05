@@ -3,10 +3,14 @@ pytest>=7.0.0
 pytest-cov>=4.0.0
 pytest-asyncio>=0.21.0
 httpx>=0.24.0
+moto>=4.2.0
 
 # Graph Database
 gremlinpython>=3.6.0
+
+# Storage
 boto3>=1.26.0
+botocore>=1.29.0
 
 # Web Framework
 fastapi>=0.68.0
@@ -20,10 +24,6 @@ numpy>=1.21.0
 # Scrapers
 scrapy>=2.5.0
 playwright>=1.30.0
-
-# AWS
-boto3>=1.26.0
-botocore>=1.29.0
 
 # Utilities
 python-dateutil>=2.8.2
