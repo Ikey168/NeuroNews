@@ -31,22 +31,18 @@ async def get_db():
     finally:
         await db.close()
 
-@router.get("/articles")
-async def get_articles(
-    start_date: Optional[datetime] = Query(None, description="Filter articles from this date"),
-    end_date: Optional[datetime] = Query(None, description="Filter articles until this date"),
-    source: Optional[str] = Query(None, description="Filter by news source"),
-    category: Optional[str] = Query(None, description="Filter by article category"),
+@router.get("/articles/topic/{topic}")
+async def get_articles_by_topic(
+    topic: str,
+    limit: int = Query(10, ge=1, le=100),
     db: RedshiftLoader = Depends(get_db)
 ) -> List[Dict[str, Any]]:
     """
-    Retrieve processed news articles with optional filtering.
+    Retrieve articles related to a specific topic.
     
     Args:
-        start_date: Optional start date filter
-        end_date: Optional end date filter 
-        source: Optional news source filter
-        category: Optional category filter
+        topic: Topic to search for in articles
+        limit: Maximum number of articles to return (1-100)
         db: Database connection (injected)
         
     Returns:
@@ -58,12 +54,56 @@ async def get_articles(
         - source: News source name
         - category: Article category
         - sentiment: Sentiment analysis result
-        
-    Raises:
-        HTTPException: If database query fails
     """
     try:
-        # Build query conditions
+        query = """
+            SELECT id, title, url, publish_date, source, category,
+                   sentiment_score, sentiment_label
+            FROM news_articles
+            WHERE content ILIKE %s OR title ILIKE %s
+            ORDER BY publish_date DESC
+            LIMIT %s
+        """
+        
+        # Create pattern for LIKE query
+        topic_pattern = f"%{topic}%"
+        results = await db.execute_query(query, [topic_pattern, topic_pattern, limit])
+        
+        articles = []
+        for row in results:
+            articles.append({
+                "id": row[0],
+                "title": row[1],
+                "url": row[2],
+                "publish_date": row[3].isoformat() if row[3] else None,
+                "source": row[4],
+                "category": row[5],
+                "sentiment": {
+                    "score": float(row[6]) if row[6] else None,
+                    "label": row[7]
+                }
+            })
+            
+        return articles
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database error: {str(e)}"
+        )
+
+@router.get("/articles")
+async def get_articles(
+    start_date: Optional[datetime] = Query(None, description="Filter articles from this date"),
+    end_date: Optional[datetime] = Query(None, description="Filter articles until this date"),
+    source: Optional[str] = Query(None, description="Filter by news source"),
+    category: Optional[str] = Query(None, description="Filter by article category"),
+    db: RedshiftLoader = Depends(get_db)
+) -> List[Dict[str, Any]]:
+    """
+    Retrieve processed news articles with optional filtering.
+    """
+    try:
         conditions = []
         params = []
         
@@ -83,7 +123,6 @@ async def get_articles(
             conditions.append("category = %s")
             params.append(category)
             
-        # Construct WHERE clause
         where_clause = " AND ".join(conditions) if conditions else "1=1"
         
         query = f"""
@@ -96,7 +135,6 @@ async def get_articles(
         
         results = await db.execute_query(query, params)
         
-        # Format results
         articles = []
         for row in results:
             articles.append({
@@ -127,25 +165,6 @@ async def get_article(
 ) -> Dict[str, Any]:
     """
     Retrieve a specific news article by ID.
-    
-    Args:
-        article_id: Unique identifier of the article
-        db: Database connection (injected)
-        
-    Returns:
-        Article dictionary with fields:
-        - id: Article unique identifier
-        - title: Article title
-        - url: Original article URL
-        - publish_date: Publication date
-        - source: News source name
-        - category: Article category
-        - content: Article content
-        - sentiment: Sentiment analysis result
-        - entities: Named entities mentioned
-        
-    Raises:
-        HTTPException: If article not found or database error occurs
     """
     try:
         query = """

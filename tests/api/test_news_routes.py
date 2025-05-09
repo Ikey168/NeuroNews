@@ -47,9 +47,56 @@ def mock_db():
     
     return mock
 
+def test_get_articles_by_topic(client, mock_db):
+    """Test retrieving articles by topic."""
+    # Mock database response
+    mock_articles = [
+        (
+            "article1",
+            "AI Revolution in Healthcare",
+            "http://example.com/1",
+            datetime(2024, 1, 1, tzinfo=timezone.utc),
+            "TestSource",
+            "Technology",
+            0.8,
+            "POSITIVE"
+        )
+    ]
+    mock_db.execute_query.return_value = mock_articles
+    
+    with patch("src.api.routes.news_routes.RedshiftLoader", return_value=mock_db):
+        response = client.get("/news/articles/topic/AI", params={"limit": 10})
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    article = data[0]
+    
+    assert article["id"] == "article1"
+    assert article["title"] == "AI Revolution in Healthcare"
+    
+    # Verify query parameters
+    query_call = mock_db.execute_query.call_args[0][0]
+    params = mock_db.execute_query.call_args[0][1]
+    
+    assert "ILIKE" in query_call
+    assert "LIMIT" in query_call
+    assert len(params) == 3
+    assert params[0] == "%AI%"  # Topic pattern
+    assert params[2] == 10      # Limit
+
+def test_get_articles_by_topic_validation(client, mock_db):
+    """Test input validation for topic search."""
+    with patch("src.api.routes.news_routes.RedshiftLoader", return_value=mock_db):
+        # Test invalid limit
+        response = client.get("/news/articles/topic/AI", params={"limit": 0})
+        assert response.status_code == 422
+        
+        response = client.get("/news/articles/topic/AI", params={"limit": 101})
+        assert response.status_code == 422
+
 def test_get_articles(client, mock_db):
     """Test retrieving articles list."""
-    # Mock database response
     mock_articles = [
         (
             "article1",
@@ -64,7 +111,6 @@ def test_get_articles(client, mock_db):
     ]
     mock_db.execute_query.return_value = mock_articles
     
-    # Mock database dependency
     with patch("src.api.routes.news_routes.RedshiftLoader", return_value=mock_db):
         response = client.get("/news/articles")
     
