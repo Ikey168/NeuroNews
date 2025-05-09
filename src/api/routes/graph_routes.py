@@ -2,197 +2,180 @@
 FastAPI routes for knowledge graph queries.
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends, FastAPI
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from src.knowledge_graph.graph_builder import GraphBuilder
+from gremlin_python.process.graph_traversal import __ # GraphTraversalSource
+from gremlin_python.process.traversal import P, T # Predicates and T tokens (like T.label)
 import os
 import logging
+from contextlib import asynccontextmanager
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/graph", tags=["knowledge-graph"])
 
-# Initialize graph connection
-graph = GraphBuilder(os.getenv('NEPTUNE_ENDPOINT'))
+# Global variable to hold the GraphBuilder instance
+graph_builder_instance: Optional[GraphBuilder] = None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI): # app parameter is conventional for lifespan
+    global graph_builder_instance
+    logger.info("Application startup: Initializing GraphBuilder...")
+    NEPTUNE_ENDPOINT = os.getenv('NEPTUNE_ENDPOINT', 'ws://localhost:8182/gremlin')
+    graph_builder_instance = GraphBuilder(NEPTUNE_ENDPOINT)
+    try:
+        await graph_builder_instance.connect()
+        logger.info("GraphBuilder connected successfully.")
+    except Exception as e:
+        logger.error(f"GraphBuilder failed to connect during startup: {e}")
+        graph_builder_instance = None 
+    
+    yield 
+    
+    logger.info("Application shutdown: Closing GraphBuilder connection...")
+    if graph_builder_instance and hasattr(graph_builder_instance, 'close') and callable(graph_builder_instance.close):
+        try:
+            await graph_builder_instance.close()
+            logger.info("GraphBuilder connection closed successfully.")
+        except Exception as e:
+            logger.error(f"Error during GraphBuilder close: {e}")
+    elif graph_builder_instance:
+        logger.warning("GraphBuilder instance does not have a callable close method or was None initially.")
+    else:
+        logger.info("GraphBuilder instance was None, no close action needed.")
+
+
+async def get_graph() -> GraphBuilder:
+    if graph_builder_instance is None:
+        logger.error("GraphBuilder instance is not available (was None after startup).")
+        raise HTTPException(status_code=503, detail="Graph database service not available (not initialized).")
+    
+    if not hasattr(graph_builder_instance, 'g') or graph_builder_instance.g is None:
+        logger.error("GraphBuilder's traversal source 'g' is not initialized on the instance.")
+        try:
+            logger.info("Attempting to reconnect GraphBuilder...")
+            await graph_builder_instance.connect()
+            if not hasattr(graph_builder_instance, 'g') or graph_builder_instance.g is None: 
+                 raise ConnectionError("Failed to re-establish graph connection (g still None).")
+            logger.info("GraphBuilder reconnected successfully.")
+        except Exception as e:
+            logger.error(f"Failed to reconnect GraphBuilder: {e}")
+            raise HTTPException(status_code=503, detail=f"Graph database service not available (reconnect failed: {e}).")
+    return graph_builder_instance
+
 
 @router.get("/related_entities")
 async def get_related_entities(
     entity: str = Query(..., description="Entity name to find relationships for"),
     entity_type: Optional[str] = Query(None, description="Type of entity (Organization, Person, Event)"),
     max_depth: int = Query(2, description="Maximum relationship depth to traverse"),
-    relationship_types: Optional[List[str]] = Query(None, description="Filter by relationship types")
+    relationship_types: Optional[List[str]] = Query(None, description="Filter by relationship types"),
+    graph: GraphBuilder = Depends(get_graph)
 ) -> Dict[str, Any]:
-    """
-    Get entities related to the specified entity through various relationships.
-    
-    Example: /graph/related_entities?entity=Google&entity_type=Organization&max_depth=2
-    """
     try:
-        # Build base query
-        g = graph.g
+        g = graph.g 
         
-        # Start with the entity
         query = g.V()
-        
         if entity_type:
             query = query.hasLabel(entity_type)
+        query = query.has('name', entity)
         
-        query = query.has('name', entity).aggregate('start')
-        
-        # Build relationship traversal
-        for _ in range(max_depth):
+        path_query = query
+        for i in range(max_depth):
             if relationship_types:
-                query = query.outE(*relationship_types).inV()
+                path_query = path_query.bothE(*relationship_types).otherV().simplePath()
             else:
-                query = query.out()
-            
-            query = query.dedup()
+                path_query = path_query.both().simplePath()
+            if i < max_depth - 1: # Avoid dedup on the very last step if only properties are needed
+                 path_query = path_query.dedup()
+
+        final_traversal = path_query.dedup().valueMap(True) # valueMap(True) includes id, label, properties
+        results = await graph._execute_traversal(final_traversal)
         
-        # Project results
-        results = query.project(
-            'entity', 'type', 'relationships', 'articles'
-        ).by(
-            __.valueMap(True)
-        ).by(
-            __.label()
-        ).by(
-            __.outE().group().by(__.label()).by(__.count())
-        ).by(
-            __.in_('MENTIONS_ORG', 'MENTIONS_PERSON', 'COVERS_EVENT')
-            .hasLabel('Article')
-            .valueMap('headline', 'publishDate')
-            .fold()
-        ).toList()
-        
-        # Format response
         formatted_results = {
             "entity": entity,
             "related_entities": [
                 {
-                    "name": r['entity'].get('name', r['entity'].get('orgName', r['entity'].get('eventName', 'Unknown')))[0],
-                    "type": r['type'],
-                    "relationship_counts": r['relationships'],
-                    "mentioned_in": [
-                        {
-                            "headline": article['headline'][0],
-                            "date": article['publishDate'][0].isoformat()
-                        }
-                        for article in r['articles']
-                    ]
+                    "name": r.get('name', r.get('orgName', r.get('eventName', ['Unknown'])))[0] 
+                            if isinstance(r.get('name', r.get('orgName', r.get('eventName', ['Unknown']))), list) and 
+                               r.get('name', r.get('orgName', r.get('eventName', ['Unknown']))) 
+                            else r.get('name', r.get('orgName', r.get('eventName', 'Unknown'))),
+                    # T.label is a Gremlin token, valueMap(True) should provide it.
+                    "type": r.get(T.label, 'Unknown') if T.label in r else 'Unknown', 
+                    "properties": {k: v[0] if isinstance(v, list) and len(v)==1 else v for k,v in r.items() if k not in [T.id, T.label]} 
                 }
-                for r in results
+                for r in results 
             ]
         }
-        
         return formatted_results
         
+    except ConnectionError as ce:
+        logger.error(f"Connection error in get_related_entities: {str(ce)}")
+        raise HTTPException(status_code=503, detail=f"Graph database connection error: {str(ce)}")
     except Exception as e:
-        logger.error(f"Error getting related entities: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error getting related entities for '{entity}': {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
 
 @router.get("/event_timeline")
 async def get_event_timeline(
     topic: str = Query(..., description="Topic to create timeline for"),
     start_date: Optional[datetime] = Query(None, description="Start date for timeline"),
     end_date: Optional[datetime] = Query(None, description="End date for timeline"),
-    include_related: bool = Query(True, description="Include related events")
+    graph: GraphBuilder = Depends(get_graph)
 ) -> Dict[str, Any]:
-    """
-    Get a timeline of events related to a specific topic.
-    
-    Example: /graph/event_timeline?topic=AI Regulation&start_date=2024-01-01
-    """
     try:
         g = graph.g
+        query = g.V().hasLabel('Event').has('keywords', P.eq(topic))
         
-        # Build base query for events with the topic
-        query = g.V().hasLabel('Event').has('keywords', topic)
-        
-        # Add date filters if provided
         if start_date:
-            query = query.has('startDate', P.gte(start_date))
+            query = query.has('startDate', P.gte(start_date.isoformat()))
         if end_date:
-            query = query.has('startDate', P.lte(end_date))
+            # For lte on date, ensure the time component covers the whole day if only date is given
+            # Assuming end_date from query is already a specific datetime
+            query = query.has('startDate', P.lte(end_date.isoformat()))
         
-        # Get event details and related entities
-        results = query.project(
-            'event', 'date', 'location', 'organizations', 'people', 'articles'
-        ).by(
-            'eventName'
-        ).by(
-            'startDate'
-        ).by(
-            'location'
-        ).by(
-            __.in_('HOSTED', 'SPONSORED')
-            .hasLabel('Organization')
-            .valueMap('orgName', 'orgType')
-            .fold()
-        ).by(
-            __.in_('PARTICIPATED_IN', 'ORGANIZED')
-            .hasLabel('Person')
-            .valueMap('name', 'title')
-            .fold()
-        ).by(
-            __.in_('COVERS_EVENT')
-            .hasLabel('Article')
-            .valueMap('headline', 'publishDate', 'url')
-            .fold()
-        ).toList()
+        projected_query = query.project(
+            'event_name', 'date', 'location'
+        ).by('eventName').by('startDate').by('location') # Ensure these are the correct property names
         
-        # Format timeline
+        results = await graph._execute_traversal(projected_query)
+        
         timeline = {
             "topic": topic,
             "events": [
                 {
-                    "name": r['event'],
-                    "date": r['date'].isoformat(),
-                    "location": r['location'],
-                    "organizations": [
-                        {
-                            "name": org['orgName'][0],
-                            "type": org['orgType'][0]
-                        }
-                        for org in r['organizations']
-                    ],
-                    "people": [
-                        {
-                            "name": person['name'][0],
-                            "title": person['title'][0]
-                        }
-                        for person in r['people']
-                    ],
-                    "coverage": [
-                        {
-                            "headline": article['headline'][0],
-                            "date": article['publishDate'][0].isoformat(),
-                            "url": article['url'][0]
-                        }
-                        for article in r['articles']
-                    ]
+                    "name": r.get('event_name', 'Unknown Event'),
+                    "date": r.get('date', 'Unknown Date'),
+                    "location": r.get('location', 'Unknown Location'),
                 }
                 for r in results
             ]
         }
-        
-        # Sort events by date
-        timeline["events"].sort(key=lambda x: x["date"])
-        
         return timeline
         
+    except ConnectionError as ce:
+        logger.error(f"Connection error in get_event_timeline: {str(ce)}")
+        raise HTTPException(status_code=503, detail=f"Graph database connection error: {str(ce)}")
     except Exception as e:
-        logger.error(f"Error getting event timeline: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error getting event timeline for topic '{topic}': {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @router.get("/health")
-async def health_check() -> Dict[str, str]:
-    """
-    Check the health of the graph database connection.
-    """
+async def health_check(graph: GraphBuilder = Depends(get_graph)) -> Dict[str, str]:
     try:
-        # Try a simple query to verify connection
-        graph.g.V().limit(1).toList()
+        await graph._execute_traversal(graph.g.V().limit(1))
         return {"status": "healthy"}
+    except ConnectionError as ce:
+        logger.error(f"Health check failed due to connection error: {str(ce)}")
+        raise HTTPException(status_code=503, detail=f"Graph database connection error: {str(ce)}")
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
-        raise HTTPException(status_code=503, detail="Graph database connection failed")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=503, detail=f"Graph database connection failed: {str(e)}")

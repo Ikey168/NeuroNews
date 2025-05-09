@@ -1,121 +1,123 @@
 import pytest
-import json
-from unittest.mock import AsyncMock, patch
+import pytest_asyncio 
+from unittest.mock import AsyncMock, MagicMock, patch
+import unittest # Import the full unittest module
+from gremlin_python.driver.driver_remote_connection import DriverRemoteConnection
+from gremlin_python.driver.client import Client
+from gremlin_python.driver.connection import Connection
+from gremlin_python.driver.resultset import ResultSet
 from src.knowledge_graph.graph_builder import GraphBuilder
+import asyncio 
 
-@pytest.fixture
-def graph_builder():
-    return GraphBuilder('ws://localhost:8182/gremlin')
+NEPTUNE_MOCK_ENDPOINT = "ws://mock-neptune:8182/gremlin"
 
-@pytest.fixture
-def mock_websocket():
-    websocket = AsyncMock()
-    websocket.__aenter__.return_value = websocket
-    websocket.__aexit__.return_value = None
-    websocket.recv.return_value = json.dumps({
-        'result': {
-            'data': [0]  # Mock vertex count response
-        }
-    })
-    return websocket
+def create_mock_result_set(data_list: list):
+    mock_rs = MagicMock(spec=ResultSet)
+    async def mock_all():
+        return data_list
+    async def mock_one():
+        return data_list[0] if data_list else None
+    mock_rs.all = AsyncMock(side_effect=mock_all)
+    mock_rs.one = AsyncMock(side_effect=mock_one)
+    return mock_rs
 
-@pytest.mark.asyncio
-async def test_execute_query(graph_builder, mock_websocket):
-    with patch('websockets.connect', return_value=mock_websocket):
-        query = "g.V().count()"
-        bindings = {'param': 'value'}
-        
-        response = await graph_builder._execute_query(query, bindings)
-        
-        # Verify websocket was used correctly
-        mock_websocket.send.assert_called_once()
-        sent_data = json.loads(mock_websocket.send.call_args[0][0])
-        assert sent_data['op'] == 'eval'
-        assert sent_data['args']['gremlin'] == query
-        assert sent_data['args']['bindings'] == bindings
-        
-        # Verify response was processed
-        assert 'result' in response
-        assert 'data' in response['result']
-        assert response['result']['data'] == [0]
+@pytest_asyncio.fixture 
+async def graph_builder_websockets(event_loop): 
+    mock_client_instance = AsyncMock(spec=Client)
+    mock_driver_remote_connection_instance = AsyncMock(spec=DriverRemoteConnection)
 
-@pytest.mark.asyncio
-async def test_add_article(graph_builder, mock_websocket):
-    with patch('websockets.connect', return_value=mock_websocket):
-        article_data = {
-            'id': '123',
-            'title': 'Test Article',
-            'url': 'http://example.com',
-            'published_date': '2025-01-01'
-        }
+    mock_client_instance.submit_async = AsyncMock() 
+    mock_client_instance.close = AsyncMock()
+    mock_driver_remote_connection_instance.close = AsyncMock()
+
+    with patch('src.knowledge_graph.graph_builder.Client', return_value=mock_client_instance) as MockedClient, \
+         patch('src.knowledge_graph.graph_builder.DriverRemoteConnection', return_value=mock_driver_remote_connection_instance) as MockedDRC:
+
+        builder = GraphBuilder(endpoint=NEPTUNE_MOCK_ENDPOINT)
+        await builder.connect() 
         
-        response = await graph_builder.add_article(article_data)
+        MockedClient.assert_called_with(NEPTUNE_MOCK_ENDPOINT, 'g', transport_factory=unittest.mock.ANY) 
+        MockedDRC.assert_called_with(NEPTUNE_MOCK_ENDPOINT, 'g', transport_factory=unittest.mock.ANY)
+
+        assert builder.client is mock_client_instance
+        assert builder.connection is mock_driver_remote_connection_instance
+        assert builder.g is not None
         
-        # Verify correct query was sent
-        sent_data = json.loads(mock_websocket.send.call_args[0][0])
-        assert 'addV' in sent_data['args']['gremlin']
-        assert sent_data['args']['bindings']['id'] == article_data['id']
-        assert sent_data['args']['bindings']['title'] == article_data['title']
+        yield builder 
+
+        await builder.close() 
+        mock_client_instance.close.assert_called_once()
 
 @pytest.mark.asyncio
-async def test_add_relationship(graph_builder, mock_websocket):
-    with patch('websockets.connect', return_value=mock_websocket):
-        from_id = '123'
-        to_id = '456'
-        rel_type = 'RELATED_TO'
-        
-        response = await graph_builder.add_relationship(from_id, to_id, rel_type)
-        
-        # Verify correct query was sent
-        sent_data = json.loads(mock_websocket.send.call_args[0][0])
-        assert 'addE' in sent_data['args']['gremlin']
-        assert sent_data['args']['bindings']['from_id'] == from_id
-        assert sent_data['args']['bindings']['to_id'] == to_id
-        assert sent_data['args']['bindings']['relationship_type'] == rel_type
+async def test_add_vertex(graph_builder_websockets: GraphBuilder):
+    vertex_label = "test_label"
+    vertex_data = {'id': 'v1', 'name': 'Test Vertex'}
+    mock_rs = create_mock_result_set([{'id': ['v1'], 'name': ['Test Vertex']}])
+    graph_builder_websockets.client.submit_async.return_value = mock_rs 
+
+    response = await graph_builder_websockets.add_vertex(vertex_label, vertex_data)
+    
+    graph_builder_websockets.client.submit_async.assert_called_once()
+    assert response == {'id': ['v1'], 'name': ['Test Vertex']}
 
 @pytest.mark.asyncio
-async def test_get_related_articles(graph_builder, mock_websocket):
-    with patch('websockets.connect', return_value=mock_websocket):
-        article_id = '123'
-        rel_type = 'RELATED_TO'
-        
-        response = await graph_builder.get_related_articles(article_id, rel_type)
-        
-        # Verify correct query was sent
-        sent_data = json.loads(mock_websocket.send.call_args[0][0])
-        assert 'both' in sent_data['args']['gremlin']
-        assert sent_data['args']['bindings']['article_id'] == article_id
-        assert sent_data['args']['bindings']['relationship_type'] == rel_type
+async def test_add_article(graph_builder_websockets: GraphBuilder):
+    article_data = {'id': 'a1', 'headline': 'Test Article'}
+    graph_builder_websockets.add_vertex = AsyncMock(return_value=article_data)
+    
+    response = await graph_builder_websockets.add_article(article_data)
+    
+    graph_builder_websockets.add_vertex.assert_called_once_with("Article", article_data)
+    assert response == article_data
 
 @pytest.mark.asyncio
-async def test_get_article_by_id(graph_builder, mock_websocket):
-    with patch('websockets.connect', return_value=mock_websocket):
-        article_id = '123'
-        
-        response = await graph_builder.get_article_by_id(article_id)
-        
-        # Verify correct query was sent
-        sent_data = json.loads(mock_websocket.send.call_args[0][0])
-        assert 'valueMap' in sent_data['args']['gremlin']
-        assert sent_data['args']['bindings']['article_id'] == article_id
+async def test_add_relationship(graph_builder_websockets: GraphBuilder):
+    from_id, to_id, rel_type = 'v1', 'v2', 'connected_to'
+    mock_rs = create_mock_result_set([{'id': 'e1'}])
+    graph_builder_websockets.client.submit_async.return_value = mock_rs
+
+    response = await graph_builder_websockets.add_relationship(from_id, to_id, rel_type)
+    
+    graph_builder_websockets.client.submit_async.assert_called_once()
+    assert response == {'id': 'e1'}
 
 @pytest.mark.asyncio
-async def test_delete_article(graph_builder, mock_websocket):
-    with patch('websockets.connect', return_value=mock_websocket):
-        article_id = '123'
-        
-        response = await graph_builder.delete_article(article_id)
-        
-        # Verify correct query was sent
-        sent_data = json.loads(mock_websocket.send.call_args[0][0])
-        assert 'drop' in sent_data['args']['gremlin']
-        assert sent_data['args']['bindings']['article_id'] == article_id
+async def test_get_related_vertices(graph_builder_websockets: GraphBuilder):
+    vertex_id, rel_type = 'v1', 'connected_to'
+    mock_data = [{'id': 'v2', 'name': 'Related V'}]
+    mock_rs = create_mock_result_set(mock_data)
+    graph_builder_websockets.client.submit_async.return_value = mock_rs
+
+    response = await graph_builder_websockets.get_related_vertices(vertex_id, rel_type)
+    
+    graph_builder_websockets.client.submit_async.assert_called_once()
+    assert response == mock_data
 
 @pytest.mark.asyncio
-async def test_clear_graph(graph_builder, mock_websocket):
-    with patch('websockets.connect', return_value=mock_websocket):
-        response = await graph_builder.clear_graph()
-        
-        # Verify correct query was sent
-        sent_data = json.loads(mock_websocket.send.call_args[0][0])
-        assert sent_data['args']['gremlin'] == "g.V().drop()"
+async def test_get_vertex_by_id(graph_builder_websockets: GraphBuilder):
+    vertex_id = 'v1'
+    mock_data = [{'id': 'v1', 'name': 'Test V'}]
+    mock_rs = create_mock_result_set(mock_data)
+    graph_builder_websockets.client.submit_async.return_value = mock_rs
+
+    response = await graph_builder_websockets.get_vertex_by_id(vertex_id)
+    
+    graph_builder_websockets.client.submit_async.assert_called_once()
+    assert response == mock_data[0]
+
+@pytest.mark.asyncio
+async def test_delete_vertex(graph_builder_websockets: GraphBuilder):
+    vertex_id = 'v1'
+    mock_rs = create_mock_result_set([]) 
+    graph_builder_websockets.client.submit_async.return_value = mock_rs
+    
+    await graph_builder_websockets.delete_vertex(vertex_id)
+    graph_builder_websockets.client.submit_async.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_clear_graph(graph_builder_websockets: GraphBuilder):
+    mock_rs = create_mock_result_set([])
+    graph_builder_websockets.client.submit_async.return_value = mock_rs
+
+    await graph_builder_websockets.clear_graph()
+    graph_builder_websockets.client.submit_async.assert_called_once()

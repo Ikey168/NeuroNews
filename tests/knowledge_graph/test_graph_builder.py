@@ -1,152 +1,164 @@
 import pytest
-from unittest.mock import Mock, patch, MagicMock
-from gremlin_python.process.traversal import Binding
+import pytest_asyncio 
+from unittest.mock import AsyncMock, MagicMock, call, patch # Added patch
+from gremlin_python.driver.resultset import ResultSet
+from gremlin_python.driver.connection import Connection as GremlinConnection # Alias to avoid conflict
+from gremlin_python.driver.client import Client
+from gremlin_python.driver.driver_remote_connection import DriverRemoteConnection
 from src.knowledge_graph.graph_builder import GraphBuilder
 
-@pytest.fixture
-def mock_client():
-    with patch('gremlin_python.driver.client.Client') as mock:
-        mock_instance = MagicMock()
-        mock.return_value = mock_instance
-        yield mock_instance
+NEPTUNE_MOCK_ENDPOINT_FOR_PLAIN_TESTS = "ws://dummy-plain:8182/gremlin"
 
-@pytest.fixture
-def mock_connection():
-    with patch('gremlin_python.driver.driver_remote_connection.DriverRemoteConnection') as mock:
-        mock_instance = MagicMock()
-        mock.return_value = mock_instance
-        yield mock_instance
+def create_mock_result_set(data_list: list):
+    mock_rs = MagicMock(spec=ResultSet)
+    async def mock_all():
+        return data_list
+    async def mock_one():
+        return data_list[0] if data_list else None
+    mock_rs.all = AsyncMock(side_effect=mock_all)
+    mock_rs.one = AsyncMock(side_effect=mock_one)
+    return mock_rs
 
-@pytest.fixture
-def mock_traversal():
-    with patch('gremlin_python.process.anonymous_traversal.traversal') as mock:
-        mock_graph = MagicMock()
-        mock.return_value = mock_graph
-        mock_graph.withRemote.return_value = mock_graph
-        yield mock_graph
+@pytest_asyncio.fixture
+async def graph_builder(mocker): # Removed event_loop, not directly used by fixture logic now
+    mock_client_instance = AsyncMock(spec=Client)
+    mock_driver_remote_connection_instance = AsyncMock(spec=DriverRemoteConnection)
 
-@pytest.fixture
-def graph_builder(mock_client, mock_connection, mock_traversal):
-    builder = GraphBuilder('ws://localhost:8182/gremlin')
-    builder.connection = mock_connection
-    builder.g = mock_traversal
-    return builder
+    mock_client_instance.submit_async = AsyncMock() 
+    mock_client_instance.close = AsyncMock()
+    mock_driver_remote_connection_instance.close = AsyncMock() # Though not explicitly closed by GraphBuilder.close()
 
-def test_add_article(graph_builder, mock_traversal):
+    # Patch Client and DriverRemoteConnection within the scope of this fixture
+    with patch('src.knowledge_graph.graph_builder.Client', return_value=mock_client_instance) as MockedClient, \
+         patch('src.knowledge_graph.graph_builder.DriverRemoteConnection', return_value=mock_driver_remote_connection_instance) as MockedDRC:
+
+        builder = GraphBuilder(endpoint=NEPTUNE_MOCK_ENDPOINT_FOR_PLAIN_TESTS)
+        
+        # Call connect to allow GraphBuilder to set up its client and g
+        await builder.connect()
+        
+        # Assert that our mocks were used by builder.connect()
+        MockedClient.assert_called_once() 
+        MockedDRC.assert_called_once()
+        assert builder.client is mock_client_instance
+        assert builder.connection is mock_driver_remote_connection_instance # The one for 'g'
+        assert builder.g is not None
+
+        yield builder
+
+        await builder.close()
+        mock_client_instance.close.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_add_vertex(graph_builder: GraphBuilder):
+    vertex_label = "test_label"
+    vertex_data = {'id': '123', 'name': 'Test Vertex', 'property': 'Test Property'}
+    mock_result_data = [{'id': ['123'], 'name': ['Test Vertex']}]
+    mock_rs = create_mock_result_set(mock_result_data)
+    graph_builder.client.submit_async.return_value = mock_rs 
+
+    response = await graph_builder.add_vertex(vertex_label, vertex_data)
+    
+    graph_builder.client.submit_async.assert_called_once()
+    assert response == mock_result_data[0] 
+
+
+@pytest.mark.asyncio
+async def test_add_article_uses_add_vertex(graph_builder: GraphBuilder, mocker):
     article_data = {
-        'id': '123',
-        'title': 'Test Article',
-        'url': 'http://example.com',
-        'published_date': '2025-01-01'
+        'id': 'article1',
+        'headline': 'Test Headline',
+        'publishDate': '2023-01-01T00:00:00Z' 
     }
+    graph_builder.add_vertex = AsyncMock(return_value={'id': 'article1'}) 
+
+    await graph_builder.add_article(article_data)
+
+    graph_builder.add_vertex.assert_called_once_with(
+        "Article",
+        {'id': 'article1', 'headline': 'Test Headline', 'publishDate': '2023-01-01T00:00:00Z'}
+    )
+
+@pytest.mark.asyncio
+async def test_add_relationship(graph_builder: GraphBuilder):
+    from_id, to_id, rel_type = '123', '456', 'RELATED_TO'
+    rel_props = {'weight': 0.5}
+    mock_result_data = [{'id': ['edge-1'], 'weight': [0.5]}]
+    mock_rs = create_mock_result_set(mock_result_data)
+    graph_builder.client.submit_async.return_value = mock_rs
+
+    response = await graph_builder.add_relationship(from_id, to_id, rel_type, rel_props)
     
-    # Setup mock chain
-    mock_traversal.addV.return_value = mock_traversal
-    mock_traversal.property.return_value = mock_traversal
-    mock_traversal.next.return_value = {'id': '123'}
+    graph_builder.client.submit_async.assert_called_once()
+    assert response == mock_result_data[0]
 
-    # Execute
-    result = graph_builder.add_article(article_data)
+
+@pytest.mark.asyncio
+async def test_get_related_vertices(graph_builder: GraphBuilder):
+    vertex_id, rel_type = '123', 'RELATED_TO'
+    expected_result_data = [{'id': '456', 'name': 'Related Vertex'}]
+    mock_rs = create_mock_result_set(expected_result_data) 
+    graph_builder.client.submit_async.return_value = mock_rs
+
+    result = await graph_builder.get_related_vertices(vertex_id, rel_type)
     
-    # Verify
-    mock_traversal.addV.assert_called_once_with('article')
-    assert mock_traversal.property.call_count == 4
-    assert result == {'id': '123'}
+    graph_builder.client.submit_async.assert_called_once()
+    assert result == expected_result_data
 
-def test_add_relationship(graph_builder, mock_traversal):
-    from_id = '123'
-    to_id = '456'
-    rel_type = 'RELATED_TO'
+
+@pytest.mark.asyncio
+async def test_get_vertex_by_id(graph_builder: GraphBuilder):
+    vertex_id = '123'
+    expected_result_item = {'id': '123', 'name': 'Test Vertex'}
+    mock_rs = create_mock_result_set([expected_result_item]) 
+    graph_builder.client.submit_async.return_value = mock_rs
+
+    result = await graph_builder.get_vertex_by_id(vertex_id)
     
-    # Setup mock chain
-    mock_traversal.V.return_value = mock_traversal
-    mock_traversal.has.return_value = mock_traversal
-    mock_traversal.addE.return_value = mock_traversal
-    mock_traversal.to.return_value = mock_traversal
-    mock_traversal.next.return_value = {'id': 'edge-1'}
+    graph_builder.client.submit_async.assert_called_once()
+    assert result == expected_result_item
 
-    # Execute
-    result = graph_builder.add_relationship(from_id, to_id, rel_type)
-    
-    # Verify
-    mock_traversal.V.assert_called_once_with()
-    mock_traversal.has.assert_called_once_with('id', from_id)
-    mock_traversal.addE.assert_called_once_with(rel_type)
-    assert result == {'id': 'edge-1'}
 
-def test_get_related_articles(graph_builder, mock_traversal):
-    article_id = '123'
-    rel_type = 'RELATED_TO'
-    expected_result = [{'id': '456', 'title': 'Related Article'}]
-    
-    # Setup mock chain
-    mock_traversal.V.return_value = mock_traversal
-    mock_traversal.has.return_value = mock_traversal
-    mock_traversal.both.return_value = mock_traversal
-    mock_traversal.valueMap.return_value = mock_traversal
-    mock_traversal.toList.return_value = expected_result
+@pytest.mark.asyncio
+async def test_delete_vertex(graph_builder: GraphBuilder):
+    vertex_id = '123'
+    mock_rs = create_mock_result_set([]) 
+    graph_builder.client.submit_async.return_value = mock_rs
 
-    # Execute
-    result = graph_builder.get_related_articles(article_id, rel_type)
-    
-    # Verify
-    mock_traversal.V.assert_called_once_with()
-    mock_traversal.has.assert_called_once_with('id', article_id)
-    mock_traversal.both.assert_called_once_with(rel_type)
-    mock_traversal.valueMap.assert_called_once_with(True)
-    assert result == expected_result
+    await graph_builder.delete_vertex(vertex_id)
+    graph_builder.client.submit_async.assert_called_once()
 
-def test_get_article_by_id(graph_builder, mock_traversal):
-    article_id = '123'
-    expected_result = [{'id': '123', 'title': 'Test Article'}]
-    
-    # Setup mock chain
-    mock_traversal.V.return_value = mock_traversal
-    mock_traversal.has.return_value = mock_traversal
-    mock_traversal.valueMap.return_value = mock_traversal
-    mock_traversal.toList.return_value = expected_result
 
-    # Execute
-    result = graph_builder.get_article_by_id(article_id)
-    
-    # Verify
-    mock_traversal.V.assert_called_once_with()
-    mock_traversal.has.assert_called_once_with('id', article_id)
-    mock_traversal.valueMap.assert_called_once_with(True)
-    assert result == expected_result[0]
+@pytest.mark.asyncio
+async def test_clear_graph(graph_builder: GraphBuilder):
+    mock_rs = create_mock_result_set([])
+    graph_builder.client.submit_async.return_value = mock_rs
 
-def test_delete_article(graph_builder, mock_traversal):
-    article_id = '123'
-    
-    # Setup mock chain
-    mock_traversal.V.return_value = mock_traversal
-    mock_traversal.has.return_value = mock_traversal
-    mock_traversal.drop.return_value = mock_traversal
-    mock_traversal.iterate.return_value = None
+    await graph_builder.clear_graph()
+    graph_builder.client.submit_async.assert_called_once()
 
-    # Execute
-    graph_builder.delete_article(article_id)
-    
-    # Verify
-    mock_traversal.V.assert_called_once_with()
-    mock_traversal.has.assert_called_once_with('id', article_id)
-    mock_traversal.drop.assert_called_once_with()
-    mock_traversal.iterate.assert_called_once_with()
 
-def test_clear_graph(graph_builder, mock_traversal):
-    # Setup mock chain
-    mock_traversal.V.return_value = mock_traversal
-    mock_traversal.drop.return_value = mock_traversal
-    mock_traversal.iterate.return_value = None
+@pytest.mark.asyncio
+async def test_close(graph_builder: GraphBuilder):
+    # The fixture already calls await builder.close() and asserts client.close.called_once()
+    # This test can verify any additional behavior of close if needed, or be removed
+    # if the fixture's teardown is sufficient.
+    # For now, let's assume the fixture covers it.
+    # If we want to test calling close() explicitly within a test:
+    # graph_builder.client.close.reset_mock() # Reset from fixture's connect/setup
+    # await graph_builder.close()
+    # graph_builder.client.close.assert_called_once() # This would be the second call if not reset
+    pass # Covered by fixture teardown
 
-    # Execute
-    graph_builder.clear_graph()
-    
-    # Verify
-    mock_traversal.V.assert_called_once_with()
-    mock_traversal.drop.assert_called_once_with()
-    mock_traversal.iterate.assert_called_once_with()
 
-def test_close(graph_builder, mock_connection):
-    graph_builder.close()
-    mock_connection.close.assert_called_once_with()
+@pytest.mark.asyncio
+async def test_add_vertex_missing_id_raises_error(graph_builder: GraphBuilder):
+    with pytest.raises(ValueError, match="Vertex data must include an 'id' field."):
+        await graph_builder.add_vertex("TestLabel", {"name": "No ID"})
+
+
+@pytest.mark.asyncio
+async def test_add_article_missing_id_raises_error(graph_builder: GraphBuilder):
+    with pytest.raises(ValueError, match="Article data must include an 'id' field."):
+        await graph_builder.add_article({"headline": "No ID"})
