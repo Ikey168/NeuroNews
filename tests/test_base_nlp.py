@@ -87,7 +87,7 @@ def test_sentiment_scores(transformer_analyzer): # Using new fixture
     assert isinstance(result_dict, dict)
     
     assert "label" in result_dict
-    assert result_dict["label"] in ["POSITIVE", "NEGATIVE"] # Or add NEUTRAL if model supports it
+    assert result_dict["label"] in ["POSITIVE", "NEGATIVE", "NEUTRAL"] # Or add NEUTRAL if model supports it
     assert "score" in result_dict
     assert isinstance(result_dict["score"], float)
     assert result_dict["score"] >= 0

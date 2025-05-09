@@ -2,6 +2,9 @@
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-v"
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
+pythonpath = ["."] # Add project root to sys.path for pytest
 
 [project]
 name = "neuronews"
@@ -12,8 +15,20 @@ dependencies = [
     "gremlinpython>=3.6.0",
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
+    "pytest-asyncio>=0.21.0",
+    "boto3>=1.26.0",
+    "tenacity>=8.2.0",
+    "transformers>=4.0.0",
+    "torch>=1.8.0",
+    "fastapi>=0.95.0",
+    "uvicorn>=0.20.0",
+    "pydantic>=1.10.0"
 ]
 
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = false

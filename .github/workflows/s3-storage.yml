@@ -16,6 +16,12 @@ jobs:
   test:
     runs-on: ubuntu-latest
     
+    env:
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test-key
+      AWS_SECRET_ACCESS_KEY: test-secret
+      MOTO_S3_CUSTOM_ENDPOINTS: http://localhost:5000
+    
     steps:
     - uses: actions/checkout@v3
     
@@ -31,19 +37,7 @@ jobs:
         pip install -r requirements.txt
         pip install pytest-cov
     
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-1
-    
-    - name: Run tests
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_REGION: us-east-1
-        S3_BUCKET: neuronews-raw-articles-test
+    - name: Run tests with mocked S3
       run: |
         export PYTHONPATH=$PYTHONPATH:$(pwd)/src
         pytest tests/database/test_s3_storage.py -v --cov=src/database
