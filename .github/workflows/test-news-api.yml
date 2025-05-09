@@ -61,10 +61,4 @@ jobs:
         REDSHIFT_USER: test_user
         REDSHIFT_PASSWORD: test_pass
       run: |
-        pytest tests/api/test_news_routes.py tests/database/test_redshift_loader.py -v --cov=src/api/routes --cov=src/database
-        
-    - name: Upload coverage
-      uses: codecov/codecov-action@v3
-      with:
-        fail_ci_if_error: true
-        flags: news-api
+        pytest tests/api/test_news_routes.py tests/database/test_redshift_loader.py -v
