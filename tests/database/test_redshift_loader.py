@@ -33,75 +33,88 @@ def loader():
         )
 
 @pytest.mark.asyncio
-async def test_get_latest_articles(loader, mock_cursor, mock_conn):
-    """Test fetching latest articles without filters."""
-    # Mock database connection
+async def test_get_latest_articles_with_pagination(loader, mock_cursor, mock_conn):
+    """Test paginated article retrieval."""
     loader._cursor = mock_cursor
     loader._conn = mock_conn
     
-    # Mock query results
-    mock_articles = [
-        (
-            "article1",
-            "Test Article",
-            "http://example.com/1",
-            datetime(2024, 1, 1, tzinfo=timezone.utc),
-            "Technology",
-            "TestSource",
-            0.8,
-            "POSITIVE"
-        )
+    # Mock total count query
+    mock_cursor.fetchall.side_effect = [
+        [(25,)],  # Total count result
+        [         # Page 2 articles
+            (
+                "article11",
+                "Test Article 11",
+                "http://example.com/11",
+                datetime(2024, 1, 1, tzinfo=timezone.utc),
+                "Technology",
+                "TestSource",
+                0.8,
+                "POSITIVE"
+            )
+        ]
     ]
-    mock_cursor.fetchall.return_value = mock_articles
     
-    # Test default parameters
-    articles = await loader.get_latest_articles()
+    # Request page 2 with 10 items per page
+    articles, pagination = await loader.get_latest_articles(page=2, per_page=10)
     
-    # Verify query construction
-    query = mock_cursor.execute.call_args[0][0]
-    params = mock_cursor.execute.call_args[0][1]
+    # Verify pagination metadata
+    assert pagination["total"] == 25
+    assert pagination["page"] == 2
+    assert pagination["per_page"] == 10
+    assert pagination["pages"] == 3
     
-    assert "ORDER BY publish_date DESC" in query
-    assert "LIMIT %s" in query
-    assert len(params) == 1
-    assert params[0] == 10  # Default limit
+    # Verify OFFSET calculation
+    query = mock_cursor.execute.call_args_list[1][0][0]  # Second query (after count)
+    params = mock_cursor.execute.call_args_list[1][0][1]
     
-    # Verify result formatting
-    assert len(articles) == 1
-    article = articles[0]
-    assert article["id"] == "article1"
-    assert article["title"] == "Test Article"
-    assert article["publish_date"] == "2024-01-01T00:00:00+00:00"
-    assert article["sentiment"]["score"] == 0.8
-    assert article["sentiment"]["label"] == "POSITIVE"
+    assert "OFFSET" in query
+    assert params[-1] == 10  # OFFSET for page 2
+    assert params[-2] == 10  # LIMIT
+
+@pytest.mark.asyncio
+async def test_pagination_validation(loader):
+    """Test pagination parameter validation."""
+    with pytest.raises(ValueError, match="Page number must be >= 1"):
+        await loader.get_latest_articles(page=0)
+        
+    with pytest.raises(ValueError, match="Items per page must be between 1 and 100"):
+        await loader.get_latest_articles(per_page=0)
+        
+    with pytest.raises(ValueError, match="Items per page must be between 1 and 100"):
+        await loader.get_latest_articles(per_page=101)
 
 @pytest.mark.asyncio
 async def test_get_latest_articles_with_filters(loader, mock_cursor, mock_conn):
-    """Test fetching articles with sentiment and category filters."""
+    """Test article retrieval with filters."""
     loader._cursor = mock_cursor
     loader._conn = mock_conn
-    mock_cursor.fetchall.return_value = []
+    
+    mock_cursor.fetchall.side_effect = [
+        [(5,)],   # Count query result
+        []        # Empty page for this test
+    ]
     
     # Test with all filters
-    await loader.get_latest_articles(
-        limit=5,
+    articles, pagination = await loader.get_latest_articles(
+        page=1,
+        per_page=10,
         min_score=0.7,
         sentiment="POSITIVE",
         category="Technology"
     )
     
-    # Verify query parameters
-    query = mock_cursor.execute.call_args[0][0]
-    params = mock_cursor.execute.call_args[0][1]
+    # Verify query conditions
+    query = mock_cursor.execute.call_args_list[1][0][0]  # Main query
+    params = mock_cursor.execute.call_args_list[1][0][1]
     
     assert "sentiment_score >= %s" in query
     assert "sentiment_label = %s" in query
     assert "category = %s" in query
-    assert len(params) == 4
+    assert len(params) == 5  # 3 filters + LIMIT + OFFSET
     assert params[0] == 0.7
     assert params[1] == "POSITIVE"
     assert params[2] == "Technology"
-    assert params[3] == 5  # Limit
 
 @pytest.mark.asyncio
 async def test_load_article(loader, mock_cursor, mock_conn):

@@ -3,7 +3,7 @@
 import os
 import psycopg2
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 
 class RedshiftLoader:
     """Handles loading and retrieving data from AWS Redshift."""
@@ -49,42 +49,39 @@ class RedshiftLoader:
             self._cursor = None
 
     async def execute_query(self, query: str, params: Optional[List] = None) -> List:
-        """Execute a query and return results.
-        
-        Args:
-            query: SQL query string
-            params: Optional list of parameters for query
-            
-        Returns:
-            List of query result rows
-        """
+        """Execute a query and return results."""
         self._cursor.execute(query, params or [])
         return self._cursor.fetchall()
 
     async def get_latest_articles(self, 
-                                limit: int = 10,
+                                page: int = 1,
+                                per_page: int = 10,
                                 min_score: float = None,
                                 sentiment: str = None,
-                                category: str = None) -> List[Dict[str, Any]]:
-        """Fetch latest news articles with optional filtering.
+                                category: str = None) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        """Fetch latest news articles with pagination and optional filtering.
         
         Args:
-            limit: Maximum number of articles to return
+            page: Page number (1-based)
+            per_page: Number of items per page
             min_score: Optional minimum sentiment score filter
             sentiment: Optional sentiment label filter (POSITIVE/NEGATIVE/NEUTRAL)
             category: Optional category filter
             
         Returns:
-            List of article dictionaries containing:
-            - id: Unique identifier
-            - title: Article title
-            - url: Source URL
-            - publish_date: Publication date
-            - category: Article category
-            - source: News source
-            - sentiment_score: Numerical sentiment score
-            - sentiment_label: Sentiment classification
+            Tuple containing:
+            1. List of article dictionaries
+            2. Pagination metadata dictionary with:
+               - total: Total number of matching articles
+               - page: Current page number
+               - per_page: Items per page
+               - pages: Total number of pages
         """
+        if page < 1:
+            raise ValueError("Page number must be >= 1")
+        if per_page < 1 or per_page > 100:
+            raise ValueError("Items per page must be between 1 and 100")
+            
         conditions = []
         params = []
         
@@ -102,15 +99,25 @@ class RedshiftLoader:
             
         where_clause = " AND ".join(conditions) if conditions else "1=1"
         
+        # Get total count
+        count_query = f"SELECT COUNT(*) FROM news_articles WHERE {where_clause}"
+        result = await self.execute_query(count_query, params)
+        total = result[0][0]
+        
+        # Calculate pagination
+        offset = (page - 1) * per_page
+        pages = (total + per_page - 1) // per_page  # Ceiling division
+        
+        # Get paginated results
         query = f"""
             SELECT id, title, url, publish_date, category, source,
                    sentiment_score, sentiment_label
             FROM news_articles
             WHERE {where_clause}
             ORDER BY publish_date DESC
-            LIMIT %s
+            LIMIT %s OFFSET %s
         """
-        params.append(limit)
+        params.extend([per_page, offset])
         
         results = await self.execute_query(query, params)
         
@@ -129,14 +136,17 @@ class RedshiftLoader:
                 }
             })
             
-        return articles
+        pagination = {
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "pages": pages
+        }
+            
+        return articles, pagination
 
     async def load_article(self, article_data: Dict[str, Any]) -> None:
-        """Load a single article into Redshift.
-        
-        Args:
-            article_data: Dictionary containing article fields
-        """
+        """Load a single article into Redshift."""
         required_fields = ["id", "title", "url", "content"]
         missing = [f for f in required_fields if f not in article_data]
         if missing:
@@ -165,14 +175,7 @@ class RedshiftLoader:
         self._conn.commit()
 
     async def delete_article(self, article_id: str) -> bool:
-        """Delete an article from Redshift.
-        
-        Args:
-            article_id: Unique identifier of article to delete
-            
-        Returns:
-            True if article was deleted, False if not found
-        """
+        """Delete an article from Redshift."""
         query = "DELETE FROM news_articles WHERE id = %s"
         self._cursor.execute(query, [article_id])
         deleted = self._cursor.rowcount > 0
