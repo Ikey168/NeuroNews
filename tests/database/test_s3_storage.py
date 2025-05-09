@@ -1,192 +1,166 @@
-"""
-Tests for the S3Storage module.
-"""
 import os
+import sys
 import json
 import pytest
+import boto3
+from moto import mock_aws
 from datetime import datetime
-from unittest.mock import patch, MagicMock
 from botocore.exceptions import ClientError
-from src.database.s3_storage import S3Storage
 
-# Test data
-SAMPLE_ARTICLE = {
-    'title': 'Test Article',
-    'source': 'example.com',
-    'content': 'Test content',
-    'author': 'Test Author',
-    'published_date': '2025-04-09'
-}
+# Add src directory to Python path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../src')))
+
+from database.s3_storage import S3Storage
+
+@pytest.fixture(autouse=True)
+def aws_credentials():
+    """Mocked AWS Credentials for moto."""
+    os.environ['AWS_ACCESS_KEY_ID'] = 'testing'
+    os.environ['AWS_SECRET_ACCESS_KEY'] = 'testing'
+    os.environ['AWS_SECURITY_TOKEN'] = 'testing'
+    os.environ['AWS_SESSION_TOKEN'] = 'testing'
+    os.environ['AWS_DEFAULT_REGION'] = 'us-east-1'
 
 @pytest.fixture
-def s3_storage():
-    """Create S3Storage instance with mocked S3 client."""
-    with patch('boto3.client') as mock_boto3_client:
-        # Mock successful bucket check
-        mock_client = MagicMock()
-        mock_boto3_client.return_value = mock_client
-        
-        storage = S3Storage(
-            bucket_name='test-bucket',
-            aws_access_key_id='test-key',
-            aws_secret_access_key='test-secret'
-        )
-        storage.s3_client = mock_client
-        return storage
+def s3_client(aws_credentials):
+    with mock_aws():
+        s3 = boto3.client('s3', region_name='us-east-1')
+        yield s3
 
-def test_initialize_s3_storage_success(s3_storage):
-    """Test successful S3Storage initialization."""
-    assert s3_storage.bucket_name == 'test-bucket'
-    assert s3_storage.prefix == 'news_articles'
+@pytest.fixture
+def s3_bucket(s3_client):
+    bucket_name = 'test-bucket'
+    s3_client.create_bucket(Bucket=bucket_name)
+    return bucket_name
 
+@pytest.fixture
+def s3_storage(s3_bucket):
+    return S3Storage(bucket_name=s3_bucket)
+
+@mock_aws
+def test_initialize_s3_storage_success(s3_bucket):
+    storage = S3Storage(bucket_name=s3_bucket)
+    assert storage.bucket_name == s3_bucket
+    assert storage.s3_client is not None
+
+@mock_aws
 def test_initialize_s3_storage_bucket_not_found():
-    """Test S3Storage initialization with non-existent bucket."""
-    with patch('boto3.client') as mock_boto3_client:
-        mock_client = MagicMock()
-        error_response = {
-            'Error': {
-                'Code': '404',
-                'Message': 'Not Found'
-            }
-        }
-        mock_client.head_bucket.side_effect = ClientError(error_response, 'HeadBucket')
-        mock_boto3_client.return_value = mock_client
-        
-        with pytest.raises(ValueError, match='Bucket test-bucket does not exist'):
-            S3Storage(bucket_name='test-bucket')
+    with pytest.raises(ValueError, match="Bucket non-existent-bucket does not exist"):
+        S3Storage(bucket_name='non-existent-bucket')
 
-def test_generate_s3_key(s3_storage):
-    """Test S3 key generation."""
-    key = s3_storage.generate_s3_key('example.com', 'Test Article')
-    
-    # Verify key format
-    assert key.startswith('news_articles/example-com/')
-    assert 'test-article' in key
+@mock_aws
+def test_generate_s3_key(s3_bucket):
+    storage = S3Storage(bucket_name=s3_bucket)
+    article = {
+        'source': 'test-source',
+        'published_date': '2025-01-01'
+    }
+    key = storage._generate_s3_key(article)
+    assert 'news_articles/2025/01/01/test-source/' in key
     assert key.endswith('.json')
 
-def test_upload_article_success(s3_storage):
-    """Test successful article upload."""
-    # Setup mock
-    s3_storage.s3_client.put_object.return_value = {}
-    
-    # Upload article
-    key = s3_storage.upload_article(SAMPLE_ARTICLE)
-    
-    # Verify S3 client was called correctly
-    s3_storage.s3_client.put_object.assert_called_once()
-    call_args = s3_storage.s3_client.put_object.call_args[1]
-    assert call_args['Bucket'] == 'test-bucket'
-    assert 'news_articles' in call_args['Key']
-    assert call_args['ContentType'] == 'application/json'
-    
-    # Verify metadata
-    metadata = call_args['Metadata']
-    assert metadata['title'] == SAMPLE_ARTICLE['title']
-    assert metadata['source'] == SAMPLE_ARTICLE['source']
-    assert metadata['author'] == SAMPLE_ARTICLE['author']
-    assert 'scraped_at' in metadata
-
-def test_upload_article_missing_fields(s3_storage):
-    """Test article upload with missing required fields."""
-    invalid_article = {
+@mock_aws
+def test_upload_article_success(s3_storage, s3_client):
+    article = {
+        'id': 'test-123',
         'title': 'Test Article',
-        'source': 'example.com'
-        # Missing 'content' field
+        'content': 'Test content',
+        'source': 'test-source',
+        'published_date': '2025-01-01'
     }
     
-    with pytest.raises(ValueError, match='Missing required article fields'):
-        s3_storage.upload_article(invalid_article)
+    key = s3_storage.upload_article(article)
+    
+    assert key is not None
+    response = s3_client.get_object(Bucket=s3_storage.bucket_name, Key=key)
+    content = json.loads(response['Body'].read().decode())
+    assert content == article
 
-def test_get_article_success(s3_storage):
-    """Test successful article retrieval."""
-    # Setup mock
-    mock_response = {
-        'Body': MagicMock(),
-        'Metadata': {'title': 'Test Article'}
+@mock_aws
+def test_upload_article_missing_fields(s3_storage):
+    article = {
+        'title': 'Test Article'
     }
-    mock_response['Body'].read.return_value = json.dumps(SAMPLE_ARTICLE).encode()
-    s3_storage.s3_client.get_object.return_value = mock_response
     
-    # Get article
-    result = s3_storage.get_article('test-key')
-    
-    # Verify result
-    assert result['data'] == SAMPLE_ARTICLE
-    assert result['metadata'] == {'title': 'Test Article'}
+    with pytest.raises(ValueError):
+        s3_storage.upload_article(article)
 
+@mock_aws
+def test_get_article_success(s3_storage, s3_client):
+    article = {
+        'id': 'test-123',
+        'title': 'Test Article',
+        'content': 'Test content',
+        'source': 'test-source',
+        'published_date': '2025-01-01'
+    }
+    
+    # Upload article as JSON
+    key = f"test/{article['id']}.json"
+    s3_client.put_object(
+        Bucket=s3_storage.bucket_name,
+        Key=key,
+        Body=json.dumps(article)
+    )
+    
+    # Retrieve and verify
+    retrieved_article = s3_storage.get_article(key)
+    assert retrieved_article['id'] == article['id']
+    assert retrieved_article['title'] == article['title']
+
+@mock_aws
 def test_list_articles_success(s3_storage):
-    """Test successful article listing."""
-    # Setup mock
-    mock_paginator = MagicMock()
-    mock_paginator.paginate.return_value = [{
-        'Contents': [
-            {
-                'Key': 'test-key-1',
-                'Size': 100,
-                'LastModified': datetime.now()
-            }
-        ]
-    }]
-    s3_storage.s3_client.get_paginator.return_value = mock_paginator
+    articles = [
+        {
+            'id': f'test-{i}',
+            'title': f'Test Article {i}',
+            'content': f'Test content {i}',
+            'source': 'test-source',
+            'published_date': '2025-01-01'
+        }
+        for i in range(3)
+    ]
     
-    # Mock head_object response
-    s3_storage.s3_client.head_object.return_value = {
-        'Metadata': {'title': 'Test Article'}
+    for article in articles:
+        s3_storage.upload_article(article)
+    
+    listed_articles = s3_storage.list_articles()
+    assert len(listed_articles) == 3
+
+@mock_aws
+def test_delete_article_success(s3_storage, s3_client):
+    article = {
+        'id': 'test-123',
+        'title': 'Test Article',
+        'content': 'Test content',
+        'source': 'test-source',
+        'published_date': '2025-01-01'
     }
     
-    # List articles
-    articles = s3_storage.list_articles()
+    key = s3_storage.upload_article(article)
+    s3_storage.delete_article(key)
     
-    # Verify results
-    assert len(articles) == 1
-    assert articles[0]['key'] == 'test-key-1'
-    assert articles[0]['metadata'] == {'title': 'Test Article'}
+    with pytest.raises(ClientError):
+        s3_client.get_object(Bucket=s3_storage.bucket_name, Key=key)
 
-def test_delete_article_success(s3_storage):
-    """Test successful article deletion."""
-    # Setup mock
-    s3_storage.s3_client.delete_object.return_value = {}
+@mock_aws
+def test_upload_file_success(s3_storage, tmpdir):
+    content = "test content"
+    file_path = tmpdir.join("test.txt")
+    file_path.write(content)
     
-    # Delete article
-    s3_storage.delete_article('test-key')
-    
-    # Verify S3 client was called correctly
-    s3_storage.s3_client.delete_object.assert_called_once_with(
-        Bucket='test-bucket',
-        Key='test-key'
-    )
+    key = s3_storage.upload_file(str(file_path), 'test/test.txt')
+    assert key == 'test/test.txt'
 
-def test_upload_file_success(s3_storage, tmp_path):
-    """Test successful file upload."""
-    # Create test file
-    test_file = tmp_path / "test.txt"
-    test_file.write_text("test content")
+@mock_aws
+def test_download_file_success(s3_storage, s3_client, tmpdir):
+    content = "test content"
+    source_path = tmpdir.join("source.txt")
+    source_path.write(content)
     
-    # Setup mock
-    s3_storage.s3_client.upload_file.return_value = {}
+    key = s3_storage.upload_file(str(source_path), 'test/test.txt')
     
-    # Upload file
-    key = s3_storage.upload_file(str(test_file))
+    download_path = tmpdir.join("downloaded.txt")
+    s3_storage.download_file(key, str(download_path))
     
-    # Verify S3 client was called correctly
-    s3_storage.s3_client.upload_file.assert_called_once()
-    call_args = s3_storage.s3_client.upload_file.call_args[0]
-    assert call_args[0] == str(test_file)
-    assert call_args[1] == 'test-bucket'
-    assert 'news_articles/files/test.txt' in call_args[2]
-
-def test_download_file_success(s3_storage, tmp_path):
-    """Test successful file download."""
-    # Setup mock
-    s3_storage.s3_client.download_file.return_value = {}
-    
-    # Download file
-    destination = tmp_path / "downloaded.txt"
-    s3_storage.download_file('test-key', str(destination))
-    
-    # Verify S3 client was called correctly
-    s3_storage.s3_client.download_file.assert_called_once_with(
-        'test-bucket',
-        'test-key',
-        str(destination)
-    )
+    assert download_path.read() == content

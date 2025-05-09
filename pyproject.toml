@@ -1,42 +1,35 @@
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v"
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
+pythonpath = ["."] # Add project root to sys.path for pytest
 
 [project]
 name = "neuronews"
 version = "0.1.0"
-authors = [
-  { name="Your Name", email="your.email@example.com" },
-]
-description = "A system for scraping and analyzing news articles"
-readme = "README.md"
-requires-python = ">=3.9"
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-]
+description = "A news aggregation and analysis system"
+requires-python = ">=3.8"
 dependencies = [
-    "boto3>=1.26.0",
+    "gremlinpython>=3.6.0",
     "pytest>=7.0.0",
-    "pytest-cov>=4.0.0"
+    "pytest-cov>=4.0.0",
+    "pytest-asyncio>=0.21.0",
+    "boto3>=1.26.0",
+    "tenacity>=8.2.0",
+    "transformers>=4.0.0",
+    "torch>=1.8.0",
+    "fastapi>=0.95.0",
+    "uvicorn>=0.20.0",
+    "pydantic>=1.10.0",
+    "psycopg2-binary>=2.9.9"  # Added psycopg2-binary
 ]
 
-[project.urls]
-"Homepage" = "https://github.com/yourusername/neuronews"
-"Bug Tracker" = "https://github.com/yourusername/neuronews/issues"
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
 
-[tool.pytest.ini_options]
-pythonpath = ["."]
-testpaths = ["tests"]
-python_files = ["test_*.py"]
-addopts = """
-    -v 
-    --cov=src 
-    --cov-report=term-missing 
-    --cov-report=html:coverage_report 
-    --cov-branch
-"""
-
-[tool.hatch.build.targets.wheel]
-packages = ["src"]
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = false

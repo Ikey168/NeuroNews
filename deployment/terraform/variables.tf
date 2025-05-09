@@ -137,3 +137,77 @@ variable "redshift_skip_final_snapshot" {
   type        = bool
   default     = true
 }
+
+# Networking Variables
+variable "vpc_cidr" {
+  description = "CIDR block for VPC"
+  type        = string
+  default     = "10.0.0.0/16"
+}
+
+variable "availability_zones" {
+  description = "List of availability zones"
+  type        = list(string)
+  default     = ["us-west-2a", "us-west-2b"]
+}
+
+variable "public_subnet_cidrs" {
+  description = "CIDR blocks for public subnets"
+  type        = list(string)
+  default     = ["10.0.1.0/24", "10.0.2.0/24"]
+}
+
+variable "private_subnet_cidrs" {
+  description = "CIDR blocks for private subnets"
+  type        = list(string)
+  default     = ["10.0.10.0/24", "10.0.11.0/24"]
+}
+
+# Neptune Variables
+variable "neptune_cluster_identifier" {
+  description = "Identifier for the Neptune cluster"
+  type        = string
+  default     = "neuronews"
+}
+
+variable "neptune_instance_class" {
+  description = "Instance class for Neptune instances"
+  type        = string
+  default     = "db.t3.medium"
+}
+
+variable "neptune_cluster_size" {
+  description = "Number of instances in the Neptune cluster"
+  type        = number
+  default     = 1
+}
+
+variable "neptune_port" {
+  description = "Port on which Neptune accepts connections"
+  type        = number
+  default     = 8182
+}
+
+variable "neptune_enable_audit_logs" {
+  description = "Enable audit logging for Neptune"
+  type        = bool
+  default     = false
+}
+
+variable "neptune_backup_retention_period" {
+  description = "Number of days to retain Neptune backups"
+  type        = number
+  default     = 7
+}
+
+variable "neptune_preferred_backup_window" {
+  description = "Preferred backup window for Neptune cluster (UTC)"
+  type        = string
+  default     = "03:00-04:00"
+}
+
+variable "neptune_skip_final_snapshot" {
+  description = "Whether to skip final snapshot when destroying the cluster"
+  type        = bool
+  default     = true
+}

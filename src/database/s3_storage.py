@@ -1,22 +1,10 @@
-"""
-S3 storage module for NeuroNews.
-Handles uploading and retrieving files from AWS S3.
-"""
 import os
 import json
+from typing import Dict, List, Any, Optional
 import boto3
-import logging
-from typing import Optional, Dict, Any, List
 from botocore.exceptions import ClientError
-from datetime import datetime
-from pathlib import Path
-
-# Configure logging
-logger = logging.getLogger(__name__)
 
 class S3Storage:
-    """Handles S3 storage operations for NeuroNews."""
-
     def __init__(
         self,
         bucket_name: str,
@@ -27,7 +15,7 @@ class S3Storage:
     ):
         """
         Initialize S3 storage handler.
-        
+
         Args:
             bucket_name: Name of the S3 bucket
             aws_access_key_id: AWS access key ID. If None, will use environment variables
@@ -37,7 +25,7 @@ class S3Storage:
         """
         self.bucket_name = bucket_name
         self.prefix = prefix
-        
+
         # Initialize S3 client
         self.s3_client = boto3.client(
             's3',
@@ -45,253 +33,130 @@ class S3Storage:
             aws_secret_access_key=aws_secret_access_key,
             region_name=aws_region
         )
-        
+
         # Verify bucket exists and is accessible
         try:
             self.s3_client.head_bucket(Bucket=bucket_name)
         except ClientError as e:
-            error_code = e.response['Error']['Code']
-            if error_code == '404':
+            error_code = int(e.response['Error']['Code'])
+            if error_code == 404:
                 raise ValueError(f"Bucket {bucket_name} does not exist")
-            elif error_code == '403':
+            elif error_code == 403:
                 raise ValueError(f"Access denied to bucket {bucket_name}")
-            else:
-                raise
+            raise
 
-    def generate_s3_key(self, source: str, title: str) -> str:
+    def _generate_s3_key(self, article: Dict[str, Any]) -> str:
         """
-        Generate a unique S3 key for an article.
-        
+        Generate S3 key for an article.
+
         Args:
-            source: Source of the article (e.g., website domain)
-            title: Article title
-            
-        Returns:
-            Unique S3 key for the article
-        """
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        source_clean = source.replace('.', '-')
-        title_slug = title.replace(' ', '-').lower()
-        # Remove special characters
-        title_slug = ''.join(c for c in title_slug if c.isalnum() or c == '-')
-        return f"{self.prefix}/{source_clean}/{timestamp}_{title_slug[:50]}.json"
+            article: Article data dictionary containing at least source and published_date
 
-    def upload_article(
-        self,
-        article_data: Dict[str, Any],
-        metadata: Optional[Dict[str, str]] = None
-    ) -> str:
+        Returns:
+            S3 key string
+        """
+        try:
+            date_parts = article['published_date'].split('-')
+            key = f"{date_parts[0]}/{date_parts[1]}/{date_parts[2]}/{article['source']}/"
+            key += f"{article.get('id', self._generate_id())}.json"
+            return os.path.join(self.prefix, key)
+        except (KeyError, IndexError):
+            raise ValueError("Article must contain 'source' and 'published_date' fields")
+
+    def _generate_id(self) -> str:
+        """Generate a unique ID for an article."""
+        import uuid
+        return str(uuid.uuid4())
+
+    def upload_article(self, article: Dict[str, Any]) -> str:
         """
         Upload an article to S3.
-        
+
         Args:
-            article_data: Dictionary containing article data
-            metadata: Optional metadata to attach to the S3 object
-            
+            article: Article data dictionary containing required fields
+
         Returns:
-            S3 key of the uploaded article
-            
+            S3 key where the article was stored
+
         Raises:
-            ValueError: If required article fields are missing
-            ClientError: If upload fails
+            ValueError: If required fields are missing
         """
-        required_fields = ['title', 'source', 'content']
-        missing_fields = [field for field in required_fields if field not in article_data]
+        required_fields = ['title', 'content', 'source', 'published_date']
+        missing_fields = [field for field in required_fields if field not in article]
         if missing_fields:
-            raise ValueError(f"Missing required article fields: {missing_fields}")
-            
-        # Generate S3 key
-        s3_key = self.generate_s3_key(article_data['source'], article_data['title'])
-        
-        # Prepare metadata
-        if metadata is None:
-            metadata = {}
-        metadata.update({
-            'title': article_data.get('title', '')[:255],  # S3 metadata values limited to 2048 bytes
-            'source': article_data.get('source', '')[:255],
-            'published_date': article_data.get('published_date', '')[:255],
-            'author': article_data.get('author', '')[:255],
-            'scraped_at': datetime.now().isoformat()[:255]
-        })
-        
-        try:
-            # Upload to S3
-            self.s3_client.put_object(
-                Bucket=self.bucket_name,
-                Key=s3_key,
-                Body=json.dumps(article_data, ensure_ascii=False),
-                ContentType='application/json',
-                Metadata=metadata
-            )
-            logger.info(f"Successfully uploaded article to S3: {s3_key}")
-            return s3_key
-        except ClientError as e:
-            logger.error(f"Failed to upload article to S3: {e}")
-            raise
+            raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
 
-    def get_article(self, s3_key: str) -> Dict[str, Any]:
+        key = self._generate_s3_key(article)
+        self.s3_client.put_object(
+            Bucket=self.bucket_name,
+            Key=key,
+            Body=json.dumps(article)
+        )
+        return key
+
+    def get_article(self, key: str) -> Dict[str, Any]:
         """
-        Retrieve an article from S3.
-        
+        Get an article from S3.
+
         Args:
-            s3_key: S3 key of the article
-            
-        Returns:
-            Dictionary containing article data and metadata
-            
-        Raises:
-            ClientError: If retrieval fails
-        """
-        try:
-            response = self.s3_client.get_object(
-                Bucket=self.bucket_name,
-                Key=s3_key
-            )
-            article_data = json.loads(response['Body'].read().decode('utf-8'))
-            metadata = response.get('Metadata', {})
-            
-            return {
-                'data': article_data,
-                'metadata': metadata
-            }
-        except ClientError as e:
-            logger.error(f"Failed to retrieve article from S3: {e}")
-            raise
+            key: S3 key for the article
 
-    def list_articles(
-        self,
-        prefix: Optional[str] = None,
-        max_items: Optional[int] = None
-    ) -> List[Dict[str, Any]]:
+        Returns:
+            Article data dictionary
         """
-        List articles in the S3 bucket.
-        
+        response = self.s3_client.get_object(Bucket=self.bucket_name, Key=key)
+        article_json = response['Body'].read().decode('utf-8')
+        return json.loads(article_json)
+
+    def list_articles(self, prefix: Optional[str] = None) -> List[str]:
+        """
+        List all article keys in the bucket.
+
         Args:
-            prefix: Optional prefix to filter articles (e.g., specific source)
-            max_items: Maximum number of items to return
-            
-        Returns:
-            List of dictionaries containing article keys and metadata
-        """
-        if prefix is None:
-            prefix = self.prefix
-            
-        try:
-            paginator = self.s3_client.get_paginator('list_objects_v2')
-            page_iterator = paginator.paginate(
-                Bucket=self.bucket_name,
-                Prefix=prefix
-            )
-            
-            articles = []
-            for page in page_iterator:
-                if 'Contents' not in page:
-                    continue
-                    
-                for obj in page['Contents']:
-                    # Get object metadata
-                    response = self.s3_client.head_object(
-                        Bucket=self.bucket_name,
-                        Key=obj['Key']
-                    )
-                    
-                    articles.append({
-                        'key': obj['Key'],
-                        'size': obj['Size'],
-                        'last_modified': obj['LastModified'],
-                        'metadata': response.get('Metadata', {})
-                    })
-                    
-                    if max_items and len(articles) >= max_items:
-                        return articles[:max_items]
-                        
-            return articles
-        except ClientError as e:
-            logger.error(f"Failed to list articles in S3: {e}")
-            raise
+            prefix: Optional prefix to filter keys
 
-    def delete_article(self, s3_key: str) -> None:
+        Returns:
+            List of S3 keys
+        """
+        prefix = prefix or self.prefix
+        paginator = self.s3_client.get_paginator('list_objects_v2')
+        keys = []
+        
+        for page in paginator.paginate(Bucket=self.bucket_name, Prefix=prefix):
+            if 'Contents' in page:
+                keys.extend([obj['Key'] for obj in page['Contents']])
+        
+        return keys
+
+    def delete_article(self, key: str) -> None:
         """
         Delete an article from S3.
-        
-        Args:
-            s3_key: S3 key of the article to delete
-            
-        Raises:
-            ClientError: If deletion fails
-        """
-        try:
-            self.s3_client.delete_object(
-                Bucket=self.bucket_name,
-                Key=s3_key
-            )
-            logger.info(f"Successfully deleted article from S3: {s3_key}")
-        except ClientError as e:
-            logger.error(f"Failed to delete article from S3: {e}")
-            raise
 
-    def upload_file(
-        self,
-        file_path: str,
-        s3_key: Optional[str] = None,
-        metadata: Optional[Dict[str, str]] = None
-    ) -> str:
+        Args:
+            key: S3 key for the article
+        """
+        self.s3_client.delete_object(Bucket=self.bucket_name, Key=key)
+
+    def upload_file(self, local_path: str, s3_key: str) -> str:
         """
         Upload a file to S3.
-        
-        Args:
-            file_path: Path to the file to upload
-            s3_key: Optional S3 key. If None, will use file name
-            metadata: Optional metadata to attach to the S3 object
-            
-        Returns:
-            S3 key of the uploaded file
-            
-        Raises:
-            FileNotFoundError: If file doesn't exist
-            ClientError: If upload fails
-        """
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"File not found: {file_path}")
-            
-        if s3_key is None:
-            s3_key = f"{self.prefix}/files/{Path(file_path).name}"
-            
-        try:
-            extra_args = {'Metadata': metadata} if metadata else {}
-            self.s3_client.upload_file(
-                file_path,
-                self.bucket_name,
-                s3_key,
-                ExtraArgs=extra_args
-            )
-            logger.info(f"Successfully uploaded file to S3: {s3_key}")
-            return s3_key
-        except ClientError as e:
-            logger.error(f"Failed to upload file to S3: {e}")
-            raise
 
-    def download_file(self, s3_key: str, destination_path: str) -> None:
+        Args:
+            local_path: Path to local file
+            s3_key: Desired S3 key for the file
+
+        Returns:
+            S3 key where the file was stored
+        """
+        self.s3_client.upload_file(local_path, self.bucket_name, s3_key)
+        return s3_key
+
+    def download_file(self, s3_key: str, local_path: str) -> None:
         """
         Download a file from S3.
-        
+
         Args:
             s3_key: S3 key of the file to download
-            destination_path: Local path where to save the file
-            
-        Raises:
-            ClientError: If download fails
+            local_path: Local path where to save the file
         """
-        try:
-            # Create directory if it doesn't exist
-            os.makedirs(os.path.dirname(destination_path), exist_ok=True)
-            
-            self.s3_client.download_file(
-                self.bucket_name,
-                s3_key,
-                destination_path
-            )
-            logger.info(f"Successfully downloaded file from S3: {s3_key}")
-        except ClientError as e:
-            logger.error(f"Failed to download file from S3: {e}")
-            raise
+        self.s3_client.download_file(self.bucket_name, s3_key, local_path)

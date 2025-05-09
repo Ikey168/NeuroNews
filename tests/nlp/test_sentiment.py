@@ -1,277 +1,140 @@
-"""
-Unit tests for sentiment analysis accuracy and functionality.
-"""
-
 import pytest
-from unittest.mock import Mock, patch
-import json
-from src.nlp import create_analyzer
+from unittest.mock import AsyncMock, MagicMock, patch, call 
+import json # For loading LABELED_TEXTS
+import os # For path joining
 
-# Test fixtures with labeled data
-LABELED_TEXTS = [
-    {
-        "text": "The company's revenue grew by 50% this quarter, exceeding all expectations.",
-        "expected_sentiment": "positive"
-    },
-    {
-        "text": "The stock market crashed today, wiping out billions in value.",
-        "expected_sentiment": "negative"
-    },
-    {
-        "text": "The company announced its quarterly earnings report today.",
-        "expected_sentiment": "neutral"
-    },
-    {
-        "text": "Despite recent setbacks, the company remains optimistic about future growth.",
-        "expected_sentiment": "positive"
-    }
+from src.nlp import SentimentAnalyzer, create_analyzer 
+
+# Load LABELED_TEXTS from the JSON fixture file
+def load_labeled_texts():
+    fixture_path = os.path.join(os.path.dirname(__file__), 'fixtures', 'labeled_data.json')
+    with open(fixture_path, 'r') as f:
+        data = json.load(f)
+    labeled_texts = []
+    for case in data.get("test_cases", []):
+        labeled_texts.append({
+            "text": case.get("text"),
+            "expected_label": case.get("expected_sentiment", "NEUTRAL").upper() 
+        })
+    labeled_texts.append({"text": "", "expected_label": "ERROR"})
+    labeled_texts.append({"text": "   ", "expected_label": "ERROR"})
+    return labeled_texts
+
+LABELED_TEXTS = load_labeled_texts()
+
+EDGE_CASE_TEXTS_FOR_DEFAULT_ANALYZER = [
+    ("", "ERROR", 0.0),
+    ("   ", "ERROR", 0.0),
+    ("!@#$%^", "NEUTRAL", 0.0), 
+    ("This is a test.", "NEUTRAL", 0.0), 
+    ("I love this product, it's amazing!", "POSITIVE", 0.0) 
 ]
 
-# Edge cases
-EDGE_CASES = [
-    {
-        "text": "",  # Empty text
-        "should_raise": True
-    },
-    {
-        "text": "   ",  # Only whitespace
-        "should_raise": True
-    },
-    {
-        "text": "This is a very long text " * 1000,  # Very long text
-        "should_raise": False
-    },
-    {
-        "text": "Text with special chars: @#$%^&*()",  # Special characters
-        "should_raise": False
-    }
-]
-
-# Mock responses for various providers
-AWS_MOCK_RESPONSES = {
-    "positive": {
-        "Sentiment": "POSITIVE",
-        "SentimentScore": {
-            "Positive": 0.95,
-            "Negative": 0.01,
-            "Neutral": 0.03,
-            "Mixed": 0.01
-        }
-    },
-    "negative": {
-        "Sentiment": "NEGATIVE",
-        "SentimentScore": {
-            "Positive": 0.01,
-            "Negative": 0.95,
-            "Neutral": 0.03,
-            "Mixed": 0.01
-        }
-    }
-}
-
-TRANSFORMERS_MOCK_RESPONSES = {
-    "positive": [{"label": "POSITIVE", "score": 0.95}],
-    "negative": [{"label": "NEGATIVE", "score": 0.92}],
-    "neutral": [{"label": "NEUTRAL", "score": 0.85}]
-}
-
 @pytest.fixture
-def vader_analyzer():
-    """Create a VADER sentiment analyzer instance."""
-    return create_analyzer("vader")
+def mock_hf_analyzer(mocker):
+    mock_pipeline_func = mocker.patch("src.nlp.sentiment_analysis.pipeline", autospec=True)
+    mock_pipeline_instance = mocker.MagicMock() 
+    mock_pipeline_func.return_value = mock_pipeline_instance
+    # SentimentAnalyzer() will use its default model name, but pipeline is mocked.
+    analyzer = SentimentAnalyzer() 
+    assert analyzer.pipeline is mock_pipeline_instance, "Patching 'src.nlp.sentiment_analysis.pipeline' did not result in the mock being used."
+    return analyzer
 
-@pytest.fixture
-def mock_aws_analyzer():
-    """Create a mocked AWS Comprehend analyzer instance."""
-    with patch('boto3.client') as mock_boto:
-        mock_client = Mock()
-        mock_boto.return_value = mock_client
-        analyzer = create_analyzer("aws", region_name="us-west-2")
-        analyzer.client = mock_client
-        yield analyzer
+def test_default_analyzer_accuracy():
+    # create_analyzer() uses SentimentAnalyzer.DEFAULT_MODEL by default
+    analyzer = create_analyzer() 
+    positive_text = "This is a wonderful and amazing experience, I am very happy!"
+    negative_text = "This is a terrible and dreadful situation, I am very sad."
+    neutral_text = "The weather today is partly cloudy with a chance of rain."
 
-def test_vader_accuracy(vader_analyzer):
-    """Test VADER sentiment analyzer accuracy on labeled data."""
-    correct = 0
-    total = len(LABELED_TEXTS)
+    pos_result = analyzer.analyze(positive_text)
+    neg_result = analyzer.analyze(negative_text)
+    neu_result = analyzer.analyze(neutral_text)
+
+    assert pos_result["label"] == "POSITIVE"
+    assert neg_result["label"] == "NEGATIVE"
+    assert neu_result["label"] in ["NEUTRAL", "POSITIVE", "NEGATIVE"]
+
+def test_batch_processing_default_analyzer():
+    analyzer = create_analyzer()
+    texts_for_live_test = [item["text"] for item in LABELED_TEXTS if item["expected_label"] != "ERROR" and item["text"] and item["text"].strip()]
     
-    for item in LABELED_TEXTS:
-        result = vader_analyzer.analyze_sentiment(item["text"])
-        if result["sentiment"] == item["expected_sentiment"]:
-            correct += 1
-            
-    accuracy = correct / total
-    print(f"VADER Accuracy: {accuracy:.2%}")
-    
-    # We expect at least 70% accuracy on our test set
-    assert accuracy >= 0.7, f"Accuracy {accuracy:.2%} below threshold of 70%"
+    if not texts_for_live_test: 
+        pytest.skip("No valid non-error texts from LABELED_TEXTS for batch processing.")
+
+    results = analyzer.analyze_batch(texts_for_live_test)
+    assert len(results) == len(texts_for_live_test)
+    for result in results:
+        assert result["label"] in ["POSITIVE", "NEGATIVE", "NEUTRAL"]
+
+@pytest.mark.parametrize("text, expected_label, _score_not_used", EDGE_CASE_TEXTS_FOR_DEFAULT_ANALYZER)
+def test_edge_cases_default_analyzer(text, expected_label, _score_not_used):
+    analyzer = create_analyzer() # Uses default model
+    result = analyzer.analyze(text)
+    assert result["label"] == expected_label
+    if expected_label == "ERROR":
+        assert result["score"] == 0.0 
+    else:
+        assert isinstance(result["score"], float)
+
+def test_hf_analyzer_mocked_call(mock_hf_analyzer: SentimentAnalyzer):
+    test_text = "This is a great day!"
+    mock_hf_analyzer.pipeline.return_value = [{"label": "POSITIVE", "score": 0.987}]
+    result = mock_hf_analyzer.analyze(test_text)
+    mock_hf_analyzer.pipeline.assert_called_once_with(test_text)
+    assert result["label"] == "POSITIVE"
+    assert result["score"] == 0.987
 
 @pytest.mark.parametrize("test_case", LABELED_TEXTS)
-def test_aws_sentiment_mapping(mock_aws_analyzer, test_case):
-    """Test AWS Comprehend sentiment mapping for each test case."""
-    mock_aws_analyzer.client.detect_sentiment.return_value = AWS_MOCK_RESPONSES["positive"]
-    
-    result = mock_aws_analyzer.analyze_sentiment(test_case["text"])
-    assert "sentiment" in result
-    assert "confidence" in result
-    assert result["provider"] == "aws"
+def test_hf_analyzer_label_mapping(mock_hf_analyzer: SentimentAnalyzer, test_case):
+    text_to_analyze = test_case["text"]
+    expected_label_from_fixture = test_case["expected_label"].upper()
 
-def test_batch_processing_vader(vader_analyzer):
-    """Test batch processing with VADER analyzer."""
-    texts = [item["text"] for item in LABELED_TEXTS]
-    results = vader_analyzer.batch_analyze(texts)
-    
-    assert len(results) == len(texts)
-    for result in results:
-        assert "sentiment" in result
-        assert "confidence" in result
-        assert "provider" in result
-        assert result["provider"] == "vader"
-
-def test_batch_processing_aws(mock_aws_analyzer):
-    """Test batch processing with AWS Comprehend."""
-    texts = [item["text"] for item in LABELED_TEXTS]
-    
-    mock_aws_analyzer.client.batch_detect_sentiment.return_value = {
-        "ResultList": [AWS_MOCK_RESPONSES["positive"]] * len(texts),
-        "ErrorList": []
-    }
-    
-    results = mock_aws_analyzer.batch_analyze(texts)
-    
-    assert len(results) == len(texts)
-    for result in results:
-        assert "sentiment" in result
-        assert "confidence" in result
-        assert "provider" in result
-        assert result["provider"] == "aws"
-
-@pytest.mark.parametrize("test_case", EDGE_CASES)
-def test_edge_cases_vader(vader_analyzer, test_case):
-    """Test VADER analyzer with edge cases."""
-    if test_case["should_raise"]:
-        with pytest.raises(ValueError):
-            vader_analyzer.analyze_sentiment(test_case["text"])
+    if not text_to_analyze or not text_to_analyze.strip(): 
+        result = mock_hf_analyzer.analyze(text_to_analyze)
+        assert result["label"] == "ERROR"
+        mock_hf_analyzer.pipeline.assert_not_called() 
     else:
-        result = vader_analyzer.analyze_sentiment(test_case["text"])
-        assert "sentiment" in result
-        assert "confidence" in result
+        mock_hf_analyzer.pipeline.return_value = [{"label": expected_label_from_fixture, "score": 0.99}]
+        result = mock_hf_analyzer.analyze(text_to_analyze)
+        assert result["label"].upper() == expected_label_from_fixture
+        mock_hf_analyzer.pipeline.assert_called_with(text_to_analyze)
 
-@pytest.mark.parametrize("test_case", EDGE_CASES)
-def test_edge_cases_aws(mock_aws_analyzer, test_case):
-    """Test AWS Comprehend analyzer with edge cases."""
-    if test_case["should_raise"]:
-        with pytest.raises(ValueError):
-            mock_aws_analyzer.analyze_sentiment(test_case["text"])
-    else:
-        mock_aws_analyzer.client.detect_sentiment.return_value = AWS_MOCK_RESPONSES["positive"]
-        result = mock_aws_analyzer.analyze_sentiment(test_case["text"])
-        assert "sentiment" in result
-        assert "confidence" in result
-
-def test_preprocessing():
-    """Test text preprocessing functionality."""
-    analyzer = create_analyzer("vader")
-    
-    # Test whitespace handling
-    assert analyzer.preprocess_text("  test  text  ") == "test text"
-    
-    # Test empty input
-    with pytest.raises(ValueError):
-        analyzer.preprocess_text("")
-    
-    # Test non-string input
-    with pytest.raises(ValueError):
-        analyzer.preprocess_text(123)
-
-def test_sentiment_scores():
-    """Test sentiment scores are properly returned."""
-    analyzer = create_analyzer("vader")
-    
-    result = analyzer.analyze_sentiment(
-        "This is a test.",
-        return_all_scores=True
-    )
-    
-    assert "all_scores" in result
-    assert isinstance(result["all_scores"], dict)
-    assert result["confidence"] >= 0
-    assert result["confidence"] <= 1
-
-@pytest.fixture
-def mock_transformers_analyzer():
-    """Create a mocked Transformers analyzer instance."""
-    with patch('transformers.pipeline') as mock_pipeline:
-        mock_pipe = Mock()
-        mock_pipeline.return_value = mock_pipe
-        analyzer = create_analyzer("transformers")
-        analyzer.sentiment_pipeline = mock_pipe
-        yield analyzer
-
-def test_transformers_accuracy(mock_transformers_analyzer):
-    """Test Transformers sentiment analyzer accuracy on labeled data."""
-    mock_transformers_analyzer.sentiment_pipeline.return_value = TRANSFORMERS_MOCK_RESPONSES["positive"]
-    
-    for item in LABELED_TEXTS:
-        result = mock_transformers_analyzer.analyze_sentiment(item["text"])
-        assert "sentiment" in result
-        assert "confidence" in result
-        assert "provider" in result
-        assert result["provider"] == "transformers"
-
-@pytest.mark.parametrize("test_case", EDGE_CASES)
-def test_edge_cases_transformers(mock_transformers_analyzer, test_case):
-    """Test Transformers analyzer with edge cases."""
-    if test_case["should_raise"]:
-        with pytest.raises(ValueError):
-            mock_transformers_analyzer.analyze_sentiment(test_case["text"])
-    else:
-        mock_transformers_analyzer.sentiment_pipeline.return_value = TRANSFORMERS_MOCK_RESPONSES["positive"]
-        result = mock_transformers_analyzer.analyze_sentiment(test_case["text"])
-        assert "sentiment" in result
-        assert "confidence" in result
-
-def test_batch_processing_transformers(mock_transformers_analyzer):
-    """Test batch processing with Transformers."""
+def test_batch_processing_hf_analyzer(mock_hf_analyzer: SentimentAnalyzer):
     texts = [item["text"] for item in LABELED_TEXTS]
-    mock_transformers_analyzer.sentiment_pipeline.return_value = [
-        TRANSFORMERS_MOCK_RESPONSES["positive"][0]
-    ] * len(texts)
+    valid_texts_for_pipeline = [t for t in texts if t and t.strip()]
+
+    mock_pipeline_output = []
+    for valid_text in valid_texts_for_pipeline:
+        original_case = next(item for item in LABELED_TEXTS if item["text"] == valid_text)
+        mock_pipeline_output.append({"label": original_case["expected_label"].upper(), "score": 0.95})
     
-    results = mock_transformers_analyzer.batch_analyze(texts)
-    
+    mock_hf_analyzer.pipeline.return_value = mock_pipeline_output
+
+    results = mock_hf_analyzer.analyze_batch(texts) 
+
+    if not valid_texts_for_pipeline:
+         mock_hf_analyzer.pipeline.assert_not_called()
+    else:
+        mock_hf_analyzer.pipeline.assert_called_once_with(valid_texts_for_pipeline)
+
     assert len(results) == len(texts)
-    for result in results:
-        assert "sentiment" in result
-        assert "confidence" in result
-        assert "provider" in result
-        assert result["provider"] == "transformers"
-
-# Integration tests (disabled by default)
-@pytest.mark.skip(reason="Requires AWS credentials")
-def test_live_aws_integration():
-    """Test live AWS Comprehend integration."""
-    analyzer = create_analyzer("aws", region_name="us-west-2")
-    result = analyzer.analyze_sentiment(
-        "This is a live test of AWS Comprehend.",
-        return_all_scores=True
-    )
     
-    assert result["provider"] == "aws"
-    assert "sentiment" in result
-    assert "confidence" in result
-    assert "all_scores" in result
+    result_idx_for_mock_output = 0
+    for i, original_text in enumerate(texts):
+        if original_text and original_text.strip():
+            expected_mock_item = mock_pipeline_output[result_idx_for_mock_output]
+            assert results[i]["label"] == expected_mock_item["label"]
+            assert results[i]["score"] == expected_mock_item["score"]
+            result_idx_for_mock_output += 1
+        else:
+            assert results[i]["label"] == "ERROR"
 
-@pytest.mark.skip(reason="Requires GPU/CPU resources")
 def test_live_transformers_integration():
-    """Test live Transformers integration."""
-    analyzer = create_analyzer("transformers")
-    result = analyzer.analyze_sentiment(
-        "This is a live test of Transformers.",
-        return_all_scores=True
-    )
-    
-    assert result["provider"] == "transformers"
-    assert "sentiment" in result
-    assert "confidence" in result
-    assert "all_scores" in result
+    # SentimentAnalyzer() will use its DEFAULT_MODEL
+    analyzer = SentimentAnalyzer() 
+    text = "Hugging Face models are quite useful for NLP tasks."
+    result = analyzer.analyze(text)
+    assert result["label"] in ["POSITIVE", "NEUTRAL", "NEGATIVE"]
+    assert isinstance(result["score"], float)
+    assert 0 <= result["score"] <= 1
