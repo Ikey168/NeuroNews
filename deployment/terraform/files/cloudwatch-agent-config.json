@@ -1,0 +1,80 @@
+{
+    "agent": {
+        "metrics_collection_interval": 60,
+        "run_as_user": "cwagent"
+    },
+    "logs": {
+        "logs_collected": {
+            "files": {
+                "collect_list": [
+                    {
+                        "file_path": "/var/log/neuronews/scraper.log",
+                        "log_group_name": "/aws/ec2/scrapers",
+                        "log_stream_name": "{instance_id}/scraper",
+                        "retention_in_days": 30,
+                        "timestamp_format": "%Y-%m-%d %H:%M:%S",
+                        "multi_line_start_pattern": "{timestamp_format}"
+                    },
+                    {
+                        "file_path": "/var/log/neuronews/error.log",
+                        "log_group_name": "/aws/ec2/scrapers",
+                        "log_stream_name": "{instance_id}/error",
+                        "retention_in_days": 30,
+                        "timestamp_format": "%Y-%m-%d %H:%M:%S",
+                        "multi_line_start_pattern": "{timestamp_format}"
+                    }
+                ]
+            }
+        }
+    },
+    "metrics": {
+        "namespace": "Production/DataPipeline",
+        "metrics_collected": {
+            "cpu": {
+                "measurement": [
+                    "cpu_usage_idle",
+                    "cpu_usage_user",
+                    "cpu_usage_system"
+                ],
+                "metrics_collection_interval": 60
+            },
+            "memory": {
+                "measurement": [
+                    "mem_used_percent",
+                    "mem_total",
+                    "mem_used"
+                ],
+                "metrics_collection_interval": 60
+            },
+            "disk": {
+                "measurement": [
+                    "used_percent",
+                    "used",
+                    "total"
+                ],
+                "resources": [
+                    "/"
+                ],
+                "metrics_collection_interval": 60
+            },
+            "processes": {
+                "measurement": [
+                    "running",
+                    "total"
+                ],
+                "metrics_collection_interval": 60
+            }
+        },
+        "append_dimensions": {
+            "ImageId": "${aws:ImageId}",
+            "InstanceId": "${aws:InstanceId}",
+            "InstanceType": "${aws:InstanceType}",
+            "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
+        },
+        "aggregation_dimensions": [
+            ["InstanceId"],
+            ["AutoScalingGroupName"],
+            ["InstanceType"]
+        ]
+    }
+}
