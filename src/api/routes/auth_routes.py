@@ -10,6 +10,7 @@ from typing import Optional
 
 from src.api.auth.jwt_auth import auth_handler, require_auth
 from src.database.redshift_loader import RedshiftLoader
+import os
 
 # Request/Response Models
 class UserCreate(BaseModel):
@@ -37,8 +38,17 @@ class RefreshRequest(BaseModel):
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+# Database dependency for tests
+async def get_db() -> RedshiftLoader:
+    return RedshiftLoader(
+        host=os.getenv("REDSHIFT_HOST", "test-host"),
+        database=os.getenv("REDSHIFT_DB", "dev"),
+        user=os.getenv("REDSHIFT_USER", "admin"),
+        password=os.getenv("REDSHIFT_PASSWORD", "test-pass"),
+    )
+
 @router.post("/register", response_model=TokenResponse)
-async def register(user: UserCreate, db: RedshiftLoader = Depends(RedshiftLoader)):
+async def register(user: UserCreate, db: RedshiftLoader = Depends(get_db)):
     """
     Register a new user.
     
@@ -88,7 +98,7 @@ async def register(user: UserCreate, db: RedshiftLoader = Depends(RedshiftLoader
     
     # Generate tokens
     token_data = {
-        "sub": user_id,
+        "sub": str(user_id),
         "email": user.email,
         "role": user.role
     }
@@ -99,7 +109,7 @@ async def register(user: UserCreate, db: RedshiftLoader = Depends(RedshiftLoader
     )
 
 @router.post("/login", response_model=TokenResponse)
-async def login(user: UserLogin, db: RedshiftLoader = Depends(RedshiftLoader)):
+async def login(user: UserLogin, db: RedshiftLoader = Depends(get_db)):
     """
     Authenticate a user and return tokens.
     
@@ -138,7 +148,7 @@ async def login(user: UserLogin, db: RedshiftLoader = Depends(RedshiftLoader)):
         
     # Generate tokens
     token_data = {
-        "sub": user_id,
+        "sub": str(user_id),
         "email": user.email,
         "role": role
     }

@@ -4,7 +4,7 @@ CloudWatch logging extension for Scrapy.
 import logging
 from scrapy import signals
 from scrapy.exceptions import NotConfigured
-from ..logging import configure_cloudwatch_logging
+from ..log_utils import configure_cloudwatch_logging
 
 
 class CloudWatchLoggingExtension:

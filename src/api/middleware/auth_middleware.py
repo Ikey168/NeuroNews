@@ -3,6 +3,8 @@ Authentication and security middleware for the API.
 """
 
 from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import JSONResponse
+from src.api.auth.jwt_auth import auth_handler
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from typing import List, Dict, Optional
@@ -68,20 +70,14 @@ class RoleBasedAccessMiddleware(BaseHTTPMiddleware):
         required_roles = self.protected_routes.get(route_key)
         
         if required_roles:
-            # Get user role from token claims
             user = request.state.user if hasattr(request.state, "user") else None
             if not user or "role" not in user:
-                raise HTTPException(
-                    status_code=401,
-                    detail="Authentication required"
-                )
-                
+                try:
+                    user = await auth_handler(request)
+                except HTTPException:
+                    return JSONResponse(status_code=401, content={"detail": "Authentication required"})
             if user["role"] not in required_roles:
-                raise HTTPException(
-                    status_code=403,
-                    detail="Insufficient permissions"
-                )
-        
+                return JSONResponse(status_code=403, content={"detail": "Insufficient permissions"})
         return await call_next(request)
 
 class AuditLogMiddleware(BaseHTTPMiddleware):

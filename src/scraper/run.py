@@ -9,7 +9,6 @@ from pathlib import Path
 from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
 from .spiders.news_spider import NewsSpider
-from .spiders.playwright_spider import PlaywrightNewsSpider
 from .pipelines.s3_pipeline import S3StoragePipeline
 
 
@@ -141,6 +140,7 @@ def run_spider(output_file=None, use_playwright=False, s3_storage=False,
     
     # Choose which spider to run
     if use_playwright:
+        from .spiders.playwright_spider import PlaywrightNewsSpider
         process.crawl(PlaywrightNewsSpider)
     else:
         process.crawl(NewsSpider)

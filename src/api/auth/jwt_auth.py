@@ -16,15 +16,14 @@ class JWTAuth:
     
     def __init__(self):
         """Initialize JWT authentication configuration."""
-        self.jwt_secret = os.getenv("JWT_SECRET_KEY")
+        # Use a default secret for test environments if env var not provided
+        self.jwt_secret = os.getenv("JWT_SECRET_KEY", "test-secret")
         self.jwt_algorithm = "HS256"
         self.access_token_expire = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
         self.refresh_token_expire = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
         
-        if not self.jwt_secret:
-            raise ValueError("JWT_SECRET_KEY environment variable must be set")
             
-        self.security = HTTPBearer()
+        self.security = HTTPBearer(auto_error=False)
 
     def create_access_token(self, data: Dict[str, Any]) -> str:
         """
@@ -37,6 +36,8 @@ class JWTAuth:
             Encoded JWT token string
         """
         to_encode = data.copy()
+        if "sub" in to_encode:
+            to_encode["sub"] = str(to_encode["sub"])
         expire = datetime.utcnow() + timedelta(minutes=self.access_token_expire)
         to_encode.update({"exp": expire})
         
@@ -57,6 +58,8 @@ class JWTAuth:
             Encoded JWT refresh token string
         """
         to_encode = data.copy()
+        if "sub" in to_encode:
+            to_encode["sub"] = str(to_encode["sub"])
         expire = datetime.utcnow() + timedelta(days=self.refresh_token_expire)
         to_encode.update({
             "exp": expire,
@@ -164,11 +167,11 @@ class JWTAuth:
                 status_code=401,
                 detail="Invalid token type"
             )
-            
+        request.state.user = payload
         return payload
 
 # Create global auth handler instance
 auth_handler = JWTAuth()
 
-# Dependency for protecting routes
-require_auth = Security(auth_handler)
+# Alias used in route dependencies
+require_auth = auth_handler

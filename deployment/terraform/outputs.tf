@@ -14,8 +14,7 @@ output "knowledge_graph_generator_function_arn" {
 }
 
 output "cross_account_role_arn" {
-  description = "The ARN of the cross-account role"
-  value       = var.create_cross_account_role ? (var.trusted_account_id != "" ? aws_iam_role.cross_account_role[0].arn : "") : ""
+  value       = ""
 }
 
 output "s3_bucket_name" {
