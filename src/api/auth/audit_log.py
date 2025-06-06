@@ -4,6 +4,7 @@ Security audit logging for authentication and authorization events.
 
 import logging
 import json
+import os
 from datetime import datetime
 from typing import Optional, Dict, Any
 import boto3
@@ -24,22 +25,30 @@ class SecurityAuditLogger:
             log_group: CloudWatch log group name
         """
         self.log_group = log_group
-        self.cloudwatch = boto3.client('cloudwatch')
-        self.logs = boto3.client('logs')
+        aws_region = os.getenv('AWS_DEFAULT_REGION')
+        if aws_region:
+            self.cloudwatch = boto3.client('cloudwatch', region_name=aws_region)
+            self.logs = boto3.client('logs', region_name=aws_region)
+        else:
+            # Fallback to no-op clients when region not configured (e.g. tests)
+            self.cloudwatch = None
+            self.logs = None
         
-        try:
-            self.logs.create_log_group(logGroupName=log_group)
-        except self.logs.exceptions.ResourceAlreadyExistsException:
-            pass
+        if self.logs:
+            try:
+                self.logs.create_log_group(logGroupName=log_group)
+            except self.logs.exceptions.ResourceAlreadyExistsException:
+                pass
             
         self.stream_name = datetime.utcnow().strftime('%Y/%m/%d/security')
-        try:
-            self.logs.create_log_stream(
-                logGroupName=log_group,
-                logStreamName=self.stream_name
-            )
-        except self.logs.exceptions.ResourceAlreadyExistsException:
-            pass
+        if self.logs:
+            try:
+                self.logs.create_log_stream(
+                    logGroupName=log_group,
+                    logStreamName=self.stream_name
+                )
+            except self.logs.exceptions.ResourceAlreadyExistsException:
+                pass
             
         self.sequence_token = None
 
@@ -117,21 +126,23 @@ class SecurityAuditLogger:
             if self.sequence_token:
                 kwargs["sequenceToken"] = self.sequence_token
                 
-            response = self.logs.put_log_events(**kwargs)
-            self.sequence_token = response.get("nextSequenceToken")
+            if self.logs:
+                response = self.logs.put_log_events(**kwargs)
+                self.sequence_token = response.get("nextSequenceToken")
             
             # Emit CloudWatch metrics
-            self.cloudwatch.put_metric_data(
-                Namespace="NeuroNews/Security",
-                MetricData=[{
-                    "MetricName": f"SecurityEvent{event_type}",
-                    "Value": 1,
-                    "Unit": "Count",
-                    "Dimensions": [
-                        {"Name": "Environment", "Value": "production"}
-                    ]
-                }]
-            )
+            if self.cloudwatch:
+                self.cloudwatch.put_metric_data(
+                    Namespace="NeuroNews/Security",
+                    MetricData=[{
+                        "MetricName": f"SecurityEvent{event_type}",
+                        "Value": 1,
+                        "Unit": "Count",
+                        "Dimensions": [
+                            {"Name": "Environment", "Value": "production"}
+                        ]
+                    }]
+                )
             
         except Exception as e:
             logger.error(f"Failed to log security event: {e}", extra=log_entry)

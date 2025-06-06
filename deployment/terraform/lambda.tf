@@ -1,3 +1,44 @@
+# IAM role for Lambda execution
+resource "aws_iam_role" "lambda_execution_role" {
+  name = "neuronews-lambda-execution-${var.environment}"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Action = "sts:AssumeRole",
+      Effect = "Allow",
+      Principal = { Service = "lambda.amazonaws.com" }
+    }]
+  })
+}
+resource "aws_iam_role_policy" "lambda_basic" {
+  name = "basic-lambda-policy"
+  role = aws_iam_role.lambda_execution_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ],
+        Effect = "Allow",
+        Resource = "arn:aws:logs:*:*:*"
+      },
+      {
+        Action = ["s3:*"],
+        Effect = "Allow",
+        Resource = [
+          module.s3.lambda_code_bucket_arn,
+          "${module.s3.lambda_code_bucket_arn}/*",
+          module.s3.raw_articles_bucket_arn,
+          "${module.s3.raw_articles_bucket_arn}/*"
+        ]
+      }
+    ]
+  })
+}
 # Lambda Function Configuration for NeuroNews
 
 # Create Lambda function for article processing

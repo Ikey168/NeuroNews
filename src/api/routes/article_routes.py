@@ -4,6 +4,7 @@ Article management routes with RBAC.
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from typing import List, Optional
+import os
 from pydantic import BaseModel
 from datetime import datetime
 
@@ -12,6 +13,17 @@ from src.api.auth.jwt_auth import require_auth
 from src.database.redshift_loader import RedshiftLoader
 
 router = APIRouter(prefix="/articles", tags=["articles"])
+
+# Database dependency
+async def get_db() -> RedshiftLoader:
+    """Return a RedshiftLoader using environment configuration or test defaults."""
+    db = RedshiftLoader(
+        host=os.getenv("REDSHIFT_HOST", "test-host"),
+        database=os.getenv("REDSHIFT_DB", "dev"),
+        user=os.getenv("REDSHIFT_USER", "admin"),
+        password=os.getenv("REDSHIFT_PASSWORD", "test-pass"),
+    )
+    return db
 
 # Request/Response Models
 class ArticleBase(BaseModel):
@@ -45,7 +57,7 @@ class Article(ArticleBase):
 @require_permissions(Permission.READ_ARTICLES)
 async def list_articles(
     request: Request,
-    db: RedshiftLoader = Depends(RedshiftLoader),
+    db: RedshiftLoader = Depends(get_db),
     category: Optional[str] = None,
     source: Optional[str] = None,
     limit: int = 50,
@@ -98,7 +110,7 @@ async def list_articles(
 async def create_article(
     request: Request,
     article: ArticleCreate,
-    db: RedshiftLoader = Depends(RedshiftLoader),
+    db: RedshiftLoader = Depends(get_db),
     user: dict = Depends(require_auth)
 ):
     """
@@ -140,7 +152,7 @@ async def create_article(
 async def get_article(
     request: Request,
     article_id: str,
-    db: RedshiftLoader = Depends(RedshiftLoader),
+    db: RedshiftLoader = Depends(get_db),
     _: dict = Depends(require_auth)
 ):
     """
@@ -171,7 +183,7 @@ async def update_article(
     request: Request,
     article_id: str,
     article: ArticleUpdate,
-    db: RedshiftLoader = Depends(RedshiftLoader),
+    db: RedshiftLoader = Depends(get_db),
     user: dict = Depends(require_auth)
 ):
     """
@@ -230,7 +242,7 @@ async def update_article(
 async def delete_article(
     request: Request,
     article_id: str,
-    db: RedshiftLoader = Depends(RedshiftLoader),
+    db: RedshiftLoader = Depends(get_db),
     user: dict = Depends(require_auth)
 ):
     """
@@ -261,3 +273,4 @@ async def delete_article(
     )
     
     return {"message": "Article deleted"}
+

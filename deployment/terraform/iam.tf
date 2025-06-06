@@ -1,3 +1,6 @@
+# Data source for account information
+data "aws_caller_identity" "current" {}
+
 # Scraper Service Role
 resource "aws_iam_role" "scraper_role" {
   name = "neuronews-scraper-role-${var.environment}"
@@ -45,8 +48,8 @@ resource "aws_iam_role_policy" "scraper_policy" {
           "s3:ListBucket"
         ]
         Resource = [
-          "${aws_s3_bucket.news_data.arn}",
-          "${aws_s3_bucket.news_data.arn}/*"
+          "${module.s3.raw_articles_bucket_arn}",
+          "${module.s3.raw_articles_bucket_arn}/*"
         ]
       },
       {
@@ -56,7 +59,7 @@ resource "aws_iam_role_policy" "scraper_policy" {
           "redshift-data:GetStatementResult",
           "redshift-data:DescribeStatement"
         ]
-        Resource = ["${aws_redshift_cluster.news_cluster.arn}"]
+        Resource = ["${aws_redshift_cluster.processed_texts.arn}"]
         Condition = {
           StringLike = {
             "redshift:DatabaseUser": "etl_user"
@@ -122,7 +125,7 @@ resource "aws_iam_role_policy" "api_policy" {
           "redshift-data:GetStatementResult",
           "redshift-data:DescribeStatement"
         ]
-        Resource = ["${aws_redshift_cluster.news_cluster.arn}"]
+        Resource = ["${aws_redshift_cluster.processed_texts.arn}"]
         Condition = {
           StringLike = {
             "redshift:DatabaseUser": "api_user"
@@ -136,7 +139,7 @@ resource "aws_iam_role_policy" "api_policy" {
           "neptune-db:GetQueryStatus",
           "neptune-db:CancelQuery"
         ]
-        Resource = ["${aws_neptune_cluster.knowledge_graph.arn}"]
+        Resource = ["${aws_neptune_cluster.main.arn}"]
       },
       {
         Effect = "Allow"
@@ -165,7 +168,7 @@ resource "aws_cloudtrail" "neuronews_trail" {
 
     data_resource {
       type   = "AWS::S3::Object"
-      values = ["${aws_s3_bucket.news_data.arn}/"]
+      values = ["${module.s3.raw_articles_bucket_arn}/"]
     }
   }
 

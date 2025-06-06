@@ -104,7 +104,9 @@ def require_permissions(*permissions: Permission):
         @wraps(func)
         async def wrapper(*args, **kwargs):
             request = next((arg for arg in args if isinstance(arg, Request)), None)
-            if not request:
+            if request is None:
+                request = next((v for v in kwargs.values() if isinstance(v, Request)), None)
+            if request is None:
                 raise ValueError("No request object found")
                 
             # Get user from request state (set by JWT middleware)
