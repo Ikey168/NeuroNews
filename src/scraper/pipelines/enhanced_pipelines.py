@@ -1,5 +1,5 @@
 """
-Pipelines for processing scraped items in NeuroNews.
+Enhanced pipelines for processing scraped items in NeuroNews.
 """
 import json
 import os
@@ -172,31 +172,4 @@ class EnhancedJsonWriterPipeline:
             self.source_files[source].write(',\n')
         self.source_files[source].write(line)
         
-        return item
-
-
-class JsonWriterPipeline:
-    """Legacy pipeline for backward compatibility."""
-
-    def open_spider(self, spider):
-        """Called when the spider is opened."""
-        # Create data directory if it doesn't exist
-        os.makedirs('data', exist_ok=True)
-        self.file = open('data/news_articles.json', 'w')
-        self.file.write('[')
-        self.first_item = True
-
-    def close_spider(self, spider):
-        """Called when the spider is closed."""
-        self.file.write(']')
-        self.file.close()
-
-    def process_item(self, item, spider):
-        """Process each scraped item."""
-        line = json.dumps(dict(item))
-        if self.first_item:
-            self.first_item = False
-        else:
-            self.file.write(',\n')
-        self.file.write(line)
         return item

@@ -10,6 +10,8 @@ from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
 from .spiders.news_spider import NewsSpider
 from .pipelines.s3_pipeline import S3StoragePipeline
+from .multi_source_runner import MultiSourceRunner
+from .data_validator import ScrapedDataValidator
 
 
 def load_aws_config(env='dev'):
@@ -150,7 +152,40 @@ def run_spider(output_file=None, use_playwright=False, s3_storage=False,
 
 def main():
     """Main entry point for the scraper CLI."""
-    parser = argparse.ArgumentParser(description='NeuroNews Scraper')
+    parser = argparse.ArgumentParser(description='NeuroNews Scraper - Multi-Source News Scraping')
+    
+    # Multi-source options
+    source_group = parser.add_argument_group('Multi-Source Options')
+    source_group.add_argument(
+        '--multi-source', '-m',
+        action='store_true',
+        help='Run all available source spiders'
+    )
+    source_group.add_argument(
+        '--spider',
+        help='Run specific spider (cnn, bbc, techcrunch, arstechnica, reuters, guardian, theverge, wired, npr)'
+    )
+    source_group.add_argument(
+        '--exclude',
+        nargs='+',
+        help='Exclude specific spiders from multi-source run'
+    )
+    source_group.add_argument(
+        '--include',
+        nargs='+',
+        help='Include only specific spiders in multi-source run'
+    )
+    source_group.add_argument(
+        '--validate',
+        action='store_true',
+        help='Run data validation after scraping'
+    )
+    source_group.add_argument(
+        '--report',
+        action='store_true',
+        help='Generate scraping report'
+    )
+    
     parser.add_argument(
         '--output', '-o',
         help='Output file path (default: data/news_articles.json)',
@@ -235,11 +270,64 @@ def main():
     
     args = parser.parse_args()
     
+    # Handle multi-source specific commands first
     if args.list_sources:
+        runner = MultiSourceRunner()
+        print("Available spiders:")
+        for spider_name in runner.spiders.keys():
+            print(f"  - {spider_name}")
+        
         settings = get_project_settings()
-        print("Configured news sources:")
-        for source in settings.get('SCRAPING_SOURCES'):
-            print(f"  - {source}")
+        print("\nConfigured news sources:")
+        sources = settings.get('SCRAPING_SOURCES', [])
+        if sources:
+            for source in sources:
+                print(f"  - {source}")
+        else:
+            # Try loading from config file directly
+            try:
+                import json
+                with open('config/settings.json', 'r') as f:
+                    config = json.load(f)
+                sources = config.get('scraping', {}).get('sources', [])
+                for source in sources:
+                    print(f"  - {source}")
+            except Exception as e:
+                print(f"  Could not load sources from config: {e}")
+        return
+    
+    if args.report:
+        runner = MultiSourceRunner()
+        report = runner.generate_report()
+        return
+    
+    if args.validate:
+        validator = ScrapedDataValidator()
+        results = validator.save_validation_report()
+        print("Data validation completed. Report saved.")
+        return
+    
+    if args.multi_source or args.spider:
+        runner = MultiSourceRunner()
+        
+        if args.spider:
+            print(f"Running spider: {args.spider}")
+            try:
+                runner.run_spider(args.spider)
+            except ValueError as e:
+                print(f"Error: {e}")
+                return
+        else:
+            print("Running all available spiders...")
+            runner.run_all_spiders(exclude=args.exclude, include_only=args.include)
+        
+        # Run validation if requested
+        if args.validate:
+            print("Running data validation...")
+            validator = ScrapedDataValidator()
+            validator.save_validation_report()
+        
+        print("Multi-source scraping completed.")
         return
     
     # Load AWS configuration from file
