@@ -1,53 +1,306 @@
-# NeuroNews Scraper
+# Multi-Source News Scraper
 
-A Scrapy-based news scraper for the NeuroNews project.
+This enhanced scraper collects news articles from 10+ major news sources with custom parsing, data validation, and comprehensive metadata extraction.
+
+## Supported News Sources
+
+- **CNN** (`cnn`) - Politics, Business, Technology, Health, Sports
+- **BBC** (`bbc`) - World news, Politics, Business, Technology, Science
+- **TechCrunch** (`techcrunch`) - Startups, Apps, Gadgets, Venture Capital, AI
+- **Ars Technica** (`arstechnica`) - Technology, Science, Gaming, Policy
+- **Reuters** (`reuters`) - Business, World news, Markets, Politics
+- **The Guardian** (`guardian`) - Politics, Environment, Science, Culture
+- **The Verge** (`theverge`) - Technology, Science, Gaming, Policy
+- **Wired** (`wired`) - Technology, Science, Business, Culture
+- **NPR** (`npr`) - National, World, Politics, Science, Health
+- **Generic News Spider** (`news`) - Fallback for other sources
 
 ## Features
 
-- Crawls news websites defined in the configuration
-- Extracts article content, metadata, and categorizes news
-- Filters out duplicate articles
-- Saves scraped data to JSON files
-- Supports JavaScript-heavy pages using Playwright
-- Stores articles in Amazon S3 with metadata
-- Logs scraper execution in AWS CloudWatch
+### 🔍 Custom Parsers
+Each news source has a specialized spider with custom HTML parsing logic tailored to their specific website structure:
+- Source-specific CSS selectors
+- Date format parsing
+- Author extraction
+- Category classification
+- Content quality assessment
+
+### 📊 Rich Metadata Extraction
+Each article includes comprehensive metadata:
+- **Basic**: Title, URL, content, publication date, source, author, category
+- **Enhanced**: Scraped timestamp, content length, word count, reading time, language
+- **Quality**: Validation score, content quality rating, duplicate check status
+
+### ✅ Data Validation
+Comprehensive validation pipeline ensures data quality:
+- Required field completeness
+- URL format validation
+- Date format verification
+- Content length assessment
+- Duplicate detection (URL and content-based)
+- Overall accuracy scoring
+
+### 📁 Organized Storage
+Articles are stored in multiple formats:
+- **Combined**: All articles in `data/all_articles.json`
+- **Source-specific**: Individual files in `data/sources/[source]_articles.json`
+- **S3 Integration**: Optional cloud storage with AWS S3
 
 ## Usage
 
-### Setting Up AWS Credentials and Dev Environment
+### Command Line Interface
 
-The project includes a setup script to configure AWS credentials and create a dev environment configuration:
-
+#### Run All Sources
 ```bash
-# Make the script executable if needed
-chmod +x scripts/setup_aws_dev.py
-
-# Run the setup script
-./scripts/setup_aws_dev.py --access-key YOUR_AWS_ACCESS_KEY --secret-key YOUR_AWS_SECRET_KEY
+python -m src.scraper.run --multi-source
 ```
 
-This script will:
-1. Set up AWS credentials in your `~/.aws/credentials` file
-2. Create a `config/dev_aws.json` configuration file
-3. Check if the required AWS resources (S3 bucket, CloudWatch log group) exist and offer to create them
-4. Generate commands to run the scraper with AWS integration
-
-### From the Command Line
-
-You can run the scraper directly:
-
+#### Run Specific Source
 ```bash
-python -m src.scraper.run
+python -m src.scraper.run --spider cnn
+python -m src.scraper.run --spider bbc
+python -m src.scraper.run --spider techcrunch
 ```
 
-Options:
-- `--output`, `-o`: Specify the output file path (default: data/news_articles.json)
-- `--list-sources`, `-l`: List the configured news sources
-- `--playwright`, `-p`: Use Playwright for JavaScript-heavy pages
-- `--env`: Environment (dev, staging, prod) for loading AWS config (default: dev)
+#### Run Multiple Sources
+```bash
+python -m src.scraper.run --multi-source --include cnn bbc reuters
+```
 
-AWS Credentials:
-- `--aws-profile`: AWS profile name
+#### Exclude Sources
+```bash
+python -m src.scraper.run --multi-source --exclude techcrunch arstechnica
+```
+
+#### With Data Validation
+```bash
+python -m src.scraper.run --multi-source --validate
+```
+
+#### Generate Reports
+```bash
+python -m src.scraper.run --report
+```
+
+#### List Available Sources
+```bash
+python -m src.scraper.run --list-sources
+```
+
+### Direct Multi-Source Runner
+
+```bash
+# Run all spiders
+python -m src.scraper.multi_source_runner --all
+
+# Run specific spider
+python -m src.scraper.multi_source_runner --spider cnn
+
+# Generate report
+python -m src.scraper.multi_source_runner --report
+
+# List available spiders
+python -m src.scraper.multi_source_runner --list
+```
+
+### Data Validation
+
+```bash
+# Run validation on scraped data
+python -m src.scraper.data_validator
+```
+
+## Configuration
+
+### Sources Configuration
+Edit `config/settings.json` to modify the list of sources:
+
+```json
+{
+  "scraping": {
+    "sources": [
+      "https://www.cnn.com",
+      "https://www.bbc.com/news",
+      "https://techcrunch.com",
+      "..."
+    ]
+  }
+}
+```
+
+### Pipeline Configuration
+The enhanced pipeline system includes:
+
+```python
+ITEM_PIPELINES = {
+    'src.scraper.pipelines.ValidationPipeline': 100,
+    'src.scraper.pipelines.DuplicateFilterPipeline': 200,
+    'src.scraper.pipelines.EnhancedJsonWriterPipeline': 300,
+    'src.scraper.pipelines.s3_pipeline.S3StoragePipeline': 400,
+}
+```
+
+## Data Structure
+
+### Article Schema
+```json
+{
+  "title": "Article title",
+  "url": "https://example.com/article",
+  "content": "Full article content...",
+  "published_date": "2024-01-01T12:00:00Z",
+  "source": "CNN",
+  "author": "John Doe",
+  "category": "Technology",
+  "scraped_date": "2024-01-01T12:30:00Z",
+  "content_length": 1500,
+  "word_count": 250,
+  "reading_time": 2,
+  "language": "en",
+  "validation_score": 85,
+  "content_quality": "high",
+  "duplicate_check": "unique"
+}
+```
+
+### Output Files
+
+#### Combined Data
+- `data/all_articles.json` - All articles from all sources
+
+#### Source-Specific Data
+- `data/sources/cnn_articles.json`
+- `data/sources/bbc_articles.json`
+- `data/sources/techcrunch_articles.json`
+- `data/sources/...`
+
+#### Reports
+- `data/scraping_report.json` - Summary statistics
+- `data/validation_report.json` - Data quality analysis
+
+## Validation Metrics
+
+The validation system provides detailed quality metrics:
+
+### Accuracy Score Calculation
+- **Field Completeness** (30 points): Required fields filled
+- **URL Validity** (20 points): Valid URL format and domain consistency
+- **Content Quality** (25 points): Adequate content length and word count
+- **Date Validity** (15 points): Valid date format and recency
+- **Uniqueness** (10 points): No duplicates detected
+
+### Quality Ratings
+- **High**: Validation score ≥ 80
+- **Medium**: Validation score 60-79
+- **Low**: Validation score < 60
+
+### Report Example
+```json
+{
+  "summary": {
+    "total_sources_analyzed": 9,
+    "total_articles_across_sources": 450,
+    "average_accuracy_score": 82.5,
+    "best_performing_source": "reuters",
+    "worst_performing_source": "techcrunch"
+  },
+  "cnn": {
+    "total_articles": 50,
+    "accuracy_score": 85.2,
+    "field_completeness": {...},
+    "content_quality": {...}
+  }
+}
+```
+
+## Development
+
+### Adding New Sources
+
+1. Create a new spider file in `src/scraper/spiders/`:
+```python
+class NewSourceSpider(scrapy.Spider):
+    name = 'newsource'
+    allowed_domains = ['newsource.com']
+    # ... implementation
+```
+
+2. Add to multi-source runner in `multi_source_runner.py`:
+```python
+from .spiders.newsource_spider import NewSourceSpider
+
+self.spiders = {
+    # existing spiders...
+    'newsource': NewSourceSpider,
+}
+```
+
+3. Update configuration in `config/settings.json`
+
+### Custom Validation Rules
+
+Extend the `ValidationPipeline` in `pipelines.py` to add source-specific validation rules:
+
+```python
+def process_item(self, item, spider):
+    # Custom validation logic
+    if spider.name == 'customsource':
+        # Source-specific validation
+        pass
+    return item
+```
+
+## Testing
+
+Run the validation tests to ensure data quality:
+
+```bash
+# Test all sources
+python -m src.scraper.data_validator
+
+# Test specific functionality
+python -m pytest tests/test_scraper.py
+```
+
+## Monitoring
+
+### CloudWatch Integration
+Enable CloudWatch logging for production monitoring:
+
+```bash
+python -m src.scraper.run --multi-source --cloudwatch
+```
+
+### S3 Storage
+Store articles in S3 for scalable data management:
+
+```bash
+python -m src.scraper.run --multi-source --s3 --s3-bucket my-bucket
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Robot.txt Blocking**: Some sites may block scrapers
+   - Solution: Respect robots.txt or use delays
+
+2. **JavaScript-Heavy Sites**: Some content requires JavaScript
+   - Solution: Use `--playwright` flag for JS rendering
+
+3. **Rate Limiting**: Sites may limit request frequency
+   - Solution: Adjust `DOWNLOAD_DELAY` in settings
+
+4. **Changing HTML Structure**: Sites update their layouts
+   - Solution: Update spider selectors regularly
+
+### Debug Mode
+Enable debug logging:
+```bash
+python -m src.scraper.run --multi-source --env dev
+```
+
+This will provide detailed logging for troubleshooting parsing issues.
 - `--aws-key-id`: AWS access key ID
 - `--aws-secret-key`: AWS secret access key
 - `--aws-region`: AWS region (default: us-east-1)

@@ -32,8 +32,9 @@ COOKIES_ENABLED = False
 
 # Configure item pipelines
 ITEM_PIPELINES = {
-    'src.scraper.pipelines.DuplicateFilterPipeline': 100,
-    'src.scraper.pipelines.JsonWriterPipeline': 300,
+    'src.scraper.pipelines.enhanced_pipelines.ValidationPipeline': 100,
+    'src.scraper.pipelines.enhanced_pipelines.DuplicateFilterPipeline': 200,
+    'src.scraper.pipelines.enhanced_pipelines.EnhancedJsonWriterPipeline': 300,
     'src.scraper.pipelines.s3_pipeline.S3StoragePipeline': 400,
 }
 

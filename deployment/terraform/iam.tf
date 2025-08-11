@@ -182,29 +182,42 @@ resource "aws_cloudtrail" "neuronews_trail" {
 resource "aws_s3_bucket" "audit_logs" {
   bucket = "neuronews-audit-logs-${var.environment}-${data.aws_caller_identity.current.account_id}"
 
-  versioning {
-    enabled = true
+  tags = {
+    Environment = var.environment
+    Service     = "audit"
   }
+}
 
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        sse_algorithm = "AES256"
-      }
+# S3 Bucket Versioning
+resource "aws_s3_bucket_versioning" "audit_logs" {
+  bucket = aws_s3_bucket.audit_logs.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+# S3 Bucket Server Side Encryption
+resource "aws_s3_bucket_server_side_encryption_configuration" "audit_logs" {
+  bucket = aws_s3_bucket.audit_logs.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
     }
   }
+}
 
-  lifecycle_rule {
-    enabled = true
+# S3 Bucket Lifecycle Configuration
+resource "aws_s3_bucket_lifecycle_configuration" "audit_logs" {
+  bucket = aws_s3_bucket.audit_logs.id
+
+  rule {
+    id     = "audit_logs_retention"
+    status = "Enabled"
 
     expiration {
       days = 365
     }
-  }
-
-  tags = {
-    Environment = var.environment
-    Service     = "audit"
   }
 }
 
