@@ -1,0 +1,258 @@
+{
+  "async_scraper": {
+    "max_concurrent": 20,
+    "max_threads": 8,
+    "headless": true,
+    "timeout": 30,
+    "retry_attempts": 3,
+    "retry_delay": 2,
+    "rate_limiting": {
+      "default_rate": 1.0,
+      "burst_size": 5,
+      "per_source_limits": {
+        "BBC": 1.5,
+        "CNN": 1.0,
+        "TechCrunch": 2.0,
+        "The Verge": 0.8,
+        "Wired": 0.8
+      }
+    },
+    "browser_settings": {
+      "viewport_width": 1920,
+      "viewport_height": 1080,
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+      "wait_timeout": 30000,
+      "navigation_timeout": 60000
+    },
+    "performance": {
+      "monitoring_enabled": true,
+      "dashboard_update_interval": 5,
+      "metrics_retention_minutes": 60,
+      "memory_threshold_mb": 1000,
+      "cpu_threshold_percent": 80
+    }
+  },
+  "sources": [
+    {
+      "name": "BBC",
+      "base_url": "https://www.bbc.com/news",
+      "article_selectors": {
+        "title": "h1[data-testid='headline'], h1.story-body__h1, h1",
+        "content": "div[data-component='text-block'] p, .story-body__inner p, article p",
+        "author": "span[data-testid='byline'], .byline__name, .story-body__byline",
+        "date": "time[datetime], .date--v2"
+      },
+      "link_patterns": ["/news/.*", "/sport/.*", "/technology/.*"],
+      "requires_js": false,
+      "rate_limit": 1.5,
+      "timeout": 30,
+      "priority": "high",
+      "enabled": true
+    },
+    {
+      "name": "CNN",
+      "base_url": "https://www.cnn.com",
+      "article_selectors": {
+        "title": "h1.headline__text, h1[data-editable], h1",
+        "content": ".zn-body__paragraph, .paragraph, article p",
+        "author": ".byline__name, .metadata__byline",
+        "date": ".update-time, time[datetime]"
+      },
+      "link_patterns": ["/2024/.*", "/2025/.*"],
+      "requires_js": false,
+      "rate_limit": 1.0,
+      "timeout": 30,
+      "priority": "high",
+      "enabled": true
+    },
+    {
+      "name": "TechCrunch",
+      "base_url": "https://techcrunch.com",
+      "article_selectors": {
+        "title": "h1.article__title, h1",
+        "content": ".article-content p, .entry-content p",
+        "author": ".article__byline a, .byline a",
+        "date": "time[datetime], .full-date-time"
+      },
+      "link_patterns": ["/2024/.*", "/2025/.*"],
+      "requires_js": false,
+      "rate_limit": 2.0,
+      "timeout": 25,
+      "priority": "medium",
+      "enabled": true
+    },
+    {
+      "name": "Reuters",
+      "base_url": "https://www.reuters.com",
+      "article_selectors": {
+        "title": "h1[data-testid='Headline'], h1.ArticleHeader_headline, h1",
+        "content": "div[data-testid='ArticleBody'] p, .StandardArticleBody_body p",
+        "author": "a[data-testid='Author'], .BylineBar_byline",
+        "date": "time[datetime], .ArticleHeader_date"
+      },
+      "link_patterns": ["/world/.*", "/business/.*", "/technology/.*"],
+      "requires_js": false,
+      "rate_limit": 1.0,
+      "timeout": 30,
+      "priority": "high",
+      "enabled": true
+    },
+    {
+      "name": "Ars Technica",
+      "base_url": "https://arstechnica.com",
+      "article_selectors": {
+        "title": "h1.heading, h1[itemprop='headline'], h1",
+        "content": ".post-content p, .article-content p",
+        "author": ".byline a, [rel='author']",
+        "date": "time[datetime], .post-meta time"
+      },
+      "link_patterns": ["/2024/.*", "/2025/.*"],
+      "requires_js": false,
+      "rate_limit": 2.0,
+      "timeout": 35,
+      "priority": "medium",
+      "enabled": true
+    },
+    {
+      "name": "The Guardian",
+      "base_url": "https://www.theguardian.com",
+      "article_selectors": {
+        "title": "h1[data-gu-name='headline'], h1.content__headline, h1",
+        "content": ".content__article-body p, .article-body p",
+        "author": ".byline a, [rel='author']",
+        "date": "time[datetime], .content__dateline time"
+      },
+      "link_patterns": ["/2024/.*", "/2025/.*", "/world/.*", "/technology/.*"],
+      "requires_js": false,
+      "rate_limit": 1.0,
+      "timeout": 30,
+      "priority": "high",
+      "enabled": true
+    },
+    {
+      "name": "NPR",
+      "base_url": "https://www.npr.org",
+      "article_selectors": {
+        "title": "h1.storytitle, h1#storytitle, h1",
+        "content": ".storytext p, #storytext p, article p",
+        "author": ".byline__name a, .byline a",
+        "date": "time[datetime], .dateblock time"
+      },
+      "link_patterns": ["/2024/.*", "/2025/.*"],
+      "requires_js": false,
+      "rate_limit": 2.0,
+      "timeout": 25,
+      "priority": "medium",
+      "enabled": true
+    },
+    {
+      "name": "The Verge",
+      "base_url": "https://www.theverge.com",
+      "article_selectors": {
+        "title": "h1.c-page-title, h1[data-testid='ArticleTitle'], h1",
+        "content": ".c-entry-content p, div[data-testid='ArticleBody'] p, article p",
+        "author": ".c-byline__author-name, span[data-testid='BylineAuthor']",
+        "date": "time[datetime]"
+      },
+      "link_patterns": ["/2024/.*", "/2025/.*"],
+      "requires_js": true,
+      "rate_limit": 0.8,
+      "timeout": 45,
+      "priority": "medium",
+      "enabled": true,
+      "js_settings": {
+        "wait_for_selector": ".c-entry-content",
+        "additional_wait": 3000,
+        "scroll_to_bottom": true
+      }
+    },
+    {
+      "name": "Wired",
+      "base_url": "https://www.wired.com",
+      "article_selectors": {
+        "title": "h1[data-testid='ContentHeaderHed'], h1.content-header__hed, h1",
+        "content": "div[data-testid='ArticleBodyWrapper'] p, .article__body p, article p",
+        "author": "a[data-testid='ContentHeaderAuthorLink'], .byline__name",
+        "date": "time[data-testid='ContentHeaderPublishDate'], time"
+      },
+      "link_patterns": ["/story/.*"],
+      "requires_js": true,
+      "rate_limit": 0.8,
+      "timeout": 45,
+      "priority": "medium",
+      "enabled": true,
+      "js_settings": {
+        "wait_for_selector": "[data-testid='ArticleBodyWrapper']",
+        "additional_wait": 4000,
+        "scroll_to_bottom": false
+      }
+    }
+  ],
+  "pipelines": {
+    "validation": {
+      "enabled": true,
+      "min_content_length": 100,
+      "max_content_length": 50000,
+      "min_title_length": 10,
+      "max_title_length": 200,
+      "quality_threshold": 50,
+      "spam_detection": true,
+      "language_detection": true
+    },
+    "duplicate_detection": {
+      "enabled": true,
+      "url_based": true,
+      "content_based": true,
+      "title_similarity_threshold": 0.8,
+      "content_similarity_threshold": 0.9
+    },
+    "enhancement": {
+      "enabled": true,
+      "category_extraction": true,
+      "keyword_extraction": true,
+      "sentiment_analysis": true,
+      "entity_extraction": true,
+      "max_keywords": 10
+    },
+    "storage": {
+      "local_storage": true,
+      "s3_upload": false,
+      "compression": false,
+      "format": "json"
+    }
+  },
+  "output": {
+    "directory": "output/async_scraped",
+    "filename_pattern": "async_scraped_articles_{timestamp}.json",
+    "create_subdirectories": true,
+    "backup_enabled": false,
+    "max_files": 100
+  },
+  "aws": {
+    "s3": {
+      "bucket": "neuronews-raw-articles-dev",
+      "prefix": "news_articles/async_python",
+      "region": "us-east-1"
+    },
+    "cloudwatch": {
+      "log_group": "NeuroNews-Async-Scraper",
+      "log_stream_prefix": "async-scraper",
+      "enabled": false
+    }
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    "file_logging": true,
+    "console_logging": true,
+    "log_file": "async_scraper.log",
+    "max_log_size_mb": 50,
+    "backup_count": 5
+  },
+  "testing": {
+    "test_mode_sources": ["BBC", "CNN"],
+    "test_mode_article_limit": 10,
+    "integration_test_timeout": 300,
+    "performance_test_duration": 600
+  }
+}
