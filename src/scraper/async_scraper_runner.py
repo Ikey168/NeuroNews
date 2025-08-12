@@ -91,11 +91,15 @@ class AsyncScraperRunner:
             sources = sources[:2]  # Only first 2 sources
             self.logger.info("🧪 Running in test mode - limited sources")
         
+        # Check if any sources require JavaScript
+        requires_js = any(source.requires_js for source in sources)
+        
         # Initialize and run scraper
         async with AsyncNewsScraperEngine(
             max_concurrent=self.config['max_concurrent'],
             max_threads=self.config['max_threads'],
-            headless=self.config['headless']
+            headless=self.config['headless'],
+            enable_playwright=requires_js
         ) as scraper:
             
             # Start performance monitoring

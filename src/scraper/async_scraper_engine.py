@@ -130,10 +130,11 @@ class PerformanceMonitor:
 class AsyncNewsScraperEngine:
     """High-performance async news scraper with Playwright and ThreadPoolExecutor."""
     
-    def __init__(self, max_concurrent: int = 10, max_threads: int = 4, headless: bool = True):
+    def __init__(self, max_concurrent: int = 10, max_threads: int = 4, headless: bool = True, enable_playwright: bool = True):
         self.max_concurrent = max_concurrent
         self.max_threads = max_threads
         self.headless = headless
+        self.enable_playwright = enable_playwright
         
         # Performance monitoring
         self.monitor = PerformanceMonitor()
@@ -185,19 +186,28 @@ class AsyncNewsScraperEngine:
         timeout = aiohttp.ClientTimeout(total=30)
         self.session = aiohttp.ClientSession(connector=connector, timeout=timeout)
         
-        # Initialize Playwright for JS-heavy sites
-        self.playwright = await async_playwright().start()
-        self.browser = await self.playwright.chromium.launch(
-            headless=self.headless,
-            args=['--no-sandbox', '--disable-dev-shm-usage']
-        )
-        
-        # Create browser contexts for parallel browsing
-        for _ in range(min(self.max_concurrent // 2, 5)):
-            context = await self.browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-            )
-            self.browser_contexts.append(context)
+        # Initialize Playwright for JS-heavy sites (only if enabled)
+        if self.enable_playwright:
+            try:
+                self.playwright = await async_playwright().start()
+                self.browser = await self.playwright.chromium.launch(
+                    headless=self.headless,
+                    args=['--no-sandbox', '--disable-dev-shm-usage']
+                )
+                
+                # Create browser contexts for parallel browsing
+                for _ in range(min(self.max_concurrent // 2, 5)):
+                    context = await self.browser.new_context(
+                        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                    )
+                    self.browser_contexts.append(context)
+                
+                self.logger.info(f"AsyncNewsScraperEngine started with Playwright support")
+            except Exception as e:
+                self.logger.warning(f"Failed to initialize Playwright: {e}. Continuing with HTTP-only mode.")
+                self.enable_playwright = False
+        else:
+            self.logger.info(f"AsyncNewsScraperEngine started in HTTP-only mode")
         
         self.logger.info(f"AsyncNewsScraperEngine started with {self.max_concurrent} concurrent connections")
     

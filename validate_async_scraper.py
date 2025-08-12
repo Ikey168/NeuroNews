@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 
 # Add project root to path
-sys.path.append('/workspaces/NeuroNews/src')
+sys.path.append('/home/runner/work/NeuroNews/NeuroNews/src')
 
 def test_imports():
     """Test that all modules can be imported."""
@@ -53,7 +53,7 @@ def test_config_loading():
     try:
         print("\nTesting config loading...")
         
-        config_path = Path('/workspaces/NeuroNews/src/scraper/config_async.json')
+        config_path = Path('/home/runner/work/NeuroNews/NeuroNews/src/scraper/config_async.json')
         
         if not config_path.exists():
             print(f"❌ Config file not found: {config_path}")

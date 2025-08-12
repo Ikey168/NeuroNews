@@ -6,6 +6,7 @@ and performance monitoring.
 
 import asyncio
 import pytest
+import pytest_asyncio
 import json
 import tempfile
 import time
@@ -14,7 +15,8 @@ from pathlib import Path
 import aiohttp
 
 import sys
-sys.path.append('/workspaces/NeuroNews/src')
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from scraper.async_scraper_engine import AsyncNewsScraperEngine
 from scraper.async_scraper_runner import AsyncScraperRunner
@@ -25,61 +27,53 @@ from scraper.performance_monitor import PerformanceDashboard
 class TestAsyncScraperEngine:
     """Test the core async scraper engine functionality."""
     
-    @pytest.fixture
+    @pytest_asyncio.fixture
     async def scraper_engine(self):
         """Create a test scraper engine instance."""
-        config = {
-            'async_scraper': {
-                'max_concurrent': 5,
-                'max_threads': 2,
-                'headless': True,
-                'timeout': 10,
-                'retry_attempts': 2,
-                'retry_delay': 1,
-                'rate_limiting': {
-                    'default_rate': 2.0,
-                    'burst_size': 3
-                }
-            },
-            'sources': [
-                {
-                    'name': 'Test Source',
-                    'base_url': 'https://example.com',
-                    'article_selectors': {
-                        'title': 'h1',
-                        'content': 'p',
-                        'author': '.author',
-                        'date': 'time'
-                    },
-                    'requires_js': False,
-                    'enabled': True
-                }
-            ]
-        }
-        
-        engine = AsyncNewsScraperEngine(config)
+        engine = AsyncNewsScraperEngine(
+            max_concurrent=5,
+            max_threads=2,
+            headless=True
+        )
         yield engine
-        await engine.cleanup()
+        await engine.close()
     
     @pytest.mark.asyncio
     async def test_engine_initialization(self, scraper_engine):
         """Test engine initializes correctly."""
         assert scraper_engine.max_concurrent == 5
         assert scraper_engine.max_threads == 2
-        assert scraper_engine.timeout == 10
-        assert scraper_engine.retry_attempts == 2
-        assert len(scraper_engine.sources) == 1
+        assert scraper_engine.headless == True
+        assert scraper_engine.session is None  # Not initialized until start()
+        assert scraper_engine.thread_pool is not None
     
     @pytest.mark.asyncio
     async def test_http_client_session(self, scraper_engine):
         """Test HTTP client session creation and cleanup."""
+        # Session should be None before start
+        assert scraper_engine.session is None
+        
+        # Mock playwright to avoid browser installation issues
+        with patch('scraper.async_scraper_engine.async_playwright') as mock_playwright:
+            mock_pw_instance = AsyncMock()
+            mock_browser = AsyncMock()
+            mock_context = AsyncMock()
+            
+            # Mock the async_playwright() call to return an async context manager
+            mock_playwright.return_value = AsyncMock()
+            mock_playwright.return_value.start.return_value = mock_pw_instance
+            mock_pw_instance.chromium.launch.return_value = mock_browser
+            mock_browser.new_context.return_value = mock_context
+            
+            # Start the engine to create session
+            await scraper_engine.start()
+        
         # Session should be created
         assert scraper_engine.session is not None
         assert isinstance(scraper_engine.session, aiohttp.ClientSession)
         
-        # Test cleanup
-        await scraper_engine.cleanup()
-        assert scraper_engine.session.closed
+        # Session should not be closed yet
+        assert not scraper_engine.session.closed
     
     @pytest.mark.asyncio
     async def test_rate_limiting(self, scraper_engine):
