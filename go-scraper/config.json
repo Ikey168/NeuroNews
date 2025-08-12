@@ -1,0 +1,105 @@
+{
+  "scraper": {
+    "max_workers": 20,
+    "requests_per_second": 10,
+    "timeout_seconds": 30,
+    "max_retries": 3,
+    "user_agent": "NeuroNews-AsyncScraper/1.0 (+https://github.com/Ikey168/NeuroNews)"
+  },
+  "sources": [
+    {
+      "name": "CNN",
+      "base_url": "https://www.cnn.com",
+      "article_selectors": {
+        "title": "h1.headline__text, h1",
+        "content": ".zn-body__paragraph, .zn-body__paragraph p, div[data-component-name='ArticleBody'] p",
+        "author": ".byline__name, .metadata__byline__author",
+        "date": ".timestamp, .update-time, time"
+      },
+      "link_patterns": [
+        "/2024/\\d+/\\d+/.*\\.html",
+        "/2025/\\d+/\\d+/.*\\.html"
+      ],
+      "requires_js": false,
+      "rate_limit": 2
+    },
+    {
+      "name": "BBC",
+      "base_url": "https://www.bbc.com/news",
+      "article_selectors": {
+        "title": "h1[data-testid='headline'], h1.story-headline, h1",
+        "content": "div[data-component='text-block'] p, .story-body__inner p, article p",
+        "author": "div[data-testid='byline-name'], .byline__name",
+        "date": "time, div[data-testid='timestamp'], .date"
+      },
+      "link_patterns": [
+        "/news/[a-z-]+-\\d+"
+      ],
+      "requires_js": false,
+      "rate_limit": 2
+    },
+    {
+      "name": "Reuters",
+      "base_url": "https://www.reuters.com",
+      "article_selectors": {
+        "title": "h1[data-testid='Heading'], h1.ArticleHeader_headline, h1",
+        "content": "div[data-testid='paragraph'] p, .StandardArticleBody_body p, article p",
+        "author": "div[data-testid='BylineBar'] a, .byline a",
+        "date": "time, span[data-testid='Body'] time"
+      },
+      "link_patterns": [
+        "/article/.*"
+      ],
+      "requires_js": false,
+      "rate_limit": 1
+    },
+    {
+      "name": "TechCrunch",
+      "base_url": "https://techcrunch.com",
+      "article_selectors": {
+        "title": "h1.article__title, h1.entry-title, h1",
+        "content": ".article-content p, .entry-content p, div[class*='articleContent'] p",
+        "author": ".byline a[rel='author'], .article__byline a",
+        "date": "time.full-date-time, .byline time"
+      },
+      "link_patterns": [
+        "/2024/\\d+/\\d+/.*",
+        "/2025/\\d+/\\d+/.*"
+      ],
+      "requires_js": false,
+      "rate_limit": 2
+    },
+    {
+      "name": "Ars Technica",
+      "base_url": "https://arstechnica.com",
+      "article_selectors": {
+        "title": "h1.post-title, h1[itemprop='headline'], h1",
+        "content": ".post-content p, div[itemprop='articleBody'] p, article p",
+        "author": "span[itemprop='author'] a, .byline a[rel='author']",
+        "date": "time[itemprop='datePublished'], .post-meta time"
+      },
+      "link_patterns": [
+        "/2024/\\d+/.*",
+        "/2025/\\d+/.*"
+      ],
+      "requires_js": false,
+      "rate_limit": 2
+    },
+    {
+      "name": "The Guardian",
+      "base_url": "https://www.theguardian.com",
+      "article_selectors": {
+        "title": "h1[data-gu-name='headline'], h1.content__headline, h1",
+        "content": "div[data-gu-name='body'] p, .content__article-body p, article p",
+        "author": "a[rel='author'], .byline a",
+        "date": "time"
+      },
+      "link_patterns": [
+        "/2024/\\w+/\\d+/.*",
+        "/2025/\\w+/\\d+/.*"
+      ],
+      "requires_js": false,
+      "rate_limit": 1
+    }
+  ]
+}

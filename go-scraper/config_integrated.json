@@ -1,0 +1,155 @@
+{
+  "max_workers": 10,
+  "rate_limit": 1.0,
+  "timeout": "60s",
+  "output_dir": "output",
+  "user_agent": "NeuroNews-Go-Scraper/1.0",
+  "retry_count": 3,
+  "retry_delay": "5s",
+  "concurrent_browsers": 3,
+  
+  "_comment_integration": "Integration with existing Python infrastructure",
+  "s3_enabled": true,
+  "s3_bucket": "neuronews-raw-articles-${environment}",
+  "s3_prefix": "news_articles/go_scraped",
+  "aws_region": "us-east-1",
+  
+  "_comment_compatibility": "Maintain compatibility with Python validation",
+  "validation_enabled": true,
+  "duplicate_check": true,
+  "quality_threshold": 50,
+  
+  "_comment_monitoring": "Integration with existing CloudWatch",
+  "cloudwatch_enabled": false,
+  "cloudwatch_log_group": "NeuroNews-Scraper",
+  "cloudwatch_log_stream": "go-scraper",
+  
+  "sources": [
+    {
+      "name": "BBC",
+      "base_url": "https://www.bbc.com/news",
+      "article_selectors": {
+        "title": "h1[data-testid='headline'], h1.story-body__h1, h1",
+        "content": "div[data-component='text-block'] p, .story-body__inner p, article p",
+        "author": "span[data-testid='byline'], .byline__name, .story-body__byline",
+        "date": "time[datetime], .date--v2"
+      },
+      "link_patterns": ["/news/.*", "/sport/.*"],
+      "requires_js": false,
+      "rate_limit": 1,
+      "_comment": "Compatible with existing Python BBC spider"
+    },
+    {
+      "name": "CNN",
+      "base_url": "https://www.cnn.com",
+      "article_selectors": {
+        "title": "h1.headline__text, h1[data-editable], h1",
+        "content": ".zn-body__paragraph, article p",
+        "author": ".byline__name, .metadata__byline",
+        "date": ".update-time, time[datetime]"
+      },
+      "link_patterns": ["/2024/.*", "/2025/.*"],
+      "requires_js": false,
+      "rate_limit": 1,
+      "_comment": "Compatible with existing Python CNN spider"
+    },
+    {
+      "name": "TechCrunch",
+      "base_url": "https://techcrunch.com",
+      "article_selectors": {
+        "title": "h1.article__title, h1",
+        "content": ".article-content p, .entry-content p",
+        "author": ".article__byline a, .byline a",
+        "date": "time[datetime], .full-date-time"
+      },
+      "link_patterns": ["/2024/.*", "/2025/.*"],
+      "requires_js": false,
+      "rate_limit": 2,
+      "_comment": "Enhanced selectors for better extraction"
+    },
+    {
+      "name": "Reuters",
+      "base_url": "https://www.reuters.com",
+      "article_selectors": {
+        "title": "h1[data-testid='Headline'], h1.ArticleHeader_headline, h1",
+        "content": "div[data-testid='ArticleBody'] p, .StandardArticleBody_body p",
+        "author": "a[data-testid='Author'], .BylineBar_byline",
+        "date": "time[datetime], .ArticleHeader_date"
+      },
+      "link_patterns": ["/world/.*", "/business/.*", "/technology/.*"],
+      "requires_js": false,
+      "rate_limit": 1,
+      "_comment": "High-reliability source for financial/world news"
+    },
+    {
+      "name": "Ars Technica",
+      "base_url": "https://arstechnica.com",
+      "article_selectors": {
+        "title": "h1.heading, h1[itemprop='headline'], h1",
+        "content": ".post-content p, .article-content p",
+        "author": ".byline a, [rel='author']",
+        "date": "time[datetime], .post-meta time"
+      },
+      "link_patterns": ["/2024/.*", "/2025/.*"],
+      "requires_js": false,
+      "rate_limit": 2,
+      "_comment": "Technical articles, longer processing time"
+    },
+    {
+      "name": "The Guardian",
+      "base_url": "https://www.theguardian.com",
+      "article_selectors": {
+        "title": "h1[data-gu-name='headline'], h1.content__headline, h1",
+        "content": ".content__article-body p, .article-body p",
+        "author": ".byline a, [rel='author']",
+        "date": "time[datetime], .content__dateline time"
+      },
+      "link_patterns": ["/2024/.*", "/2025/.*"],
+      "requires_js": false,
+      "rate_limit": 1,
+      "_comment": "International perspective, quality journalism"
+    },
+    {
+      "name": "NPR",
+      "base_url": "https://www.npr.org",
+      "article_selectors": {
+        "title": "h1.storytitle, h1#storytitle, h1",
+        "content": ".storytext p, #storytext p, article p",
+        "author": ".byline__name a, .byline a",
+        "date": "time[datetime], .dateblock time"
+      },
+      "link_patterns": ["/2024/.*", "/2025/.*"],
+      "requires_js": false,
+      "rate_limit": 2,
+      "_comment": "Public radio content, high quality"
+    },
+    {
+      "name": "The Verge",
+      "base_url": "https://www.theverge.com",
+      "article_selectors": {
+        "title": "h1.c-page-title, h1[data-testid='ArticleTitle'], h1",
+        "content": ".c-entry-content p, div[data-testid='ArticleBody'] p, article p",
+        "author": ".c-byline__author-name, span[data-testid='BylineAuthor']",
+        "date": "time[datetime]"
+      },
+      "link_patterns": ["/2024/.*", "/2025/.*"],
+      "requires_js": true,
+      "rate_limit": 1,
+      "_comment": "JavaScript-heavy tech news site"
+    },
+    {
+      "name": "Wired",
+      "base_url": "https://www.wired.com",
+      "article_selectors": {
+        "title": "h1[data-testid='ContentHeaderHed'], h1.content-header__hed, h1",
+        "content": "div[data-testid='ArticleBodyWrapper'] p, .article__body p, article p",
+        "author": "a[data-testid='ContentHeaderAuthorLink'], .byline__name",
+        "date": "time[data-testid='ContentHeaderPublishDate'], time"
+      },
+      "link_patterns": ["/story/.*"],
+      "requires_js": true,
+      "rate_limit": 1,
+      "_comment": "Technology and culture coverage"
+    }
+  ]
+}
