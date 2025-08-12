@@ -13,7 +13,7 @@ import argparse
 from pathlib import Path
 
 # Add project root to path
-sys.path.append('/workspaces/NeuroNews/src')
+sys.path.append('/home/runner/work/NeuroNews/NeuroNews/src')
 
 from scraper.async_scraper_runner import AsyncScraperRunner
 from scraper.performance_monitor import PerformanceDashboard
@@ -23,7 +23,7 @@ class AsyncScraperDemo:
     """Demo class for showcasing async scraper capabilities."""
     
     def __init__(self):
-        self.config_path = '/workspaces/NeuroNews/src/scraper/config_async.json'
+        self.config_path = '/home/runner/work/NeuroNews/NeuroNews/src/scraper/config_async.json'
         self.demo_results = {}
     
     async def run_performance_demo(self):

@@ -27,6 +27,14 @@ numpy>=1.21.0
 # Scrapers
 scrapy>=2.5.0
 
+# AsyncIO Scraping Dependencies
+aiohttp>=3.8.0          # Async HTTP client
+playwright>=1.40.0      # Browser automation  
+asyncio-throttle>=1.0.2 # Rate limiting
+psutil>=5.9.0          # System monitoring
+aiofiles>=0.8.0        # Async file operations
+beautifulsoup4>=4.11.0 # HTML parsing
+
 # Utilities
 python-dateutil>=2.8.2
 requests>=2.28.0
