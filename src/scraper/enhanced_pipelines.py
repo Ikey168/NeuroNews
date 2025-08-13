@@ -346,7 +346,7 @@ class DuplicateFilterPipeline:
     
     def close_spider(self, spider):
         """Log duplicate detection statistics when spider closes."""
-        spider.logger.info(f\"\"\"
+        spider.logger.info(f"""
 === Duplicate Detection Statistics ===
 Total duplicates found: {self.duplicate_count}
 By URL: {self.duplicate_reasons.get('duplicate_url', 0)}
@@ -354,7 +354,7 @@ By title: {self.duplicate_reasons.get('duplicate_title', 0)}
 By content: {self.duplicate_reasons.get('duplicate_content', 0)}
 Similar titles: {self.duplicate_reasons.get('similar_title', 0)}
 =====================================
-\"\"\")
+""")
         
         spider.crawler.stats.set_value('duplicates_total_count', self.duplicate_count)
         for reason, count in self.duplicate_reasons.items():
