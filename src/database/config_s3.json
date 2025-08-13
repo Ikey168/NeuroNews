@@ -1,0 +1,31 @@
+{
+  "s3_storage": {
+    "bucket_name": "neuronews-articles",
+    "region": "us-east-1",
+    "raw_prefix": "raw_articles",
+    "processed_prefix": "processed_articles",
+    "enable_versioning": true,
+    "enable_encryption": true,
+    "storage_class": "STANDARD",
+    "lifecycle_days": 365,
+    "max_file_size_mb": 100
+  },
+  "aws_credentials": {
+    "use_iam_role": true,
+    "aws_access_key_id": null,
+    "aws_secret_access_key": null
+  },
+  "ingestion": {
+    "batch_size": 50,
+    "max_concurrent_uploads": 10,
+    "retry_attempts": 3,
+    "verify_integrity": true,
+    "cleanup_old_articles_days": 365
+  },
+  "monitoring": {
+    "enable_metrics": true,
+    "log_level": "INFO",
+    "alert_on_failures": true,
+    "statistics_interval_hours": 24
+  }
+}
