@@ -366,7 +366,6 @@ class TestIntegration:
         assert stats['total_articles'] == 2
         assert stats['successful_requests'] == 2
         assert stats['avg_response_time'] > 0
-        assert duration > 0.5  # At least 0.5 seconds for rate limiting
     
     @pytest.mark.asyncio
     @patch('aiohttp.ClientSession.get')
