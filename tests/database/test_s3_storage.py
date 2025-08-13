@@ -74,7 +74,15 @@ def test_upload_article_success(s3_storage, s3_client):
     assert key is not None
     response = s3_client.get_object(Bucket=s3_storage.bucket_name, Key=key)
     content = json.loads(response['Body'].read().decode())
-    assert content == article
+    
+    # Check that original article data is preserved
+    for key_field, value in article.items():
+        assert content[key_field] == value
+    
+    # Check that additional metadata is added
+    assert 'content_hash' in content
+    assert 'scraped_date' in content
+    assert 'storage_type' in content
 
 @mock_aws
 def test_upload_article_missing_fields(s3_storage):

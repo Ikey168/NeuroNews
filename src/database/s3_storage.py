@@ -87,6 +87,9 @@ class S3ArticleStorage:
         except NoCredentialsError:
             logger.warning("AWS credentials not found. S3 operations will fail.")
             self.s3_client = None
+        except ValueError as e:
+            # Re-raise ValueError from bucket validation
+            raise e
         except Exception as e:
             logger.error(f"Failed to initialize S3 client: {e}")
             self.s3_client = None
@@ -769,11 +772,70 @@ class S3Storage(S3ArticleStorage):
         super().__init__(config, aws_access_key_id, aws_secret_access_key)
         self.prefix = prefix
 
+    def _generate_s3_key(self, article: Dict[str, Any]) -> str:
+        """Legacy _generate_s3_key method for backwards compatibility."""
+        # Get date from article or use current date
+        if 'published_date' in article:
+            date_str = article['published_date']
+        else:
+            date_str = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+        
+        # Parse date and create directory structure
+        date_parts = date_str.split('-')
+        if len(date_parts) != 3:
+            date_parts = datetime.now(timezone.utc).strftime('%Y-%m-%d').split('-')
+        
+        year, month, day = date_parts
+        
+        # Generate content hash
+        content = f"{article.get('title', '')}{article.get('content', '')}{article.get('url', '')}"
+        content_hash = self._calculate_content_hash(content)[:8]
+        
+        # Create legacy key structure
+        source = article.get('source', 'unknown').replace(' ', '-').lower()
+        
+        return f"{self.prefix}/{year}/{month}/{day}/{source}/{content_hash}.json"
+
     def upload_article(self, article: Dict[str, Any]) -> str:
         """Upload article using legacy interface."""
-        import asyncio
-        metadata = asyncio.run(self.store_raw_article(article))
-        return metadata.s3_key
+        # Validate required fields for legacy interface
+        required_fields = ['title', 'content', 'source']
+        missing_fields = [field for field in required_fields if not article.get(field)]
+        if missing_fields:
+            raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
+        
+        if not self.s3_client:
+            raise ValueError("S3 client not available")
+        
+        # Add URL if not present (for legacy compatibility)
+        enhanced_article = dict(article)
+        if 'url' not in enhanced_article:
+            enhanced_article['url'] = f"legacy://{article.get('source', 'unknown')}/{article.get('title', 'unknown')}"
+        
+        # Generate legacy S3 key using our legacy method
+        s3_key = self._generate_s3_key(enhanced_article)
+        
+        # Add metadata
+        enhanced_article.update({
+            'scraped_date': datetime.now(timezone.utc).isoformat(),
+            'content_hash': self._calculate_content_hash(enhanced_article['content']),
+            'storage_type': 'raw'
+        })
+        
+        # Upload to S3
+        try:
+            self.s3_client.put_object(
+                Bucket=self.bucket_name,
+                Key=s3_key,
+                Body=json.dumps(enhanced_article, ensure_ascii=False),
+                ContentType='application/json'
+            )
+            logger.info(f"Successfully uploaded article to S3: {s3_key}")
+            return s3_key
+            
+        except Exception as e:
+            logger.error(f"Failed to upload article to S3: {e}")
+            raise
 
     def get_article(self, key: str) -> Dict[str, Any]:
         """Get article using legacy interface."""
@@ -785,6 +847,12 @@ class S3Storage(S3ArticleStorage):
         import asyncio
         prefix = prefix or self.prefix
         return asyncio.run(self.list_articles_by_prefix(prefix))
+
+    def delete_article(self, key: str) -> None:
+        """Delete article using legacy interface."""
+        if not self.s3_client:
+            raise ValueError("S3 client not available")
+        self.s3_client.delete_object(Bucket=self.bucket_name, Key=key)
 
     def upload_file(self, local_path: str, s3_key: str) -> str:
         """Upload file to S3."""
