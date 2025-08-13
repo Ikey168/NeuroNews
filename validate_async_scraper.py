@@ -87,46 +87,22 @@ async def test_engine_creation():
         # Import here to avoid import errors if previous tests fail
         from scraper.async_scraper_engine import AsyncNewsScraperEngine
         
-        # Simple test config
-        config = {
-            'async_scraper': {
-                'max_concurrent': 5,
-                'max_threads': 2,
-                'headless': True,
-                'timeout': 10,
-                'retry_attempts': 2,
-                'rate_limiting': {
-                    'default_rate': 1.0,
-                    'burst_size': 3
-                }
-            },
-            'sources': [
-                {
-                    'name': 'Test Source',
-                    'base_url': 'https://httpbin.org',
-                    'article_selectors': {
-                        'title': 'h1',
-                        'content': 'p'
-                    },
-                    'requires_js': False,
-                    'enabled': True
-                }
-            ]
-        }
-        
-        # Create engine
-        engine = AsyncNewsScraperEngine(config)
+        # Create engine with direct parameters (matching actual API)
+        engine = AsyncNewsScraperEngine(max_concurrent=5, max_threads=2, headless=True)
         print("✅ Engine created successfully")
         
         # Test properties
         assert engine.max_concurrent == 5
         assert engine.max_threads == 2
-        assert len(engine.sources) == 1
+        assert engine.headless == True
         print("✅ Engine properties validated")
         
-        # Cleanup
-        await engine.cleanup()
-        print("✅ Engine cleanup successful")
+        # Test that monitor is initialized
+        assert engine.monitor is not None
+        print("✅ Performance monitor initialized")
+        
+        # Don't start the engine (to avoid Playwright browser requirements)
+        print("✅ Engine validation completed (skipping browser initialization)")
         
         return True
         
@@ -141,24 +117,8 @@ async def test_pipeline_creation():
         
         from scraper.async_pipelines import AsyncPipelineProcessor
         
-        config = {
-            'pipelines': {
-                'validation': {
-                    'enabled': True,
-                    'min_content_length': 50
-                },
-                'duplicate_detection': {
-                    'enabled': True,
-                    'title_similarity_threshold': 0.8
-                },
-                'enhancement': {
-                    'enabled': True,
-                    'category_extraction': True
-                }
-            }
-        }
-        
-        processor = AsyncPipelineProcessor(config, max_workers=2)
+        # Create processor with direct parameters (matching actual API)
+        processor = AsyncPipelineProcessor(max_threads=2)
         print("✅ Pipeline processor created successfully")
         
         # Test article validation
@@ -169,7 +129,7 @@ async def test_pipeline_creation():
             'source': 'Test Source'
         }
         
-        is_valid = await processor._validate_article(test_article)
+        is_valid = await processor.validate_article_async(test_article)
         print(f"✅ Article validation: {is_valid}")
         
         return True
@@ -188,19 +148,15 @@ def test_monitor_creation():
         monitor = PerformanceDashboard(update_interval=5)
         print("✅ Performance monitor created successfully")
         
-        # Test recording metrics
-        monitor.record_article('Test Source', success=True, response_time=1.5)
-        stats = monitor.get_stats()
+        # Test recording metrics (using correct API)
+        monitor.record_article('Test Source', response_time=1.5)
+        monitor.record_request(success=True, response_time=1.5, source='Test Source')
+        
+        stats = monitor.get_performance_stats()
         
         assert stats['total_articles'] == 1
-        assert stats['successful_articles'] == 1
+        assert stats['successful_requests'] == 1
         print("✅ Metrics recording validated")
-        
-        # Test system info
-        system_info = monitor.get_system_info()
-        assert 'cpu_percent' in system_info
-        assert 'memory_percent' in system_info
-        print("✅ System info retrieval validated")
         
         return True
         

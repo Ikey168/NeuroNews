@@ -159,7 +159,7 @@ class PerformanceDashboard:
         if response_time is not None:
             self.source_metrics[source]['response_times'].append(response_time)
     
-    def record_request(self, source: str, success: bool, response_time: float = None):
+    def record_request(self, success: bool, response_time: float = None, source: str = "unknown"):
         """Record a request (successful or failed)."""
         self.counters['total_requests'] += 1
         
@@ -224,6 +224,35 @@ class PerformanceDashboard:
         
         return stats
     
+    def get_performance_stats(self) -> Dict[str, Any]:
+        """Get basic performance statistics for testing and monitoring."""
+        total_requests = self.counters['successful_requests'] + self.counters['failed_requests']
+        
+        # Calculate average response time
+        avg_response_time = 0.0
+        total_response_time = 0.0
+        total_responses = 0
+        
+        for source_metrics in self.source_metrics.values():
+            response_times = list(source_metrics['response_times'])
+            if response_times:
+                total_response_time += sum(response_times)
+                total_responses += len(response_times)
+        
+        if total_responses > 0:
+            avg_response_time = total_response_time / total_responses
+        
+        return {
+            'total_articles': self.counters['total_articles'],
+            'total_requests': total_requests,
+            'successful_requests': self.counters['successful_requests'],
+            'failed_requests': self.counters['failed_requests'],
+            'avg_response_time': avg_response_time,
+            'uptime_seconds': time.time() - self.start_time,
+            'articles_per_second': self.counters['total_articles'] / max(time.time() - self.start_time, 1),
+            'success_rate': (self.counters['successful_requests'] / max(total_requests, 1)) * 100
+        }
+
     def get_metrics_history(self, minutes: int = 30) -> List[Dict[str, Any]]:
         """Get metrics history for the last N minutes."""
         cutoff_time = datetime.now() - timedelta(minutes=minutes)
