@@ -279,7 +279,7 @@ class SourceCredibilityPipeline:
         """Log credibility statistics when spider closes."""
         total = sum(self.credibility_stats.values())
         
-        spider.logger.info(f\"\"\"
+        spider.logger.info(f"""
 === Source Credibility Statistics ===
 Total articles: {total}
 Trusted: {self.credibility_stats['trusted']} ({self.credibility_stats['trusted']/total*100:.1f}%)
@@ -289,7 +289,7 @@ Unreliable: {self.credibility_stats['unreliable']} ({self.credibility_stats['unr
 Unknown: {self.credibility_stats['unknown']} ({self.credibility_stats['unknown']/total*100:.1f}%)
 Blocked unreliable: {self.blocked_count}
 ====================================
-\"\"\")
+""")
         
         # Store stats in spider stats
         for level, count in self.credibility_stats.items():
