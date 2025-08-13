@@ -260,7 +260,7 @@ async def _run_async_scraper(scraper_runner, selected_sources, config: Dict[str,
         
         # Send error metrics if enabled
         if config.get('cloudwatch_logging_enabled', False):
-            _send_error_metrics(str(e), config)
+            _send_error_metrics_config(str(e), config)
         
         return {
             'total_articles': 0,
@@ -270,6 +270,100 @@ async def _run_async_scraper(scraper_runner, selected_sources, config: Dict[str,
             'status': 'error',
             'error': str(e)
         }
+
+
+def _send_cloudwatch_metrics(total_articles: int, sources_count: int, config: Dict[str, Any]) -> None:
+    """
+    Send custom metrics to CloudWatch for scraper monitoring.
+    
+    Args:
+        total_articles: Number of articles scraped
+        sources_count: Number of sources processed
+        config: Configuration including CloudWatch settings
+    """
+    try:
+        import boto3
+        from datetime import datetime, timezone
+        
+        cloudwatch = boto3.client('cloudwatch', region_name=config.get('aws_region', 'us-east-1'))
+        namespace = config.get('cloudwatch_namespace', 'NeuroNews/Lambda/Scraper')
+        
+        metrics = [
+            {
+                'MetricName': 'ArticlesScraped',
+                'Value': total_articles,
+                'Unit': 'Count',
+                'Timestamp': datetime.now(timezone.utc),
+                'Dimensions': [
+                    {'Name': 'Environment', 'Value': config.get('environment', 'production')},
+                    {'Name': 'ScraperType', 'Value': 'lambda'}
+                ]
+            },
+            {
+                'MetricName': 'SourcesProcessed',
+                'Value': sources_count,
+                'Unit': 'Count',
+                'Timestamp': datetime.now(timezone.utc),
+                'Dimensions': [
+                    {'Name': 'Environment', 'Value': config.get('environment', 'production')},
+                    {'Name': 'ScraperType', 'Value': 'lambda'}
+                ]
+            }
+        ]
+        
+        # Send metrics in batches (CloudWatch limit is 20 metrics per call)
+        for i in range(0, len(metrics), 20):
+            batch = metrics[i:i+20]
+            cloudwatch.put_metric_data(
+                Namespace=namespace,
+                MetricData=batch
+            )
+        
+        logger.info(f"Sent {len(metrics)} metrics to CloudWatch namespace: {namespace}")
+        
+    except Exception as e:
+        logger.error(f"Error sending metrics to CloudWatch: {e}")
+
+
+def _send_error_metrics_config(error_message: str, config: Dict[str, Any]) -> None:
+    """
+    Send error metrics to CloudWatch using config.
+    
+    Args:
+        error_message: Error message
+        config: Configuration including CloudWatch settings
+    """
+    try:
+        import boto3
+        from datetime import datetime, timezone
+        
+        cloudwatch = boto3.client('cloudwatch', region_name=config.get('aws_region', 'us-east-1'))
+        namespace = config.get('cloudwatch_namespace', 'NeuroNews/Lambda/Scraper')
+        
+        metrics = [
+            {
+                'MetricName': 'ScraperErrors',
+                'Value': 1,
+                'Unit': 'Count',
+                'Timestamp': datetime.now(timezone.utc),
+                'Dimensions': [
+                    {'Name': 'Environment', 'Value': config.get('environment', 'production')},
+                    {'Name': 'ScraperType', 'Value': 'lambda'},
+                    {'Name': 'ErrorType', 'Value': 'execution_error'}
+                ]
+            }
+        ]
+        
+        cloudwatch.put_metric_data(
+            Namespace=namespace,
+            MetricData=metrics
+        )
+        
+        logger.info(f"Sent error metric to CloudWatch: {error_message[:100]}...")
+        
+    except Exception as e:
+        logger.error(f"Error sending error metrics to CloudWatch: {e}")
+
 
 def _store_articles_in_s3(articles: List[Dict[str, Any]], config: Dict[str, Any]) -> Dict[str, Any]:
     """
