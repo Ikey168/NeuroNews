@@ -10,6 +10,7 @@ resource "aws_iam_role" "lambda_execution_role" {
     }]
   })
 }
+
 resource "aws_iam_role_policy" "lambda_basic" {
   name = "basic-lambda-policy"
   role = aws_iam_role.lambda_execution_role.id
@@ -35,6 +36,22 @@ resource "aws_iam_role_policy" "lambda_basic" {
           module.s3.raw_articles_bucket_arn,
           "${module.s3.raw_articles_bucket_arn}/*"
         ]
+      },
+      {
+        Action = [
+          "cloudwatch:PutMetricData",
+          "cloudwatch:GetMetricStatistics",
+          "cloudwatch:ListMetrics"
+        ],
+        Effect = "Allow",
+        Resource = "*"
+      },
+      {
+        Action = [
+          "events:PutEvents"
+        ],
+        Effect = "Allow",
+        Resource = "*"
       }
     ]
   })
@@ -117,6 +134,42 @@ resource "aws_lambda_function" "article_notifier" {
   )
 }
 
+# News Scraper Lambda Function for Automated Scraping
+resource "aws_lambda_function" "news_scraper" {
+  function_name = "${var.lambda_function_prefix}-news-scraper-${var.environment}"
+  description   = "Automated news scraping with multi-source support"
+  handler       = "news_scraper.lambda_handler"
+  runtime       = var.lambda_runtime
+  timeout       = var.lambda_scraper_timeout
+  memory_size   = var.lambda_scraper_memory_size
+  s3_bucket     = module.s3.lambda_code_bucket_name
+  s3_key        = "lambda-functions/news_scraper.zip"
+  role          = aws_iam_role.lambda_execution_role.arn
+
+  environment {
+    variables = {
+      S3_BUCKET = module.s3.raw_articles_bucket_name
+      S3_PREFIX = "lambda-scraped-articles"
+      CLOUDWATCH_LOG_GROUP = "/aws/lambda/${var.lambda_function_prefix}-news-scraper-${var.environment}"
+      CLOUDWATCH_NAMESPACE = "NeuroNews/Lambda/Scraper"
+      AWS_REGION = var.aws_region
+      ENVIRONMENT = var.environment
+      S3_STORAGE_ENABLED = "true"
+      CLOUDWATCH_LOGGING_ENABLED = "true"
+      MONITORING_ENABLED = "true"
+    }
+  }
+
+  tags = merge(
+    var.tags,
+    {
+      Name        = "News Scraper Lambda Function"
+      Environment = var.environment
+      Service     = "scraper"
+    }
+  )
+}
+
 resource "aws_lambda_permission" "allow_s3_invoke_article_processor" {
   statement_id  = "AllowExecutionFromS3"
   action        = "lambda:InvokeFunction"
@@ -125,6 +178,48 @@ resource "aws_lambda_permission" "allow_s3_invoke_article_processor" {
   source_arn    = module.s3.raw_articles_bucket_arn
 }
 
+# EventBridge (CloudWatch Events) rule for scheduled scraping
+resource "aws_cloudwatch_event_rule" "news_scraper_schedule" {
+  name                = "${var.lambda_function_prefix}-scraper-schedule-${var.environment}"
+  description         = "Trigger news scraper Lambda function on schedule"
+  schedule_expression = var.scraper_schedule_expression
+
+  tags = merge(
+    var.tags,
+    {
+      Name        = "News Scraper Schedule"
+      Environment = var.environment
+      Service     = "scraper"
+    }
+  )
+}
+
+# EventBridge target for news scraper Lambda
+resource "aws_cloudwatch_event_target" "news_scraper_target" {
+  rule      = aws_cloudwatch_event_rule.news_scraper_schedule.name
+  target_id = "NewsScraperLambdaTarget"
+  arn       = aws_lambda_function.news_scraper.arn
+
+  input = jsonencode({
+    sources = var.scraper_sources
+    max_articles_per_source = var.scraper_max_articles_per_source
+    scraper_config = {
+      concurrent_requests = var.scraper_concurrent_requests
+      timeout = var.scraper_timeout
+    }
+  })
+}
+
+# Permission for EventBridge to invoke the news scraper Lambda
+resource "aws_lambda_permission" "allow_eventbridge_invoke_news_scraper" {
+  statement_id  = "AllowExecutionFromEventBridge"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.news_scraper.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.news_scraper_schedule.arn
+}
+
+# CloudWatch Log Groups
 resource "aws_cloudwatch_log_group" "article_processor_logs" {
   name              = "/aws/lambda/${aws_lambda_function.article_processor.function_name}"
   retention_in_days = var.lambda_log_retention_days
@@ -138,4 +233,18 @@ resource "aws_cloudwatch_log_group" "knowledge_graph_generator_logs" {
 resource "aws_cloudwatch_log_group" "article_notifier_logs" {
   name              = "/aws/lambda/${aws_lambda_function.article_notifier.function_name}"
   retention_in_days = var.lambda_log_retention_days
+}
+
+resource "aws_cloudwatch_log_group" "news_scraper_logs" {
+  name              = "/aws/lambda/${aws_lambda_function.news_scraper.function_name}"
+  retention_in_days = var.lambda_log_retention_days
+
+  tags = merge(
+    var.tags,
+    {
+      Name        = "News Scraper Lambda Logs"
+      Environment = var.environment
+      Service     = "scraper"
+    }
+  )
 }
