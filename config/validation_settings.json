@@ -1,0 +1,100 @@
+{
+  "source_reputation": {
+    "trusted_domains": [
+      "reuters.com",
+      "bbc.com",
+      "npr.org",
+      "pbs.org",
+      "apnews.com",
+      "theguardian.com",
+      "wsj.com",
+      "nytimes.com",
+      "washingtonpost.com",
+      "economist.com",
+      "nature.com",
+      "science.org",
+      "sciencedirect.com",
+      "pubmed.ncbi.nlm.nih.gov",
+      "arxiv.org",
+      "ieee.org",
+      "acm.org",
+      "springer.com",
+      "wiley.com",
+      "elsevier.com"
+    ],
+    "questionable_domains": [
+      "dailymail.co.uk",
+      "nypost.com",
+      "foxnews.com",
+      "cnn.com",
+      "msnbc.com",
+      "huffpost.com",
+      "buzzfeed.com",
+      "vox.com",
+      "slate.com",
+      "salon.com"
+    ],
+    "banned_domains": [
+      "infowars.com",
+      "breitbart.com",
+      "naturalnews.com",
+      "globalresearch.ca",
+      "beforeitsnews.com",
+      "veteranstoday.com",
+      "southfront.org",
+      "zerohedge.com",
+      "activistpost.com",
+      "truthdig.com"
+    ],
+    "reputation_thresholds": {
+      "trusted": 0.9,
+      "reliable": 0.7,
+      "questionable": 0.4,
+      "unreliable": 0.2
+    }
+  },
+  "content_validation": {
+    "min_title_length": 10,
+    "max_title_length": 200,
+    "min_content_length": 100,
+    "min_word_count": 50,
+    "max_content_length": 50000,
+    "require_publication_date": true,
+    "max_days_old": 30,
+    "html_cleaning": {
+      "remove_tags": ["script", "style", "noscript", "iframe", "embed", "object"],
+      "remove_attributes": ["onclick", "onload", "onerror", "style", "class", "id"],
+      "decode_entities": true,
+      "normalize_whitespace": true,
+      "remove_empty_paragraphs": true
+    }
+  },
+  "duplicate_detection": {
+    "strategies": ["url", "title", "content_hash", "fuzzy_title"],
+    "fuzzy_title_threshold": 0.8,
+    "content_hash_algorithm": "md5",
+    "enable_cross_source_detection": true,
+    "cache_size": 10000
+  },
+  "validation_scoring": {
+    "content_weight": 0.7,
+    "reputation_weight": 0.3,
+    "min_passing_score": 60.0,
+    "quality_factors": {
+      "title_quality": 0.2,
+      "content_quality": 0.4,
+      "url_quality": 0.1,
+      "date_quality": 0.1,
+      "source_quality": 0.2
+    }
+  },
+  "pipeline_settings": {
+    "drop_invalid_articles": true,
+    "log_validation_details": true,
+    "generate_reports": true,
+    "report_file": "data/validation_report.json",
+    "block_unreliable_sources": false,
+    "quality_min_score": 60.0,
+    "quality_min_content_length": 200
+  }
+}
