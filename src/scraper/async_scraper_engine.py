@@ -130,39 +130,60 @@ class PerformanceMonitor:
 class AsyncNewsScraperEngine:
     """High-performance async news scraper with Playwright and ThreadPoolExecutor."""
     
-    def __init__(self, max_concurrent: int = 10, max_threads: int = 4, headless: bool = True):
+    def __init__(self, max_concurrent: int = 10, max_threads: int = 4, headless: bool = True, proxy_config: Optional[dict] = None, use_tor: bool = False, captcha_api_key: Optional[str] = None):
         self.max_concurrent = max_concurrent
         self.max_threads = max_threads
         self.headless = headless
-        
+        self.proxy_config = proxy_config
+        self.use_tor = use_tor
+        self.captcha_api_key = captcha_api_key
+
         # Performance monitoring
         self.monitor = PerformanceMonitor()
-        
+
         # Rate limiting
         self.semaphores = {}
-        
+
+        # Proxy manager
+        from scraper.proxy_manager import ProxyConfig
+        self.proxy = ProxyConfig(**proxy_config) if proxy_config else None
+        self.tor_manager = None
+        if use_tor:
+            from scraper.tor_manager import TorManager
+            self.tor_manager = TorManager()
+
+        # User agent rotator
+        from scraper.user_agent_rotator import UserAgentRotator
+        self.user_agent_rotator = UserAgentRotator()
+
+        # CAPTCHA solver
+        self.captcha_solver = None
+        if captcha_api_key:
+            from scraper.captcha_solver import CaptchaSolver
+            self.captcha_solver = CaptchaSolver(captcha_api_key)
+
         # Browser management
         self.playwright = None
         self.browser = None
         self.browser_contexts = []
-        
+
         # Thread pool for CPU-intensive tasks
         self.thread_pool = ThreadPoolExecutor(max_workers=max_threads)
-        
+
         # Session management
         self.session = None
-        
+
         # Results storage
         self.articles: List[Article] = []
         self.articles_lock = asyncio.Lock()
-        
+
         # Deduplication
         self.seen_urls: Set[str] = set()
-        
+
         # Setup logging
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO)
-        
+
         if not self.logger.handlers:
             handler = logging.StreamHandler()
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -180,23 +201,37 @@ class AsyncNewsScraperEngine:
     
     async def start(self):
         """Initialize async components."""
-        # Create aiohttp session
-        connector = aiohttp.TCPConnector(limit=self.max_concurrent * 2)
+        # Proxy setup
+        connector = None
+        if self.use_tor:
+            connector = aiohttp.TCPConnector(limit=self.max_concurrent * 2, ssl=False)
+            proxy = self.tor_manager.get_proxy()
+        elif self.proxy:
+            connector = aiohttp.TCPConnector(limit=self.max_concurrent * 2, ssl=False)
+            proxy = self.proxy.url
+        else:
+            connector = aiohttp.TCPConnector(limit=self.max_concurrent * 2)
+            proxy = None
+
         timeout = aiohttp.ClientTimeout(total=30)
-        self.session = aiohttp.ClientSession(connector=connector, timeout=timeout)
-        
+        headers = self.user_agent_rotator.browser_profiles[0].get_headers() if self.user_agent_rotator.browser_profiles else {}
+        self.session = aiohttp.ClientSession(connector=connector, timeout=timeout, headers=headers)
+
         # Initialize Playwright for JS-heavy sites
         self.playwright = await async_playwright().start()
+        browser_args = ['--no-sandbox', '--disable-dev-shm-usage']
+        if proxy:
+            browser_args.append(f'--proxy-server={proxy}')
         self.browser = await self.playwright.chromium.launch(
             headless=self.headless,
-            args=['--no-sandbox', '--disable-dev-shm-usage']
+            args=browser_args
         )
-        
-        # Create browser contexts for parallel browsing
-        for _ in range(min(self.max_concurrent // 2, 5)):
-            context = await self.browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-            )
+
+        # Create browser contexts for parallel browsing with random user agents
+        for i in range(min(self.max_concurrent // 2, 5)):
+            profile = self.user_agent_rotator.browser_profiles[i % len(self.user_agent_rotator.browser_profiles)] if self.user_agent_rotator.browser_profiles else None
+            user_agent = profile.user_agent if profile else "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            context = await self.browser.new_context(user_agent=user_agent)
             self.browser_contexts.append(context)
         
         self.logger.info(f"AsyncNewsScraperEngine started with {self.max_concurrent} concurrent connections")
@@ -316,12 +351,21 @@ class AsyncNewsScraperEngine:
             return []
     
     async def get_article_links_http(self, source: NewsSource) -> List[str]:
-        """Get article links using HTTP request."""
+        """Get article links using HTTP request with proxy and user agent rotation."""
         try:
-            async with self.session.get(source.base_url) as response:
+            # Rotate user agent
+            headers = self.user_agent_rotator.get_random_headers() if hasattr(self.user_agent_rotator, 'get_random_headers') else {}
+            # Rotate proxy
+            proxy = self.tor_manager.get_proxy() if self.use_tor else (self.proxy.url if self.proxy else None)
+            async with self.session.get(source.base_url, headers=headers, proxy=proxy) as response:
                 if response.status == 200:
                     html = await response.text()
-                    
+                    # CAPTCHA detection (simple placeholder)
+                    if 'captcha' in html.lower() and self.captcha_solver:
+                        self.logger.warning(f"CAPTCHA detected on {source.base_url}, attempting to solve...")
+                        # Here you would extract sitekey and call self.captcha_solver.solve_recaptcha_v2(...)
+                        # For now, just log and skip
+                        return []
                     # Use thread pool for CPU-intensive parsing
                     loop = asyncio.get_event_loop()
                     links = await loop.run_in_executor(
@@ -333,44 +377,29 @@ class AsyncNewsScraperEngine:
                 else:
                     self.logger.warning(f"HTTP {response.status} for {source.base_url}")
                     return []
-                    
         except Exception as e:
             self.logger.error(f"Error getting links from {source.base_url}: {e}")
             return []
-    
-    def extract_links_from_html(self, html: str, source: NewsSource) -> List[str]:
-        """Extract article links from HTML (runs in thread pool)."""
-        from bs4 import BeautifulSoup
-        
-        soup = BeautifulSoup(html, 'html.parser')
-        links = []
-        
-        # Find all links
-        for a_tag in soup.find_all('a', href=True):
-            href = a_tag['href']
-            
-            # Convert relative URLs to absolute
-            if href.startswith('/'):
-                href = urljoin(source.base_url, href)
-            
-            # Check if link matches patterns
-            for pattern in source.link_patterns:
-                if re.search(pattern, href):
-                    links.append(href)
-                    break
-        
-        return list(set(links))  # Remove duplicates
     
     async def scrape_article_http(self, semaphore: asyncio.Semaphore, 
                                 source: NewsSource, url: str) -> Optional[Article]:
         """Scrape individual article using HTTP."""
         async with semaphore:
             try:
-                async with self.session.get(url) as response:
+                # Rotate user agent
+                headers = self.user_agent_rotator.get_random_headers() if hasattr(self.user_agent_rotator, 'get_random_headers') else {}
+                # Rotate proxy
+                proxy = self.tor_manager.get_proxy() if self.use_tor else (self.proxy.url if self.proxy else None)
+                async with self.session.get(url, headers=headers, proxy=proxy) as response:
                     if response.status == 200:
                         html = await response.text()
-                        
-                        # Parse article in thread pool
+                        # CAPTCHA detection (simple placeholder)
+                        if 'captcha' in html.lower() and self.captcha_solver:
+                            self.logger.warning(f"CAPTCHA detected on {url}, attempting to solve...")
+                            # Here you would extract sitekey and call self.captcha_solver.solve_recaptcha_v2(...)
+                            # For now, just log and skip
+                            return None
+                        # Use thread pool for parsing
                         loop = asyncio.get_event_loop()
                         article = await loop.run_in_executor(
                             self.thread_pool,
@@ -379,11 +408,10 @@ class AsyncNewsScraperEngine:
                         )
                         return article
                     else:
-                        self.logger.debug(f"HTTP {response.status} for {url}")
+                        self.logger.warning(f"HTTP {response.status} for {url}")
                         return None
-                        
             except Exception as e:
-                self.logger.debug(f"Error scraping {url}: {e}")
+                self.logger.error(f"Error scraping article {url}: {e}")
                 return None
     
     def parse_article_html(self, html: str, url: str, source: NewsSource) -> Optional[Article]:
