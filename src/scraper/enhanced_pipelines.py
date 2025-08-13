@@ -109,14 +109,14 @@ class EnhancedValidationPipeline:
         """Log final statistics when spider closes."""
         stats = self.validation_pipeline.get_statistics()
         
-        spider.logger.info(f\"\"\"
+        spider.logger.info(f"""
 === Data Validation Pipeline Statistics ===
 Processed: {stats['processed_count']} articles
 Accepted: {stats['accepted_count']} articles ({stats['acceptance_rate']:.1f}%)
 Rejected: {stats['rejected_count']} articles ({stats['rejection_rate']:.1f}%)
 Warnings: {stats['warnings_count']} articles
 ==========================================
-\"\"\")
+    """)
         
         # Store stats in spider stats
         spider.crawler.stats.set_value('validation_processed_count', stats['processed_count'])
