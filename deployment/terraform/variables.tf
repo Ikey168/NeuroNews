@@ -206,3 +206,46 @@ variable "cloudtrail_retention_days" {
   type        = number
   default     = 365
 }
+
+# News Scraper Lambda Configuration
+variable "lambda_scraper_timeout" {
+  description = "Timeout for news scraper Lambda function in seconds"
+  type        = number
+  default     = 900  # 15 minutes - optimized for scraping operations
+}
+
+variable "lambda_scraper_memory_size" {
+  description = "Memory allocation for news scraper Lambda function in MB"
+  type        = number
+  default     = 1024  # 1GB - optimized for web scraping workloads
+}
+
+variable "scraper_schedule_expression" {
+  description = "EventBridge schedule expression for automated scraping"
+  type        = string
+  default     = "rate(2 hours)"  # Run every 2 hours by default
+}
+
+variable "scraper_sources" {
+  description = "List of news sources to scrape"
+  type        = list(string)
+  default     = ["bbc", "cnn", "reuters", "techcrunch"]
+}
+
+variable "scraper_max_articles_per_source" {
+  description = "Maximum number of articles to scrape per source"
+  type        = number
+  default     = 15
+}
+
+variable "scraper_concurrent_requests" {
+  description = "Number of concurrent requests for scraping"
+  type        = number
+  default     = 8  # Optimized for Lambda environment
+}
+
+variable "scraper_timeout" {
+  description = "Timeout for individual scraper requests in seconds"
+  type        = number
+  default     = 30
+}

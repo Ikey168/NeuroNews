@@ -1,0 +1,229 @@
+{
+  "lambda_scraper_config": {
+    "description": "Configuration for NeuroNews Lambda-based news scraper automation",
+    "version": "1.0.0",
+    "last_updated": "2025-08-13",
+    
+    "deployment": {
+      "function_name_prefix": "neuronews-news-scraper",
+      "runtime": "python3.9",
+      "timeout_seconds": 900,
+      "memory_mb": 1024,
+      "architecture": "x86_64",
+      "deployment_package_max_size_mb": 250
+    },
+    
+    "scheduling": {
+      "enabled": true,
+      "default_schedule": "rate(2 hours)",
+      "alternative_schedules": {
+        "high_frequency": "rate(30 minutes)",
+        "standard": "rate(2 hours)",
+        "low_frequency": "rate(6 hours)",
+        "daily": "rate(1 day)",
+        "business_hours": "cron(0 9-17 ? * MON-FRI *)"
+      },
+      "timezone": "UTC"
+    },
+    
+    "scraper_settings": {
+      "sources": {
+        "default": ["bbc", "cnn", "reuters", "techcrunch"],
+        "expanded": ["bbc", "cnn", "reuters", "techcrunch", "guardian", "nytimes", "wsj"],
+        "tech_focused": ["techcrunch", "wired", "ars-technica", "the-verge"],
+        "news_focused": ["bbc", "cnn", "reuters", "associated-press"]
+      },
+      "limits": {
+        "max_articles_per_source": 15,
+        "max_total_articles": 100,
+        "concurrent_requests": 8,
+        "request_timeout_seconds": 30,
+        "max_execution_time_seconds": 840
+      },
+      "optimization": {
+        "use_playwright": false,
+        "enable_caching": true,
+        "respect_robots_txt": true,
+        "user_agent_rotation": true,
+        "request_delay_ms": 100
+      }
+    },
+    
+    "storage": {
+      "s3": {
+        "enabled": true,
+        "bucket_prefix": "neuronews-articles",
+        "key_prefix": "lambda-scraped",
+        "organization": {
+          "raw_articles": "raw_articles/YYYY/MM/DD/",
+          "processed_articles": "processed_articles/YYYY/MM/DD/"
+        },
+        "features": {
+          "versioning": true,
+          "encryption": true,
+          "lifecycle_management": true,
+          "intelligent_tiering": true
+        }
+      }
+    },
+    
+    "monitoring": {
+      "cloudwatch": {
+        "enabled": true,
+        "log_group": "/aws/lambda/neuronews-scraper",
+        "log_retention_days": 30,
+        "namespace": "NeuroNews/Lambda/Scraper",
+        "custom_metrics": [
+          "ArticlesScraped",
+          "ExecutionTime",
+          "MemoryUsed",
+          "FailedUrls",
+          "SuccessRate",
+          "SourcePerformance"
+        ]
+      },
+      "alarms": {
+        "error_threshold": 2,
+        "duration_threshold_minutes": 10,
+        "low_articles_threshold": 10,
+        "evaluation_periods": 2,
+        "sns_topic_arn": "arn:aws:sns:us-east-1:ACCOUNT:neuronews-alerts"
+      }
+    },
+    
+    "error_handling": {
+      "retry_policy": {
+        "max_retries": 3,
+        "backoff_multiplier": 2,
+        "initial_delay_seconds": 1
+      },
+      "dead_letter_queue": {
+        "enabled": true,
+        "max_receive_count": 3
+      },
+      "notification": {
+        "notify_on_failure": true,
+        "notify_on_low_performance": true,
+        "escalation_threshold": 5
+      }
+    },
+    
+    "security": {
+      "iam": {
+        "execution_role": "neuronews-lambda-execution-role",
+        "policies": [
+          "AWSLambdaBasicExecutionRole",
+          "CloudWatchFullAccess",
+          "S3FullAccess",
+          "EventBridgeInvokeFunction"
+        ]
+      },
+      "vpc": {
+        "enabled": false,
+        "subnet_ids": [],
+        "security_group_ids": []
+      },
+      "environment_variables": {
+        "encrypted": [
+          "S3_BUCKET",
+          "CLOUDWATCH_NAMESPACE"
+        ]
+      }
+    },
+    
+    "environments": {
+      "development": {
+        "schedule": "rate(6 hours)",
+        "sources": ["bbc", "cnn"],
+        "max_articles_per_source": 5,
+        "memory_mb": 512,
+        "timeout_seconds": 300
+      },
+      "staging": {
+        "schedule": "rate(4 hours)",
+        "sources": ["bbc", "cnn", "reuters"],
+        "max_articles_per_source": 10,
+        "memory_mb": 768,
+        "timeout_seconds": 600
+      },
+      "production": {
+        "schedule": "rate(2 hours)",
+        "sources": ["bbc", "cnn", "reuters", "techcrunch"],
+        "max_articles_per_source": 15,
+        "memory_mb": 1024,
+        "timeout_seconds": 900
+      }
+    },
+    
+    "cost_optimization": {
+      "reserved_concurrency": 5,
+      "provisioned_concurrency": 0,
+      "architecture": "arm64",
+      "memory_optimization": {
+        "enabled": true,
+        "target_utilization": 0.8
+      },
+      "cold_start_mitigation": {
+        "warming_enabled": false,
+        "warming_schedule": "rate(15 minutes)"
+      }
+    },
+    
+    "integration": {
+      "eventbridge": {
+        "enabled": true,
+        "rule_name": "neuronews-scraper-schedule",
+        "input_transformer": {
+          "enabled": true,
+          "input_paths": {
+            "environment": "$.environment",
+            "sources": "$.sources"
+          }
+        }
+      },
+      "s3_triggers": {
+        "enabled": false,
+        "trigger_on_upload": false
+      },
+      "api_gateway": {
+        "enabled": false,
+        "manual_trigger_endpoint": false
+      }
+    },
+    
+    "testing": {
+      "unit_tests": {
+        "enabled": true,
+        "test_events": [
+          {
+            "name": "basic_test",
+            "payload": {
+              "sources": ["bbc"],
+              "max_articles_per_source": 2,
+              "scraper_config": {
+                "concurrent_requests": 1,
+                "timeout": 10
+              }
+            }
+          },
+          {
+            "name": "multi_source_test",
+            "payload": {
+              "sources": ["bbc", "cnn"],
+              "max_articles_per_source": 3,
+              "scraper_config": {
+                "concurrent_requests": 2,
+                "timeout": 15
+              }
+            }
+          }
+        ]
+      },
+      "integration_tests": {
+        "enabled": true,
+        "s3_validation": true,
+        "cloudwatch_validation": true
+      }
+    }
+  }
+}
