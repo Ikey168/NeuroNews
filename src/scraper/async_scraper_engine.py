@@ -130,13 +130,26 @@ class PerformanceMonitor:
 class AsyncNewsScraperEngine:
     """High-performance async news scraper with Playwright and ThreadPoolExecutor."""
     
-    def __init__(self, max_concurrent: int = 10, max_threads: int = 4, headless: bool = True, proxy_config: Optional[dict] = None, use_tor: bool = False, captcha_api_key: Optional[str] = None):
+    def __init__(self, 
+                 max_concurrent: int = 10, 
+                 max_threads: int = 4, 
+                 headless: bool = True, 
+                 proxy_config_path: Optional[str] = None,
+                 proxy_config: Optional[dict] = None, 
+                 use_tor: bool = False, 
+                 captcha_api_key: Optional[str] = None,
+                 cloudwatch_region: str = 'us-east-1',
+                 cloudwatch_namespace: str = 'NeuroNews/Scraper',
+                 dynamodb_table: str = 'neuronews-failed-urls',
+                 sns_topic_arn: Optional[str] = None,
+                 enable_monitoring: bool = True):
         self.max_concurrent = max_concurrent
         self.max_threads = max_threads
         self.headless = headless
         self.proxy_config = proxy_config
         self.use_tor = use_tor
         self.captcha_api_key = captcha_api_key
+        self.enable_monitoring = enable_monitoring
 
         # Performance monitoring
         self.monitor = PerformanceMonitor()
@@ -144,22 +157,67 @@ class AsyncNewsScraperEngine:
         # Rate limiting
         self.semaphores = {}
 
+        # Monitoring and error handling components
+        self.cloudwatch_logger = None
+        self.failure_manager = None
+        self.alert_manager = None
+        self.retry_manager = None
+        
+        if enable_monitoring:
+            # Initialize monitoring components
+            from .cloudwatch_logger import CloudWatchLogger
+            from .dynamodb_failure_manager import DynamoDBFailureManager
+            from .sns_alert_manager import SNSAlertManager
+            from .enhanced_retry_manager import EnhancedRetryManager, RetryConfig
+            
+            self.cloudwatch_logger = CloudWatchLogger(
+                region_name=cloudwatch_region,
+                namespace=cloudwatch_namespace
+            )
+            
+            self.failure_manager = DynamoDBFailureManager(
+                table_name=dynamodb_table,
+                region_name=cloudwatch_region
+            )
+            
+            if sns_topic_arn:
+                self.alert_manager = SNSAlertManager(
+                    topic_arn=sns_topic_arn,
+                    region_name=cloudwatch_region
+                )
+            
+            # Enhanced retry manager with monitoring integration
+            self.retry_manager = EnhancedRetryManager(
+                cloudwatch_logger=self.cloudwatch_logger,
+                failure_manager=self.failure_manager,
+                alert_manager=self.alert_manager,
+                retry_config=RetryConfig(max_retries=3, base_delay=2.0)
+            )
+
         # Proxy manager
-        from scraper.proxy_manager import ProxyConfig
-        self.proxy = ProxyConfig(**proxy_config) if proxy_config else None
+        self.proxy_manager = None
+        if proxy_config_path:
+            from .proxy_manager import ProxyRotationManager
+            self.proxy_manager = ProxyRotationManager(config_path=proxy_config_path)
+        elif proxy_config:
+            from .proxy_manager import ProxyConfig
+            self.proxy = ProxyConfig(**proxy_config)
+        else:
+            self.proxy = None
+            
         self.tor_manager = None
         if use_tor:
-            from scraper.tor_manager import TorManager
+            from .tor_manager import TorManager
             self.tor_manager = TorManager()
 
         # User agent rotator
-        from scraper.user_agent_rotator import UserAgentRotator
+        from .user_agent_rotator import UserAgentRotator
         self.user_agent_rotator = UserAgentRotator()
 
         # CAPTCHA solver
         self.captcha_solver = None
         if captcha_api_key:
-            from scraper.captcha_solver import CaptchaSolver
+            from .captcha_solver import CaptchaSolver
             self.captcha_solver = CaptchaSolver(captcha_api_key)
 
         # Browser management
@@ -201,21 +259,60 @@ class AsyncNewsScraperEngine:
     
     async def start(self):
         """Initialize async components."""
+        # Initialize monitoring components if enabled
+        if self.enable_monitoring:
+            if self.cloudwatch_logger:
+                self.logger.info("Initializing CloudWatch logging...")
+            if self.failure_manager:
+                self.logger.info("Initializing DynamoDB failure tracking...")
+            if self.alert_manager:
+                self.logger.info("Initializing SNS alerting...")
+                # Test alert system
+                try:
+                    await self.alert_manager.test_alert_system()
+                    self.logger.info("SNS alert system test successful")
+                except Exception as e:
+                    self.logger.warning(f"SNS alert system test failed: {e}")
+        
         # Proxy setup
         connector = None
-        if self.use_tor:
-            connector = aiohttp.TCPConnector(limit=self.max_concurrent * 2, ssl=False)
-            proxy = self.tor_manager.get_proxy()
+        proxy = None
+        
+        # Get proxy configuration
+        if self.proxy_manager:
+            # Use proxy rotation manager
+            proxy_config = await self.proxy_manager.get_proxy()
+            if proxy_config:
+                proxy = f"{proxy_config.proxy_type}://{proxy_config.host}:{proxy_config.port}"
+                if proxy_config.username:
+                    proxy = f"{proxy_config.proxy_type}://{proxy_config.username}:{proxy_config.password}@{proxy_config.host}:{proxy_config.port}"
+        elif self.use_tor and self.tor_manager:
+            proxy = self.tor_manager.get_proxy_url()
         elif self.proxy:
-            connector = aiohttp.TCPConnector(limit=self.max_concurrent * 2, ssl=False)
-            proxy = self.proxy.url
-        else:
-            connector = aiohttp.TCPConnector(limit=self.max_concurrent * 2)
-            proxy = None
+            proxy = f"{self.proxy.proxy_type}://{self.proxy.host}:{self.proxy.port}"
+            
+        # Setup connector
+        connector = aiohttp.TCPConnector(
+            limit=self.max_concurrent * 2, 
+            ssl=False if proxy else None
+        )
 
         timeout = aiohttp.ClientTimeout(total=30)
-        headers = self.user_agent_rotator.browser_profiles[0].get_headers() if self.user_agent_rotator.browser_profiles else {}
-        self.session = aiohttp.ClientSession(connector=connector, timeout=timeout, headers=headers)
+        
+        # Get initial headers from user agent rotator
+        initial_headers = self.user_agent_rotator.get_random_headers()
+        
+        # Create session with proxy if available
+        session_kwargs = {
+            'connector': connector,
+            'timeout': timeout,
+            'headers': initial_headers
+        }
+        
+        if proxy:
+            session_kwargs['trust_env'] = True
+            
+        self.session = aiohttp.ClientSession(**session_kwargs)
 
         # Initialize Playwright for JS-heavy sites
         self.playwright = await async_playwright().start()
@@ -229,15 +326,42 @@ class AsyncNewsScraperEngine:
 
         # Create browser contexts for parallel browsing with random user agents
         for i in range(min(self.max_concurrent // 2, 5)):
-            profile = self.user_agent_rotator.browser_profiles[i % len(self.user_agent_rotator.browser_profiles)] if self.user_agent_rotator.browser_profiles else None
-            user_agent = profile.user_agent if profile else "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-            context = await self.browser.new_context(user_agent=user_agent)
+            headers = self.user_agent_rotator.get_random_headers()
+            user_agent = headers.get('User-Agent', "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+            context = await self.browser.new_context(
+                user_agent=user_agent,
+                extra_http_headers=headers
+            )
             self.browser_contexts.append(context)
         
+        # Start proxy health monitoring if using proxy manager
+        if self.proxy_manager and hasattr(self.proxy_manager, 'start_health_monitor'):
+            asyncio.create_task(self.proxy_manager.start_health_monitor())
+        
         self.logger.info(f"AsyncNewsScraperEngine started with {self.max_concurrent} concurrent connections")
+        self.logger.info(f"Monitoring enabled: {self.enable_monitoring}")
+        if proxy:
+            self.logger.info(f"Using proxy: {proxy.split('@')[-1] if '@' in proxy else proxy}")  # Hide credentials
     
     async def close(self):
         """Clean up resources."""
+        # Flush any remaining monitoring data
+        if self.enable_monitoring:
+            if self.cloudwatch_logger:
+                try:
+                    await self.cloudwatch_logger.flush_metrics()
+                    self.logger.info("Flushed remaining CloudWatch metrics")
+                except Exception as e:
+                    self.logger.error(f"Error flushing CloudWatch metrics: {e}")
+            
+            if self.failure_manager:
+                try:
+                    # Clean up old failures (optional, can be done periodically instead)
+                    await self.failure_manager.cleanup_old_failures(days=30)
+                    self.logger.info("Cleaned up old failure records")
+                except Exception as e:
+                    self.logger.error(f"Error cleaning up failures: {e}")
+        
         if self.session:
             await self.session.close()
         

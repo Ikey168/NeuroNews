@@ -1,0 +1,63 @@
+{
+  "monitoring": {
+    "enabled": true,
+    "cloudwatch": {
+      "region_name": "us-east-1",
+      "namespace": "NeuroNews/Scraper",
+      "log_group": "/aws/lambda/neuronews-scraper"
+    },
+    "dynamodb": {
+      "table_name": "neuronews-failed-urls",
+      "region_name": "us-east-1",
+      "retry_strategy": "exponential_backoff",
+      "max_retries": 5,
+      "base_retry_delay": 300,
+      "max_retry_delay": 86400
+    },
+    "sns": {
+      "topic_arn": "arn:aws:sns:us-east-1:123456789012:neuronews-alerts",
+      "region_name": "us-east-1",
+      "rate_limit_window": 3600,
+      "max_alerts_per_window": 10
+    },
+    "retry_config": {
+      "max_retries": 3,
+      "base_delay": 2.0,
+      "max_delay": 300.0,
+      "exponential_base": 2.0,
+      "jitter": true,
+      "retry_on_status_codes": [429, 500, 502, 503, 504],
+      "permanent_failure_codes": [401, 403, 404, 410]
+    },
+    "circuit_breaker": {
+      "failure_threshold": 5,
+      "timeout": 300
+    },
+    "alerting": {
+      "failure_rate_threshold": 50.0,
+      "consecutive_failure_threshold": 5,
+      "response_time_threshold": 30000,
+      "captcha_threshold": 10,
+      "ip_block_threshold": 3
+    }
+  },
+  "scraper_config": {
+    "max_concurrent": 10,
+    "max_threads": 4,
+    "headless": true,
+    "enable_monitoring": true,
+    "request_timeout": 30,
+    "retry_delays": [1, 2, 5, 10, 30],
+    "health_check_interval": 300
+  },
+  "performance_monitoring": {
+    "track_response_times": true,
+    "track_memory_usage": true,
+    "track_cpu_usage": true,
+    "performance_alert_threshold": {
+      "response_time_ms": 10000,
+      "memory_mb": 1024,
+      "cpu_percent": 80
+    }
+  }
+}
