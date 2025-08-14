@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from typing import List, Optional
 import os
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timezone
 
 from src.api.auth.permissions import Permission, require_permissions
 from src.api.auth.jwt_auth import require_auth
@@ -141,7 +141,7 @@ async def create_article(
             article.category,
             article.source,
             user["sub"],
-            datetime.utcnow()
+            datetime.now(timezone.utc)
         ]
     )
     
@@ -230,7 +230,7 @@ async def update_article(
             article.content,
             article.category,
             article.source,
-            datetime.utcnow(),
+            datetime.now(timezone.utc),
             article_id
         ]
     )

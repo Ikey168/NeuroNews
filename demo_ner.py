@@ -6,7 +6,7 @@ Showcases entity extraction from news articles with various entity types.
 import os
 import sys
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Dict, Any
 import json
 
@@ -343,7 +343,7 @@ class NERDemo:
                     'entities': entities,
                     'entity_count': len(entities),
                     'entity_types': list(set(e['type'] for e in entities)),
-                    'processed_at': datetime.utcnow().isoformat()
+                    'processed_at': datetime.now(timezone.utc).isoformat()
                 }
                 results.append(result)
                 

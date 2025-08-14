@@ -6,7 +6,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 import jwt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from src.api.auth.jwt_auth import JWTAuth, auth_handler
 from src.api.routes.auth_routes import router as auth_router
@@ -170,7 +170,7 @@ def test_verify_expired_token(client):
         "sub": 1,
         "email": TEST_USER["email"],
         "role": TEST_USER["role"],
-        "exp": datetime.utcnow() - timedelta(minutes=1)
+        "exp": datetime.now(timezone.utc) - timedelta(minutes=1)
     }
     expired_token = jwt.encode(
         token_data,

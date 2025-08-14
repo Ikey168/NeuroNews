@@ -5,7 +5,7 @@ Authentication routes for the API.
 from fastapi import APIRouter, HTTPException, Depends, Response
 from pydantic import BaseModel, EmailStr
 import bcrypt
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from src.api.auth.jwt_auth import auth_handler, require_auth
@@ -90,7 +90,7 @@ async def register(user: UserCreate, db: RedshiftLoader = Depends(get_db)):
             user.first_name,
             user.last_name,
             user.role,
-            datetime.utcnow()
+            datetime.now(timezone.utc)
         ]
     )
     
