@@ -238,6 +238,10 @@ class MultiLanguagePipeline:
 
 
 class LanguageFilterPipeline:
+    def _get_original_language(self, item: Dict[str, Any]) -> str:
+        # Return detected language from item['language_info'] if present
+        info = item.get('language_info', {})
+        return info.get('detected_language', 'unknown')
     """
     Pipeline that filters articles based on detected language.
     """

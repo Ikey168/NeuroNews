@@ -17,6 +17,45 @@ logger = logging.getLogger(__name__)
 
 
 class MultiLanguageArticleProcessor(ArticleProcessor):
+    def detect_and_store_language(self, article_data: Dict[str, Any]) -> Dict[str, Any]:
+        # Simulate detection and storage
+        detection = self.language_detector.detect_language(article_data.get('content', ''))
+        result = {
+            'detected_language': detection.get('language'),
+            'confidence': detection.get('confidence'),
+        }
+        # Optionally store detection
+        self.store_language_detection({
+            'article_id': article_data.get('id'),
+            'detected_language': detection.get('language'),
+            'confidence': detection.get('confidence'),
+        })
+        return result
+
+    def translate_article(self, article_data: Dict[str, Any], source_language: str, target_language: str) -> Dict[str, Any]:
+        # Use the translation service
+        translation = self.translate_service.translate_text(
+            article_data.get('content', ''),
+            source_language,
+            target_language
+        )
+        result = {
+            'translated_text': translation.get('translated_text'),
+            'error': translation.get('error'),
+        }
+        if translation.get('translated_text'):
+            result['translated_content'] = translation.get('translated_text')
+        return result
+
+    def update_language_stats(self, lang: str):
+        # Simulate updating language distribution
+        if not hasattr(self, 'language_distribution'):
+            self.language_distribution = {}
+        self.language_distribution[lang] = self.language_distribution.get(lang, 0) + 1
+
+    def get_processing_statistics(self) -> Dict[str, Any]:
+        # Return language distribution stats
+        return {'language_distribution': getattr(self, 'language_distribution', {})}
     """
     Extended article processor that handles multi-language content.
     Detects language, translates non-English content, and stores both versions.
