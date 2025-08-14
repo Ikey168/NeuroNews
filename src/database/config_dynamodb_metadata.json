@@ -1,0 +1,43 @@
+{
+  "dynamodb": {
+    "table_name": "neuronews-article-metadata",
+    "region": "us-east-1",
+    "read_capacity_units": 10,
+    "write_capacity_units": 10,
+    "batch_size": 25,
+    "max_retries": 3,
+    "retry_delay": 1.0,
+    "search_limit": 100,
+    "enable_full_text_search": true,
+    "create_indexes": true,
+    "enable_point_in_time_recovery": true
+  },
+  "indexing": {
+    "auto_index_on_scrape": true,
+    "auto_index_on_s3_store": true,
+    "auto_update_on_redshift_load": true,
+    "enable_title_tokenization": true,
+    "max_content_summary_length": 200,
+    "default_search_fields": ["title", "content_summary", "title_tokens"],
+    "search_modes": {
+      "default": "contains",
+      "available": ["exact", "contains", "starts_with", "fuzzy"]
+    }
+  },
+  "performance": {
+    "query_timeout_seconds": 30,
+    "scan_timeout_seconds": 60,
+    "batch_timeout_seconds": 120,
+    "max_concurrent_operations": 10,
+    "enable_query_caching": false,
+    "cache_ttl_seconds": 300
+  },
+  "monitoring": {
+    "enable_metrics": true,
+    "log_query_performance": true,
+    "alert_on_high_latency": true,
+    "performance_threshold_ms": 1000,
+    "enable_health_checks": true,
+    "health_check_interval_seconds": 300
+  }
+}
