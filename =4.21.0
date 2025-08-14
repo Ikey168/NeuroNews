@@ -1,0 +1,11 @@
+usage: transformers <command> [<args>]
+
+positional arguments:
+  {chat,convert,download,env,run,serve,add-new-model-like,add-fast-image-processor}
+                        transformers command helpers
+    convert             CLI tool to run convert model from original author
+                        checkpoints to Transformers PyTorch checkpoints.
+    run                 Run a pipeline through the CLI
+
+options:
+  -h, --help            show this help message and exit

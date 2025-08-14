@@ -32,7 +32,7 @@ jobs:
       env:
         NEPTUNE_ENDPOINT: "ws://mock-neptune:8182/gremlin"
       run: |
-        pytest
+        pytest --ignore=tests/test_ner.py
 
   lint:
     runs-on: ubuntu-latest

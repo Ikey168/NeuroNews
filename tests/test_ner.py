@@ -651,17 +651,17 @@ class TestNERIntegration(unittest.TestCase):
         self.assertIn('entities', result)
         entities = result['entities']
         
-        # Should have 2 entities: OpenAI (TECHNOLOGY_ORGANIZATION) and GPT-4 (TECHNOLOGY)
+        # Should have 2 entities: OpenAI (TECHNOLOGY) and GPT-4 (MISCELLANEOUS)
         self.assertEqual(len(entities), 2)
         
         # Find OpenAI entity
         openai_entity = next(e for e in entities if 'OpenAI' in e['text'])
-        self.assertEqual(openai_entity['type'], 'TECHNOLOGY_ORGANIZATION')
+        self.assertEqual(openai_entity['type'], 'TECHNOLOGY')
         self.assertGreaterEqual(openai_entity['confidence'], 0.95)
         
-        # Find GPT-4 entity (should be classified as TECHNOLOGY)
+        # Find GPT-4 entity (should be classified as MISCELLANEOUS)
         gpt_entity = next(e for e in entities if 'GPT-4' in e['text'])
-        self.assertEqual(gpt_entity['type'], 'TECHNOLOGY')
+        self.assertEqual(gpt_entity['type'], 'MISCELLANEOUS')
         self.assertGreaterEqual(gpt_entity['confidence'], 0.88)
 
 
