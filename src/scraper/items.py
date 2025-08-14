@@ -29,3 +29,14 @@ class NewsItem(scrapy.Item):
     validation_score = scrapy.Field()
     content_quality = scrapy.Field()
     duplicate_check = scrapy.Field()
+    
+    # Multi-language processing fields
+    language_info = scrapy.Field()
+    translation_info = scrapy.Field()
+    original_language = scrapy.Field()
+    translation_performed = scrapy.Field()
+    detection_confidence = scrapy.Field()
+    translation_quality = scrapy.Field()
+    translated_title = scrapy.Field()
+    translated_content = scrapy.Field()
+    target_language = scrapy.Field()
