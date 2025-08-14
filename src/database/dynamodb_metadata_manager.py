@@ -735,10 +735,17 @@ class DynamoDBMetadataManager:
     def _tokenize_search_query(self, query_text: str) -> List[str]:
         """Tokenize search query text."""
         import re
+        # Common stop words to filter out
+        stop_words = {'in', 'on', 'at', 'the', 'a', 'an', 'and', 'or', 'but', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'can', 'to', 'of', 'for', 'with', 'by', 'from', 'as', 'if', 'then', 'than', 'this', 'that', 'these', 'those'}
+        
         # Remove punctuation and convert to lowercase
         query_text = re.sub(r'[^\w\s]', ' ', query_text.lower())
-        # Split and filter short words
-        tokens = [word.strip() for word in query_text.split() if len(word.strip()) > 1]
+        # Split and filter stop words and very short words (but keep important acronyms)
+        tokens = []
+        for word in query_text.split():
+            word = word.strip()
+            if word and word not in stop_words and len(word) >= 1:
+                tokens.append(word)
         return tokens
     
     def _build_search_filter(self, search_tokens: List[str], search_query: SearchQuery):
