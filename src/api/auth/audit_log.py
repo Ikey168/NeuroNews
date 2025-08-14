@@ -5,7 +5,7 @@ Security audit logging for authentication and authorization events.
 import logging
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 import boto3
 from fastapi import Request
@@ -40,7 +40,7 @@ class SecurityAuditLogger:
             except self.logs.exceptions.ResourceAlreadyExistsException:
                 pass
             
-        self.stream_name = datetime.utcnow().strftime('%Y/%m/%d/security')
+        self.stream_name = datetime.now(timezone.utc).strftime('%Y/%m/%d/security')
         if self.logs:
             try:
                 self.logs.create_log_stream(
@@ -72,7 +72,7 @@ class SecurityAuditLogger:
             Formatted log event
         """
         log_entry = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "event_type": event_type,
             "event_data": event_data
         }
@@ -118,7 +118,7 @@ class SecurityAuditLogger:
                 "logGroupName": self.log_group,
                 "logStreamName": self.stream_name,
                 "logEvents": [{
-                    "timestamp": int(datetime.utcnow().timestamp() * 1000),
+                    "timestamp": int(datetime.now(timezone.utc).timestamp() * 1000),
                     "message": json.dumps(log_entry)
                 }]
             }

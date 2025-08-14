@@ -3,7 +3,7 @@ JWT-based authentication system for the NeuroNews API.
 """
 
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 
 import jwt
@@ -38,7 +38,7 @@ class JWTAuth:
         to_encode = data.copy()
         if "sub" in to_encode:
             to_encode["sub"] = str(to_encode["sub"])
-        expire = datetime.utcnow() + timedelta(minutes=self.access_token_expire)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=self.access_token_expire)
         to_encode.update({"exp": expire})
         
         return jwt.encode(
@@ -60,7 +60,7 @@ class JWTAuth:
         to_encode = data.copy()
         if "sub" in to_encode:
             to_encode["sub"] = str(to_encode["sub"])
-        expire = datetime.utcnow() + timedelta(days=self.refresh_token_expire)
+        expire = datetime.now(timezone.utc) + timedelta(days=self.refresh_token_expire)
         to_encode.update({
             "exp": expire,
             "refresh": True
