@@ -8,6 +8,7 @@ integration with the data validation pipeline.
 import unittest
 import os
 import sys
+import logging
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime, timezone, timedelta
 import json
