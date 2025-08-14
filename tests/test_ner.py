@@ -324,18 +324,22 @@ class TestNERArticleProcessor(unittest.TestCase):
         self.mock_ner_processor = patch('src.nlp.ner_article_processor.create_ner_processor')
         self.mock_ner_create = self.mock_ner_processor.start()
         
-        self.mock_psycopg2 = patch('src.nlp.ner_article_processor.psycopg2')
-        self.mock_db = self.mock_psycopg2.start()
+        # Mock psycopg2 in both places
+        self.mock_psycopg2_ner = patch('src.nlp.ner_article_processor.psycopg2')
+        self.mock_psycopg2_article = patch('src.nlp.article_processor.psycopg2')
+        self.mock_db_ner = self.mock_psycopg2_ner.start()
+        self.mock_db_article = self.mock_psycopg2_article.start()
         
         # Configure mocks
         self.mock_ner_instance = Mock()
         self.mock_ner_create.return_value = self.mock_ner_instance
         
-        # Mock database connection
+        # Mock database connection for both patches
         self.mock_conn = MagicMock()
         self.mock_cursor = MagicMock()
         self.mock_conn.cursor.return_value.__enter__.return_value = self.mock_cursor
-        self.mock_db.connect.return_value.__enter__.return_value = self.mock_conn
+        self.mock_db_ner.connect.return_value.__enter__.return_value = self.mock_conn
+        self.mock_db_article.connect.return_value.__enter__.return_value = self.mock_conn
         
         # Test configuration
         self.config = {
@@ -344,6 +348,7 @@ class TestNERArticleProcessor(unittest.TestCase):
             'redshift_database': 'test-db',
             'redshift_user': 'test-user',
             'redshift_password': 'test-password',
+            'sentiment_provider': None,  # Use None to get default model
             'ner_enabled': True
         }
     
@@ -351,7 +356,8 @@ class TestNERArticleProcessor(unittest.TestCase):
         """Clean up after tests."""
         self.mock_sentiment_analyzer.stop()
         self.mock_ner_processor.stop()
-        self.mock_psycopg2.stop()
+        self.mock_psycopg2_ner.stop()
+        self.mock_psycopg2_article.stop()
     
     def test_processor_initialization_with_ner(self):
         """Test processor initialization with NER enabled."""
@@ -571,7 +577,8 @@ class TestNERIntegration(unittest.TestCase):
     
     @patch('src.nlp.ner_processor.pipeline')
     @patch('src.nlp.ner_article_processor.psycopg2')
-    def test_end_to_end_processing(self, mock_psycopg2, mock_pipeline):
+    @patch('src.nlp.article_processor.psycopg2')
+    def test_end_to_end_processing(self, mock_psycopg2_article, mock_psycopg2_ner, mock_pipeline):
         """Test end-to-end NER processing pipeline."""
         # Mock transformers pipeline
         mock_ner = Mock()
@@ -599,7 +606,8 @@ class TestNERIntegration(unittest.TestCase):
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
         mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
-        mock_psycopg2.connect.return_value.__enter__.return_value = mock_conn
+        mock_psycopg2_ner.connect.return_value.__enter__.return_value = mock_conn
+        mock_psycopg2_article.connect.return_value.__enter__.return_value = mock_conn
         
         # Test article
         articles = [
@@ -619,6 +627,7 @@ class TestNERIntegration(unittest.TestCase):
                 redshift_database='test-db',
                 redshift_user='test-user',
                 redshift_password='test-password',
+                sentiment_provider=None,  # Use None to get default model
                 ner_enabled=True
             )
         
