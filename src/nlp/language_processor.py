@@ -312,7 +312,7 @@ class AWSTranslateService:
             logger.info(f"Successfully translated text from {source_language} to {target_language}")
             return result
             
-        except (BotoCoreError, ClientError) as e:
+        except (BotoCoreError, ClientError, Exception) as e:
             error_msg = f"AWS Translate error: {str(e)}"
             logger.error(error_msg)
             return {

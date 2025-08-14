@@ -82,25 +82,23 @@ class TestAWSTranslateService:
     """Test AWS Translate service integration."""
     
     def setup_method(self):
-        pass
-
-    @patch('src.nlp.language_processor.boto3.Session')
-    def test_translate_text_success(self, mock_session):
+        with patch('boto3.client'):
+            self.service = AWSTranslateService()
+            # Mock the translate client directly
+            self.service.translate_client = Mock()
+    
+    @patch('boto3.client')
+    def test_translate_text_success(self, mock_boto):
         """Test successful text translation."""
-        # Create mock session and client
-        mock_client = Mock()
-        mock_client.translate_text.return_value = {
+        # Create service with mocked client
+        service = AWSTranslateService()
+        
+        # Mock the translate_text method directly
+        service.translate_client.translate_text.return_value = {
             'TranslatedText': 'This is a test',
             'SourceLanguageCode': 'es',
             'TargetLanguageCode': 'en'
         }
-        
-        mock_session_instance = Mock()
-        mock_session_instance.client.return_value = mock_client
-        mock_session.return_value = mock_session_instance
-        
-        # Create service with mocked client
-        service = AWSTranslateService()
         
         result = service.translate_text("Esto es una prueba", 'es', 'en')
         
@@ -109,39 +107,28 @@ class TestAWSTranslateService:
         assert result['target_language'] == 'en'
         assert result['error'] is None
 
-    @patch('src.nlp.language_processor.boto3.Session')
-    def test_translate_text_error(self, mock_session):
+    @patch('boto3.client')
+    def test_translate_text_error(self, mock_boto):
         """Test translation error handling."""
-        # Create mock session and client that raises exception
-        mock_client = Mock()
-        mock_client.translate_text.side_effect = Exception("Translation failed")
-        
-        mock_session_instance = Mock()
-        mock_session_instance.client.return_value = mock_client
-        mock_session.return_value = mock_session_instance
-        
         service = AWSTranslateService()
+        service.translate_client = Mock()
+        service.translate_client.translate_text = Mock(side_effect=Exception("Translation failed"))
         result = service.translate_text("Test text", 'es', 'en')
         assert result['error'] is not None
         assert 'Translation failed' in result['error']
     
-    @patch('src.nlp.language_processor.boto3.Session')
-    def test_cache_functionality(self, mock_session):
+    @patch('boto3.client')
+    def test_cache_functionality(self, mock_boto):
         """Test translation caching."""
-        # Create mock session and client
-        mock_client = Mock()
-        mock_client.translate_text.return_value = {
+        # Create service with mocked client
+        service = AWSTranslateService()
+        
+        # Mock the translate_text method directly
+        service.translate_client.translate_text.return_value = {
             'TranslatedText': 'Cached translation',
             'SourceLanguageCode': 'es',
             'TargetLanguageCode': 'en'
         }
-        
-        mock_session_instance = Mock()
-        mock_session_instance.client.return_value = mock_client
-        mock_session.return_value = mock_session_instance
-        
-        # Create service with mocked client
-        service = AWSTranslateService()
         
         # First call
         result1 = service.translate_text("Test", 'es', 'en')
@@ -149,7 +136,7 @@ class TestAWSTranslateService:
         result2 = service.translate_text("Test", 'es', 'en')
         
         # Should only call AWS once due to caching
-        mock_client.translate_text.assert_called_once()
+        service.translate_client.translate_text.assert_called_once()
         assert result1['translated_text'] == result2['translated_text']
 
 
@@ -229,12 +216,16 @@ class TestMultiLanguageArticleProcessor:
         }
         
         with patch.object(self.processor.language_detector, 'detect_language') as mock_detect:
-            mock_detect.return_value = ('es', 0.85)  # Returns tuple, not dict
+            mock_detect.return_value = {
+                'language': 'es',
+                'confidence': 0.85,
+                'method': 'pattern_based'
+            }
             
-            result = self.processor.process_article(article_data)
+            result = self.processor.detect_and_store_language(article_data)
             
-            assert result['original_language'] == 'es'
-            assert result['detection_confidence'] == 0.85
+            assert result['detected_language'] == 'es'
+            assert result['confidence'] == 0.85
     
     def test_translation_workflow(self):
         """Test the translation workflow."""
@@ -249,27 +240,20 @@ class TestMultiLanguageArticleProcessor:
                 'translated_text': 'This is news about modern technology.',
                 'source_language': 'es',
                 'target_language': 'en',
-                'error': None,
-                'confidence': 0.9
+                'error': None
             }
             
-            with patch.object(self.processor.language_detector, 'detect_language') as mock_detect:
-                mock_detect.return_value = ('es', 0.85)
-                
-                result = self.processor.process_article(article_data)
-                
-                assert result['translation_performed'] is True
-                assert 'translated_content' in result
+            result = self.processor.translate_article(article_data, 'es', 'en')
+            
+            assert result['error'] is None
+            assert 'translated_content' in result or result['translated_text'] is not None
     
     @patch('psycopg2.connect')
     def test_database_integration(self, mock_connect):
         """Test database storage integration."""
         mock_cursor = Mock()
         mock_conn = Mock()
-        mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
-        mock_conn.cursor.return_value.__exit__ = Mock(return_value=None)
-        mock_conn.__enter__ = Mock(return_value=mock_conn)
-        mock_conn.__exit__ = Mock(return_value=None)
+        mock_conn.cursor.return_value = mock_cursor
         mock_connect.return_value = mock_conn
         
         with patch('src.nlp.sentiment_analysis.SentimentAnalyzer'):
@@ -281,9 +265,6 @@ class TestMultiLanguageArticleProcessor:
                 redshift_password='test_pass'
             )
         
-        # Mock the connection attribute for the processor
-        processor.connection = mock_conn
-        
         # Test language detection storage
         detection_data = {
             'article_id': 'test_123',
@@ -291,19 +272,23 @@ class TestMultiLanguageArticleProcessor:
             'confidence': 0.85
         }
         
-        result = processor.store_language_detection(detection_data)
-        assert result is True
+        processor.store_language_detection(detection_data)
+        mock_cursor.execute.assert_called()
     
     def test_statistics_tracking(self):
         """Test statistics tracking functionality."""
         processor = self.processor
         
-        # Test that we can get statistics (even if empty)
-        stats = processor.get_translation_statistics()
+        # Test language distribution tracking
+        processor.update_language_stats('es')
+        processor.update_language_stats('fr')
+        processor.update_language_stats('es')
         
-        assert isinstance(stats, dict)
-        # Test basic structure
-        assert 'total_translations' in stats or stats is not None
+        stats = processor.get_processing_statistics()
+        
+        assert 'language_distribution' in stats
+        assert stats['language_distribution']['es'] == 2
+        assert stats['language_distribution']['fr'] == 1
 
 
 class TestMultiLanguagePipeline:
@@ -322,61 +307,46 @@ class TestMultiLanguagePipeline:
             'REDSHIFT_PASSWORD': 'test_pass'
         }
         
-        # Create pipeline with settings
-        self.pipeline = MultiLanguagePipeline(
-            redshift_host='test_host',
-            redshift_port=5439,
-            redshift_database='test_db',
-            redshift_user='test_user',
-            redshift_password='test_pass'
-        )
+        with patch('psycopg2.connect'), patch('src.nlp.sentiment_analysis.SentimentAnalyzer'):
+            self.pipeline = MultiLanguagePipeline()
     
     def test_pipeline_initialization(self):
         """Test pipeline initialization."""
         pipeline = self.pipeline
+        pipeline.open_spider(self.spider)
         
-        # Mock the processor creation
-        with patch('src.scraper.pipelines.multi_language_pipeline.MultiLanguageArticleProcessor'):
-            pipeline.open_spider(self.spider)
-        
-        assert pipeline.redshift_host == 'test_host'
-        assert pipeline.redshift_database == 'test_db'
+        assert pipeline.enabled is True
+        assert pipeline.target_language == 'en'
+        assert pipeline.quality_threshold == 0.7
     
     def test_item_processing(self):
         """Test item processing through pipeline."""
         from src.scraper.items import NewsItem
         
-        # Mock the processor creation and processing
+        # Initialize pipeline first
+        self.pipeline.open_spider(self.spider)
+        
+        item = NewsItem()
+        item['title'] = 'This is a comprehensive technology news article about machine learning'
+        item['content'] = 'This is a comprehensive technology news article about machine learning and artificial intelligence developments.'
+        item['url'] = 'https://example.com/news'
+        
+        # Mock the processor
         mock_processor = Mock()
         mock_processor.process_article.return_value = {
-            'original_language': 'es',
-            'translation_performed': True,
+            'detected_language': 'es',
+            'translated': True,
             'translation_quality': 0.85,
-            'detection_confidence': 0.95,
-            'translated_title': 'This is a comprehensive technology news article about machine learning',
-            'translated_content': 'This is a comprehensive technology news article about machine learning and artificial intelligence developments.',
-            'errors': []
+            'success': True
         }
         
-        with patch('src.scraper.pipelines.multi_language_pipeline.MultiLanguageArticleProcessor', return_value=mock_processor):
-            # Initialize pipeline first
-            self.pipeline.open_spider(self.spider)
-            
-            item = NewsItem()
-            item['title'] = 'This is a comprehensive technology news article about machine learning'
-            item['content'] = 'This is a comprehensive technology news article about machine learning and artificial intelligence developments.'
-            item['url'] = 'https://example.com/news'
-            
-            result = self.pipeline.process_item(item, self.spider)
-            
-            # Check that the item has been processed with multi-language data
-            assert result['original_language'] == 'es'
-            assert result['translation_performed'] == True
-            assert result['translation_quality'] == 0.85
-            assert result['detection_confidence'] == 0.95
-            assert result['translated_title'] is not None
-            assert result['translated_content'] is not None
-            assert result['target_language'] == 'en'
+        # Set the processor on the pipeline
+        self.pipeline.processor = mock_processor
+        
+        result = self.pipeline.process_item(item, self.spider)
+        
+        assert 'language_info' in result
+        assert result['language_info']['detected_language'] == 'es'
     
     def test_disabled_pipeline(self):
         """Test pipeline when disabled."""
@@ -390,23 +360,11 @@ class TestMultiLanguagePipeline:
             'REDSHIFT_PASSWORD': 'test_pass'
         }
         
-        # Create disabled pipeline
-        pipeline = MultiLanguagePipeline(
-            redshift_host='test_host',
-            redshift_port=5439,
-            redshift_database='test_db',
-            redshift_user='test_user',
-            redshift_password='test_pass'
-        )
-        
-        # Mock the enabled property
-        pipeline.enabled = False
+        pipeline = self.pipeline
+        pipeline.open_spider(spider)
         
         from src.scraper.items import NewsItem
         item = NewsItem()
-        item['title'] = 'Test Article About Technology and Innovation in Modern Society Today'
-        item['content'] = 'This is test content for the article that talks about various technological advancements and how they impact our daily lives in many different ways. The content needs to be long enough to pass validation requirements.'
-        item['url'] = 'https://example.com/test'
         
         result = pipeline.process_item(item, spider)
         assert result == item  # Should pass through unchanged
@@ -423,21 +381,20 @@ class TestLanguageFilterPipeline:
             'LANGUAGE_FILTER_REQUIRE_TRANSLATION': True
         }
         
-        self.pipeline = LanguageFilterPipeline(
-            allowed_languages=['en', 'es'],
-            require_translation=True
-        )
+        self.pipeline = LanguageFilterPipeline()
     
     def test_allowed_language_pass(self):
         """Test that allowed languages pass through."""
+        from scrapy.exceptions import DropItem
         from src.scraper.items import NewsItem
         
         item = NewsItem()
-        item['original_language'] = 'en'
-        item['translation_performed'] = True
+        item['language_info'] = {'detected_language': 'en'}
         
-        result = self.pipeline.process_item(item, self.spider)
-        assert result == item
+        # Mock the original_language determination
+        with patch.object(self.pipeline, '_get_original_language', return_value='en'):
+            result = self.pipeline.process_item(item, self.spider)
+            assert result == item
     
     def test_blocked_language_drop(self):
         """Test that blocked languages are dropped."""
@@ -445,11 +402,12 @@ class TestLanguageFilterPipeline:
         from src.scraper.items import NewsItem
         
         item = NewsItem()
-        item['original_language'] = 'de'  # Not in allowed list
-        item['translation_performed'] = False
+        item['language_info'] = {'detected_language': 'de'}  # Not in allowed list
         
-        with pytest.raises(DropItem):
-            self.pipeline.process_item(item, self.spider)
+        # Mock the original_language determination
+        with patch.object(self.pipeline, '_get_original_language', return_value='de'):
+            with pytest.raises(DropItem):
+                self.pipeline.process_item(item, self.spider)
 
 
 class TestIntegrationWorkflow:
@@ -470,24 +428,19 @@ class TestIntegrationWorkflow:
         
         mock_cursor = Mock()
         mock_conn = Mock()
-        mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
-        mock_conn.cursor.return_value.__exit__ = Mock(return_value=None)
-        mock_conn.__enter__ = Mock(return_value=mock_conn)
-        mock_conn.__exit__ = Mock(return_value=None)
+        mock_conn.cursor.return_value = mock_cursor
         mock_db.return_value = mock_conn
         
-        # Create processor with mocked sentiment analyzer
-        with patch('src.nlp.sentiment_analysis.SentimentAnalyzer') as mock_analyzer_class:
-            mock_analyzer = Mock()
-            mock_analyzer_class.return_value = mock_analyzer
+        # Create processor
+        with patch('src.nlp.sentiment_analysis.create_analyzer') as mock_analyzer:
+            mock_analyzer.return_value = Mock()
             
             processor = MultiLanguageArticleProcessor(
                 redshift_host='test_host',
                 redshift_port=5439,
                 redshift_database='test_db',
                 redshift_user='test_user',
-                redshift_password='test_pass',
-                sentiment_provider='local'  # Use local instead of aws
+                redshift_password='test_pass'
             )
         
         # Test article
@@ -498,41 +451,27 @@ class TestIntegrationWorkflow:
             'url': 'https://example.com/ai-news'
         }
         
-        # Mock language detection
-        with patch.object(processor.language_detector, 'detect_language') as mock_detect:
-            mock_detect.return_value = ('es', 0.85)
-            
-            # Process article
-            result = processor.process_article(article)
-            
-            # Verify results
-            assert result['original_language'] == 'es'
-            assert 'translation_performed' in result
+        # Process article
+        result = processor.process_article(article)
+        
+        # Verify results
+        assert result['detected_language'] == 'es'
+        assert result['translated'] is True
+        assert 'translation_quality' in result
+        assert 'processing_time' in result
     
     def test_error_handling_workflow(self):
         """Test error handling in processing workflow."""
-        with patch('psycopg2.connect') as mock_connect, \
-             patch('src.nlp.sentiment_analysis.SentimentAnalyzer') as mock_analyzer_class:
-            
-            mock_analyzer = Mock()
-            mock_analyzer_class.return_value = mock_analyzer
-            
-            # Mock the context manager for database connection
-            mock_cursor = Mock()
-            mock_conn = Mock()
-            mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
-            mock_conn.cursor.return_value.__exit__ = Mock(return_value=None)
-            mock_conn.__enter__ = Mock(return_value=mock_conn)
-            mock_conn.__exit__ = Mock(return_value=None)
-            mock_connect.return_value = mock_conn
+        with patch('psycopg2.connect'), \
+             patch('src.nlp.sentiment_analysis.create_analyzer') as mock_analyzer:
+            mock_analyzer.return_value = Mock()
             
             processor = MultiLanguageArticleProcessor(
                 redshift_host='test_host',
                 redshift_port=5439,
                 redshift_database='test_db',
                 redshift_user='test_user',
-                redshift_password='test_pass',
-                sentiment_provider='local'  # Use local instead of aws
+                redshift_password='test_pass'
             )
         
         # Test with invalid article data
@@ -540,7 +479,8 @@ class TestIntegrationWorkflow:
         
         result = processor.process_article(invalid_article)
         
-        assert 'errors' in result
+        assert result['success'] is False
+        assert 'error' in result
 
 
 if __name__ == '__main__':

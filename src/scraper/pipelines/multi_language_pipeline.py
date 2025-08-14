@@ -21,18 +21,18 @@ class MultiLanguagePipeline:
     """
     
     def __init__(self,
-                 redshift_host: str = None,
-                 redshift_port: int = 5439,
-                 redshift_database: str = None,
-                 redshift_user: str = None,
-                 redshift_password: str = None,
-                 aws_region: str = 'us-east-1',
-                 aws_access_key_id: str = None,
-                 aws_secret_access_key: str = None,
-                 target_language: str = 'en',
-                 translation_enabled: bool = True,
-                 quality_threshold: float = 0.7,
-                 min_content_length: int = 100):
+        redshift_host: str = None,
+        redshift_port: int = 5439,
+        redshift_database: str = None,
+        redshift_user: str = None,
+        redshift_password: str = None,
+        aws_region: str = 'us-east-1',
+        aws_access_key_id: str = None,
+        aws_secret_access_key: str = None,
+        target_language: str = 'en',
+        translation_enabled: bool = True,
+        quality_threshold: float = 0.7,
+        min_content_length: int = 100):
         """
         Initialize multi-language pipeline.
         
@@ -56,16 +56,14 @@ class MultiLanguagePipeline:
         self.redshift_database = redshift_database or os.getenv('REDSHIFT_DATABASE')
         self.redshift_user = redshift_user or os.getenv('REDSHIFT_USER')
         self.redshift_password = redshift_password or os.getenv('REDSHIFT_PASSWORD')
-        
         self.aws_region = aws_region
         self.aws_access_key_id = aws_access_key_id or os.getenv('AWS_ACCESS_KEY_ID')
         self.aws_secret_access_key = aws_secret_access_key or os.getenv('AWS_SECRET_ACCESS_KEY')
-        
+        self.enabled = True
         self.target_language = target_language
         self.translation_enabled = translation_enabled
         self.quality_threshold = quality_threshold
         self.min_content_length = min_content_length
-        
         self.processor = None
         self.stats = {
             'items_processed': 0,
@@ -73,27 +71,7 @@ class MultiLanguagePipeline:
             'items_dropped': 0,
             'translation_errors': 0,
             'language_distribution': {}
-        }
-        
-    @classmethod
-    def from_crawler(cls, crawler):
-        """Create pipeline instance from crawler settings."""
-        settings = crawler.settings
-        
-        return cls(
-            redshift_host=settings.get('REDSHIFT_HOST'),
-            redshift_port=settings.getint('REDSHIFT_PORT', 5439),
-            redshift_database=settings.get('REDSHIFT_DATABASE'),
-            redshift_user=settings.get('REDSHIFT_USER'),
-            redshift_password=settings.get('REDSHIFT_PASSWORD'),
-            aws_region=settings.get('AWS_REGION', 'us-east-1'),
-            aws_access_key_id=settings.get('AWS_ACCESS_KEY_ID'),
-            aws_secret_access_key=settings.get('AWS_SECRET_ACCESS_KEY'),
-            target_language=settings.get('TARGET_LANGUAGE', 'en'),
-            translation_enabled=settings.getbool('TRANSLATION_ENABLED', True),
-            quality_threshold=settings.getfloat('TRANSLATION_QUALITY_THRESHOLD', 0.7),
-            min_content_length=settings.getint('MIN_CONTENT_LENGTH', 100)
-        )
+    }
         
     def open_spider(self, spider):
         """Initialize pipeline when spider opens."""
@@ -167,11 +145,13 @@ class MultiLanguagePipeline:
         Raises:
             DropItem: If item should be dropped
         """
+        # If pipeline is disabled, return item unchanged
+        if not self.enabled:
+            return item
         # Validate item
         if not self._validate_item(item):
             self.stats['items_dropped'] += 1
             raise DropItem("Item validation failed")
-            
         try:
             # Convert item to dictionary
             article_data = {
@@ -288,6 +268,22 @@ class LanguageFilterPipeline:
     def from_crawler(cls, crawler):
         """Create pipeline instance from crawler settings."""
         settings = crawler.settings
+        
+        # Add settings to the MultiLanguagePipeline instance
+        return MultiLanguagePipeline(
+            redshift_host=settings.get('REDSHIFT_HOST'),
+            redshift_port=settings.getint('REDSHIFT_PORT', 5439),
+            redshift_database=settings.get('REDSHIFT_DATABASE'),
+            redshift_user=settings.get('REDSHIFT_USER'),
+            redshift_password=settings.get('REDSHIFT_PASSWORD'),
+            aws_region=settings.get('AWS_REGION', 'us-east-1'),
+            aws_access_key_id=settings.get('AWS_ACCESS_KEY_ID'),
+            aws_secret_access_key=settings.get('AWS_SECRET_ACCESS_KEY'),
+            target_language=settings.get('TARGET_LANGUAGE', 'en'),
+            translation_enabled=settings.getbool('TRANSLATION_ENABLED', True),
+            quality_threshold=settings.getfloat('TRANSLATION_QUALITY_THRESHOLD', 0.7),
+            min_content_length=settings.getint('MIN_CONTENT_LENGTH', 100)
+        )
         
         return cls(
             allowed_languages=settings.getlist('ALLOWED_LANGUAGES'),
