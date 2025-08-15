@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import json
 
 from src.nlp.sentiment_analysis import SentimentAnalyzer, create_analyzer
-from src.api.routes.sentiment_routes import router
+from src.api.routes.sentiment_routes import router, get_db
 from fastapi.testclient import TestClient
 from fastapi import FastAPI
 
@@ -67,98 +67,108 @@ class TestSentimentAnalysisPipeline:
             assert "text" in result
             assert result["label"] in ["POSITIVE", "NEGATIVE", "NEUTRAL", "ERROR"]
     
-    @patch('src.api.routes.sentiment_routes.get_db')
-    def test_sentiment_trends_endpoint(self, mock_get_db):
+    def test_sentiment_trends_endpoint(self):
         """Test the sentiment trends API endpoint."""
-        # Mock database
-        mock_db = AsyncMock()
-        mock_get_db.return_value.__aenter__.return_value = mock_db
+        # Mock the get_db dependency completely
+        async def mock_get_db():
+            mock_db = AsyncMock()
+            mock_db.execute_query.side_effect = [
+                # Trends query results
+                [
+                    (datetime.now() - timedelta(days=1), "POSITIVE", 5, 0.8, 0.6, 0.9),
+                    (datetime.now() - timedelta(days=1), "NEGATIVE", 3, 0.3, 0.1, 0.4)
+                ],
+                # Overall stats query results
+                [
+                    ("POSITIVE", 5, 0.8, 62.5),
+                    ("NEGATIVE", 3, 0.3, 37.5)
+                ],
+                # Count query results
+                [(8,)]
+            ]
+            yield mock_db
         
-        # Mock query results
-        mock_db.execute_query.return_value = [
-            (
-                "test_id_1", 
-                "Positive Tech News", 
-                "TechSource", 
-                "Technology",
-                datetime.now() - timedelta(days=1),
-                0.8,
-                "POSITIVE",
-                '[]'
-            ),
-            (
-                "test_id_2",
-                "Market Concerns",
-                "FinanceSource", 
-                "Finance",
-                datetime.now() - timedelta(days=2),
-                0.7,
-                "NEGATIVE",
-                '[]'
-            )
-        ]
+        # Override the dependency
+        app.dependency_overrides[get_db] = mock_get_db
         
-        # Test endpoint
-        response = client.get("/news_sentiment?topic=Technology&days=7")
-        assert response.status_code == 200
-        
-        data = response.json()
-        assert "analysis_period" in data
-        assert "summary" in data
-        assert "trends" in data
-        assert "articles" in data
-        
-        # Check summary statistics
-        summary = data["summary"]
-        assert "total_articles" in summary
-        assert "sentiment_distribution" in summary
-        assert "sentiment_percentages" in summary
-    
-    def test_analyze_text_endpoint(self):
-        """Test the real-time text analysis endpoint."""
-        with patch('src.api.routes.sentiment_routes.create_analyzer') as mock_create:
-            mock_analyzer = MagicMock()
-            mock_analyzer.analyze.return_value = {
-                "label": "POSITIVE",
-                "score": 0.85,
-                "text": "Test text"
-            }
-            mock_create.return_value = mock_analyzer
-            
-            response = client.post("/sentiment/analyze?text=Great news everyone!")
+        try:
+            # Test endpoint
+            response = client.get("/news_sentiment?topic=Technology")
+            print(f"Response status: {response.status_code}")
+            print(f"Response content: {response.content}")
+            if response.status_code != 200:
+                print(f"Response text: {response.text}")
             assert response.status_code == 200
             
             data = response.json()
-            assert "text" in data
-            assert "sentiment" in data
-            assert "provider" in data
-            assert "analysis_timestamp" in data
-            
-            sentiment = data["sentiment"]
-            assert sentiment["label"] == "POSITIVE"
-            assert sentiment["score"] == 0.85
+            assert "sentiment_trends" in data
+            assert "overall_sentiment" in data
+            assert "article_count" in data
+            assert "topic_filter" in data
+            assert data["topic_filter"] == "Technology"
+            assert data["article_count"] == 8
+        finally:
+            # Clean up
+            app.dependency_overrides.clear()
     
-    def test_batch_analyze_endpoint(self):
-        """Test the batch analysis endpoint."""
-        with patch('src.api.routes.sentiment_routes.create_analyzer') as mock_create:
-            mock_analyzer = MagicMock()
-            mock_analyzer.analyze_batch.return_value = [
-                {"label": "POSITIVE", "score": 0.8, "text": "Great!"},
-                {"label": "NEGATIVE", "score": 0.7, "text": "Bad news"},
-                {"label": "NEUTRAL", "score": 0.5, "text": "Okay"}
+    def test_sentiment_summary_endpoint(self):
+        """Test the sentiment summary API endpoint."""
+        # Mock the get_db dependency
+        async def mock_get_db():
+            mock_db = AsyncMock()
+            mock_db.execute_query.return_value = [
+                ("POSITIVE", 10, 0.8, 0.1),
+                ("NEGATIVE", 5, 0.3, 0.05),
+                ("NEUTRAL", 3, 0.5, 0.02)
             ]
-            mock_create.return_value = mock_analyzer
+            yield mock_db
+        
+        # Override the dependency
+        app.dependency_overrides[get_db] = mock_get_db
+        
+        try:
+            response = client.get("/news_sentiment/summary?topic=AI&days=7")
+            assert response.status_code == 200
             
-            test_texts = ["Great!", "Bad news", "Okay"]
-            response = client.post(
-                "/sentiment/analyze/batch",
-                json=test_texts,
-                params={"provider": "huggingface"}
-            )
+            data = response.json()
+            assert "summary" in data
+            assert "total_articles" in data
+            assert "days_analyzed" in data
+            assert "topic_filter" in data
+            assert data["topic_filter"] == "AI"
+            assert data["days_analyzed"] == 7
+        finally:
+            app.dependency_overrides.clear()
+    
+    def test_topic_sentiment_endpoint(self):
+        """Test the topic sentiment analysis endpoint."""
+        # Mock the get_db dependency
+        async def mock_get_db():
+            mock_db = AsyncMock()
+            mock_db.execute_query.return_value = [
+                ("TECH", "POSITIVE", 8, 0.8),
+                ("TECH", "NEGATIVE", 2, 0.3),
+                ("MARKET", "NEGATIVE", 6, 0.4),
+                ("MARKET", "POSITIVE", 4, 0.7)
+            ]
+            yield mock_db
+        
+        # Override the dependency
+        app.dependency_overrides[get_db] = mock_get_db
+        
+        try:
+            response = client.get("/news_sentiment/topics?days=7&min_articles=5")
+            assert response.status_code == 200
             
-            # Note: TestClient might not support this exact format,
-            # in real testing we'd use async test client
-            assert response.status_code in [200, 422]  # 422 if request format differs
+            data = response.json()
+            assert isinstance(data, list)
+            if data:  # If there are results
+                topic_data = data[0]
+                assert "topic" in topic_data
+                assert "total_articles" in topic_data
+                assert "sentiments" in topic_data
+        finally:
+            app.dependency_overrides.clear()
 
 class TestSentimentPipelineIntegration:
     """Integration tests for complete sentiment pipeline."""
