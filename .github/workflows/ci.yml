@@ -28,6 +28,11 @@ jobs:
         pip install pytest pytest-asyncio pytest-cov
         pip install -r requirements.txt
         
+    - name: Download NLTK data and spaCy models
+      run: |
+        python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords'); nltk.download('averaged_perceptron_tagger')"
+        python -m spacy download en_core_web_sm
+        
     - name: Run tests
       env:
         NEPTUNE_ENDPOINT: "ws://mock-neptune:8182/gremlin"
