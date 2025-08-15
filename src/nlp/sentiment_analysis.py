@@ -123,10 +123,45 @@ class SentimentAnalyzer:
     batch_analyze = analyze_batch
 
 
-def create_analyzer(model_name: Optional[str] = None, **kwargs: object) -> SentimentAnalyzer:
-    """Factory used by tests and application code."""
+def create_analyzer(model_name: Optional[str] = None, provider: Optional[str] = None, **kwargs: object):
+    """
+    Factory function to create sentiment analyzers.
+    
+    Args:
+        model_name: Name of the model to use (for HuggingFace transformers)
+        provider: Provider type ('huggingface', 'aws', 'aws_comprehend')
+        **kwargs: Additional configuration for the analyzer
+        
+    Returns:
+        Sentiment analyzer instance
+    """
+    # Handle backward compatibility - if model_name provided, use HuggingFace
+    if model_name and not provider:
+        provider = "huggingface"
+    
+    # Default to HuggingFace if no provider specified
+    if not provider:
+        provider = "huggingface"
+    
+    provider = provider.lower()
+    
+    if provider in ["aws", "aws_comprehend"]:
+        try:
+            from .aws_sentiment import AWSComprehendSentimentAnalyzer
+            return AWSComprehendSentimentAnalyzer(**kwargs)
+        except ImportError as e:
+            logger.warning(f"AWS Comprehend not available: {e}. Falling back to HuggingFace.")
+            provider = "huggingface"
+        except Exception as e:
+            logger.error(f"Failed to initialize AWS Comprehend: {e}. Falling back to HuggingFace.")
+            provider = "huggingface"
+    
+    if provider == "huggingface":
+        return SentimentAnalyzer(model_name=model_name)
+    
+    raise ValueError(f"Unsupported sentiment provider: {provider}")
 
-    if kwargs:
-        logger.debug("Ignoring additional parameters for create_analyzer: %s", kwargs)
-
+# Backward compatibility function
+def create_huggingface_analyzer(model_name: Optional[str] = None, **kwargs: object) -> SentimentAnalyzer:
+    """Create a HuggingFace transformer-based sentiment analyzer."""
     return SentimentAnalyzer(model_name=model_name)
