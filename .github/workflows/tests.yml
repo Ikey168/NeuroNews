@@ -44,6 +44,7 @@ jobs:
           netcat-openbsd
 
     - name: Install Python dependencies
+      timeout-minutes: 15
       run: |
         python -m pip install --upgrade pip wheel setuptools
         # Install numpy first to avoid compilation issues
@@ -51,7 +52,11 @@ jobs:
         # Install pre-compiled packages when available to avoid compilation issues
         pip install --only-binary=scipy,scikit-learn scipy scikit-learn
         pip install --only-binary=spacy,blis,murmurhash,cymem,preshed,thinc spacy
-        python -m pip install -r requirements.txt
+        # Install PyTorch with pre-compiled binaries (CPU only for CI)
+        pip install --only-binary=torch torch --index-url https://download.pytorch.org/whl/cpu
+        pip install --only-binary=transformers transformers
+        # Install remaining dependencies with timeout protection and binary preference
+        pip install --prefer-binary -r requirements.txt
 
     - name: Download NLTK data and spaCy models
       run: |
