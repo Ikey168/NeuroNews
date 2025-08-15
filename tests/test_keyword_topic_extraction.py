@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from src.nlp.keyword_topic_extractor import (
     KeywordTopicExtractor, TFIDFKeywordExtractor, LDATopicModeler,
     TextPreprocessor, KeywordResult, TopicResult, ExtractionResult,
-    create_keyword_extractor
+    SimpleKeywordExtractor, create_keyword_extractor
 )
 from src.nlp.keyword_topic_database import KeywordTopicDatabase
 from src.api.routes.topic_routes import router
@@ -433,6 +433,126 @@ class TestKeywordTopicIntegration:
         # Verify timing consistency
         total_time = (end_time - start_time).total_seconds()
         assert abs(result.processing_time - total_time) < 1.0  # Within 1 second tolerance
+
+
+class TestSimpleKeywordExtractor:
+    """Test simple keyword extractor functionality (fallback for missing dependencies)."""
+    
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.extractor = SimpleKeywordExtractor()
+    
+    def test_simple_extractor_initialization(self):
+        """Test simple extractor initialization."""
+        assert self.extractor.config is not None
+        assert 'keywords_per_article' in self.extractor.config
+        assert self.extractor.preprocessor is not None
+    
+    def test_simple_keyword_extraction(self):
+        """Test basic keyword extraction without ML dependencies."""
+        article = {
+            "id": "test_simple",
+            "title": "Artificial Intelligence in Healthcare",
+            "content": "Machine learning algorithms are revolutionizing medical diagnosis and treatment.",
+            "url": "https://example.com/simple"
+        }
+        
+        result = self.extractor.extract_keywords_and_topics(article)
+        
+        assert result.article_id == "test_simple"
+        assert result.title == "Artificial Intelligence in Healthcare"
+        assert len(result.keywords) > 0
+        assert all(kw.method == 'simple' for kw in result.keywords)
+        assert result.extraction_method == 'simple'
+        assert result.processing_time > 0
+    
+    def test_simple_extractor_batch_processing(self):
+        """Test batch processing with simple extractor."""
+        articles = [
+            {
+                "id": "batch_1",
+                "title": "Technology News",
+                "content": "Latest developments in artificial intelligence and machine learning.",
+                "url": "https://example.com/1"
+            },
+            {
+                "id": "batch_2", 
+                "title": "Climate Science Update",
+                "content": "New research on climate change and environmental protection.",
+                "url": "https://example.com/2"
+            }
+        ]
+        
+        results = self.extractor.process_batch(articles)
+        
+        assert len(results) == 2
+        assert all(r.extraction_method == 'simple' for r in results)
+        assert all(len(r.keywords) > 0 for r in results)
+    
+    def test_simple_extractor_empty_content(self):
+        """Test simple extractor with empty content."""
+        article = {
+            "id": "empty_test",
+            "title": "",
+            "content": "",
+            "url": "https://example.com/empty"
+        }
+        
+        result = self.extractor.extract_keywords_and_topics(article)
+        
+        assert result.article_id == "empty_test"
+        assert len(result.keywords) == 0
+        assert result.extraction_method == 'simple'
+
+
+class TestCreateKeywordExtractorFallback:
+    """Test factory function with dependency fallback."""
+    
+    @patch('src.nlp.keyword_topic_extractor.KeywordTopicExtractor')
+    def test_factory_with_ml_dependencies(self, mock_kw_extractor):
+        """Test factory function when ML dependencies are available."""
+        # Mock successful import of sklearn
+        with patch('builtins.__import__') as mock_import:
+            mock_import.return_value = MagicMock()
+            
+            extractor = create_keyword_extractor()
+            
+            # Should attempt to create KeywordTopicExtractor
+            mock_kw_extractor.assert_called_once()
+    
+    def test_factory_fallback_to_simple(self):
+        """Test factory function fallback when ML dependencies missing."""
+        # Mock ImportError for sklearn
+        with patch('builtins.__import__', side_effect=ImportError("No module named 'sklearn'")):
+            extractor = create_keyword_extractor()
+            
+            # Should return SimpleKeywordExtractor
+            assert isinstance(extractor, SimpleKeywordExtractor)
+    
+    def test_factory_with_config_path(self):
+        """Test factory function with config path."""
+        # Create a temporary config file
+        import tempfile
+        import os
+        
+        config_data = {
+            "keywords_per_article": 15,
+            "min_keyword_length": 4
+        }
+        
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            json.dump(config_data, f)
+            config_path = f.name
+        
+        try:
+            # Mock ImportError to force simple extractor
+            with patch('builtins.__import__', side_effect=ImportError("No module named 'sklearn'")):
+                extractor = create_keyword_extractor(config_path)
+                
+                assert isinstance(extractor, SimpleKeywordExtractor)
+                assert extractor.config['keywords_per_article'] == 15
+        finally:
+            os.unlink(config_path)
 
 
 # Run tests if executed directly

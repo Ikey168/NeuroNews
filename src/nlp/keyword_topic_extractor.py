@@ -18,7 +18,7 @@ import os
 import re
 import json
 import logging
-from typing import List, Dict, Any, Optional, Tuple, Set
+from typing import List, Dict, Any, Optional, Tuple, Set, Union
 from dataclasses import dataclass, asdict
 from datetime import datetime
 
@@ -27,36 +27,83 @@ import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.decomposition import LatentDirichletAllocation
 from sklearn.cluster import KMeans
-import nltk
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize, sent_tokenize
-from nltk.stem import WordNetLemmatizer
-from nltk.tag import pos_tag
-import spacy
 
-# Download required NLTK data
-try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    nltk.download('punkt')
-
-try:
-    nltk.data.find('corpora/stopwords')
-except LookupError:
-    nltk.download('stopwords')
-
-try:
-    nltk.data.find('corpora/wordnet')
-except LookupError:
-    nltk.download('wordnet')
-
-try:
-    nltk.data.find('taggers/averaged_perceptron_tagger')
-except LookupError:
-    nltk.download('averaged_perceptron_tagger')
-
-# Set up logging
+# Set up logging first
 logger = logging.getLogger(__name__)
+
+# NLTK imports with error handling
+try:
+    import nltk
+    from nltk.corpus import stopwords
+    from nltk.tokenize import word_tokenize, sent_tokenize
+    from nltk.stem import WordNetLemmatizer
+    from nltk.tag import pos_tag
+    
+    # Download required NLTK data if not already present
+    def ensure_nltk_data():
+        """Ensure required NLTK data is downloaded."""
+        required_data = [
+            ('punkt', 'tokenizers/punkt'),
+            ('punkt_tab', 'tokenizers/punkt_tab'),
+            ('stopwords', 'corpora/stopwords'),
+            ('wordnet', 'corpora/wordnet'),
+            ('averaged_perceptron_tagger', 'taggers/averaged_perceptron_tagger'),
+            ('averaged_perceptron_tagger_eng', 'taggers/averaged_perceptron_tagger_eng')
+        ]
+        
+        for name, path in required_data:
+            try:
+                nltk.data.find(path)
+            except LookupError:
+                try:
+                    logger.info(f"Downloading NLTK data: {name}")
+                    nltk.download(name, quiet=True)
+                except Exception as e:
+                    logger.warning(f"Failed to download NLTK data {name}: {e}")
+    
+    # Try to ensure NLTK data is available
+    try:
+        ensure_nltk_data()
+    except Exception as e:
+        logger.warning(f"NLTK data setup failed: {e}")
+    
+    NLTK_AVAILABLE = True
+    try:
+        # Test if NLTK is working
+        stopwords.words('english')
+        WordNetLemmatizer()
+    except Exception as e:
+        logger.warning(f"NLTK not fully functional: {e}")
+        NLTK_AVAILABLE = False
+        
+except ImportError as e:
+    logger.warning(f"NLTK not available: {e}")
+    NLTK_AVAILABLE = False
+    # Create dummy classes for when NLTK is not available
+    class WordNetLemmatizer:
+        def lemmatize(self, word): return word
+    def stopwords(): return []
+    def word_tokenize(text): return text.split()
+    def sent_tokenize(text): return text.split('.')
+    def pos_tag(tokens): return [(token, 'NN') for token in tokens]
+
+# spaCy imports with error handling
+try:
+    import spacy
+    # Try to load the English model, fallback if not available
+    try:
+        nlp = spacy.load("en_core_web_sm")
+        SPACY_AVAILABLE = True
+    except OSError:
+        logger.warning("spaCy English model not found. Install with: python -m spacy download en_core_web_sm")
+        nlp = None
+        SPACY_AVAILABLE = False
+except ImportError:
+    logger.warning("spaCy not available. Install with: pip install spacy")
+    nlp = None
+    SPACY_AVAILABLE = False
+
+
 
 
 @dataclass
@@ -96,10 +143,20 @@ class TextPreprocessor:
     
     def __init__(self):
         """Initialize preprocessor with required components."""
-        self.lemmatizer = WordNetLemmatizer()
+        if NLTK_AVAILABLE:
+            try:
+                self.lemmatizer = WordNetLemmatizer()
+                # Extended stopwords including news-specific terms
+                self.stop_words = set(stopwords.words('english'))
+            except Exception as e:
+                logger.warning(f"NLTK initialization failed: {e}")
+                self.lemmatizer = None
+                self.stop_words = set()
+        else:
+            self.lemmatizer = None
+            self.stop_words = set()
         
-        # Extended stopwords including news-specific terms
-        self.stop_words = set(stopwords.words('english'))
+        # Add news-specific stop words
         self.stop_words.update([
             'said', 'says', 'according', 'report', 'reports', 'news',
             'article', 'story', 'post', 'published', 'updated', 'source',
@@ -136,38 +193,74 @@ class TextPreprocessor:
     def extract_sentences(self, text: str) -> List[str]:
         """Extract sentences from text."""
         cleaned_text = self.clean_text(text)
-        sentences = sent_tokenize(cleaned_text)
-        return [s for s in sentences if len(s.split()) > 3]  # Filter very short sentences
+        
+        if not NLTK_AVAILABLE:
+            # Simple fallback: split on sentence-ending punctuation
+            sentences = re.split(r'[.!?]+', cleaned_text)
+            return [s.strip() for s in sentences if len(s.strip().split()) > 3]
+        
+        try:
+            sentences = sent_tokenize(cleaned_text)
+            return [s for s in sentences if len(s.split()) > 3]  # Filter very short sentences
+        except Exception as e:
+            logger.warning(f"NLTK sentence tokenization failed: {e}. Using simple sentence splitting.")
+            # Simple fallback: split on sentence-ending punctuation
+            sentences = re.split(r'[.!?]+', cleaned_text)
+            return [s.strip() for s in sentences if len(s.strip().split()) > 3]
     
     def extract_keywords_pos(self, text: str, min_length: int = 3, max_keywords: int = 20) -> List[str]:
         """Extract potential keywords using POS tagging."""
         cleaned_text = self.clean_text(text)
-        tokens = word_tokenize(cleaned_text.lower())
         
-        # POS tagging
-        pos_tagged = pos_tag(tokens)
+        if not NLTK_AVAILABLE:
+            # Simple fallback: extract words based on length and stop words
+            words = re.findall(r'\b[a-zA-Z]{3,}\b', cleaned_text.lower())
+            keywords = []
+            for word in words:
+                if word not in self.stop_words and word not in keywords:
+                    keywords.append(word)
+            return keywords[:max_keywords]
         
-        # Extract words with valid POS tags
-        keywords = []
-        for word, pos in pos_tagged:
-            if (pos in self.valid_pos and 
-                word not in self.stop_words and 
-                len(word) >= min_length and 
-                word.isalpha()):
-                lemmatized = self.lemmatizer.lemmatize(word)
-                keywords.append(lemmatized)
-        
-        # Remove duplicates while preserving order
-        unique_keywords = []
-        seen = set()
-        for keyword in keywords:
-            if keyword not in seen:
-                unique_keywords.append(keyword)
-                seen.add(keyword)
-        
-        return unique_keywords[:max_keywords]
-
-
+        try:
+            tokens = word_tokenize(cleaned_text.lower())
+            # POS tagging
+            pos_tagged = pos_tag(tokens)
+            
+            # Extract words with valid POS tags
+            keywords = []
+            for word, pos in pos_tagged:
+                if (pos in self.valid_pos and 
+                    word not in self.stop_words and 
+                    len(word) >= min_length and 
+                    word.isalpha()):
+                    try:
+                        if self.lemmatizer:
+                            lemmatized = self.lemmatizer.lemmatize(word)
+                            keywords.append(lemmatized)
+                        else:
+                            keywords.append(word)
+                    except:
+                        keywords.append(word)  # Fallback to original word
+            
+            # Remove duplicates while preserving order
+            unique_keywords = []
+            seen = set()
+            for keyword in keywords:
+                if keyword not in seen:
+                    unique_keywords.append(keyword)
+                    seen.add(keyword)
+            
+            return unique_keywords[:max_keywords]
+            
+        except Exception as e:
+            logger.warning(f"NLTK processing failed: {e}. Using simple word filtering.")
+            # Simple fallback: extract words based on length and stop words
+            words = re.findall(r'\b[a-zA-Z]{3,}\b', cleaned_text.lower())
+            keywords = []
+            for word in words:
+                if word not in self.stop_words and word not in keywords:
+                    keywords.append(word)
+            return keywords[:max_keywords]
 class TFIDFKeywordExtractor:
     """TF-IDF based keyword extraction."""
     
@@ -570,17 +663,192 @@ class KeywordTopicExtractor:
         return results
 
 
-def create_keyword_extractor(config_path: Optional[str] = None) -> KeywordTopicExtractor:
-    """Factory function to create a keyword extractor with configuration."""
-    config = None
-    if config_path and os.path.exists(config_path):
-        try:
-            with open(config_path, 'r') as f:
-                config = json.load(f)
-        except Exception as e:
-            logger.error(f"Error loading config from {config_path}: {e}")
+class SimpleKeywordExtractor:
+    """Simplified keyword extractor that works without external dependencies."""
     
-    return KeywordTopicExtractor(config)
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
+        """Initialize simple extractor."""
+        self.config = config or self._get_default_config()
+        self.preprocessor = self._create_simple_preprocessor()
+        self.topics_fitted = False
+        
+    def _get_default_config(self) -> Dict[str, Any]:
+        """Get default configuration."""
+        return {
+            "keywords_per_article": 10,
+            "min_keyword_length": 3,
+            "max_keywords": 50
+        }
+    
+    def _create_simple_preprocessor(self):
+        """Create a simple preprocessor that doesn't require NLTK."""
+        class SimplePreprocessor:
+            def __init__(self):
+                self.stop_words = {
+                    'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
+                    'from', 'up', 'about', 'into', 'through', 'during', 'before', 'after', 'above', 'below',
+                    'between', 'among', 'over', 'under', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+                    'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may',
+                    'might', 'must', 'can', 'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she', 'it',
+                    'we', 'they', 'me', 'him', 'her', 'us', 'them', 'my', 'your', 'his', 'her', 'its', 'our',
+                    'their', 'said', 'says', 'according', 'report', 'reports', 'news', 'article', 'story'
+                }
+            
+            def clean_text(self, text: str) -> str:
+                # Remove HTML tags
+                text = re.sub(r'<[^>]+>', '', text)
+                # Remove URLs
+                text = re.sub(r'http[s]?://\S+', '', text)
+                # Remove special characters except letters and spaces
+                text = re.sub(r'[^a-zA-Z\s]', '', text)
+                # Remove extra whitespace
+                text = re.sub(r'\s+', ' ', text)
+                return text.strip()
+            
+            def extract_keywords_pos(self, text: str, max_keywords: int = 20) -> List[str]:
+                cleaned_text = self.clean_text(text)
+                words = re.findall(r'\b[a-zA-Z]{3,}\b', cleaned_text.lower())
+                keywords = []
+                for word in words:
+                    if word not in self.stop_words and word not in keywords:
+                        keywords.append(word)
+                return keywords[:max_keywords]
+        
+        return SimplePreprocessor()
+    
+    def extract_keywords_and_topics(self, article: Dict[str, Any]) -> ExtractionResult:
+        """Extract keywords from a single article."""
+        start_time = datetime.now()
+        
+        title = article.get('title', '')
+        content = article.get('content', '')
+        full_text = f"{title} {content}".strip()
+        
+        if not full_text:
+            return self._empty_result(article, start_time)
+        
+        # Extract keywords using simple method
+        keyword_strings = self.preprocessor.extract_keywords_pos(
+            full_text, 
+            max_keywords=self.config.get('keywords_per_article', 10)
+        )
+        
+        keywords = [
+            KeywordResult(keyword=kw, score=0.5, method='simple') 
+            for kw in keyword_strings
+        ]
+        
+        end_time = datetime.now()
+        processing_time = (end_time - start_time).total_seconds()
+        
+        return ExtractionResult(
+            article_id=article.get('id', ''),
+            url=article.get('url', ''),
+            title=title,
+            keywords=keywords,
+            topics=[],
+            dominant_topic=None,
+            extraction_method='simple',
+            processed_at=end_time,
+            processing_time=processing_time
+        )
+    
+    def process_batch(self, articles: List[Dict[str, Any]]) -> List[ExtractionResult]:
+        """Process multiple articles."""
+        results = []
+        for article in articles:
+            result = self.extract_keywords_and_topics(article)
+            results.append(result)
+        return results
+    
+    def _empty_result(self, article: Dict[str, Any], start_time: datetime) -> ExtractionResult:
+        """Create empty result for failed processing."""
+        end_time = datetime.now()
+        return ExtractionResult(
+            article_id=article.get('id', ''),
+            url=article.get('url', ''),
+            title=article.get('title', ''),
+            keywords=[],
+            topics=[],
+            dominant_topic=None,
+            extraction_method='simple',
+            processed_at=end_time,
+            processing_time=(end_time - start_time).total_seconds()
+        )
+
+
+def create_keyword_extractor(config_path: Optional[str] = None) -> Union[KeywordTopicExtractor, SimpleKeywordExtractor]:
+    """
+    Factory function to create keyword extractor with fallback to simple extractor
+    if ML dependencies are not available.
+    """
+    try:
+        # Check if all required ML dependencies are available
+        sklearn_available = False
+        try:
+            from sklearn.feature_extraction.text import TfidfVectorizer
+            from sklearn.decomposition import LatentDirichletAllocation
+            sklearn_available = True
+        except ImportError:
+            pass
+        
+        nltk_available = False
+        try:
+            import nltk
+            # Try to use NLTK to check if it's properly set up
+            from nltk.corpus import stopwords
+            # Test if data is available (may need download)
+            try:
+                stopwords.words('english')
+                nltk_available = True
+            except LookupError:
+                # NLTK data not downloaded, but module available
+                nltk_available = False
+        except ImportError:
+            pass
+        
+        spacy_available = False
+        try:
+            import spacy
+            # Check if the model is available
+            try:
+                nlp = spacy.load("en_core_web_sm")
+                spacy_available = True
+            except OSError:
+                # Model not available
+                spacy_available = False
+        except ImportError:
+            pass
+        
+        logger.info(f"Dependencies check: sklearn={sklearn_available}, nltk={nltk_available}, spacy={spacy_available}")
+        
+        # If ML dependencies are available, use the full extractor
+        if sklearn_available:
+            config = None
+            if config_path and os.path.exists(config_path):
+                try:
+                    with open(config_path, 'r') as f:
+                        config = json.load(f)
+                except Exception as e:
+                    logger.error(f"Error loading config from {config_path}: {e}")
+            return KeywordTopicExtractor(config)
+        else:
+            # Fall back to simple extractor
+            logger.warning("ML dependencies not available, using simple keyword extractor")
+            config = None
+            if config_path and os.path.exists(config_path):
+                try:
+                    with open(config_path, 'r') as f:
+                        config = json.load(f)
+                except Exception as e:
+                    logger.error(f"Error loading config from {config_path}: {e}")
+            return SimpleKeywordExtractor(config)
+            
+    except Exception as e:
+        logger.error(f"Failed to create keyword extractor: {e}")
+        # Fall back to simple extractor in case of any errors
+        logger.warning("Falling back to simple keyword extractor due to error")
+        return SimpleKeywordExtractor()
 
 
 # Example usage and testing
