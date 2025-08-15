@@ -1,0 +1,380 @@
+{
+  "demo_completed_at": "2025-08-15T05:23:08.595063",
+  "extraction_summary": {
+    "total_articles": 6,
+    "successful_extractions": 6,
+    "total_keywords": 60,
+    "total_topics": 6,
+    "sample_results": [
+      {
+        "title": "Revolutionary AI Breakthrough: New Neural Network Architecture Achieves Human-Level Performance",
+        "keywords": [
+          "revolutionary",
+          "new",
+          "neural",
+          "network",
+          "architecture"
+        ],
+        "dominant_topic": "neural network_neural_network",
+        "processing_time": 2.543835
+      },
+      {
+        "title": "Climate Change Accelerating: Global Temperatures Rise Beyond Critical Thresholds",
+        "keywords": [
+          "climate",
+          "change",
+          "accelerating",
+          "global",
+          "temperature"
+        ],
+        "dominant_topic": "climate_environmental_climate change",
+        "processing_time": 0.005722
+      },
+      {
+        "title": "Personalized Medicine Revolution: Genomic Analysis Enables Targeted Cancer Treatments",
+        "keywords": [
+          "personalized",
+          "medicine",
+          "revolution",
+          "genomic",
+          "analysis"
+        ],
+        "dominant_topic": "genetic_medicine_medical",
+        "processing_time": 0.00517
+      },
+      {
+        "title": "Cryptocurrency Market Volatility Sparks Regulatory Discussions on Digital Asset Frameworks",
+        "keywords": [
+          "cryptocurrency",
+          "market",
+          "volatility",
+          "spark",
+          "regulatory"
+        ],
+        "dominant_topic": "digital_cryptocurrency_regulatory",
+        "processing_time": 0.004347
+      },
+      {
+        "title": "Mars Exploration Mission Discovers Evidence of Ancient Water Systems on Red Planet",
+        "keywords": [
+          "mar",
+          "exploration",
+          "mission",
+          "discovers",
+          "evidence"
+        ],
+        "dominant_topic": "mars_space_missions",
+        "processing_time": 0.00933
+      },
+      {
+        "title": "Digital Learning Transformation: AI-Powered Educational Platforms Reshape Student Experience",
+        "keywords": [
+          "learning",
+          "transformation",
+          "aipowered",
+          "educational",
+          "platform"
+        ],
+        "dominant_topic": "learning_educational_student",
+        "processing_time": 0.006282
+      }
+    ]
+  },
+  "topic_modeling_summary": {
+    "topics": [
+      {
+        "topic_id": 0,
+        "topic_name": "genetic_medicine_medical",
+        "topic_words": [
+          "genetic",
+          "medicine",
+          "medical",
+          "personalized",
+          "targeted",
+          "cancer",
+          "developing",
+          "sequencing",
+          "genomic",
+          "cancer treatments"
+        ],
+        "word_scores": [
+          2.4840608434895572,
+          2.0328351678796346,
+          2.021834498312449,
+          1.9315702090976072,
+          1.8989417785340819,
+          1.7291928055225227,
+          1.6151186075231179,
+          1.558642982093288,
+          1.548900985232774,
+          1.5418671635076475
+        ]
+      },
+      {
+        "topic_id": 1,
+        "topic_name": "climate_environmental_climate change",
+        "topic_words": [
+          "climate",
+          "environmental",
+          "climate change",
+          "levels",
+          "international",
+          "global",
+          "scientists",
+          "critical thresholds",
+          "change",
+          "international climate"
+        ],
+        "word_scores": [
+          3.133302473568338,
+          1.8444608700907388,
+          1.5007237430986646,
+          1.4793676036534356,
+          1.474161341059866,
+          1.4650894728999044,
+          1.4050242275906517,
+          1.3907897919654397,
+          1.3758941940241107,
+          1.3683691061752128
+        ]
+      },
+      {
+        "topic_id": 2,
+        "topic_name": "healthcare providers_genomic analysis_environmental data",
+        "topic_words": [
+          "healthcare providers",
+          "genomic analysis",
+          "environmental data",
+          "neural",
+          "scientific research",
+          "tasks",
+          "highs",
+          "experience significant",
+          "astrobiology research",
+          "digital"
+        ],
+        "word_scores": [
+          0.7782251115075743,
+          0.7322180577863759,
+          0.7282092283502376,
+          0.7268161182715392,
+          0.7205821807472378,
+          0.7193835552012415,
+          0.7154554420335827,
+          0.7151892387217472,
+          0.7140461219476768,
+          0.713249897871099
+        ]
+      },
+      {
+        "topic_id": 3,
+        "topic_name": "digital_cryptocurrency_regulatory",
+        "topic_words": [
+          "digital",
+          "cryptocurrency",
+          "regulatory",
+          "financial",
+          "frameworks",
+          "technology",
+          "market volatility",
+          "volatility",
+          "digital asset",
+          "asset"
+        ],
+        "word_scores": [
+          2.407498872448785,
+          2.1257704738806162,
+          1.975072089137682,
+          1.89384443312308,
+          1.8929218583770215,
+          1.8495285706957187,
+          1.582480040784475,
+          1.489370084664418,
+          1.481209009398897,
+          1.4325512945011276
+        ]
+      },
+      {
+        "topic_id": 4,
+        "topic_name": "literacy essential_comprehensive frameworks_accelerating",
+        "topic_words": [
+          "literacy essential",
+          "comprehensive frameworks",
+          "accelerating",
+          "portfolio",
+          "mission discovers",
+          "biomarkers",
+          "involves novel",
+          "distance education",
+          "riverbeds",
+          "investor confidence"
+        ],
+        "word_scores": [
+          0.7943667333906527,
+          0.7452654743821235,
+          0.7432239954368044,
+          0.7408431623780474,
+          0.7380468003583172,
+          0.7362017246362265,
+          0.7306647264436726,
+          0.7273823160707623,
+          0.7244858588064955,
+          0.723786076489304
+        ]
+      },
+      {
+        "topic_id": 5,
+        "topic_name": "feasible_adjust_companies",
+        "topic_words": [
+          "feasible",
+          "adjust",
+          "companies",
+          "increasingly feasible",
+          "asset frameworks",
+          "dioxide",
+          "environment",
+          "fossil fuels",
+          "history",
+          "thresholds"
+        ],
+        "word_scores": [
+          0.7629881618445813,
+          0.7534016692617618,
+          0.7518170168013747,
+          0.7439546236729884,
+          0.7408136329828064,
+          0.7395302971439867,
+          0.7393772118653473,
+          0.7388358912525512,
+          0.7376055888628769,
+          0.7349149907808838
+        ]
+      },
+      {
+        "topic_id": 6,
+        "topic_name": "systems_treatments tailored_artificial",
+        "topic_words": [
+          "systems",
+          "treatments tailored",
+          "artificial",
+          "scientists analyzing",
+          "shows",
+          "environment planetary",
+          "digital",
+          "incorporating cryptocurrency",
+          "transformer architectures",
+          "digital literacy"
+        ],
+        "word_scores": [
+          0.7477683073271417,
+          0.7466380701327153,
+          0.7445231718824414,
+          0.7320732812474516,
+          0.7251844446325808,
+          0.7213017881856655,
+          0.7196206642024499,
+          0.7151592012872013,
+          0.7149609535498065,
+          0.7070200639606619
+        ]
+      },
+      {
+        "topic_id": 7,
+        "topic_name": "learning_educational_student",
+        "topic_words": [
+          "learning",
+          "educational",
+          "student",
+          "platforms",
+          "methods",
+          "reality",
+          "education",
+          "aipowered",
+          "systems",
+          "digital"
+        ],
+        "word_scores": [
+          2.991465726617098,
+          2.9004488312008596,
+          1.9958958768790076,
+          1.5993167405697084,
+          1.5526214677249648,
+          1.517154084259521,
+          1.5111616375495014,
+          1.4572395587511737,
+          1.4538663494789728,
+          1.3995847622926392
+        ]
+      },
+      {
+        "topic_id": 8,
+        "topic_name": "mars_space_missions",
+        "topic_words": [
+          "mars",
+          "space",
+          "missions",
+          "water",
+          "systems",
+          "water systems",
+          "ancient",
+          "evidence ancient",
+          "evidence",
+          "exploration"
+        ],
+        "word_scores": [
+          2.4512427253354714,
+          2.32181851610354,
+          2.0439565223970977,
+          1.9791987962435407,
+          1.9041438775918982,
+          1.5949148106417375,
+          1.568831816731457,
+          1.5255912304896753,
+          1.4735175921454036,
+          1.4663954959781815
+        ]
+      },
+      {
+        "topic_id": 9,
+        "topic_name": "neural network_neural_network",
+        "topic_words": [
+          "neural network",
+          "neural",
+          "network",
+          "new",
+          "humanlevel",
+          "tasks",
+          "humanlevel performance",
+          "architecture",
+          "advancement",
+          "breakthrough"
+        ],
+        "word_scores": [
+          1.9506870065353623,
+          1.8691159136318327,
+          1.8610619281619074,
+          1.544302790739204,
+          1.534832973596044,
+          1.5288077266826339,
+          1.5251701159784026,
+          1.4965545627210433,
+          1.4895747314677144,
+          1.4791040491011531
+        ]
+      }
+    ],
+    "model_fitted": true,
+    "n_texts": 6,
+    "perplexity": 680623.7133631442
+  },
+  "quality_metrics": {
+    "articles_with_keywords": 6,
+    "articles_with_topics": 6,
+    "avg_keywords_per_article": 10.0,
+    "avg_topics_per_article": 1.0,
+    "avg_processing_time": 0.005870166666666667,
+    "keyword_diversity": 60,
+    "topic_coverage": 6
+  },
+  "sample_articles_count": 6
+}

@@ -32,11 +32,18 @@ CREATE TABLE news_articles (
     author VARCHAR(255),
     category VARCHAR(100),
     
-    -- NLP analysis results (for future use)
+    -- NLP analysis results
     sentiment_score DECIMAL(3,2),
     sentiment_label VARCHAR(20),
     entities SUPER, -- JSON array of extracted entities
-    keywords SUPER  -- JSON array of keywords
+    
+    -- Keyword extraction and topic modeling (Issue #29)
+    keywords SUPER,  -- JSON array of keywords with scores
+    topics SUPER,    -- JSON array of topics with probabilities
+    dominant_topic SUPER, -- JSON object of the most probable topic
+    extraction_method VARCHAR(50), -- Method used for extraction (tfidf_lda, bert, etc.)
+    extraction_processed_at TIMESTAMP, -- When extraction was performed
+    extraction_processing_time DECIMAL(10,3) -- Processing time in seconds
 )
 DISTSTYLE KEY
 COMPOUND SORTKEY (published_date, source_credibility, content_quality);

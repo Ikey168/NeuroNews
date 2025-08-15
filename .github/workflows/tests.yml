@@ -25,7 +25,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.x'
+        python-version: '3.11'  # Use 3.11 for compatibility with ML packages like blis
         cache: 'pip'
     
     - name: Install system dependencies
@@ -36,13 +36,32 @@ jobs:
           python3-setuptools \
           build-essential \
           gcc \
+          gfortran \
+          libopenblas-dev \
+          liblapack-dev \
+          pkg-config \
           jq \
           netcat-openbsd
 
     - name: Install Python dependencies
+      timeout-minutes: 15
       run: |
         python -m pip install --upgrade pip wheel setuptools
-        python -m pip install -r requirements.txt
+        # Install numpy first to avoid compilation issues
+        pip install numpy
+        # Install pre-compiled packages when available to avoid compilation issues
+        pip install --only-binary=scipy,scikit-learn scipy scikit-learn
+        pip install --only-binary=spacy,blis,murmurhash,cymem,preshed,thinc spacy
+        # Install PyTorch with pre-compiled binaries (CPU only for CI)
+        pip install --only-binary=torch torch --index-url https://download.pytorch.org/whl/cpu
+        pip install --only-binary=transformers transformers
+        # Install remaining dependencies with timeout protection and binary preference
+        pip install --prefer-binary -r requirements.txt
+
+    - name: Download NLTK data and spaCy models
+      run: |
+        python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords'); nltk.download('averaged_perceptron_tagger')"
+        python -m spacy download en_core_web_sm || echo "spaCy model download failed, tests will use fallback"
 
     - name: Verify Dependencies
       run: |

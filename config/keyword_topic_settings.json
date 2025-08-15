@@ -1,0 +1,50 @@
+{
+  "keyword_extraction": {
+    "tfidf_max_features": 1000,
+    "tfidf_ngram_range": [1, 3],
+    "keywords_per_article": 15,
+    "min_keyword_length": 3,
+    "max_keyword_length": 25
+  },
+  "topic_modeling": {
+    "lda_n_topics": 15,
+    "lda_max_features": 1000,
+    "min_topic_probability": 0.1,
+    "max_iter": 10,
+    "learning_method": "online",
+    "learning_offset": 50.0,
+    "random_state": 42
+  },
+  "preprocessing": {
+    "remove_html": true,
+    "remove_urls": true,
+    "remove_emails": true,
+    "min_sentence_length": 3,
+    "filter_pos_tags": ["NN", "NNS", "NNP", "NNPS", "JJ", "JJR", "JJS", "VB", "VBD", "VBG", "VBN", "VBP", "VBZ"],
+    "additional_stopwords": [
+      "said", "says", "according", "report", "reports", "news",
+      "article", "story", "post", "published", "updated", "source",
+      "sources", "reporter", "correspondent", "editorial", "editor",
+      "website", "online", "digital", "print", "media", "press"
+    ]
+  },
+  "database": {
+    "store_keywords": true,
+    "store_topics": true,
+    "batch_size": 100,
+    "update_existing": false
+  },
+  "api": {
+    "enable_topic_search": true,
+    "enable_keyword_search": true,
+    "max_results_per_page": 50,
+    "default_topic_threshold": 0.2
+  },
+  "performance": {
+    "parallel_processing": true,
+    "max_workers": 4,
+    "chunk_size": 10,
+    "cache_results": true,
+    "cache_ttl": 3600
+  }
+}
