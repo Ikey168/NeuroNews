@@ -48,8 +48,9 @@ jobs:
         python -m pip install --upgrade pip wheel setuptools
         # Install numpy first to avoid compilation issues
         pip install numpy
-        # Install pre-compiled packages when available
+        # Install pre-compiled packages when available to avoid compilation issues
         pip install --only-binary=scipy,scikit-learn scipy scikit-learn
+        pip install --only-binary=spacy,blis,murmurhash,cymem,preshed,thinc spacy
         python -m pip install -r requirements.txt
 
     - name: Download NLTK data and spaCy models
