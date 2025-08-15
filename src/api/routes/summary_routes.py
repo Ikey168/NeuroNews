@@ -26,13 +26,13 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, validator
 from starlette.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_404_NOT_FOUND
 
-from ..nlp.ai_summarizer import (
+from src.nlp.ai_summarizer import (
     AIArticleSummarizer, 
     SummaryLength, 
     SummarizationModel,
     Summary
 )
-from ..nlp.summary_database import SummaryDatabase, SummaryRecord, get_redshift_connection_params
+from src.nlp.summary_database import SummaryDatabase, SummaryRecord, get_redshift_connection_params
 
 logger = logging.getLogger(__name__)
 

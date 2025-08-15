@@ -9,9 +9,9 @@ from src.api.routes import (
     news_routes, 
     summary_routes,
     sentiment_routes,
-    topic_routes,
     article_routes
 )
+# topic_routes requires pandas which may not be available
 
 app = FastAPI(
     title="NeuroNews API",
@@ -33,8 +33,8 @@ app.include_router(graph_routes.router)
 app.include_router(news_routes.router)
 app.include_router(summary_routes.router)
 app.include_router(sentiment_routes.router)
-app.include_router(topic_routes.router)
 app.include_router(article_routes.router)
+# app.include_router(topic_routes.router)  # Requires pandas
 
 @app.get("/")
 async def root():
