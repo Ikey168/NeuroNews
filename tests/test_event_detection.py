@@ -14,8 +14,19 @@ import json
 import pytest
 import numpy as np
 from datetime import datetime, timedelta
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import Mock, patch, AsyncMock, MagicMock
 from typing import Dict, List, Any
+
+# Mock the expensive imports before importing our modules
+with patch.dict('sys.modules', {
+    'sentence_transformers': MagicMock(),
+    'sentence_transformers.SentenceTransformer': MagicMock(),
+    'sklearn': MagicMock(),
+    'sklearn.cluster': MagicMock(),
+    'sklearn.metrics': MagicMock(),
+    'psycopg2': MagicMock(),
+}):
+    pass
 
 # Test data
 SAMPLE_ARTICLES = [
@@ -62,7 +73,7 @@ class TestArticleEmbedder:
     @pytest.fixture
     def embedder(self):
         """Create embedder instance for testing."""
-        with patch('src.nlp.article_embedder.SentenceTransformer') as mock_transformer:
+        with patch('sentence_transformers.SentenceTransformer') as mock_transformer:
             mock_model = Mock()
             mock_model.get_sentence_embedding_dimension.return_value = 384
             mock_model.encode.return_value = SAMPLE_EMBEDDINGS[0]
@@ -520,9 +531,9 @@ class TestDatabaseIntegration:
     @pytest.mark.asyncio
     async def test_embedding_storage_preparation(self):
         """Test embedding data preparation for storage."""
-        from src.nlp.article_embedder import ArticleEmbedder
-        
-        with patch('src.nlp.article_embedder.SentenceTransformer'):
+        with patch('sentence_transformers.SentenceTransformer'):
+            from src.nlp.article_embedder import ArticleEmbedder
+            
             embedder = ArticleEmbedder(model_name='test-model')
             
             # Test data preparation
@@ -599,9 +610,9 @@ class TestPerformanceAndQuality:
     
     def test_embedding_quality_assessment(self):
         """Test embedding quality metrics."""
-        from src.nlp.article_embedder import ArticleEmbedder
-        
-        with patch('src.nlp.article_embedder.SentenceTransformer'):
+        with patch('sentence_transformers.SentenceTransformer'):
+            from src.nlp.article_embedder import ArticleEmbedder
+            
             embedder = ArticleEmbedder('test-model')
             
             # Test various embedding qualities
@@ -624,9 +635,9 @@ class TestPerformanceAndQuality:
     
     def test_processing_time_tracking(self):
         """Test processing time measurement."""
-        from src.nlp.article_embedder import ArticleEmbedder
-        
-        with patch('src.nlp.article_embedder.SentenceTransformer'):
+        with patch('sentence_transformers.SentenceTransformer'):
+            from src.nlp.article_embedder import ArticleEmbedder
+            
             embedder = ArticleEmbedder('test-model')
             stats = embedder.get_statistics()
             
@@ -664,9 +675,9 @@ class TestErrorHandling:
     
     def test_malformed_text_preprocessing(self):
         """Test preprocessing of malformed or empty text."""
-        from src.nlp.article_embedder import ArticleEmbedder
-        
-        with patch('src.nlp.article_embedder.SentenceTransformer'):
+        with patch('sentence_transformers.SentenceTransformer'):
+            from src.nlp.article_embedder import ArticleEmbedder
+            
             embedder = ArticleEmbedder('test-model')
             
             # Test various edge cases
@@ -681,9 +692,9 @@ class TestErrorHandling:
     
     def test_database_connection_failure_handling(self):
         """Test handling of database connection failures."""
-        from src.nlp.article_embedder import ArticleEmbedder
-        
-        with patch('src.nlp.article_embedder.SentenceTransformer'):
+        with patch('sentence_transformers.SentenceTransformer'):
+            from src.nlp.article_embedder import ArticleEmbedder
+            
             embedder = ArticleEmbedder(
                 'test-model',
                 conn_params={'host': 'invalid-host'}
@@ -700,7 +711,7 @@ async def test_full_pipeline_integration():
     """Test the complete event detection pipeline."""
     
     # Mock external dependencies
-    with patch('src.nlp.article_embedder.SentenceTransformer') as mock_transformer, \
+    with patch('sentence_transformers.SentenceTransformer') as mock_transformer, \
          patch('psycopg2.connect') as mock_db:
         
         # Setup mocks
