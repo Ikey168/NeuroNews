@@ -38,14 +38,47 @@ sentence_transformers_mock.SentenceTransformer = MockSentenceTransformer
 sklearn_mock = MagicMock()
 sklearn_cluster_mock = MagicMock()
 sklearn_metrics_mock = MagicMock()
+sklearn_preprocessing_mock = MagicMock()
+
+# Setup sklearn submodule mocks with proper return values
+mock_kmeans = MagicMock()
+mock_dbscan = MagicMock()
+
+# Configure KMeans to return proper clustering results
+def mock_kmeans_fit_predict(X):
+    # Return labels for each input sample
+    return np.array([0, 1, 0, 1, 0, 1][:len(X)])
+
+def mock_dbscan_fit_predict(X):
+    # Return labels for each input sample
+    return np.array([0, 1, 0, 1, 0, 1][:len(X)])
+
+mock_kmeans.fit_predict = MagicMock(side_effect=mock_kmeans_fit_predict)
+mock_dbscan.fit_predict = MagicMock(side_effect=mock_dbscan_fit_predict)
+
+sklearn_cluster_mock.KMeans = MagicMock(return_value=mock_kmeans)
+sklearn_cluster_mock.DBSCAN = MagicMock(return_value=mock_dbscan)
+sklearn_metrics_mock.silhouette_score = MagicMock(return_value=0.5)
+sklearn_metrics_mock.calinski_harabasz_score = MagicMock(return_value=100.0)
+
+# Mock StandardScaler
+mock_scaler = MagicMock()
+mock_scaler.fit_transform = MagicMock(side_effect=lambda x: x)  # Return input unchanged
+sklearn_preprocessing_mock.StandardScaler = MagicMock(return_value=mock_scaler)
+
+# Set spec to avoid importlib.util issues
+sklearn_mock.__spec__ = MagicMock()
+sklearn_cluster_mock.__spec__ = MagicMock()
+sklearn_metrics_mock.__spec__ = MagicMock()
+sklearn_preprocessing_mock.__spec__ = MagicMock()
 
 # Mock the modules before any imports
 import sys
-sys.modules['sentence_transformers'] = sentence_transformers_mock
+
 sys.modules['sklearn'] = sklearn_mock
 sys.modules['sklearn.cluster'] = sklearn_cluster_mock
 sys.modules['sklearn.metrics'] = sklearn_metrics_mock
-sys.modules['psycopg2'] = MagicMock()
+sys.modules['sklearn.preprocessing'] = sklearn_preprocessing_mock
 
 # Test data
 SAMPLE_ARTICLES = [
@@ -89,11 +122,22 @@ SAMPLE_EMBEDDINGS = [
 class TestArticleEmbedder:
     """Test the ArticleEmbedder class."""
     
-    @pytest.fixture  
+    @pytest.fixture
     def embedder(self):
         """Create embedder instance for testing."""
-        # Patch the SentenceTransformer at import time
-        with patch('src.nlp.article_embedder.SentenceTransformer', MockSentenceTransformer):
+        # Patch at the module level where it's imported
+        with patch('src.nlp.article_embedder.SentenceTransformer', MockSentenceTransformer), \
+             patch('psycopg2.connect') as mock_connect:
+            
+            # Setup database mocking
+            mock_conn = MagicMock()
+            mock_cursor = MagicMock()
+            mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
+            mock_conn.cursor.return_value.__exit__ = Mock(return_value=None)
+            mock_conn.__enter__ = Mock(return_value=mock_conn)
+            mock_conn.__exit__ = Mock(return_value=None)
+            mock_connect.return_value = mock_conn
+            
             from src.nlp.article_embedder import ArticleEmbedder
             
             embedder = ArticleEmbedder(
@@ -102,8 +146,8 @@ class TestArticleEmbedder:
                 max_length=512,
                 batch_size=2
             )
-            return embedder
-    
+            yield embedder
+
     def test_embedder_initialization(self, embedder):
         """Test embedder initialization."""
         assert embedder.model_name == 'test-model'

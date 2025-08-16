@@ -117,16 +117,16 @@ class ArticleEmbedder:
             full_text = re.sub(r'\S+@\S+', '', full_text)
             
             # Remove special characters but keep basic punctuation
-            full_text = re.sub(r'[^\w\s.,!?;:()\-\'\"]+', ' ', full_text)
+            full_text = re.sub(r'[^\w\s.,!?;:()\-\'"]+', ' ', full_text)
             
             # Remove excessive punctuation
             full_text = re.sub(r'[.]{2,}', '.', full_text)
             full_text = re.sub(r'[!]{2,}', '!', full_text)
             full_text = re.sub(r'[?]{2,}', '?', full_text)
             
-            # Normalize quotes
-            full_text = re.sub(r'[""]', '"', full_text)
-            full_text = re.sub(r'['']', "'", full_text)
+            # Normalize quotes - using escape sequences for special quotes
+            full_text = re.sub(r'[\u201c\u201d]', '"', full_text)  # Unicode smart quotes
+            full_text = re.sub(r'[\u2018\u2019]', "'", full_text)  # Unicode smart apostrophes
             
             # Remove leading/trailing whitespace
             full_text = full_text.strip()
