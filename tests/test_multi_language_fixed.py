@@ -6,13 +6,28 @@ Tests language detection, translation, quality checking, and pipeline integratio
 import pytest
 import asyncio
 import json
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import Mock, patch, AsyncMock, MagicMock
 from datetime import datetime
 
-# Import our multi-language components
-from src.nlp.language_processor import LanguageDetector, AWSTranslateService, TranslationQualityChecker
-from src.nlp.multi_language_processor import MultiLanguageArticleProcessor
-from src.scraper.pipelines.multi_language_pipeline import MultiLanguagePipeline, LanguageFilterPipeline
+# Mock psycopg2 before any imports that might use it
+import sys
+sys.modules['psycopg2'] = MagicMock()
+sys.modules['psycopg2.connect'] = MagicMock()
+
+# Mock database connection at module level
+mock_db_connection = MagicMock()
+mock_cursor = MagicMock()
+mock_db_connection.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
+mock_db_connection.cursor.return_value.__exit__ = Mock(return_value=None)
+mock_db_connection.__enter__ = Mock(return_value=mock_db_connection)
+mock_db_connection.__exit__ = Mock(return_value=None)
+
+# Patch psycopg2.connect globally for this module
+with patch('psycopg2.connect', return_value=mock_db_connection):
+    # Import our multi-language components
+    from src.nlp.language_processor import LanguageDetector, AWSTranslateService, TranslationQualityChecker
+    from src.nlp.multi_language_processor import MultiLanguageArticleProcessor
+    from src.scraper.pipelines.multi_language_pipeline import MultiLanguagePipeline, LanguageFilterPipeline
 
 
 class TestLanguageDetector:
@@ -199,7 +214,7 @@ class TestMultiLanguageArticleProcessor:
     def setup_method(self):
         with patch('psycopg2.connect'), patch('src.nlp.sentiment_analysis.SentimentAnalyzer'):
             self.processor = MultiLanguageArticleProcessor(
-                redshift_host='test_host',
+                redshift_host='localhost',
                 redshift_port=5439,
                 redshift_database='test_db',
                 redshift_user='test_user',
@@ -259,7 +274,7 @@ class TestMultiLanguageArticleProcessor:
         with patch('src.nlp.sentiment_analysis.SentimentAnalyzer') as mock_analyzer:
             mock_analyzer.return_value = Mock()
             processor = MultiLanguageArticleProcessor(
-                redshift_host='test_host',
+                redshift_host='localhost',
                 redshift_port=5439,
                 redshift_database='test_db',
                 redshift_user='test_user',
@@ -303,7 +318,7 @@ class TestMultiLanguagePipeline:
             'MULTI_LANGUAGE_ENABLED': True,
             'MULTI_LANGUAGE_TARGET_LANGUAGE': 'en',
             'MULTI_LANGUAGE_QUALITY_THRESHOLD': 0.7,
-            'REDSHIFT_HOST': 'test_host',
+            'REDSHIFT_HOST': 'localhost',
             'REDSHIFT_PORT': 5439,
             'REDSHIFT_DATABASE': 'test_db',
             'REDSHIFT_USER': 'test_user',
@@ -313,7 +328,7 @@ class TestMultiLanguagePipeline:
         with patch('psycopg2.connect'), patch('src.nlp.sentiment_analysis.SentimentAnalyzer') as mock_analyzer:
             mock_analyzer.return_value = Mock()
             self.pipeline = MultiLanguagePipeline(
-                redshift_host='test_host',
+                redshift_host='localhost',
                 redshift_port=5439,
                 redshift_database='test_db',
                 redshift_user='test_user',
@@ -378,7 +393,7 @@ class TestMultiLanguagePipeline:
         spider = Mock()
         spider.settings = {
             'MULTI_LANGUAGE_ENABLED': False,
-            'REDSHIFT_HOST': 'test_host',
+            'REDSHIFT_HOST': 'localhost',
             'REDSHIFT_PORT': 5439,
             'REDSHIFT_DATABASE': 'test_db',
             'REDSHIFT_USER': 'test_user',
@@ -468,7 +483,7 @@ class TestIntegrationWorkflow:
             mock_analyzer.return_value = Mock()
             
             processor = MultiLanguageArticleProcessor(
-                redshift_host='test_host',
+                redshift_host='localhost',
                 redshift_port=5439,
                 redshift_database='test_db',
                 redshift_user='test_user',
@@ -498,7 +513,7 @@ class TestIntegrationWorkflow:
             mock_analyzer.return_value = Mock()
             
             processor = MultiLanguageArticleProcessor(
-                redshift_host='test_host',
+                redshift_host='localhost',
                 redshift_port=5439,
                 redshift_database='test_db',
                 redshift_user='test_user',
