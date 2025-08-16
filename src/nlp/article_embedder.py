@@ -110,8 +110,8 @@ class ArticleEmbedder:
             # Remove excessive whitespace
             full_text = re.sub(r'\s+', ' ', full_text)
             
-            # Remove URLs
-            full_text = re.sub(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', '', full_text)
+            # Remove URLs (simplified regex)
+            full_text = re.sub(r'https?://\S+', '', full_text)
             
             # Remove email addresses
             full_text = re.sub(r'\S+@\S+', '', full_text)

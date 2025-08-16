@@ -223,7 +223,9 @@ class TestMultiLanguageArticleProcessor:
     """Test multi-language article processing."""
     
     def setup_method(self):
-        with patch('psycopg2.connect'), patch('src.nlp.sentiment_analysis.SentimentAnalyzer'):
+        with patch('psycopg2.connect'), \
+             patch('src.nlp.sentiment_analysis.SentimentAnalyzer'), \
+             patch.object(MultiLanguageArticleProcessor, '_initialize_database'):
             self.processor = MultiLanguageArticleProcessor(
                 redshift_host='localhost',
                 redshift_port=5439,
@@ -336,7 +338,9 @@ class TestMultiLanguagePipeline:
             'REDSHIFT_PASSWORD': 'test_pass'
         }
         
-        with patch('psycopg2.connect'), patch('src.nlp.sentiment_analysis.SentimentAnalyzer') as mock_analyzer:
+        with patch('psycopg2.connect'), \
+             patch('src.nlp.sentiment_analysis.SentimentAnalyzer') as mock_analyzer, \
+             patch.object(MultiLanguageArticleProcessor, '_initialize_database'):
             mock_analyzer.return_value = Mock()
             self.pipeline = MultiLanguagePipeline(
                 redshift_host='localhost',
@@ -490,7 +494,8 @@ class TestIntegrationWorkflow:
         mock_db.return_value = mock_conn
         
         # Create processor
-        with patch('src.nlp.sentiment_analysis.SentimentAnalyzer') as mock_analyzer:
+        with patch('src.nlp.sentiment_analysis.SentimentAnalyzer') as mock_analyzer, \
+             patch.object(MultiLanguageArticleProcessor, '_initialize_database'):
             mock_analyzer.return_value = Mock()
             
             processor = MultiLanguageArticleProcessor(
@@ -520,7 +525,8 @@ class TestIntegrationWorkflow:
     def test_error_handling_workflow(self):
         """Test error handling in processing workflow."""
         with patch('psycopg2.connect'), \
-             patch('src.nlp.sentiment_analysis.SentimentAnalyzer') as mock_analyzer:
+             patch('src.nlp.sentiment_analysis.SentimentAnalyzer') as mock_analyzer, \
+             patch.object(MultiLanguageArticleProcessor, '_initialize_database'):
             mock_analyzer.return_value = Mock()
             
             processor = MultiLanguageArticleProcessor(

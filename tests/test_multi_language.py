@@ -11,23 +11,34 @@ from datetime import datetime
 
 # Mock psycopg2 before any imports that might use it
 import sys
-sys.modules['psycopg2'] = MagicMock()
-sys.modules['psycopg2.connect'] = MagicMock()
+from unittest.mock import Mock, patch, AsyncMock, MagicMock
 
-# Mock database connection at module level
-mock_db_connection = MagicMock()
+# Create a comprehensive mock for psycopg2
+mock_psycopg2 = MagicMock()
+mock_connection = MagicMock()
 mock_cursor = MagicMock()
-mock_db_connection.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
-mock_db_connection.cursor.return_value.__exit__ = Mock(return_value=None)
-mock_db_connection.__enter__ = Mock(return_value=mock_db_connection)
-mock_db_connection.__exit__ = Mock(return_value=None)
 
-# Patch psycopg2.connect globally for this module
-with patch('psycopg2.connect', return_value=mock_db_connection):
-    # Import our multi-language components
-    from src.nlp.language_processor import LanguageDetector, AWSTranslateService, TranslationQualityChecker
-    from src.nlp.multi_language_processor import MultiLanguageArticleProcessor
-    from src.scraper.pipelines.multi_language_pipeline import MultiLanguagePipeline, LanguageFilterPipeline
+# Setup cursor context manager
+mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+mock_cursor.__exit__ = MagicMock(return_value=None)
+
+# Setup connection context manager and cursor method
+mock_connection.cursor.return_value = mock_cursor
+mock_connection.__enter__ = MagicMock(return_value=mock_connection)
+mock_connection.__exit__ = MagicMock(return_value=None)
+
+# Setup connect function
+mock_psycopg2.connect = MagicMock(return_value=mock_connection)
+mock_psycopg2.extras = MagicMock()
+
+# Replace sys.modules
+sys.modules['psycopg2'] = mock_psycopg2
+sys.modules['psycopg2.extras'] = mock_psycopg2.extras
+
+# Import our multi-language components
+from src.nlp.language_processor import LanguageDetector, AWSTranslateService, TranslationQualityChecker
+from src.nlp.multi_language_processor import MultiLanguageArticleProcessor
+from src.scraper.pipelines.multi_language_pipeline import MultiLanguagePipeline, LanguageFilterPipeline
 
 
 class TestLanguageDetector:
@@ -225,16 +236,9 @@ class TestMultiLanguageArticleProcessor:
     """Test multi-language article processing."""
     
     def setup_method(self):
-        with patch('psycopg2.connect') as mock_connect, \
+        # Patch the _initialize_database method to prevent actual database connections
+        with patch.object(MultiLanguageArticleProcessor, '_initialize_database'), \
              patch('src.nlp.sentiment_analysis.SentimentAnalyzer'):
-            # Setup comprehensive database mocking
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
-            mock_conn.cursor.return_value.__exit__ = Mock(return_value=None)
-            mock_conn.__enter__ = Mock(return_value=mock_conn)
-            mock_conn.__exit__ = Mock(return_value=None)
-            mock_connect.return_value = mock_conn
             
             self.processor = MultiLanguageArticleProcessor(
                 redshift_host='localhost',  # Use localhost instead of test_host
@@ -343,16 +347,8 @@ class TestMultiLanguagePipeline:
     """Test Scrapy pipeline integration."""
     
     def setup_method(self):
-        with patch('psycopg2.connect') as mock_connect:
-            # Setup comprehensive database mocking
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
-            mock_conn.cursor.return_value.__exit__ = Mock(return_value=None)
-            mock_conn.__enter__ = Mock(return_value=mock_conn)
-            mock_conn.__exit__ = Mock(return_value=None)
-            mock_connect.return_value = mock_conn
-            
+        # Patch the _initialize_database method to prevent actual database connections
+        with patch.object(MultiLanguageArticleProcessor, '_initialize_database'):
             self.spider = Mock()
             self.spider.settings = {
                 'MULTI_LANGUAGE_ENABLED': True,
@@ -549,7 +545,8 @@ class TestIntegrationWorkflow:
     def test_error_handling_workflow(self):
         """Test error handling in processing workflow."""
         with patch('psycopg2.connect') as mock_connect, \
-             patch('src.nlp.sentiment_analysis.SentimentAnalyzer') as mock_analyzer_class:
+             patch('src.nlp.sentiment_analysis.SentimentAnalyzer') as mock_analyzer_class, \
+             patch.object(MultiLanguageArticleProcessor, '_initialize_database'):
             
             mock_analyzer = Mock()
             mock_analyzer_class.return_value = mock_analyzer
