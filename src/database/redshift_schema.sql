@@ -151,3 +151,195 @@ WHERE
     AND a.source_credibility IN ('trusted', 'reliable')
     AND a.content_quality IN ('high', 'medium')
 ORDER BY s.created_at DESC;
+
+-- Event Clusters Table (Issue #31)
+DROP TABLE IF EXISTS event_clusters CASCADE;
+
+CREATE TABLE event_clusters (
+    -- Primary identifiers
+    id BIGINT IDENTITY(1,1) PRIMARY KEY,
+    cluster_id VARCHAR(255) UNIQUE NOT NULL, -- e.g., 'tech_event_20250815_001'
+    
+    -- Cluster metadata
+    cluster_name VARCHAR(500), -- Descriptive name for the event
+    event_type VARCHAR(100), -- 'breaking', 'trending', 'developing', 'resolved'
+    category VARCHAR(100), -- 'Technology', 'Politics', 'Health', etc.
+    
+    -- Clustering parameters
+    embedding_model VARCHAR(255) NOT NULL, -- e.g., 'all-MiniLM-L6-v2'
+    clustering_method VARCHAR(100) DEFAULT 'kmeans', -- 'kmeans', 'dbscan', etc.
+    cluster_size INTEGER, -- Number of articles in cluster
+    
+    -- Quality metrics
+    silhouette_score DECIMAL(5,4), -- Clustering quality score
+    cohesion_score DECIMAL(5,4), -- How similar articles are within cluster
+    separation_score DECIMAL(5,4), -- How different cluster is from others
+    
+    -- Event detection metadata
+    first_article_date TIMESTAMP, -- When first article in cluster was published
+    last_article_date TIMESTAMP, -- When last article in cluster was published
+    peak_activity_date TIMESTAMP, -- When most articles were published
+    event_duration_hours DECIMAL(8,2), -- Duration of event in hours
+    
+    -- Geographic and source information
+    primary_sources SUPER, -- JSON array of main sources covering the event
+    geographic_focus SUPER, -- JSON array of locations mentioned
+    key_entities SUPER, -- JSON array of main entities (people, orgs) involved
+    
+    -- Event significance
+    trending_score DECIMAL(8,4), -- How trending/viral the event is
+    impact_score DECIMAL(5,2), -- Estimated impact/importance (1-100)
+    velocity_score DECIMAL(8,4), -- How fast the story is developing
+    
+    -- Status and lifecycle
+    status VARCHAR(50) DEFAULT 'active', -- 'active', 'merged', 'split', 'archived'
+    merged_into_cluster_id VARCHAR(255), -- If merged with another cluster
+    
+    -- Timestamps
+    created_at TIMESTAMP SORTKEY DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+DISTSTYLE EVEN
+COMPOUND SORTKEY (created_at, category, event_type);
+
+-- Article Cluster Assignments Table (Issue #31)
+DROP TABLE IF EXISTS article_cluster_assignments CASCADE;
+
+CREATE TABLE article_cluster_assignments (
+    -- Primary identifiers
+    id BIGINT IDENTITY(1,1) PRIMARY KEY,
+    article_id VARCHAR(255) DISTKEY REFERENCES news_articles(id),
+    cluster_id VARCHAR(255) REFERENCES event_clusters(cluster_id),
+    
+    -- Assignment metadata
+    assignment_confidence DECIMAL(5,4), -- How confident the clustering is
+    distance_to_centroid DECIMAL(10,6), -- Distance from cluster center
+    is_cluster_representative BOOLEAN DEFAULT FALSE, -- Is this a key article for the cluster?
+    
+    -- Article contribution to cluster
+    contribution_score DECIMAL(5,4), -- How much this article contributes to cluster definition
+    novelty_score DECIMAL(5,4), -- How novel/unique this article is within cluster
+    
+    -- Processing metadata
+    embedding_vector SUPER, -- JSON array of the article's embedding vector (optional)
+    processing_method VARCHAR(100), -- Method used for assignment
+    processing_version VARCHAR(50), -- Version of clustering algorithm
+    
+    -- Timestamps
+    assigned_at TIMESTAMP SORTKEY DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+DISTSTYLE KEY
+COMPOUND SORTKEY (assigned_at, cluster_id, assignment_confidence);
+
+-- Article Embeddings Table (Issue #31)
+DROP TABLE IF EXISTS article_embeddings CASCADE;
+
+CREATE TABLE article_embeddings (
+    -- Primary identifiers
+    id BIGINT IDENTITY(1,1) PRIMARY KEY,
+    article_id VARCHAR(255) DISTKEY REFERENCES news_articles(id),
+    
+    -- Embedding metadata
+    embedding_model VARCHAR(255) NOT NULL, -- e.g., 'all-MiniLM-L6-v2'
+    embedding_dimension INTEGER NOT NULL, -- Vector dimension (e.g., 384, 768)
+    embedding_vector SUPER NOT NULL, -- JSON array of embedding values
+    
+    -- Text processing metadata
+    text_preprocessed TEXT, -- Preprocessed text used for embedding
+    text_hash VARCHAR(64), -- Hash of preprocessed text for deduplication
+    tokens_count INTEGER, -- Number of tokens processed
+    
+    -- Quality metrics
+    embedding_quality_score DECIMAL(5,4), -- Quality assessment of embedding
+    processing_time DECIMAL(8,4), -- Time taken to generate embedding (seconds)
+    
+    -- Timestamps
+    created_at TIMESTAMP SORTKEY DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+DISTSTYLE KEY
+COMPOUND SORTKEY (created_at, embedding_model);
+
+-- Create indexes for performance optimization
+-- Redshift automatically manages indexes, but we define compound sort keys above
+
+-- Event Clusters Statistics View (Issue #31)
+CREATE OR REPLACE VIEW event_cluster_statistics AS
+SELECT 
+    ec.cluster_id,
+    ec.cluster_name,
+    ec.category,
+    ec.event_type,
+    ec.cluster_size,
+    ec.trending_score,
+    ec.impact_score,
+    ec.first_article_date,
+    ec.last_article_date,
+    ec.event_duration_hours,
+    COUNT(aca.article_id) as actual_article_count,
+    AVG(aca.assignment_confidence) as avg_confidence,
+    AVG(aca.distance_to_centroid) as avg_distance,
+    COUNT(CASE WHEN aca.is_cluster_representative THEN 1 END) as representative_articles,
+    STRING_AGG(DISTINCT a.source, ', ') as sources,
+    COUNT(DISTINCT a.source) as unique_sources
+FROM event_clusters ec
+LEFT JOIN article_cluster_assignments aca ON ec.cluster_id = aca.cluster_id
+LEFT JOIN news_articles a ON aca.article_id = a.id
+GROUP BY 
+    ec.cluster_id, ec.cluster_name, ec.category, ec.event_type,
+    ec.cluster_size, ec.trending_score, ec.impact_score,
+    ec.first_article_date, ec.last_article_date, ec.event_duration_hours
+ORDER BY ec.trending_score DESC, ec.created_at DESC;
+
+-- Active Breaking News View (Issue #31)
+CREATE OR REPLACE VIEW active_breaking_news AS
+SELECT 
+    ec.cluster_id,
+    ec.cluster_name,
+    ec.category,
+    ec.event_type,
+    ec.trending_score,
+    ec.impact_score,
+    ec.velocity_score,
+    ec.cluster_size,
+    ec.first_article_date,
+    ec.last_article_date,
+    ec.peak_activity_date,
+    ec.event_duration_hours,
+    STRING_AGG(DISTINCT a.title, ' | ') as sample_headlines,
+    COUNT(DISTINCT a.source) as source_count,
+    AVG(aca.assignment_confidence) as avg_confidence
+FROM event_clusters ec
+JOIN article_cluster_assignments aca ON ec.cluster_id = aca.cluster_id
+JOIN news_articles a ON aca.article_id = a.id
+WHERE 
+    ec.status = 'active'
+    AND ec.event_type IN ('breaking', 'trending', 'developing')
+    AND ec.last_article_date >= DATEADD(hour, -24, CURRENT_TIMESTAMP) -- Active in last 24 hours
+    AND a.source_credibility IN ('trusted', 'reliable')
+GROUP BY 
+    ec.cluster_id, ec.cluster_name, ec.category, ec.event_type,
+    ec.trending_score, ec.impact_score, ec.velocity_score, ec.cluster_size,
+    ec.first_article_date, ec.last_article_date, ec.peak_activity_date,
+    ec.event_duration_hours
+HAVING COUNT(aca.article_id) >= 3 -- At least 3 articles
+ORDER BY ec.trending_score DESC, ec.impact_score DESC;
+
+-- Trending Events by Category View (Issue #31)
+CREATE OR REPLACE VIEW trending_events_by_category AS
+SELECT 
+    ec.category,
+    COUNT(DISTINCT ec.cluster_id) as active_events,
+    SUM(ec.cluster_size) as total_articles,
+    AVG(ec.trending_score) as avg_trending_score,
+    AVG(ec.impact_score) as avg_impact_score,
+    MAX(ec.trending_score) as max_trending_score,
+    STRING_AGG(DISTINCT ec.cluster_name, ' | ') as top_events
+FROM event_clusters ec
+WHERE 
+    ec.status = 'active'
+    AND ec.last_article_date >= DATEADD(hour, -24, CURRENT_TIMESTAMP)
+GROUP BY ec.category
+ORDER BY avg_trending_score DESC, active_events DESC;
