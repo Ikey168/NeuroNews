@@ -18,21 +18,23 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Run containerization verification
+    - name: Update containerization verification for GitHub Actions
       run: |
         echo "🚀 Running NeuroNews Containerization Tests"
+        # Update docker-compose command for GitHub Actions compatibility
+        sed -i 's/docker-compose --version/docker compose version/g' verify_containerization.py
         python verify_containerization.py
 
     - name: Test minimal containerized services
       run: |
         echo "🔧 Testing minimal containerized services..."
-        docker-compose -f docker-compose.test-minimal.yml up --build --abort-on-container-exit --exit-code-from test-minimal
+        docker compose -f docker-compose.test-minimal.yml up --build --abort-on-container-exit --exit-code-from test-minimal
       timeout-minutes: 10
 
     - name: Clean up containers
       if: always()
       run: |
-        docker-compose -f docker-compose.test-minimal.yml down --volumes --remove-orphans
+        docker compose -f docker-compose.test-minimal.yml down --volumes --remove-orphans
         docker system prune -f
 
   # Build verification
@@ -78,18 +80,18 @@ jobs:
     - name: Start background services
       run: |
         echo "🗄️ Starting PostgreSQL and Redis services..."
-        docker-compose -f docker-compose.test-minimal.yml up -d test-postgres test-redis
+        docker compose -f docker-compose.test-minimal.yml up -d test-postgres test-redis
 
     - name: Wait for services to be ready
       run: |
         echo "⏳ Waiting for services to be ready..."
-        timeout 60 bash -c 'until docker-compose -f docker-compose.test-minimal.yml exec -T test-postgres pg_isready -U test_user; do sleep 2; done'
-        timeout 60 bash -c 'until docker-compose -f docker-compose.test-minimal.yml exec -T test-redis redis-cli ping; do sleep 2; done'
+        timeout 60 bash -c 'until docker compose -f docker-compose.test-minimal.yml exec -T test-postgres pg_isready -U test_user; do sleep 2; done'
+        timeout 60 bash -c 'until docker compose -f docker-compose.test-minimal.yml exec -T test-redis redis-cli ping; do sleep 2; done'
 
     - name: Run connectivity tests against live services
       run: |
         echo "🔍 Testing connectivity against live services..."
-        docker-compose -f docker-compose.test-minimal.yml run --rm test-minimal python test_connectivity.py
+        docker compose -f docker-compose.test-minimal.yml run --rm test-minimal python test_connectivity.py
       env:
         DB_HOST: test-postgres
         DB_PORT: 5432
@@ -106,7 +108,7 @@ jobs:
     - name: Clean up integration test
       if: always()
       run: |
-        docker-compose -f docker-compose.test-minimal.yml down --volumes --remove-orphans
+        docker compose -f docker-compose.test-minimal.yml down --volumes --remove-orphans
         docker system prune -f
 
   # Summary job

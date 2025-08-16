@@ -36,7 +36,7 @@ def main():
     
     tests = [
         ("docker --version", "Docker availability"),
-        ("docker-compose --version", "Docker Compose availability"),
+        ("docker compose version", "Docker Compose availability"),
         ("docker build -f Dockerfile.simple -t neuronews-test .", "Simple Docker build"),
         ("docker images | grep neuronews", "Docker image creation"),
         ("docker run --rm neuronews-test python -c 'import psycopg2; print(\"Dependencies OK\")'", "Container dependency check"),
