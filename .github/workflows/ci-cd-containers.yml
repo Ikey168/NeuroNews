@@ -28,15 +28,15 @@ jobs:
     - name: Run tests with Docker Compose
       run: |
         echo "Starting containerized test environment..."
-        docker-compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from test
+        docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from test
       
     - name: Copy test results
       if: always()
       run: |
         # Copy test results from container if it exists
-        if docker-compose -f docker-compose.test.yml ps -q test > /dev/null 2>&1; then
-          docker-compose -f docker-compose.test.yml cp test:/home/neuronews/app/htmlcov ./test-results/ || echo "No coverage report found"
-          docker-compose -f docker-compose.test.yml cp test:/home/neuronews/app/test-results.xml ./test-results/ || echo "No test results found"
+        if docker compose -f docker-compose.test.yml ps -q test > /dev/null 2>&1; then
+          docker compose -f docker-compose.test.yml cp test:/home/neuronews/app/htmlcov ./test-results/ || echo "No coverage report found"
+          docker compose -f docker-compose.test.yml cp test:/home/neuronews/app/test-results.xml ./test-results/ || echo "No test results found"
         fi
 
     - name: Upload test results
@@ -58,7 +58,7 @@ jobs:
     - name: Clean up
       if: always()
       run: |
-        docker-compose -f docker-compose.test.yml down -v
+        docker compose -f docker-compose.test.yml down -v
         docker system prune -f
 
   # Build job
