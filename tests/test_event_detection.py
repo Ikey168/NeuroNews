@@ -17,16 +17,35 @@ from datetime import datetime, timedelta
 from unittest.mock import Mock, patch, AsyncMock, MagicMock
 from typing import Dict, List, Any
 
-# Mock the expensive imports before importing our modules
-with patch.dict('sys.modules', {
-    'sentence_transformers': MagicMock(),
-    'sentence_transformers.SentenceTransformer': MagicMock(),
-    'sklearn': MagicMock(),
-    'sklearn.cluster': MagicMock(),
-    'sklearn.metrics': MagicMock(),
-    'psycopg2': MagicMock(),
-}):
-    pass
+# Create a comprehensive mock for SentenceTransformer
+class MockSentenceTransformer:
+    def __init__(self, model_name=None, *args, **kwargs):
+        self.model_name = model_name or 'test-model'
+        
+    def get_sentence_embedding_dimension(self):
+        return 384
+        
+    def encode(self, texts, *args, **kwargs):
+        if isinstance(texts, list):
+            return np.random.rand(len(texts), 384).astype(np.float32)
+        else:
+            return np.random.rand(384).astype(np.float32)
+
+# Patch the imports at module level
+sentence_transformers_mock = MagicMock()
+sentence_transformers_mock.SentenceTransformer = MockSentenceTransformer
+
+sklearn_mock = MagicMock()
+sklearn_cluster_mock = MagicMock()
+sklearn_metrics_mock = MagicMock()
+
+# Mock the modules before any imports
+import sys
+sys.modules['sentence_transformers'] = sentence_transformers_mock
+sys.modules['sklearn'] = sklearn_mock
+sys.modules['sklearn.cluster'] = sklearn_cluster_mock
+sys.modules['sklearn.metrics'] = sklearn_metrics_mock
+sys.modules['psycopg2'] = MagicMock()
 
 # Test data
 SAMPLE_ARTICLES = [
@@ -70,23 +89,19 @@ SAMPLE_EMBEDDINGS = [
 class TestArticleEmbedder:
     """Test the ArticleEmbedder class."""
     
-    @pytest.fixture
+    @pytest.fixture  
     def embedder(self):
         """Create embedder instance for testing."""
-        with patch('sentence_transformers.SentenceTransformer') as mock_transformer:
-            mock_model = Mock()
-            mock_model.get_sentence_embedding_dimension.return_value = 384
-            mock_model.encode.return_value = SAMPLE_EMBEDDINGS[0]
-            mock_transformer.return_value = mock_model
-            
+        # Patch the SentenceTransformer at import time
+        with patch('src.nlp.article_embedder.SentenceTransformer', MockSentenceTransformer):
             from src.nlp.article_embedder import ArticleEmbedder
+            
             embedder = ArticleEmbedder(
                 model_name='test-model',
                 conn_params={'host': 'test'},
                 max_length=512,
                 batch_size=2
             )
-            embedder.model = mock_model
             return embedder
     
     def test_embedder_initialization(self, embedder):
@@ -531,9 +546,8 @@ class TestDatabaseIntegration:
     @pytest.mark.asyncio
     async def test_embedding_storage_preparation(self):
         """Test embedding data preparation for storage."""
-        with patch('sentence_transformers.SentenceTransformer'):
+        with patch('src.nlp.article_embedder.SentenceTransformer', MockSentenceTransformer):
             from src.nlp.article_embedder import ArticleEmbedder
-            
             embedder = ArticleEmbedder(model_name='test-model')
             
             # Test data preparation
@@ -610,9 +624,8 @@ class TestPerformanceAndQuality:
     
     def test_embedding_quality_assessment(self):
         """Test embedding quality metrics."""
-        with patch('sentence_transformers.SentenceTransformer'):
+        with patch('src.nlp.article_embedder.SentenceTransformer', MockSentenceTransformer):
             from src.nlp.article_embedder import ArticleEmbedder
-            
             embedder = ArticleEmbedder('test-model')
             
             # Test various embedding qualities
@@ -635,9 +648,8 @@ class TestPerformanceAndQuality:
     
     def test_processing_time_tracking(self):
         """Test processing time measurement."""
-        with patch('sentence_transformers.SentenceTransformer'):
+        with patch('src.nlp.article_embedder.SentenceTransformer', MockSentenceTransformer):
             from src.nlp.article_embedder import ArticleEmbedder
-            
             embedder = ArticleEmbedder('test-model')
             stats = embedder.get_statistics()
             
@@ -675,9 +687,8 @@ class TestErrorHandling:
     
     def test_malformed_text_preprocessing(self):
         """Test preprocessing of malformed or empty text."""
-        with patch('sentence_transformers.SentenceTransformer'):
+        with patch('src.nlp.article_embedder.SentenceTransformer', MockSentenceTransformer):
             from src.nlp.article_embedder import ArticleEmbedder
-            
             embedder = ArticleEmbedder('test-model')
             
             # Test various edge cases
@@ -692,9 +703,8 @@ class TestErrorHandling:
     
     def test_database_connection_failure_handling(self):
         """Test handling of database connection failures."""
-        with patch('sentence_transformers.SentenceTransformer'):
+        with patch('src.nlp.article_embedder.SentenceTransformer', MockSentenceTransformer):
             from src.nlp.article_embedder import ArticleEmbedder
-            
             embedder = ArticleEmbedder(
                 'test-model',
                 conn_params={'host': 'invalid-host'}
@@ -711,20 +721,18 @@ async def test_full_pipeline_integration():
     """Test the complete event detection pipeline."""
     
     # Mock external dependencies
-    with patch('sentence_transformers.SentenceTransformer') as mock_transformer, \
+    with patch('src.nlp.article_embedder.SentenceTransformer', MockSentenceTransformer), \
          patch('psycopg2.connect') as mock_db:
         
-        # Setup mocks
-        mock_model = Mock()
-        mock_model.get_sentence_embedding_dimension.return_value = 384
-        mock_model.encode.return_value = np.array(SAMPLE_EMBEDDINGS)
-        mock_transformer.return_value = mock_model
-        
+        # Setup database mocks
         mock_conn = Mock()
         mock_cursor = Mock()
-        mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+        mock_conn.__enter__ = Mock(return_value=mock_conn)
+        mock_conn.__exit__ = Mock(return_value=None)
+        mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
+        mock_conn.cursor.return_value.__exit__ = Mock(return_value=None)
         mock_cursor.rowcount = len(SAMPLE_ARTICLES)
-        mock_db.return_value.__enter__.return_value = mock_conn
+        mock_db.return_value = mock_conn
         
         # Import after mocking
         from src.nlp.article_embedder import ArticleEmbedder

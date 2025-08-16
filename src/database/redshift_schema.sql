@@ -343,3 +343,70 @@ WHERE
     AND ec.last_article_date >= DATEADD(hour, -24, CURRENT_TIMESTAMP)
 GROUP BY ec.category
 ORDER BY avg_trending_score DESC, active_events DESC;
+
+-- Breaking News View (Issue #31)
+CREATE OR REPLACE VIEW breaking_news_view AS
+SELECT 
+    ec.cluster_id,
+    ec.cluster_name,
+    ec.event_type,
+    ec.category,
+    ec.trending_score,
+    ec.impact_score,
+    ec.velocity_score,
+    ec.cluster_size,
+    ec.first_article_date,
+    ec.last_article_date,
+    ec.peak_activity_date,
+    ec.event_duration_hours,
+    STRING_AGG(DISTINCT a.title, ' | ') as sample_headlines,
+    COUNT(DISTINCT a.source) as source_count,
+    AVG(aca.confidence_score) as avg_confidence
+FROM event_clusters ec
+JOIN article_cluster_assignments aca ON ec.cluster_id = aca.cluster_id
+JOIN articles a ON aca.article_id = a.id
+WHERE 
+    ec.status = 'active'
+    AND ec.event_type IN ('breaking', 'trending')
+    AND ec.last_article_date >= DATEADD(hour, -6, CURRENT_TIMESTAMP) -- Breaking in last 6 hours
+    AND a.source_credibility IN ('trusted', 'reliable')
+GROUP BY 
+    ec.cluster_id, ec.cluster_name, ec.category, ec.event_type,
+    ec.trending_score, ec.impact_score, ec.velocity_score, ec.cluster_size,
+    ec.first_article_date, ec.last_article_date, ec.peak_activity_date,
+    ec.event_duration_hours
+HAVING COUNT(aca.article_id) >= 2 -- At least 2 articles for breaking news
+ORDER BY ec.trending_score DESC, ec.impact_score DESC;
+
+-- Trending Events View (Issue #31)  
+CREATE OR REPLACE VIEW trending_events_view AS
+SELECT 
+    ec.cluster_id,
+    ec.cluster_name,
+    ec.event_type,
+    ec.category,
+    ec.trending_score,
+    ec.impact_score,
+    ec.velocity_score,
+    ec.cluster_size,
+    ec.first_article_date,
+    ec.last_article_date,
+    ec.peak_activity_date,
+    ec.event_duration_hours,
+    STRING_AGG(DISTINCT a.title, ' | ') as sample_headlines,
+    COUNT(DISTINCT a.source) as source_count,
+    AVG(aca.confidence_score) as avg_confidence
+FROM event_clusters ec
+JOIN article_cluster_assignments aca ON ec.cluster_id = aca.cluster_id
+JOIN articles a ON aca.article_id = a.id
+WHERE 
+    ec.status = 'active'
+    AND ec.last_article_date >= DATEADD(hour, -24, CURRENT_TIMESTAMP) -- Active in last 24 hours
+    AND a.source_credibility IN ('trusted', 'reliable')
+GROUP BY 
+    ec.cluster_id, ec.cluster_name, ec.category, ec.event_type,
+    ec.trending_score, ec.impact_score, ec.velocity_score, ec.cluster_size,
+    ec.first_article_date, ec.last_article_date, ec.peak_activity_date,
+    ec.event_duration_hours
+HAVING COUNT(aca.article_id) >= 3 -- At least 3 articles
+ORDER BY ec.trending_score DESC, ec.impact_score DESC;
