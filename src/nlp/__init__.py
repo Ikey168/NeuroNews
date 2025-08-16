@@ -8,6 +8,10 @@ from .sentiment_analysis import (
     SentimentAnalyzer  # Corrected import
 )
 from .article_processor import ArticleProcessor
+
+# Event Detection Components (Issue #31)
+from .article_embedder import ArticleEmbedder
+from .event_clusterer import EventClusterer
 from .ner_processor import (
     NERProcessor,
     create_ner_processor

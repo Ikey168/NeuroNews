@@ -153,20 +153,20 @@ class TestRedshiftETLProcessor(unittest.TestCase):
         self.assertEqual(self.processor._user, 'test_user')
         self.assertEqual(self.processor._batch_size, 10)
     
-    @patch('psycopg2.connect')
+    @patch('src.database.redshift_loader.psycopg2.connect')
     def test_connection(self, mock_connect):
         """Test database connection."""
         mock_connect.return_value = self.mock_conn
         
         processor = RedshiftETLProcessor(
-            host='test-host',
+            host='localhost',
             password='test-password'
         )
         
         processor.connect()
         
         mock_connect.assert_called_once_with(
-            host='test-host',
+            host='localhost',
             database='dev',
             user='admin',
             password='test-password',
@@ -380,7 +380,7 @@ class TestSchemaManagement(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.processor = RedshiftETLProcessor(
-            host='test-host',
+            host='localhost',
             password='test-password'
         )
         

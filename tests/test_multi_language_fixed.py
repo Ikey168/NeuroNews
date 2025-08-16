@@ -6,8 +6,34 @@ Tests language detection, translation, quality checking, and pipeline integratio
 import pytest
 import asyncio
 import json
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import Mock, patch, AsyncMock, MagicMock
 from datetime import datetime
+
+# Mock psycopg2 before any imports that might use it
+import sys
+from unittest.mock import Mock, patch, AsyncMock, MagicMock
+
+# Create a comprehensive mock for psycopg2
+mock_psycopg2 = MagicMock()
+mock_connection = MagicMock()
+mock_cursor = MagicMock()
+
+# Setup cursor context manager
+mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+mock_cursor.__exit__ = MagicMock(return_value=None)
+
+# Setup connection context manager and cursor method
+mock_connection.cursor.return_value = mock_cursor
+mock_connection.__enter__ = MagicMock(return_value=mock_connection)
+mock_connection.__exit__ = MagicMock(return_value=None)
+
+# Setup connect function
+mock_psycopg2.connect = MagicMock(return_value=mock_connection)
+mock_psycopg2.extras = MagicMock()
+
+# Replace sys.modules
+sys.modules['psycopg2'] = mock_psycopg2
+sys.modules['psycopg2.extras'] = mock_psycopg2.extras
 
 # Import our multi-language components
 from src.nlp.language_processor import LanguageDetector, AWSTranslateService, TranslationQualityChecker
@@ -197,9 +223,11 @@ class TestMultiLanguageArticleProcessor:
     """Test multi-language article processing."""
     
     def setup_method(self):
-        with patch('psycopg2.connect'), patch('src.nlp.sentiment_analysis.SentimentAnalyzer'):
+        with patch('psycopg2.connect'), \
+             patch('src.nlp.sentiment_analysis.SentimentAnalyzer'), \
+             patch.object(MultiLanguageArticleProcessor, '_initialize_database'):
             self.processor = MultiLanguageArticleProcessor(
-                redshift_host='test_host',
+                redshift_host='localhost',
                 redshift_port=5439,
                 redshift_database='test_db',
                 redshift_user='test_user',
@@ -259,7 +287,7 @@ class TestMultiLanguageArticleProcessor:
         with patch('src.nlp.sentiment_analysis.SentimentAnalyzer') as mock_analyzer:
             mock_analyzer.return_value = Mock()
             processor = MultiLanguageArticleProcessor(
-                redshift_host='test_host',
+                redshift_host='localhost',
                 redshift_port=5439,
                 redshift_database='test_db',
                 redshift_user='test_user',
@@ -303,17 +331,19 @@ class TestMultiLanguagePipeline:
             'MULTI_LANGUAGE_ENABLED': True,
             'MULTI_LANGUAGE_TARGET_LANGUAGE': 'en',
             'MULTI_LANGUAGE_QUALITY_THRESHOLD': 0.7,
-            'REDSHIFT_HOST': 'test_host',
+            'REDSHIFT_HOST': 'localhost',
             'REDSHIFT_PORT': 5439,
             'REDSHIFT_DATABASE': 'test_db',
             'REDSHIFT_USER': 'test_user',
             'REDSHIFT_PASSWORD': 'test_pass'
         }
         
-        with patch('psycopg2.connect'), patch('src.nlp.sentiment_analysis.SentimentAnalyzer') as mock_analyzer:
+        with patch('psycopg2.connect'), \
+             patch('src.nlp.sentiment_analysis.SentimentAnalyzer') as mock_analyzer, \
+             patch.object(MultiLanguageArticleProcessor, '_initialize_database'):
             mock_analyzer.return_value = Mock()
             self.pipeline = MultiLanguagePipeline(
-                redshift_host='test_host',
+                redshift_host='localhost',
                 redshift_port=5439,
                 redshift_database='test_db',
                 redshift_user='test_user',
@@ -378,7 +408,7 @@ class TestMultiLanguagePipeline:
         spider = Mock()
         spider.settings = {
             'MULTI_LANGUAGE_ENABLED': False,
-            'REDSHIFT_HOST': 'test_host',
+            'REDSHIFT_HOST': 'localhost',
             'REDSHIFT_PORT': 5439,
             'REDSHIFT_DATABASE': 'test_db',
             'REDSHIFT_USER': 'test_user',
@@ -464,11 +494,12 @@ class TestIntegrationWorkflow:
         mock_db.return_value = mock_conn
         
         # Create processor
-        with patch('src.nlp.sentiment_analysis.SentimentAnalyzer') as mock_analyzer:
+        with patch('src.nlp.sentiment_analysis.SentimentAnalyzer') as mock_analyzer, \
+             patch.object(MultiLanguageArticleProcessor, '_initialize_database'):
             mock_analyzer.return_value = Mock()
             
             processor = MultiLanguageArticleProcessor(
-                redshift_host='test_host',
+                redshift_host='localhost',
                 redshift_port=5439,
                 redshift_database='test_db',
                 redshift_user='test_user',
@@ -494,11 +525,12 @@ class TestIntegrationWorkflow:
     def test_error_handling_workflow(self):
         """Test error handling in processing workflow."""
         with patch('psycopg2.connect'), \
-             patch('src.nlp.sentiment_analysis.SentimentAnalyzer') as mock_analyzer:
+             patch('src.nlp.sentiment_analysis.SentimentAnalyzer') as mock_analyzer, \
+             patch.object(MultiLanguageArticleProcessor, '_initialize_database'):
             mock_analyzer.return_value = Mock()
             
             processor = MultiLanguageArticleProcessor(
-                redshift_host='test_host',
+                redshift_host='localhost',
                 redshift_port=5439,
                 redshift_database='test_db',
                 redshift_user='test_user',
