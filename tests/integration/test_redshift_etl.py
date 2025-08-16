@@ -159,14 +159,14 @@ class TestRedshiftETLProcessor(unittest.TestCase):
         mock_connect.return_value = self.mock_conn
         
         processor = RedshiftETLProcessor(
-            host='test-host',
+            host='localhost',
             password='test-password'
         )
         
         processor.connect()
         
         mock_connect.assert_called_once_with(
-            host='test-host',
+            host='localhost',
             database='dev',
             user='admin',
             password='test-password',
@@ -380,7 +380,7 @@ class TestSchemaManagement(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.processor = RedshiftETLProcessor(
-            host='test-host',
+            host='localhost',
             password='test-password'
         )
         

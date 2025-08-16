@@ -224,18 +224,18 @@ class TestTranslationQualityChecker:
 class TestMultiLanguageArticleProcessor:
     """Test multi-language article processing."""
     
-    @patch('psycopg2.connect')
-    def setup_method(self, mock_connect):
-        # Setup comprehensive database mocking
-        mock_conn = MagicMock()
-        mock_cursor = MagicMock()
-        mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
-        mock_conn.cursor.return_value.__exit__ = Mock(return_value=None)
-        mock_conn.__enter__ = Mock(return_value=mock_conn)
-        mock_conn.__exit__ = Mock(return_value=None)
-        mock_connect.return_value = mock_conn
-        
-        with patch('src.nlp.sentiment_analysis.SentimentAnalyzer'):
+    def setup_method(self):
+        with patch('psycopg2.connect') as mock_connect, \
+             patch('src.nlp.sentiment_analysis.SentimentAnalyzer'):
+            # Setup comprehensive database mocking
+            mock_conn = MagicMock()
+            mock_cursor = MagicMock()
+            mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
+            mock_conn.cursor.return_value.__exit__ = Mock(return_value=None)
+            mock_conn.__enter__ = Mock(return_value=mock_conn)
+            mock_conn.__exit__ = Mock(return_value=None)
+            mock_connect.return_value = mock_conn
+            
             self.processor = MultiLanguageArticleProcessor(
                 redshift_host='localhost',  # Use localhost instead of test_host
                 redshift_port=5439,
@@ -342,37 +342,37 @@ class TestMultiLanguageArticleProcessor:
 class TestMultiLanguagePipeline:
     """Test Scrapy pipeline integration."""
     
-    @patch('psycopg2.connect')
-    def setup_method(self, mock_connect):
-        # Setup comprehensive database mocking
-        mock_conn = MagicMock()
-        mock_cursor = MagicMock()
-        mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
-        mock_conn.cursor.return_value.__exit__ = Mock(return_value=None)
-        mock_conn.__enter__ = Mock(return_value=mock_conn)
-        mock_conn.__exit__ = Mock(return_value=None)
-        mock_connect.return_value = mock_conn
-        
-        self.spider = Mock()
-        self.spider.settings = {
-            'MULTI_LANGUAGE_ENABLED': True,
-            'MULTI_LANGUAGE_TARGET_LANGUAGE': 'en',
-            'MULTI_LANGUAGE_QUALITY_THRESHOLD': 0.7,
-            'REDSHIFT_HOST': 'localhost',  # Use localhost instead of test_host
-            'REDSHIFT_PORT': 5439,
-            'REDSHIFT_DATABASE': 'test_db',
-            'REDSHIFT_USER': 'test_user',
-            'REDSHIFT_PASSWORD': 'test_pass'
-        }
-        
-        # Create pipeline with settings
-        self.pipeline = MultiLanguagePipeline(
-            redshift_host='localhost',  # Use localhost instead of test_host
-            redshift_port=5439,
-            redshift_database='test_db',
-            redshift_user='test_user',
-            redshift_password='test_pass'
-        )
+    def setup_method(self):
+        with patch('psycopg2.connect') as mock_connect:
+            # Setup comprehensive database mocking
+            mock_conn = MagicMock()
+            mock_cursor = MagicMock()
+            mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
+            mock_conn.cursor.return_value.__exit__ = Mock(return_value=None)
+            mock_conn.__enter__ = Mock(return_value=mock_conn)
+            mock_conn.__exit__ = Mock(return_value=None)
+            mock_connect.return_value = mock_conn
+            
+            self.spider = Mock()
+            self.spider.settings = {
+                'MULTI_LANGUAGE_ENABLED': True,
+                'MULTI_LANGUAGE_TARGET_LANGUAGE': 'en',
+                'MULTI_LANGUAGE_QUALITY_THRESHOLD': 0.7,
+                'REDSHIFT_HOST': 'localhost',  # Use localhost instead of test_host
+                'REDSHIFT_PORT': 5439,
+                'REDSHIFT_DATABASE': 'test_db',
+                'REDSHIFT_USER': 'test_user',
+                'REDSHIFT_PASSWORD': 'test_pass'
+            }
+            
+            # Create pipeline with settings
+            self.pipeline = MultiLanguagePipeline(
+                redshift_host='localhost',  # Use localhost instead of test_host
+                redshift_port=5439,
+                redshift_database='test_db',
+                redshift_user='test_user',
+                redshift_password='test_pass'
+            )
     
     def test_pipeline_initialization(self):
         """Test pipeline initialization."""
@@ -498,8 +498,7 @@ class TestLanguageFilterPipeline:
 class TestIntegrationWorkflow:
     """Integration tests for complete multi-language workflow."""
     
-    @patch('psycopg2.connect')
-    def setup_method(self, mock_db):
+    def setup_method(self):
         """Setup test environment."""
         self.config = {
             'nlp': {'language_codes': ['en', 'es', 'fr', 'de']},
@@ -515,15 +514,6 @@ class TestIntegrationWorkflow:
                 'translate_client': {}
             }
         }
-        
-        # Setup mock database connection
-        mock_cursor = Mock()
-        mock_conn = Mock()
-        mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
-        mock_conn.cursor.return_value.__exit__ = Mock(return_value=None)
-        mock_conn.__enter__ = Mock(return_value=mock_conn)
-        mock_conn.__exit__ = Mock(return_value=None)
-        mock_db.return_value = mock_conn
     
     @patch('boto3.client')
     @patch('psycopg2.connect')

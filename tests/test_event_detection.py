@@ -550,7 +550,16 @@ class TestDatabaseIntegration:
         """Test embedding data preparation for storage."""
         with patch('src.nlp.article_embedder.SentenceTransformer', MockSentenceTransformer):
             from src.nlp.article_embedder import ArticleEmbedder
-            embedder = ArticleEmbedder(model_name='test-model')
+            
+            # Create embedder with connection parameters
+            conn_params = {
+                'host': 'localhost',
+                'port': 5439,
+                'database': 'test-db',
+                'user': 'test-user',
+                'password': 'test-pass'
+            }
+            embedder = ArticleEmbedder(model_name='test-model', conn_params=conn_params)
             
             # Test data preparation
             embeddings = [

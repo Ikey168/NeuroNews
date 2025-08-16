@@ -11,23 +11,34 @@ from datetime import datetime
 
 # Mock psycopg2 before any imports that might use it
 import sys
-sys.modules['psycopg2'] = MagicMock()
-sys.modules['psycopg2.connect'] = MagicMock()
+from unittest.mock import Mock, patch, AsyncMock, MagicMock
 
-# Mock database connection at module level
-mock_db_connection = MagicMock()
+# Create a comprehensive mock for psycopg2
+mock_psycopg2 = MagicMock()
+mock_connection = MagicMock()
 mock_cursor = MagicMock()
-mock_db_connection.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
-mock_db_connection.cursor.return_value.__exit__ = Mock(return_value=None)
-mock_db_connection.__enter__ = Mock(return_value=mock_db_connection)
-mock_db_connection.__exit__ = Mock(return_value=None)
 
-# Patch psycopg2.connect globally for this module
-with patch('psycopg2.connect', return_value=mock_db_connection):
-    # Import our multi-language components
-    from src.nlp.language_processor import LanguageDetector, AWSTranslateService, TranslationQualityChecker
-    from src.nlp.multi_language_processor import MultiLanguageArticleProcessor
-    from src.scraper.pipelines.multi_language_pipeline import MultiLanguagePipeline, LanguageFilterPipeline
+# Setup cursor context manager
+mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+mock_cursor.__exit__ = MagicMock(return_value=None)
+
+# Setup connection context manager and cursor method
+mock_connection.cursor.return_value = mock_cursor
+mock_connection.__enter__ = MagicMock(return_value=mock_connection)
+mock_connection.__exit__ = MagicMock(return_value=None)
+
+# Setup connect function
+mock_psycopg2.connect = MagicMock(return_value=mock_connection)
+mock_psycopg2.extras = MagicMock()
+
+# Replace sys.modules
+sys.modules['psycopg2'] = mock_psycopg2
+sys.modules['psycopg2.extras'] = mock_psycopg2.extras
+
+# Import our multi-language components
+from src.nlp.language_processor import LanguageDetector, AWSTranslateService, TranslationQualityChecker
+from src.nlp.multi_language_processor import MultiLanguageArticleProcessor
+from src.scraper.pipelines.multi_language_pipeline import MultiLanguagePipeline, LanguageFilterPipeline
 
 
 class TestLanguageDetector:
