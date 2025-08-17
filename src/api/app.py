@@ -4,7 +4,7 @@ Main FastAPI application configuration.
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from src.api.routes import graph_routes, news_routes, event_routes
+from src.api.routes import graph_routes, news_routes, event_routes, veracity_routes
 
 app = FastAPI(
     title="NeuroNews API",
@@ -25,6 +25,7 @@ app.add_middleware(
 app.include_router(graph_routes.router)
 app.include_router(news_routes.router)
 app.include_router(event_routes.router)
+app.include_router(veracity_routes.router)
 
 @app.get("/")
 async def root():
