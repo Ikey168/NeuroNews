@@ -13,6 +13,13 @@ try:
 except ImportError:
     ENHANCED_KG_AVAILABLE = False
 
+# Try to import event timeline routes (Issue #38)
+try:
+    from src.api.routes import event_timeline_routes
+    EVENT_TIMELINE_AVAILABLE = True
+except ImportError:
+    EVENT_TIMELINE_AVAILABLE = False
+
 app = FastAPI(
     title="NeuroNews API",
     description="API for accessing news articles and knowledge graph",
@@ -37,6 +44,10 @@ app.include_router(veracity_routes.router)
 # Include enhanced knowledge graph routes if available (Issue #37)
 if ENHANCED_KG_AVAILABLE:
     app.include_router(enhanced_kg_routes.router)
+
+# Include event timeline routes if available (Issue #38)
+if EVENT_TIMELINE_AVAILABLE:
+    app.include_router(event_timeline_routes.router)
 
 @app.get("/")
 async def root():
