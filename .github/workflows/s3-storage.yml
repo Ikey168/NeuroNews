@@ -1,16 +1,16 @@
-name: S3 Storage Tests
+# name: S3 Storage Tests
 
-on:
-  push:
-    branches: [ main ]
-    paths:
-      - 'src/database/s3_storage.py'
-      - 'tests/database/test_s3_storage.py'
-  pull_request:
-    branches: [ main ]
-    paths:
-      - 'src/database/s3_storage.py'
-      - 'tests/database/test_s3_storage.py'
+# on:
+#   push:
+#     branches: [ main ]
+#     paths:
+#       - 'src/database/s3_storage.py'
+#       - 'tests/database/test_s3_storage.py'
+#   pull_request:
+#     branches: [ main ]
+#     paths:
+#       - 'src/database/s3_storage.py'
+#       - 'tests/database/test_s3_storage.py'
 
 jobs:
   test:

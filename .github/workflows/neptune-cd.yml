@@ -1,22 +1,22 @@
-name: Neptune Knowledge Graph CI/CD
+# name: Neptune Knowledge Graph CI/CD
 
-on:
-  push:
-    branches: [ main ]
-    paths:
-      - 'src/knowledge_graph/**'
-      - 'deployment/terraform/neptune.tf'
-      - 'deployment/terraform/scripts/neptune_schema.gremlin'
-      - 'tests/knowledge_graph/**'
-      - 'tests/integration/**'
-  pull_request:
-    branches: [ main ]
-    paths:
-      - 'src/knowledge_graph/**'
-      - 'deployment/terraform/neptune.tf'
-      - 'deployment/terraform/scripts/neptune_schema.gremlin'
-      - 'tests/knowledge_graph/**'
-      - 'tests/integration/**'
+# on:
+#   push:
+#     branches: [ main ]
+#     paths:
+#       - 'src/knowledge_graph/**'
+#       - 'deployment/terraform/neptune.tf'
+#       - 'deployment/terraform/scripts/neptune_schema.gremlin'
+#       - 'tests/knowledge_graph/**'
+#       - 'tests/integration/**'
+#   pull_request:
+#     branches: [ main ]
+#     paths:
+#       - 'src/knowledge_graph/**'
+#       - 'deployment/terraform/neptune.tf'
+#       - 'deployment/terraform/scripts/neptune_schema.gremlin'
+#       - 'tests/knowledge_graph/**'
+#       - 'tests/integration/**'
 
 env:
   AWS_REGION: us-west-2

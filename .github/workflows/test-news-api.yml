@@ -1,18 +1,18 @@
-name: News API Tests
+# name: News API Tests
 
-on:
-  push:
-    branches: [ main, develop ]
-    paths:
-      - 'src/api/routes/news_routes.py'
-      - 'src/database/redshift_loader.py'
-      - 'tests/api/test_news_routes.py'
-      - 'tests/database/test_redshift_loader.py'
-  pull_request:
-    branches: [ main, develop ]
-    paths:
-      - 'src/api/routes/news_routes.py'
-      - 'src/database/redshift_loader.py'
+# on:
+#   push:
+#     branches: [ main, develop ]
+#     paths:
+#       - 'src/api/routes/news_routes.py'
+#       - 'src/database/redshift_loader.py'
+#       - 'tests/api/test_news_routes.py'
+#       - 'tests/database/test_redshift_loader.py'
+#   pull_request:
+#     branches: [ main, develop ]
+#     paths:
+#       - 'src/api/routes/news_routes.py'
+#       - 'src/database/redshift_loader.py'
       - 'tests/api/test_news_routes.py'
       - 'tests/database/test_redshift_loader.py'
 

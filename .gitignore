@@ -236,3 +236,27 @@ tfplan
 # Terraform variable files that might contain sensitive data
 terraform.tfvars
 terraform.tfvars.json
+
+# Project organization
+# Keep logs directory but ignore log files
+logs/*.log
+logs/*.txt
+
+# Temporary files and artifacts
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Demo results (keep structure but ignore generated files)
+demo/results/*.json
+demo/results/*.csv
+demo/results/*.html
+
+# Validation results
+validation_results.json
+validation/*.json
+
+# Docker and containerization
+.docker/
+docker-compose.override.yml
