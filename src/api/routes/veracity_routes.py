@@ -13,7 +13,7 @@ import psycopg2
 import os
 
 from src.nlp.fake_news_detector import FakeNewsDetector, FakeNewsConfig
-from src.database.redshift_loader import RedshiftConnection
+from src.database.redshift_loader import RedshiftETLProcessor as RedshiftConnection
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
