@@ -1,0 +1,123 @@
+# Docker Compose for Testing - Isolated Test Environment
+version: '3.8'
+
+services:
+  # Test runner
+  test:
+    build:
+      context: .
+      target: test
+    environment:
+      - PYTHONPATH=/home/neuronews/app
+      - DB_HOST=test-postgres
+      - DB_PORT=5432
+      - DB_NAME=neuronews_test
+      - DB_USER=test_user
+      - DB_PASSWORD=test_password
+      - REDIS_HOST=test-redis
+      - REDIS_PORT=6379
+      - S3_ENDPOINT=http://test-minio:9000
+      - S3_ACCESS_KEY=testuser
+      - S3_SECRET_KEY=testpassword
+      - S3_BUCKET=test-bucket
+      - TESTING=true
+    depends_on:
+      test-postgres:
+        condition: service_healthy
+      test-redis:
+        condition: service_healthy
+      test-minio:
+        condition: service_healthy
+    networks:
+      - test-network
+    volumes:
+      - ./test-results:/home/neuronews/app/htmlcov
+    command: >
+      sh -c "
+        echo 'Waiting for services to be ready...' &&
+        sleep 5 &&
+        echo 'Running tests...' &&
+        python -m pytest 
+          --cov=src 
+          --cov-report=html:/home/neuronews/app/htmlcov 
+          --cov-report=term-missing 
+          --junitxml=/home/neuronews/app/test-results.xml 
+          -v 
+          --tb=short
+          tests/
+      "
+
+  # Test PostgreSQL database
+  test-postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: neuronews_test
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+    volumes:
+      - ./deployment/sql:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d neuronews_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - test-network
+
+  # Test Redis
+  test-redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - test-network
+
+  # Test MinIO for S3 testing
+  test-minio:
+    image: minio/minio:latest
+    environment:
+      MINIO_ROOT_USER: testuser
+      MINIO_ROOT_PASSWORD: testpassword
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - test-network
+
+  # Database migration and setup
+  test-setup:
+    build:
+      context: .
+      target: development
+    environment:
+      - PYTHONPATH=/home/neuronews/app
+      - DB_HOST=test-postgres
+      - DB_PORT=5432
+      - DB_NAME=neuronews_test
+      - DB_USER=test_user
+      - DB_PASSWORD=test_password
+    depends_on:
+      test-postgres:
+        condition: service_healthy
+    networks:
+      - test-network
+    command: >
+      sh -c "
+        echo 'Setting up test database...' &&
+        python -c '
+        import asyncio
+        from src.database.setup import setup_test_database
+        asyncio.run(setup_test_database())
+        ' &&
+        echo 'Test database setup complete!'
+      "
+
+networks:
+  test-network:
+    driver: bridge

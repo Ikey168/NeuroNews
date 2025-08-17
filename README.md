@@ -44,6 +44,9 @@
 
 ## 🚀 Getting Started
 
+### 📁 Project Structure
+This project is organized for clean development and maintenance. See [`docs/PROJECT_STRUCTURE.md`](docs/PROJECT_STRUCTURE.md) for a detailed overview of the directory structure and organization guidelines.
+
 ### 1️⃣ Clone the Repository
 ```bash
 git clone https://github.com/your-username/newsgraph-ai.git
@@ -55,11 +58,20 @@ cd newsgraph-ai
 pip install -r requirements.txt
 ```
 
-### 3️⃣ Configure AWS Credentials
+### 3️⃣ Docker Development (Recommended)
+```bash
+# Run with Docker Compose for development
+docker compose up --build
+
+# Run tests in containerized environment
+docker compose -f docker-compose.test-minimal.yml up --build --abort-on-container-exit
+```
+
+### 4️⃣ Configure AWS Credentials
 - Add your **AWS_ACCESS_KEY_ID** & **AWS_SECRET_ACCESS_KEY**.  
 - Ensure **IAM roles** have permissions for Lambda, S3, Redshift, and Neptune.  
 
-### 4️⃣ Run Tests and Generate Coverage Report
+### 5️⃣ Run Tests and Generate Coverage Report
 Before running the test suite make sure the Terraform CLI is installed. On
 Ubuntu you can install it from HashiCorp's APT repository:
 ```bash
@@ -89,17 +101,26 @@ The coverage report provides:
 - Untested code identification
 - Module-level coverage summaries
 
-### 5️⃣ Run the Scraper
+### 6️⃣ Run Demo Scripts
 ```bash
-python scraper.py
+# Explore available demos
+ls demo/
+
+# Run specific demo (example)
+python demo/demo_sentiment_pipeline.py
 ```
 
-### 6️⃣ Run the NLP Pipeline
+### 7️⃣ Run the Scraper
 ```bash
-python nlp_processor.py
+python src/scraper.py
 ```
 
-### 7️⃣ Access Dashboards & Reports
+### 8️⃣ Run the NLP Pipeline
+```bash
+python src/nlp_processor.py
+```
+
+### 9️⃣ Access Dashboards & Reports
 - AWS QuickSight for **visualizations & insights**.  
 - REST API for **news sentiment, event tracking, and historical context**.  
 

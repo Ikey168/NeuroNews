@@ -1,0 +1,63 @@
+# Docker Compose for Minimal Connectivity Testing
+services:
+  # Minimal test runner
+  test-minimal:
+    build:
+      context: .
+      dockerfile: Dockerfile.simple
+    environment:
+      - PYTHONPATH=/home/neuronews/app
+      - DB_HOST=test-postgres
+      - DB_PORT=5432
+      - DB_NAME=neuronews_test
+      - DB_USER=test_user
+      - DB_PASSWORD=test_password
+      - REDIS_HOST=test-redis
+      - REDIS_PORT=6379
+      - S3_ENDPOINT=http://test-minio:9000
+      - S3_ACCESS_KEY=testuser
+      - S3_SECRET_KEY=testpassword
+      - S3_BUCKET=test-bucket
+      - TESTING=true
+    depends_on:
+      test-postgres:
+        condition: service_healthy
+      test-redis:
+        condition: service_healthy
+    networks:
+      - test-network
+
+  # Test PostgreSQL database
+  test-postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: neuronews_test
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+    volumes:
+      - test-postgres-data:/var/lib/postgresql/data
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d neuronews_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Test Redis cache
+  test-redis:
+    image: redis:7-alpine
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  test-postgres-data:
+
+networks:
+  test-network:
+    driver: bridge

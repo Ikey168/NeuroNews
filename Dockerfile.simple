@@ -1,0 +1,38 @@
+# Simplified Dockerfile for testing containerization without heavy ML dependencies
+FROM python:3.12-slim
+
+# Create non-root user
+RUN groupadd -r neuronews && useradd -r -g neuronews neuronews
+
+# Set working directory
+WORKDIR /home/neuronews/app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy minimal requirements
+COPY requirements-test-minimal.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements-test-minimal.txt
+
+# Copy test files
+COPY tests/test_connectivity.py .
+COPY tests/test_comprehensive.py .
+COPY src/ ./src/
+
+# Change ownership
+RUN chown -R neuronews:neuronews /home/neuronews/app
+
+# Switch to non-root user
+USER neuronews
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import psycopg2; print('Ready')" || exit 1
+
+# Default command
+CMD ["python", "test_comprehensive.py"]
