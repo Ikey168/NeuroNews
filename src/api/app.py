@@ -20,6 +20,13 @@ try:
 except ImportError:
     EVENT_TIMELINE_AVAILABLE = False
 
+# Try to import quicksight dashboard routes (Issue #49)
+try:
+    from src.api.routes import quicksight_routes
+    QUICKSIGHT_AVAILABLE = True
+except ImportError:
+    QUICKSIGHT_AVAILABLE = False
+
 app = FastAPI(
     title="NeuroNews API",
     description="API for accessing news articles and knowledge graph",
@@ -48,6 +55,10 @@ if ENHANCED_KG_AVAILABLE:
 # Include event timeline routes if available (Issue #38)
 if EVENT_TIMELINE_AVAILABLE:
     app.include_router(event_timeline_routes.router)
+
+# Include quicksight dashboard routes if available (Issue #49)
+if QUICKSIGHT_AVAILABLE:
+    app.include_router(quicksight_routes.router)
 
 @app.get("/")
 async def root():
