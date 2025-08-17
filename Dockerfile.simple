@@ -20,8 +20,8 @@ COPY requirements-test-minimal.txt .
 RUN pip install --no-cache-dir -r requirements-test-minimal.txt
 
 # Copy test files
-COPY test_connectivity.py .
-COPY test_comprehensive.py .
+COPY tests/test_connectivity.py .
+COPY tests/test_comprehensive.py .
 COPY src/ ./src/
 
 # Change ownership

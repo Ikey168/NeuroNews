@@ -71,7 +71,7 @@ COPY --chown=neuronews:neuronews requirements-test-minimal.txt .
 RUN pip install --user --no-cache-dir -r requirements-test-minimal.txt
 
 # Copy test connectivity script
-COPY --chown=neuronews:neuronews test_connectivity.py .
+COPY --chown=neuronews:neuronews tests/test_connectivity.py .
 
 # Health check for test environment
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

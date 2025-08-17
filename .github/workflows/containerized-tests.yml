@@ -22,8 +22,8 @@ jobs:
       run: |
         echo "🚀 Running NeuroNews Containerization Tests"
         # Update docker-compose command for GitHub Actions compatibility
-        sed -i 's/docker-compose --version/docker compose version/g' verify_containerization.py
-        python verify_containerization.py
+        sed -i 's/docker-compose --version/docker compose version/g' validation/verify_containerization.py
+        python validation/verify_containerization.py
 
     - name: Test minimal containerized services
       run: |
