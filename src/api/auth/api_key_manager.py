@@ -134,7 +134,8 @@ class DynamoDBAPIKeyStore:
                 self.table = self.dynamodb.Table(self.table_name)
                 self._ensure_table_exists()
             except Exception as e:
-                logger.warning(f"Failed to initialize DynamoDB: {e}")
+                if "Unable to locate credentials" not in str(e):
+                    logger.warning(f"Failed to initialize DynamoDB: {e}")
                 self.dynamodb = None
                 self.table = None
         else:
