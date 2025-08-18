@@ -1,0 +1,96 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: neuronews
+  labels:
+    name: neuronews
+    component: knowledge-graph
+    tier: api
+    version: v2.0.0
+  annotations:
+    description: "NeuroNews Knowledge Graph API namespace with enhanced caching and optimization"
+    contact: "platform-team@neuronews.com"
+    created-by: "issue-75-knowledge-graph-api"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kg-api-service-account
+  namespace: neuronews
+  labels:
+    app: knowledge-graph-api
+    component: api
+    version: v2.0.0
+  annotations:
+    description: "Service account for Knowledge Graph API with AWS Neptune and Redis access"
+automountServiceAccountToken: true
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kg-api-role
+  namespace: neuronews
+  labels:
+    app: knowledge-graph-api
+    component: rbac
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["monitoring.coreos.com"]
+  resources: ["servicemonitors"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kg-api-role-binding
+  namespace: neuronews
+  labels:
+    app: knowledge-graph-api
+    component: rbac
+subjects:
+- kind: ServiceAccount
+  name: kg-api-service-account
+  namespace: neuronews
+roleRef:
+  kind: Role
+  name: kg-api-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kg-api-cluster-role
+  labels:
+    app: knowledge-graph-api
+    component: rbac
+rules:
+- apiGroups: [""]
+  resources: ["nodes", "namespaces"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["nodes", "pods"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kg-api-cluster-role-binding
+  labels:
+    app: knowledge-graph-api
+    component: rbac
+subjects:
+- kind: ServiceAccount
+  name: kg-api-service-account
+  namespace: neuronews
+roleRef:
+  kind: ClusterRole
+  name: kg-api-cluster-role
+  apiGroup: rbac.authorization.k8s.io
