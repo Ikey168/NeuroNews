@@ -1,0 +1,210 @@
+apiVersion: v1
+kind: ServiceMonitor
+metadata:
+  name: neuronews-fastapi-metrics
+  namespace: neuronews
+  labels:
+    app: neuronews-fastapi
+    component: api
+    monitoring: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: neuronews-fastapi
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+    honorLabels: true
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'http_requests_total'
+      targetLabel: __name__
+      replacement: 'neuronews_api_requests_total'
+  namespaceSelector:
+    matchNames:
+    - neuronews
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: neuronews-fastapi-grafana-dashboard
+  namespace: neuronews
+  labels:
+    app: neuronews-fastapi
+    component: monitoring
+    grafana_dashboard: "1"
+data:
+  fastapi-dashboard.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "NeuroNews FastAPI Dashboard",
+        "tags": ["neuronews", "fastapi", "api"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Request Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum(rate(neuronews_api_requests_total[5m])) by (method, status_code)",
+                "legendFormat": "{{method}} - {{status_code}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Requests/sec"
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Response Time",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, method))",
+                "legendFormat": "95th percentile - {{method}}"
+              },
+              {
+                "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, method))",
+                "legendFormat": "50th percentile - {{method}}"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Active Pods",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "sum(up{job=\"neuronews-fastapi\"})",
+                "legendFormat": "Active Pods"
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "CPU Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"neuronews-fastapi-.*\"}[5m])) by (pod)",
+                "legendFormat": "{{pod}}"
+              }
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Memory Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum(container_memory_usage_bytes{pod=~\"neuronews-fastapi-.*\"}) by (pod)",
+                "legendFormat": "{{pod}}"
+              }
+            ]
+          },
+          {
+            "id": 6,
+            "title": "Error Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum(rate(neuronews_api_requests_total{status_code=~\"5..\"}[5m])) / sum(rate(neuronews_api_requests_total[5m]))",
+                "legendFormat": "Error Rate"
+              }
+            ]
+          }
+        ],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "refresh": "30s"
+      }
+    }
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: neuronews-fastapi-prometheus-rules
+  namespace: neuronews
+  labels:
+    app: neuronews-fastapi
+    component: monitoring
+    prometheus: kube-prometheus
+    role: alert-rules
+data:
+  fastapi.rules: |
+    groups:
+    - name: neuronews-fastapi.rules
+      interval: 30s
+      rules:
+      # High Error Rate Alert
+      - alert: NeuroNewsAPIHighErrorRate
+        expr: |
+          (
+            sum(rate(neuronews_api_requests_total{status_code=~"5.."}[5m])) /
+            sum(rate(neuronews_api_requests_total[5m]))
+          ) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          service: neuronews-fastapi
+        annotations:
+          summary: "High error rate detected for NeuroNews API"
+          description: "NeuroNews API error rate is {{ $value | humanizePercentage }} which is above the threshold of 5%"
+      
+      # High Response Time Alert
+      - alert: NeuroNewsAPIHighLatency
+        expr: |
+          histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="neuronews-fastapi"}[5m])) by (le)) > 2.0
+        for: 5m
+        labels:
+          severity: warning
+          service: neuronews-fastapi
+        annotations:
+          summary: "High response time detected for NeuroNews API"
+          description: "NeuroNews API 95th percentile latency is {{ $value }}s which is above the threshold of 2s"
+      
+      # Pod Down Alert
+      - alert: NeuroNewsAPIPodsDown
+        expr: |
+          sum(up{job="neuronews-fastapi"}) < 2
+        for: 1m
+        labels:
+          severity: critical
+          service: neuronews-fastapi
+        annotations:
+          summary: "NeuroNews API pods are down"
+          description: "Only {{ $value }} NeuroNews API pods are running, which is below the minimum of 2"
+      
+      # High CPU Usage Alert
+      - alert: NeuroNewsAPIHighCPU
+        expr: |
+          sum(rate(container_cpu_usage_seconds_total{pod=~"neuronews-fastapi-.*"}[5m])) by (pod) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: neuronews-fastapi
+        annotations:
+          summary: "High CPU usage detected for NeuroNews API pod"
+          description: "Pod {{ $labels.pod }} CPU usage is {{ $value | humanizePercentage }}"
+      
+      # High Memory Usage Alert
+      - alert: NeuroNewsAPIHighMemory
+        expr: |
+          sum(container_memory_usage_bytes{pod=~"neuronews-fastapi-.*"}) by (pod) / sum(container_spec_memory_limit_bytes{pod=~"neuronews-fastapi-.*"}) by (pod) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          service: neuronews-fastapi
+        annotations:
+          summary: "High memory usage detected for NeuroNews API pod"
+          description: "Pod {{ $labels.pod }} memory usage is {{ $value | humanizePercentage }}"
