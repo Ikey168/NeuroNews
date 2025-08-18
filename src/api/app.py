@@ -52,13 +52,26 @@ try:
 except ImportError:
     API_KEY_MANAGEMENT_AVAILABLE = False
 
+# Try to import AWS WAF security components (Issue #65)
+try:
+    from src.api.security.waf_middleware import WAFSecurityMiddleware, WAFMetricsMiddleware
+    from src.api.routes import waf_security_routes
+    WAF_SECURITY_AVAILABLE = True
+except ImportError:
+    WAF_SECURITY_AVAILABLE = False
+
 app = FastAPI(
     title="NeuroNews API",
-    description="API for accessing news articles and knowledge graph with RBAC, rate limiting, and API key management",
+    description="API for accessing news articles and knowledge graph with RBAC, rate limiting, API key management, and AWS WAF security",
     version="0.1.0"
 )
 
-# Add rate limiting middleware first (Issue #59)
+# Add WAF security middleware first for maximum protection (Issue #65)
+if WAF_SECURITY_AVAILABLE:
+    app.add_middleware(WAFSecurityMiddleware)
+    app.add_middleware(WAFMetricsMiddleware)
+
+# Add rate limiting middleware (Issue #59)
 if RATE_LIMITING_AVAILABLE:
     app.add_middleware(RateLimitMiddleware, config=RateLimitConfig())
 
@@ -100,6 +113,10 @@ if RBAC_AVAILABLE:
 if API_KEY_MANAGEMENT_AVAILABLE:
     app.include_router(api_key_routes.router)
 
+# Include AWS WAF security routes (Issue #65)
+if WAF_SECURITY_AVAILABLE:
+    app.include_router(waf_security_routes.router)
+
 # Include enhanced knowledge graph routes if available (Issue #37)
 if ENHANCED_KG_AVAILABLE:
     app.include_router(enhanced_kg_routes.router)
@@ -122,6 +139,7 @@ async def root():
             "rate_limiting": RATE_LIMITING_AVAILABLE,
             "rbac": RBAC_AVAILABLE,
             "api_key_management": API_KEY_MANAGEMENT_AVAILABLE,
+            "waf_security": WAF_SECURITY_AVAILABLE,
             "enhanced_kg": ENHANCED_KG_AVAILABLE,
             "event_timeline": EVENT_TIMELINE_AVAILABLE,
             "quicksight": QUICKSIGHT_AVAILABLE
@@ -140,6 +158,7 @@ async def health_check():
             "rate_limiting": "operational" if RATE_LIMITING_AVAILABLE else "disabled",
             "rbac": "operational" if RBAC_AVAILABLE else "disabled",
             "api_key_management": "operational" if API_KEY_MANAGEMENT_AVAILABLE else "disabled",
+            "waf_security": "operational" if WAF_SECURITY_AVAILABLE else "disabled",
             "database": "unknown",  # Would check actual DB connection
             "cache": "unknown"      # Would check Redis connection
         }
