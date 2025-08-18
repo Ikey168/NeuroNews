@@ -1,0 +1,58 @@
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: neuronews-nlp-critical-priority
+  labels:
+    app: neuronews-nlp
+    priority-level: critical
+value: 1000000
+globalDefault: false
+description: "Critical priority for time-sensitive NLP processing jobs"
+
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: neuronews-nlp-high-priority
+  labels:
+    app: neuronews-nlp
+    priority-level: high
+value: 100000
+globalDefault: false
+description: "High priority for important NLP processing jobs like sentiment analysis and entity extraction"
+
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: neuronews-nlp-medium-priority
+  labels:
+    app: neuronews-nlp
+    priority-level: medium
+value: 50000
+globalDefault: false
+description: "Medium priority for AI processing jobs like topic modeling and advanced analytics"
+
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: neuronews-nlp-low-priority
+  labels:
+    app: neuronews-nlp
+    priority-level: low
+value: 10000
+globalDefault: false
+description: "Low priority for batch processing and background NLP tasks"
+
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: neuronews-nlp-maintenance-priority
+  labels:
+    app: neuronews-nlp
+    priority-level: maintenance
+value: 5000
+globalDefault: false
+description: "Maintenance priority for cleanup and housekeeping NLP jobs"

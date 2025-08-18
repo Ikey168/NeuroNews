@@ -1,0 +1,216 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: neuronews-nlp-config
+  namespace: neuronews
+  labels:
+    app: neuronews-nlp
+    component: configuration
+data:
+  # Job processing configuration
+  DEFAULT_BATCH_SIZE: "100"
+  MAX_CONCURRENT_JOBS: "3"
+  JOB_TIMEOUT_SECONDS: "3600"
+  
+  # Model configuration
+  HUGGINGFACE_CACHE_DIR: "/app/models"
+  MODEL_DOWNLOAD_TIMEOUT: "600"
+  USE_MODEL_CACHE: "true"
+  
+  # GPU configuration
+  ENABLE_GPU_ACCELERATION: "true"
+  GPU_MEMORY_FRACTION: "0.8"
+  CUDA_VISIBLE_DEVICES: "0"
+  
+  # Sentiment analysis configuration
+  SENTIMENT_MODEL_NAME: "cardiffnlp/twitter-roberta-base-sentiment-latest"
+  SENTIMENT_BATCH_SIZE: "100"
+  SENTIMENT_MAX_LENGTH: "512"
+  SENTIMENT_CONFIDENCE_THRESHOLD: "0.5"
+  
+  # Entity extraction configuration
+  NER_MODEL_NAME: "dbmdz/bert-large-cased-finetuned-conll03-english"
+  NER_BATCH_SIZE: "50"
+  NER_MAX_LENGTH: "512"
+  NER_CONFIDENCE_THRESHOLD: "0.7"
+  NER_ENTITY_TYPES: "PERSON,ORGANIZATION,LOCATION,MISCELLANEOUS"
+  
+  # Topic modeling configuration
+  TOPIC_MODEL_TYPE: "LDA"
+  TOPIC_NUM_TOPICS: "20"
+  TOPIC_BATCH_SIZE: "25"
+  TOPIC_MAX_ITERATIONS: "1000"
+  TOPIC_EMBEDDING_MODEL: "sentence-transformers/all-MiniLM-L6-v2"
+  
+  # Data processing configuration
+  ARTICLE_TEXT_MAX_LENGTH: "10000"
+  MINIMUM_ARTICLE_LENGTH: "100"
+  SKIP_PROCESSED_ARTICLES: "true"
+  PROCESSING_WINDOW_HOURS: "24"
+  
+  # Output configuration
+  OUTPUT_FORMAT: "json"
+  SAVE_INTERMEDIATE_RESULTS: "true"
+  COMPRESS_OUTPUTS: "true"
+  
+  # Redshift configuration
+  REDSHIFT_SCHEMA: "nlp_results"
+  REDSHIFT_BATCH_INSERT_SIZE: "1000"
+  REDSHIFT_CONNECTION_TIMEOUT: "30"
+  REDSHIFT_MAX_RETRIES: "3"
+  
+  # PostgreSQL configuration
+  POSTGRES_SCHEMA: "public"
+  POSTGRES_CONNECTION_TIMEOUT: "30"
+  POSTGRES_MAX_RETRIES: "3"
+  POSTGRES_BATCH_SIZE: "500"
+  
+  # Monitoring configuration
+  ENABLE_METRICS: "true"
+  METRICS_PORT: "8080"
+  HEALTH_CHECK_INTERVAL: "30"
+  LOG_LEVEL: "INFO"
+  STRUCTURED_LOGGING: "true"
+  
+  # Performance optimization
+  WORKER_THREADS: "4"
+  IO_THREADS: "2"
+  MEMORY_LIMIT_MB: "4096"
+  GC_OPTIMIZATION: "true"
+  
+  # Error handling
+  MAX_RETRIES: "3"
+  RETRY_DELAY_SECONDS: "5"
+  EXPONENTIAL_BACKOFF: "true"
+  CIRCUIT_BREAKER_ENABLED: "true"
+  
+  # AWS configuration
+  AWS_DEFAULT_REGION: "us-east-1"
+  AWS_S3_BUCKET: "neuronews-nlp-results"
+  S3_RESULT_PREFIX: "processed/"
+  
+  # Security configuration
+  ENABLE_SSL: "true"
+  VERIFY_SSL_CERTS: "true"
+  CONNECTION_ENCRYPTION: "true"
+  
+  # Feature flags
+  ENABLE_ADVANCED_NER: "true"
+  ENABLE_MULTILINGUAL_SUPPORT: "false"
+  ENABLE_REAL_TIME_PROCESSING: "false"
+  ENABLE_BATCH_OPTIMIZATION: "true"
+  
+  # Experimental features
+  EXPERIMENTAL_GPU_OPTIMIZATION: "true"
+  EXPERIMENTAL_MEMORY_MAPPING: "false"
+  EXPERIMENTAL_DISTRIBUTED_PROCESSING: "false"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: neuronews-nlp-job-templates
+  namespace: neuronews
+  labels:
+    app: neuronews-nlp
+    component: job-templates
+data:
+  sentiment-analysis-template.yaml: |
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      generateName: neuronews-sentiment-
+      namespace: neuronews
+      labels:
+        app: neuronews-nlp
+        component: sentiment-analysis
+        priority: high
+    spec:
+      completions: 1
+      parallelism: 1
+      backoffLimit: 3
+      activeDeadlineSeconds: 3600
+      ttlSecondsAfterFinished: 86400
+      template:
+        spec:
+          restartPolicy: Never
+          serviceAccountName: neuronews-nlp-processor
+          priorityClassName: neuronews-nlp-high-priority
+          containers:
+          - name: sentiment-analyzer
+            image: neuronews/sentiment-analyzer:latest
+            resources:
+              requests:
+                memory: "1Gi"
+                cpu: "500m"
+              limits:
+                memory: "4Gi"
+                cpu: "2000m"
+                nvidia.com/gpu: 1
+  
+  entity-extraction-template.yaml: |
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      generateName: neuronews-ner-
+      namespace: neuronews
+      labels:
+        app: neuronews-nlp
+        component: entity-extraction
+        priority: high
+    spec:
+      completions: 1
+      parallelism: 1
+      backoffLimit: 3
+      activeDeadlineSeconds: 3600
+      ttlSecondsAfterFinished: 86400
+      template:
+        spec:
+          restartPolicy: Never
+          serviceAccountName: neuronews-nlp-processor
+          priorityClassName: neuronews-nlp-high-priority
+          containers:
+          - name: entity-extractor
+            image: neuronews/entity-extractor:latest
+            resources:
+              requests:
+                memory: "2Gi"
+                cpu: "1000m"
+              limits:
+                memory: "8Gi"
+                cpu: "4000m"
+                nvidia.com/gpu: 1
+  
+  topic-modeling-template.yaml: |
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      generateName: neuronews-topic-
+      namespace: neuronews
+      labels:
+        app: neuronews-nlp
+        component: topic-modeling
+        priority: medium
+    spec:
+      completions: 1
+      parallelism: 1
+      backoffLimit: 2
+      activeDeadlineSeconds: 7200
+      ttlSecondsAfterFinished: 86400
+      template:
+        spec:
+          restartPolicy: Never
+          serviceAccountName: neuronews-nlp-processor
+          priorityClassName: neuronews-nlp-medium-priority
+          containers:
+          - name: topic-modeler
+            image: neuronews/ai-topic-modeler:latest
+            resources:
+              requests:
+                memory: "4Gi"
+                cpu: "2000m"
+                nvidia.com/gpu: 1
+              limits:
+                memory: "16Gi"
+                cpu: "8000m"
+                nvidia.com/gpu: 1

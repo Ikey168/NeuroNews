@@ -1,0 +1,548 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: neuronews-sentiment-analysis
+  namespace: neuronews
+  labels:
+    app: neuronews-nlp
+    component: sentiment-analysis
+    priority: high
+spec:
+  # Job configuration
+  completions: 1
+  parallelism: 1
+  backoffLimit: 3
+  activeDeadlineSeconds: 3600  # 1 hour timeout
+  ttlSecondsAfterFinished: 86400  # Clean up after 24 hours
+  
+  template:
+    metadata:
+      labels:
+        app: neuronews-nlp
+        component: sentiment-analysis
+        priority: high
+    spec:
+      restartPolicy: Never
+      serviceAccountName: neuronews-nlp-processor
+      
+      # Priority class for high-priority scheduling
+      priorityClassName: neuronews-nlp-high-priority
+      
+      # Node selection for GPU-enabled nodes (if available)
+      nodeSelector:
+        node-type: compute
+      
+      tolerations:
+      - key: "gpu"
+        operator: "Equal"
+        value: "nvidia"
+        effect: "NoSchedule"
+      
+      containers:
+      - name: sentiment-analyzer
+        image: neuronews/sentiment-analyzer:latest
+        
+        # Resource requests and limits optimized for sentiment analysis
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+            # GPU resource if available
+            nvidia.com/gpu: 1
+        
+        # Environment configuration
+        env:
+        - name: JOB_TYPE
+          value: "sentiment-analysis"
+        - name: BATCH_SIZE
+          value: "100"
+        - name: MAX_WORKERS
+          value: "4"
+        - name: MODEL_NAME
+          value: "cardiffnlp/twitter-roberta-base-sentiment-latest"
+        - name: USE_GPU
+          value: "true"
+        - name: LOG_LEVEL
+          value: "INFO"
+        
+        # Redshift connection
+        - name: REDSHIFT_HOST
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-redshift-credentials
+              key: host
+        - name: REDSHIFT_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-redshift-credentials
+              key: database
+        - name: REDSHIFT_USER
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-redshift-credentials
+              key: username
+        - name: REDSHIFT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-redshift-credentials
+              key: password
+        
+        # PostgreSQL connection for reading articles
+        - name: POSTGRES_HOST
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-postgres-credentials
+              key: host
+        - name: POSTGRES_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-postgres-credentials
+              key: database
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-postgres-credentials
+              key: username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-postgres-credentials
+              key: password
+        
+        # Configuration from ConfigMap
+        envFrom:
+        - configMapRef:
+            name: neuronews-nlp-config
+        
+        # Volume mounts for model cache and results
+        volumeMounts:
+        - name: model-cache
+          mountPath: /app/models
+        - name: results-output
+          mountPath: /app/results
+        - name: tmp-storage
+          mountPath: /tmp
+        
+        # Health checks
+        livenessProbe:
+          exec:
+            command:
+            - python
+            - -c
+            - "import os; exit(0 if os.path.exists('/tmp/sentiment_job_running') else 1)"
+          initialDelaySeconds: 30
+          periodSeconds: 60
+          timeoutSeconds: 10
+          failureThreshold: 3
+        
+        # Command to run sentiment analysis
+        command: ["/bin/bash"]
+        args:
+        - -c
+        - |
+          set -e
+          echo "Starting sentiment analysis job at $(date)"
+          
+          # Create running indicator
+          touch /tmp/sentiment_job_running
+          
+          # Start the sentiment analysis processor
+          python -m src.nlp.kubernetes_sentiment_processor \
+            --job-type=sentiment-analysis \
+            --batch-size=${BATCH_SIZE} \
+            --max-workers=${MAX_WORKERS} \
+            --output-dir=/app/results \
+            --model-cache-dir=/app/models
+          
+          # Remove running indicator on completion
+          rm -f /tmp/sentiment_job_running
+          
+          echo "Sentiment analysis job completed at $(date)"
+      
+      # Volumes for persistent storage
+      volumes:
+      - name: model-cache
+        persistentVolumeClaim:
+          claimName: neuronews-nlp-models-pvc
+      - name: results-output
+        persistentVolumeClaim:
+          claimName: neuronews-nlp-results-pvc
+      - name: tmp-storage
+        emptyDir:
+          sizeLimit: 2Gi
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: neuronews-entity-extraction
+  namespace: neuronews
+  labels:
+    app: neuronews-nlp
+    component: entity-extraction
+    priority: high
+spec:
+  # Job configuration
+  completions: 1
+  parallelism: 1
+  backoffLimit: 3
+  activeDeadlineSeconds: 3600  # 1 hour timeout
+  ttlSecondsAfterFinished: 86400  # Clean up after 24 hours
+  
+  template:
+    metadata:
+      labels:
+        app: neuronews-nlp
+        component: entity-extraction
+        priority: high
+    spec:
+      restartPolicy: Never
+      serviceAccountName: neuronews-nlp-processor
+      
+      # Priority class for high-priority scheduling
+      priorityClassName: neuronews-nlp-high-priority
+      
+      # Node selection for GPU-enabled nodes
+      nodeSelector:
+        node-type: compute
+      
+      tolerations:
+      - key: "gpu"
+        operator: "Equal"
+        value: "nvidia"
+        effect: "NoSchedule"
+      
+      containers:
+      - name: entity-extractor
+        image: neuronews/entity-extractor:latest
+        
+        # Resource requests and limits optimized for NER
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "8Gi"
+            cpu: "4000m"
+            # GPU resource for transformer models
+            nvidia.com/gpu: 1
+        
+        # Environment configuration
+        env:
+        - name: JOB_TYPE
+          value: "entity-extraction"
+        - name: BATCH_SIZE
+          value: "50"  # Smaller batch for memory-intensive NER
+        - name: MAX_WORKERS
+          value: "2"
+        - name: MODEL_NAME
+          value: "dbmdz/bert-large-cased-finetuned-conll03-english"
+        - name: USE_GPU
+          value: "true"
+        - name: CONFIDENCE_THRESHOLD
+          value: "0.7"
+        - name: LOG_LEVEL
+          value: "INFO"
+        
+        # Redshift connection
+        - name: REDSHIFT_HOST
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-redshift-credentials
+              key: host
+        - name: REDSHIFT_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-redshift-credentials
+              key: database
+        - name: REDSHIFT_USER
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-redshift-credentials
+              key: username
+        - name: REDSHIFT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-redshift-credentials
+              key: password
+        
+        # PostgreSQL connection for reading articles
+        - name: POSTGRES_HOST
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-postgres-credentials
+              key: host
+        - name: POSTGRES_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-postgres-credentials
+              key: database
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-postgres-credentials
+              key: username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-postgres-credentials
+              key: password
+        
+        # Configuration from ConfigMap
+        envFrom:
+        - configMapRef:
+            name: neuronews-nlp-config
+        
+        # Volume mounts
+        volumeMounts:
+        - name: model-cache
+          mountPath: /app/models
+        - name: results-output
+          mountPath: /app/results
+        - name: tmp-storage
+          mountPath: /tmp
+        
+        # Health checks
+        livenessProbe:
+          exec:
+            command:
+            - python
+            - -c
+            - "import os; exit(0 if os.path.exists('/tmp/ner_job_running') else 1)"
+          initialDelaySeconds: 60  # NER models take longer to load
+          periodSeconds: 60
+          timeoutSeconds: 15
+          failureThreshold: 3
+        
+        # Command to run entity extraction
+        command: ["/bin/bash"]
+        args:
+        - -c
+        - |
+          set -e
+          echo "Starting entity extraction job at $(date)"
+          
+          # Create running indicator
+          touch /tmp/ner_job_running
+          
+          # Start the entity extraction processor
+          python -m src.nlp.kubernetes_ner_processor \
+            --job-type=entity-extraction \
+            --batch-size=${BATCH_SIZE} \
+            --max-workers=${MAX_WORKERS} \
+            --confidence-threshold=${CONFIDENCE_THRESHOLD} \
+            --output-dir=/app/results \
+            --model-cache-dir=/app/models
+          
+          # Remove running indicator on completion
+          rm -f /tmp/ner_job_running
+          
+          echo "Entity extraction job completed at $(date)"
+      
+      # Volumes for persistent storage
+      volumes:
+      - name: model-cache
+        persistentVolumeClaim:
+          claimName: neuronews-nlp-models-pvc
+      - name: results-output
+        persistentVolumeClaim:
+          claimName: neuronews-nlp-results-pvc
+      - name: tmp-storage
+        emptyDir:
+          sizeLimit: 4Gi  # Larger for NER processing
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: neuronews-ai-topic-modeling
+  namespace: neuronews
+  labels:
+    app: neuronews-nlp
+    component: topic-modeling
+    priority: medium
+spec:
+  # Job configuration for heavy AI processing
+  completions: 1
+  parallelism: 1
+  backoffLimit: 2
+  activeDeadlineSeconds: 7200  # 2 hour timeout for AI processing
+  ttlSecondsAfterFinished: 86400
+  
+  template:
+    metadata:
+      labels:
+        app: neuronews-nlp
+        component: topic-modeling
+        priority: medium
+    spec:
+      restartPolicy: Never
+      serviceAccountName: neuronews-nlp-processor
+      
+      # Priority class for medium-priority scheduling
+      priorityClassName: neuronews-nlp-medium-priority
+      
+      # Require GPU nodes for heavy AI processing
+      nodeSelector:
+        node-type: gpu-compute
+        nvidia.com/gpu.present: "true"
+      
+      tolerations:
+      - key: "gpu"
+        operator: "Equal"
+        value: "nvidia"
+        effect: "NoSchedule"
+      
+      containers:
+      - name: topic-modeler
+        image: neuronews/ai-topic-modeler:latest
+        
+        # High resource requirements for AI processing
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "2000m"
+            nvidia.com/gpu: 1
+          limits:
+            memory: "16Gi"
+            cpu: "8000m"
+            nvidia.com/gpu: 1
+        
+        # Environment configuration for AI processing
+        env:
+        - name: JOB_TYPE
+          value: "topic-modeling"
+        - name: BATCH_SIZE
+          value: "25"  # Small batch for memory-intensive AI
+        - name: MAX_WORKERS
+          value: "1"   # Single worker for GPU utilization
+        - name: MODEL_NAME
+          value: "sentence-transformers/all-MiniLM-L6-v2"
+        - name: TOPIC_MODEL_TYPE
+          value: "LDA"
+        - name: NUM_TOPICS
+          value: "20"
+        - name: USE_GPU
+          value: "true"
+        - name: CUDA_VISIBLE_DEVICES
+          value: "0"
+        - name: LOG_LEVEL
+          value: "INFO"
+        
+        # Database connections
+        - name: REDSHIFT_HOST
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-redshift-credentials
+              key: host
+        - name: REDSHIFT_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-redshift-credentials
+              key: database
+        - name: REDSHIFT_USER
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-redshift-credentials
+              key: username
+        - name: REDSHIFT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-redshift-credentials
+              key: password
+        
+        - name: POSTGRES_HOST
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-postgres-credentials
+              key: host
+        - name: POSTGRES_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-postgres-credentials
+              key: database
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-postgres-credentials
+              key: username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-postgres-credentials
+              key: password
+        
+        # Configuration from ConfigMap
+        envFrom:
+        - configMapRef:
+            name: neuronews-nlp-config
+        
+        # Volume mounts for AI models and data
+        volumeMounts:
+        - name: model-cache
+          mountPath: /app/models
+        - name: results-output
+          mountPath: /app/results
+        - name: tmp-storage
+          mountPath: /tmp
+        - name: gpu-cache
+          mountPath: /app/gpu-cache
+        
+        # Health checks for AI processing
+        livenessProbe:
+          exec:
+            command:
+            - python
+            - -c
+            - "import os; exit(0 if os.path.exists('/tmp/ai_job_running') else 1)"
+          initialDelaySeconds: 120  # AI models need time to initialize
+          periodSeconds: 120
+          timeoutSeconds: 30
+          failureThreshold: 2
+        
+        # Command to run AI topic modeling
+        command: ["/bin/bash"]
+        args:
+        - -c
+        - |
+          set -e
+          echo "Starting AI topic modeling job at $(date)"
+          
+          # GPU memory management
+          export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
+          
+          # Create running indicator
+          touch /tmp/ai_job_running
+          
+          # Start the AI topic modeling processor
+          python -m src.nlp.kubernetes_ai_processor \
+            --job-type=topic-modeling \
+            --batch-size=${BATCH_SIZE} \
+            --max-workers=${MAX_WORKERS} \
+            --num-topics=${NUM_TOPICS} \
+            --output-dir=/app/results \
+            --model-cache-dir=/app/models \
+            --gpu-cache-dir=/app/gpu-cache
+          
+          # Remove running indicator on completion
+          rm -f /tmp/ai_job_running
+          
+          echo "AI topic modeling job completed at $(date)"
+      
+      # Volumes for AI processing
+      volumes:
+      - name: model-cache
+        persistentVolumeClaim:
+          claimName: neuronews-nlp-models-pvc
+      - name: results-output
+        persistentVolumeClaim:
+          claimName: neuronews-nlp-results-pvc
+      - name: tmp-storage
+        emptyDir:
+          sizeLimit: 8Gi  # Large temp space for AI processing
+      - name: gpu-cache
+        emptyDir:
+          sizeLimit: 4Gi  # GPU model cache
