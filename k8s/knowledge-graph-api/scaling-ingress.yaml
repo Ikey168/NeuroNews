@@ -1,0 +1,289 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: knowledge-graph-api-hpa
+  namespace: neuronews
+  labels:
+    app: knowledge-graph-api
+    component: autoscaling
+  annotations:
+    description: "HPA for Knowledge Graph API with custom metrics"
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: knowledge-graph-api
+  
+  minReplicas: 3
+  maxReplicas: 20
+  
+  # Scaling behavior configuration
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+      - type: Pods
+        value: 4
+        periodSeconds: 15
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+      - type: Pods
+        value: 2
+        periodSeconds: 60
+      selectPolicy: Min
+  
+  metrics:
+  # CPU-based scaling
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  
+  # Memory-based scaling
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  
+  # Custom metrics for API-specific scaling
+  - type: Pods
+    pods:
+      metric:
+        name: kg_api_requests_per_second
+      target:
+        type: AverageValue
+        averageValue: "50"
+  
+  - type: Pods
+    pods:
+      metric:
+        name: kg_api_response_time_p95
+      target:
+        type: AverageValue
+        averageValue: "500m"  # 500ms
+  
+  - type: Pods
+    pods:
+      metric:
+        name: kg_api_cache_miss_rate
+      target:
+        type: AverageValue
+        averageValue: "30"  # 30% cache miss rate triggers scaling
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: knowledge-graph-api-pdb
+  namespace: neuronews
+  labels:
+    app: knowledge-graph-api
+    component: availability
+  annotations:
+    description: "Pod disruption budget for Knowledge Graph API"
+spec:
+  selector:
+    matchLabels:
+      app: knowledge-graph-api
+  minAvailable: 2  # Always keep at least 2 pods running
+  # Alternatively: maxUnavailable: 1
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: knowledge-graph-api-ingress
+  namespace: neuronews
+  labels:
+    app: knowledge-graph-api
+    component: ingress
+  annotations:
+    description: "Ingress for Knowledge Graph API with SSL and rate limiting"
+    # Nginx ingress annotations
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    
+    # Rate limiting
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    nginx.ingress.kubernetes.io/rate-limit-connections: "10"
+    
+    # Timeouts
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    
+    # Body size limits
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    
+    # CORS settings
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization"
+    
+    # Security headers
+    nginx.ingress.kubernetes.io/custom-http-errors: "404,503"
+    nginx.ingress.kubernetes.io/default-backend: "default-http-backend"
+    
+    # Load balancing
+    nginx.ingress.kubernetes.io/upstream-hash-by: "$request_uri"
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/affinity-mode: "persistent"
+    
+    # Monitoring
+    nginx.ingress.kubernetes.io/enable-access-log: "true"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-API-Version: v2.0.0";
+      more_set_headers "X-Service: knowledge-graph-api";
+    
+    # Certificate management (if using cert-manager)
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    cert-manager.io/acme-challenge-type: "http01"
+spec:
+  tls:
+  - hosts:
+    - kg-api.neuronews.com
+    - api.neuronews.com
+    secretName: kg-api-tls-secret
+  
+  rules:
+  # Primary domain
+  - host: kg-api.neuronews.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: knowledge-graph-api-service
+            port:
+              number: 80
+  
+  # API subdomain with version prefix
+  - host: api.neuronews.com
+    http:
+      paths:
+      - path: /v2/graph
+        pathType: Prefix
+        backend:
+          service:
+            name: knowledge-graph-api-service
+            port:
+              number: 80
+      
+      # Health check endpoint
+      - path: /health
+        pathType: Exact
+        backend:
+          service:
+            name: knowledge-graph-api-service
+            port:
+              number: 80
+      
+      # Metrics endpoint (protected)
+      - path: /metrics
+        pathType: Exact
+        backend:
+          service:
+            name: knowledge-graph-api-service
+            port:
+              number: 9090
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: knowledge-graph-api-netpol
+  namespace: neuronews
+  labels:
+    app: knowledge-graph-api
+    component: security
+  annotations:
+    description: "Network policy for Knowledge Graph API security"
+spec:
+  podSelector:
+    matchLabels:
+      app: knowledge-graph-api
+  
+  policyTypes:
+  - Ingress
+  - Egress
+  
+  ingress:
+  # Allow ingress from ingress controller
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8000
+  
+  # Allow ingress from monitoring namespace
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 8000
+    - protocol: TCP
+      port: 9090
+  
+  # Allow ingress from same namespace (for service discovery)
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: neuronews
+    ports:
+    - protocol: TCP
+      port: 8000
+  
+  egress:
+  # Allow egress to Redis
+  - to:
+    - podSelector:
+        matchLabels:
+          app: kg-api-redis
+    ports:
+    - protocol: TCP
+      port: 6379
+  
+  # Allow egress to DNS
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  
+  # Allow egress to Neptune (AWS)
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 8182
+    - protocol: TCP
+      port: 443
+  
+  # Allow egress to monitoring services
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 9090
+    - protocol: TCP
+      port: 3000

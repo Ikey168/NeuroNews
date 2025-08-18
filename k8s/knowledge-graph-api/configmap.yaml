@@ -1,0 +1,145 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kg-api-config
+  namespace: neuronews
+  labels:
+    app: knowledge-graph-api
+    component: config
+    version: v2.0.0
+  annotations:
+    description: "Configuration for enhanced Knowledge Graph API with caching and optimization"
+data:
+  # API Configuration
+  API_VERSION: "v2.0.0"
+  API_NAME: "NeuroNews Knowledge Graph API"
+  API_DESCRIPTION: "Enhanced Knowledge Graph API with caching, optimization, and real-time execution"
+  LOG_LEVEL: "INFO"
+  ENVIRONMENT: "production"
+  
+  # FastAPI Configuration
+  FASTAPI_HOST: "0.0.0.0"
+  FASTAPI_PORT: "8000"
+  FASTAPI_WORKERS: "4"
+  FASTAPI_RELOAD: "false"
+  FASTAPI_DEBUG: "false"
+  
+  # Neptune Configuration
+  NEPTUNE_ENDPOINT: "wss://neuronews-neptune-cluster.cluster-cxxxxx.us-west-2.neptune.amazonaws.com:8182/gremlin"
+  NEPTUNE_REGION: "us-west-2"
+  NEPTUNE_USE_SSL: "true"
+  NEPTUNE_CONNECTION_TIMEOUT: "30"
+  NEPTUNE_READ_TIMEOUT: "60"
+  NEPTUNE_MAX_CONNECTIONS: "20"
+  
+  # Redis Cache Configuration
+  REDIS_HOST: "kg-api-redis-service"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  REDIS_SSL: "false"
+  REDIS_MAX_CONNECTIONS: "20"
+  REDIS_CONNECTION_TIMEOUT: "5"
+  REDIS_SOCKET_KEEPALIVE: "true"
+  REDIS_HEALTH_CHECK_INTERVAL: "30"
+  
+  # Cache Settings
+  CACHE_TTL: "3600"  # 1 hour default TTL
+  CACHE_TTL_SHORT: "300"  # 5 minutes for frequently changing data
+  CACHE_TTL_LONG: "86400"  # 24 hours for stable data
+  MAX_CACHE_SIZE: "10000"
+  ENABLE_CACHE_COMPRESSION: "true"
+  CACHE_KEY_PREFIX: "kg_api_v2"
+  
+  # Query Optimization Settings
+  MAX_TRAVERSAL_DEPTH: "5"
+  MAX_RESULTS_PER_QUERY: "1000"
+  QUERY_BATCH_SIZE: "100"
+  QUERY_TIMEOUT: "30"
+  RETRY_ATTEMPTS: "3"
+  RETRY_DELAY: "1.0"
+  ENABLE_QUERY_OPTIMIZATION: "true"
+  
+  # Performance Monitoring
+  ENABLE_METRICS: "true"
+  METRICS_PORT: "9090"
+  METRICS_PATH: "/metrics"
+  PROMETHEUS_SCRAPE: "true"
+  ENABLE_TRACING: "true"
+  TRACE_SAMPLING_RATE: "0.1"
+  
+  # Security Settings
+  ENABLE_CORS: "true"
+  CORS_ORIGINS: "*"
+  CORS_METHODS: "GET,POST,PUT,DELETE,OPTIONS"
+  CORS_HEADERS: "*"
+  ENABLE_RATE_LIMITING: "true"
+  RATE_LIMIT_REQUESTS: "100"
+  RATE_LIMIT_WINDOW: "60"
+  
+  # Health Check Configuration
+  HEALTH_CHECK_INTERVAL: "30"
+  HEALTH_CHECK_TIMEOUT: "10"
+  HEALTH_CHECK_RETRIES: "3"
+  LIVENESS_PROBE_PATH: "/api/v2/graph/health"
+  READINESS_PROBE_PATH: "/api/v2/graph/health"
+  
+  # API Features Configuration
+  ENABLE_ENTITY_SEARCH: "true"
+  ENABLE_TIMELINE_QUERIES: "true"
+  ENABLE_RELATIONSHIP_TRAVERSAL: "true"
+  ENABLE_CACHE_MANAGEMENT: "true"
+  ENABLE_PERFORMANCE_STATS: "true"
+  
+  # Batch Processing Configuration
+  BATCH_PROCESSING_ENABLED: "true"
+  BATCH_SIZE: "50"
+  BATCH_TIMEOUT: "30"
+  MAX_CONCURRENT_BATCHES: "5"
+  
+  # AWS Configuration
+  AWS_REGION: "us-west-2"
+  AWS_DEFAULT_REGION: "us-west-2"
+  
+  # Logging Configuration
+  LOG_FORMAT: "json"
+  LOG_TIMESTAMP_FORMAT: "iso"
+  ENABLE_ACCESS_LOGS: "true"
+  ENABLE_ERROR_LOGS: "true"
+  LOG_ROTATION_SIZE: "100MB"
+  LOG_RETENTION_DAYS: "30"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kg-api-secrets
+  namespace: neuronews
+  labels:
+    app: knowledge-graph-api
+    component: secrets
+    version: v2.0.0
+  annotations:
+    description: "Sensitive configuration for Knowledge Graph API"
+type: Opaque
+stringData:
+  # Redis Password (if required)
+  REDIS_PASSWORD: ""
+  
+  # Neptune IAM Authentication (if using IAM)
+  AWS_ACCESS_KEY_ID: ""
+  AWS_SECRET_ACCESS_KEY: ""
+  
+  # API Security Keys
+  JWT_SECRET_KEY: "change-this-in-production"
+  API_SECRET_KEY: "change-this-in-production"
+  
+  # Database URLs (for future use)
+  DATABASE_URL: ""
+  REDIS_URL: ""
+  
+  # Monitoring and Tracing
+  JAEGER_ENDPOINT: ""
+  DATADOG_API_KEY: ""
+  
+  # Third-party Integrations
+  SLACK_WEBHOOK_URL: ""
+  PAGERDUTY_INTEGRATION_KEY: ""
