@@ -1,0 +1,354 @@
+# NeuroNews Services - Production Environment
+version: '3.8'
+
+services:
+  # FastAPI Application Service
+  fastapi:
+    build:
+      context: .
+      dockerfile: docker/fastapi.Dockerfile
+      target: production
+    container_name: neuronews-fastapi-prod
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app
+      - ENVIRONMENT=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=neuronews_prod
+      - DB_USER=neuronews
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - GREMLIN_SERVER_URL=ws://gremlin:8182/gremlin
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+    volumes:
+      - fastapi_data:/app/data
+      - fastapi_logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      gremlin:
+        condition: service_started
+    networks:
+      - neuronews-network
+    restart: unless-stopped
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  # News Scraper Service (Scheduled)
+  scraper:
+    build:
+      context: .
+      dockerfile: docker/scraper.Dockerfile
+      target: scheduler
+    container_name: neuronews-scraper-prod
+    environment:
+      - PYTHONPATH=/app
+      - ENVIRONMENT=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=neuronews_prod
+      - DB_USER=neuronews
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+    volumes:
+      - scraper_data:/app/data
+      - scraper_logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - neuronews-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # NLP Pipeline Service (Worker)
+  nlp:
+    build:
+      context: .
+      dockerfile: docker/nlp.Dockerfile
+      target: worker
+    container_name: neuronews-nlp-prod
+    environment:
+      - PYTHONPATH=/app
+      - ENVIRONMENT=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=neuronews_prod
+      - DB_USER=neuronews
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - GREMLIN_SERVER_URL=ws://gremlin:8182/gremlin
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    volumes:
+      - nlp_data:/app/data
+      - nlp_logs:/app/logs
+      - nlp_models:/app/models
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      gremlin:
+        condition: service_started
+    networks:
+      - neuronews-network
+    restart: unless-stopped
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+
+  # Streamlit Dashboard Service
+  dashboard:
+    build:
+      context: .
+      dockerfile: docker/dashboard.Dockerfile
+      target: production
+    container_name: neuronews-dashboard-prod
+    ports:
+      - "8501:8501"
+    environment:
+      - PYTHONPATH=/app
+      - ENVIRONMENT=production
+      - FASTAPI_URL=http://fastapi:8000
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=neuronews_prod
+      - DB_USER=neuronews
+      - DB_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - dashboard_data:/app/data
+    depends_on:
+      - fastapi
+      - postgres
+    networks:
+      - neuronews-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: neuronews-postgres-prod
+    environment:
+      POSTGRES_DB: neuronews_prod
+      POSTGRES_USER: neuronews
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - postgres_backups:/backups
+      - ./deployment/sql:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U neuronews -d neuronews_prod"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - neuronews-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: neuronews-redis-prod
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - neuronews-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    command: redis-server --appendonly yes --maxmemory 200mb --maxmemory-policy allkeys-lru
+
+  # Gremlin Server for Graph Database
+  gremlin:
+    image: tinkerpop/gremlin-server:3.6.2
+    container_name: neuronews-gremlin-prod
+    ports:
+      - "8182:8182"
+    environment:
+      GREMLIN_SERVER_PORT: 8182
+      JAVA_OPTS: "-Xmx2048m"
+    volumes:
+      - gremlin_data:/opt/gremlin-server/data
+      - gremlin_logs:/opt/gremlin-server/logs
+    networks:
+      - neuronews-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+  # Nginx Load Balancer
+  nginx:
+    image: nginx:alpine
+    container_name: neuronews-nginx-prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/ssl:/etc/ssl/certs:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - fastapi
+      - dashboard
+    networks:
+      - neuronews-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+
+  # Monitoring: Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: neuronews-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - neuronews-network
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+
+  # Monitoring: Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: neuronews-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./docker/monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+    networks:
+      - neuronews-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  postgres_backups:
+    driver: local
+  redis_data:
+    driver: local
+  gremlin_data:
+    driver: local
+  gremlin_logs:
+    driver: local
+  fastapi_data:
+    driver: local
+  fastapi_logs:
+    driver: local
+  scraper_data:
+    driver: local
+  scraper_logs:
+    driver: local
+  nlp_data:
+    driver: local
+  nlp_logs:
+    driver: local
+  nlp_models:
+    driver: local
+  dashboard_data:
+    driver: local
+  nginx_logs:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  neuronews-network:
+    driver: bridge
+    name: neuronews-prod-network
