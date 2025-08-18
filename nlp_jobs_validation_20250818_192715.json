@@ -1,0 +1,87 @@
+{
+  "timestamp": "2025-08-18 19:27:11.642222+00:00",
+  "namespace": "neuronews",
+  "tests": {
+    "cluster_connectivity": {
+      "name": "Cluster Connectivity",
+      "status": "failed",
+      "start_time": "2025-08-18 19:27:11.642473+00:00",
+      "message": "Failed to connect: E0818 19:27:14.783803   22592 memcache.go:265] \"Unhandled Error\" err=\"couldn't get current server API group list: Get \\\"http://localhost:8080/api?timeout=32s\\\": dial tcp [::1]:8080: connect: connection refused\"\nE0818 19:27:14.785395   22592 memcache.go:265] \"Unhandled Error\" err=\"couldn't get current server API group list: Get \\\"http://localhost:8080/api?timeout=32s\\\": dial tcp [::1]:8080: connect: connection refused\"\nE0818 19:27:14.786836   22592 memcache.go:265] \"Unhandled Error\" err=\"couldn't get current server API group list: Get \\\"http://localhost:8080/api?timeout=32s\\\": dial tcp [::1]:8080: connect: connection refused\"\nE0818 19:27:14.788171   22592 memcache.go:265] \"Unhandled Error\" err=\"couldn't get current server API group list: Get \\\"http://localhost:8080/api?timeout=32s\\\": dial tcp [::1]:8080: connect: connection refused\"\nE0818 19:27:14.789512   22592 memcache.go:265] \"Unhandled Error\" err=\"couldn't get current server API group list: Get \\\"http://localhost:8080/api?timeout=32s\\\": dial tcp [::1]:8080: connect: connection refused\"\nThe connection to the server localhost:8080 was refused - did you specify the right host or port?\n",
+      "end_time": "2025-08-18 19:27:14.792435+00:00"
+    },
+    "namespace_exists": {
+      "name": "Namespace Exists",
+      "status": "failed",
+      "start_time": "2025-08-18 19:27:14.792439+00:00",
+      "message": "Namespace neuronews not found",
+      "end_time": "2025-08-18 19:27:14.848963+00:00"
+    },
+    "priority_classes": {
+      "name": "Priority Classes",
+      "status": "failed",
+      "start_time": "2025-08-18 19:27:14.848968+00:00",
+      "message": "Missing priority classes: ['nlp-critical', 'nlp-high', 'nlp-medium', 'nlp-low', 'nlp-maintenance']",
+      "end_time": "2025-08-18 19:27:15.064494+00:00"
+    },
+    "rbac_resources": {
+      "name": "RBAC Resources",
+      "status": "failed",
+      "start_time": "2025-08-18 19:27:15.064499+00:00",
+      "message": "Missing RBAC resources: ['ServiceAccount nlp-processor', 'Role nlp-processor', 'RoleBinding nlp-processor', 'ClusterRole nlp-gpu-access']",
+      "end_time": "2025-08-18 19:27:15.239100+00:00"
+    },
+    "storage_resources": {
+      "name": "Storage Resources",
+      "status": "failed",
+      "start_time": "2025-08-18 19:27:15.239105+00:00",
+      "message": "Unbound PVCs: ['nlp-models', 'nlp-results', 'nlp-cache']",
+      "details": {
+        "nlp-models": "Missing",
+        "nlp-results": "Missing",
+        "nlp-cache": "Missing"
+      },
+      "end_time": "2025-08-18 19:27:15.374582+00:00"
+    },
+    "configmap": {
+      "name": "ConfigMap",
+      "status": "failed",
+      "start_time": "2025-08-18 19:27:15.374587+00:00",
+      "message": "ConfigMap nlp-config not found",
+      "end_time": "2025-08-18 19:27:15.417131+00:00"
+    },
+    "gpu_availability": {
+      "name": "GPU Availability",
+      "status": "warning",
+      "start_time": "2025-08-18 19:27:15.417135+00:00",
+      "message": "No GPU nodes found",
+      "end_time": "2025-08-18 19:27:15.504923+00:00"
+    },
+    "nvidia_device_plugin": {
+      "name": "NVIDIA Device Plugin",
+      "status": "warning",
+      "start_time": "2025-08-18 19:27:15.504928+00:00",
+      "message": "NVIDIA device plugin not found",
+      "end_time": "2025-08-18 19:27:15.594411+00:00"
+    },
+    "monitoring_resources": {
+      "name": "Monitoring Resources",
+      "status": "failed",
+      "start_time": "2025-08-18 19:27:15.594416+00:00",
+      "message": "No monitoring resources found",
+      "end_time": "2025-08-18 19:27:15.726099+00:00"
+    },
+    "job_creation": {
+      "name": "Job Creation",
+      "status": "failed",
+      "start_time": "2025-08-18 19:27:15.726104+00:00",
+      "message": "No jobs found",
+      "end_time": "2025-08-18 19:27:15.886358+00:00"
+    }
+  },
+  "summary": {
+    "total_tests": 10,
+    "passed_tests": 0,
+    "failed_tests": 8,
+    "warnings": 2
+  }
+}
