@@ -44,15 +44,28 @@ try:
 except ImportError:
     RBAC_AVAILABLE = False
 
+# Try to import API key management components (Issue #61)
+try:
+    from src.api.auth.api_key_middleware import APIKeyAuthMiddleware, APIKeyMetricsMiddleware
+    from src.api.routes import api_key_routes
+    API_KEY_MANAGEMENT_AVAILABLE = True
+except ImportError:
+    API_KEY_MANAGEMENT_AVAILABLE = False
+
 app = FastAPI(
     title="NeuroNews API",
-    description="API for accessing news articles and knowledge graph with RBAC and rate limiting",
+    description="API for accessing news articles and knowledge graph with RBAC, rate limiting, and API key management",
     version="0.1.0"
 )
 
 # Add rate limiting middleware first (Issue #59)
 if RATE_LIMITING_AVAILABLE:
     app.add_middleware(RateLimitMiddleware, config=RateLimitConfig())
+
+# Add API key authentication middleware (Issue #61)
+if API_KEY_MANAGEMENT_AVAILABLE:
+    app.add_middleware(APIKeyAuthMiddleware)
+    app.add_middleware(APIKeyMetricsMiddleware)
 
 # Add RBAC middleware (Issue #60)
 if RBAC_AVAILABLE:
@@ -83,6 +96,10 @@ if RATE_LIMITING_AVAILABLE:
 if RBAC_AVAILABLE:
     app.include_router(rbac_routes.router)
 
+# Include API key management routes (Issue #61)
+if API_KEY_MANAGEMENT_AVAILABLE:
+    app.include_router(api_key_routes.router)
+
 # Include enhanced knowledge graph routes if available (Issue #37)
 if ENHANCED_KG_AVAILABLE:
     app.include_router(enhanced_kg_routes.router)
@@ -104,6 +121,7 @@ async def root():
         "features": {
             "rate_limiting": RATE_LIMITING_AVAILABLE,
             "rbac": RBAC_AVAILABLE,
+            "api_key_management": API_KEY_MANAGEMENT_AVAILABLE,
             "enhanced_kg": ENHANCED_KG_AVAILABLE,
             "event_timeline": EVENT_TIMELINE_AVAILABLE,
             "quicksight": QUICKSIGHT_AVAILABLE
@@ -121,6 +139,7 @@ async def health_check():
             "api": "operational",
             "rate_limiting": "operational" if RATE_LIMITING_AVAILABLE else "disabled",
             "rbac": "operational" if RBAC_AVAILABLE else "disabled",
+            "api_key_management": "operational" if API_KEY_MANAGEMENT_AVAILABLE else "disabled",
             "database": "unknown",  # Would check actual DB connection
             "cache": "unknown"      # Would check Redis connection
         }
