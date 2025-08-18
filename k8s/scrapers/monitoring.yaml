@@ -1,0 +1,368 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: neuronews-scrapers-metrics
+  namespace: neuronews
+  labels:
+    app: neuronews-scrapers
+    component: scraper
+    monitoring: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: neuronews-scrapers-monitor
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 60s
+    scrapeTimeout: 30s
+    honorLabels: true
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'scraper_(.+)'
+      targetLabel: __name__
+      replacement: 'neuronews_scraper_${1}'
+  namespaceSelector:
+    matchNames:
+    - neuronews
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: neuronews-scrapers-monitor
+  namespace: neuronews
+  labels:
+    app: neuronews-scrapers-monitor
+    component: scraper-monitoring
+spec:
+  type: ClusterIP
+  ports:
+  - name: metrics
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  selector:
+    app: neuronews-scrapers
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: neuronews-scrapers-grafana-dashboard
+  namespace: neuronews
+  labels:
+    app: neuronews-scrapers
+    component: monitoring
+    grafana_dashboard: "1"
+data:
+  scrapers-dashboard.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "NeuroNews Scrapers Dashboard",
+        "tags": ["neuronews", "scrapers", "cronjobs"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Active Scraper Jobs",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "sum(kube_job_status_active{namespace=\"neuronews\", job_name=~\".*scraper.*\"})",
+                "legendFormat": "Active Jobs"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "thresholds"
+                },
+                "thresholds": {
+                  "steps": [
+                    {"color": "green", "value": null},
+                    {"color": "yellow", "value": 3},
+                    {"color": "red", "value": 5}
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": 2,
+            "title": "Scraper Success Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(neuronews_scraper_articles_scraped_total[5m])",
+                "legendFormat": "Articles/sec - {{scraper_type}}"
+              },
+              {
+                "expr": "rate(neuronews_scraper_errors_total[5m])",
+                "legendFormat": "Errors/sec - {{scraper_type}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Rate (per second)"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Scraper Resource Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum(container_memory_usage_bytes{pod=~\".*scraper.*\", namespace=\"neuronews\"}) by (pod)",
+                "legendFormat": "Memory - {{pod}}"
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Articles Scraped by Source",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "increase(neuronews_scraper_articles_scraped_total[1h])",
+                "legendFormat": "{{source_name}}"
+              }
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Scraper Execution Duration",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, sum(rate(neuronews_scraper_duration_seconds_bucket[5m])) by (le, scraper_type))",
+                "legendFormat": "95th percentile - {{scraper_type}}"
+              },
+              {
+                "expr": "histogram_quantile(0.50, sum(rate(neuronews_scraper_duration_seconds_bucket[5m])) by (le, scraper_type))",
+                "legendFormat": "50th percentile - {{scraper_type}}"
+              }
+            ]
+          },
+          {
+            "id": 6,
+            "title": "Failed Jobs",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "sum(kube_job_status_failed{namespace=\"neuronews\", job_name=~\".*scraper.*\"})",
+                "legendFormat": "Failed Jobs"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "thresholds"
+                },
+                "thresholds": {
+                  "steps": [
+                    {"color": "green", "value": null},
+                    {"color": "yellow", "value": 1},
+                    {"color": "red", "value": 3}
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": 7,
+            "title": "CronJob Schedule Status",
+            "type": "table",
+            "targets": [
+              {
+                "expr": "kube_cronjob_next_schedule_time{namespace=\"neuronews\"}",
+                "legendFormat": "{{cronjob}}"
+              }
+            ]
+          },
+          {
+            "id": 8,
+            "title": "Network Traffic",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum(rate(container_network_receive_bytes_total{pod=~\".*scraper.*\", namespace=\"neuronews\"}[5m])) by (pod)",
+                "legendFormat": "Received - {{pod}}"
+              },
+              {
+                "expr": "sum(rate(container_network_transmit_bytes_total{pod=~\".*scraper.*\", namespace=\"neuronews\"}[5m])) by (pod)",
+                "legendFormat": "Transmitted - {{pod}}"
+              }
+            ]
+          }
+        ],
+        "time": {
+          "from": "now-6h",
+          "to": "now"
+        },
+        "refresh": "30s"
+      }
+    }
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: neuronews-scrapers-prometheus-rules
+  namespace: neuronews
+  labels:
+    app: neuronews-scrapers
+    component: monitoring
+    prometheus: kube-prometheus
+    role: alert-rules
+data:
+  scrapers.rules: |
+    groups:
+    - name: neuronews-scrapers.rules
+      interval: 60s
+      rules:
+      # Scraper Job Failure Alert
+      - alert: NeuroNewsScraperJobFailed
+        expr: |
+          increase(kube_job_status_failed{namespace="neuronews", job_name=~".*scraper.*"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          service: neuronews-scrapers
+        annotations:
+          summary: "NeuroNews scraper job failed"
+          description: "Scraper job {{$labels.job_name}} has failed in namespace {{$labels.namespace}}"
+      
+      # High Error Rate Alert
+      - alert: NeuroNewsScraperHighErrorRate
+        expr: |
+          (
+            sum(rate(neuronews_scraper_errors_total[5m])) by (scraper_type) /
+            sum(rate(neuronews_scraper_requests_total[5m])) by (scraper_type)
+          ) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: neuronews-scrapers
+        annotations:
+          summary: "High error rate detected for NeuroNews scraper"
+          description: "Scraper {{$labels.scraper_type}} error rate is {{ $value | humanizePercentage }} which is above the threshold of 10%"
+      
+      # Low Article Scraping Rate Alert
+      - alert: NeuroNewsScraperLowProductivity
+        expr: |
+          rate(neuronews_scraper_articles_scraped_total[1h]) < 5
+        for: 30m
+        labels:
+          severity: warning
+          service: neuronews-scrapers
+        annotations:
+          summary: "Low article scraping rate detected"
+          description: "Scraper {{$labels.scraper_type}} is scraping only {{ $value }} articles per hour, which is below expected rate"
+      
+      # Scraper Job Stuck Alert
+      - alert: NeuroNewsScraperJobStuck
+        expr: |
+          time() - kube_job_status_start_time{namespace="neuronews", job_name=~".*scraper.*"} > 3600
+        for: 5m
+        labels:
+          severity: critical
+          service: neuronews-scrapers
+        annotations:
+          summary: "NeuroNews scraper job appears to be stuck"
+          description: "Scraper job {{$labels.job_name}} has been running for more than 1 hour"
+      
+      # High Memory Usage Alert
+      - alert: NeuroNewsScraperHighMemoryUsage
+        expr: |
+          sum(container_memory_usage_bytes{pod=~".*scraper.*", namespace="neuronews"}) by (pod) / 
+          sum(container_spec_memory_limit_bytes{pod=~".*scraper.*", namespace="neuronews"}) by (pod) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          service: neuronews-scrapers
+        annotations:
+          summary: "High memory usage detected for NeuroNews scraper"
+          description: "Scraper pod {{$labels.pod}} memory usage is {{ $value | humanizePercentage }}"
+      
+      # CronJob Not Running Alert
+      - alert: NeuroNewsScraperCronJobNotRunning
+        expr: |
+          time() - kube_cronjob_status_last_schedule_time{namespace="neuronews", cronjob=~".*scraper.*"} > 14400
+        for: 30m
+        labels:
+          severity: critical
+          service: neuronews-scrapers
+        annotations:
+          summary: "NeuroNews scraper CronJob has not run recently"
+          description: "CronJob {{$labels.cronjob}} has not run for more than 4 hours"
+      
+      # Scraper Response Time Alert
+      - alert: NeuroNewsScraperSlowResponse
+        expr: |
+          histogram_quantile(0.95, sum(rate(neuronews_scraper_duration_seconds_bucket[5m])) by (le, scraper_type)) > 1800
+        for: 10m
+        labels:
+          severity: warning
+          service: neuronews-scrapers
+        annotations:
+          summary: "Slow response time detected for NeuroNews scraper"
+          description: "Scraper {{$labels.scraper_type}} 95th percentile response time is {{ $value }}s which is above the threshold of 30 minutes"
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: neuronews-scraper-metrics-collector
+  namespace: neuronews
+  labels:
+    app: neuronews-scrapers
+    component: metrics-collector
+spec:
+  schedule: "*/5 * * * *"  # Every 5 minutes
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: neuronews-scrapers
+            component: metrics-collector
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: neuronews-scrapers
+          containers:
+          - name: metrics-collector
+            image: curlimages/curl:latest
+            command: ["/bin/sh"]
+            args:
+            - -c
+            - |
+              # Collect metrics from running scraper pods
+              for pod in $(kubectl get pods -n neuronews -l app=neuronews-scrapers --field-selector=status.phase=Running -o name | cut -d'/' -f2); do
+                echo "Collecting metrics from pod: $pod"
+                
+                # Try to get metrics from pod
+                if kubectl exec -n neuronews $pod -- curl -s http://localhost:8080/metrics > /tmp/metrics.txt 2>/dev/null; then
+                  # Push to Prometheus PushGateway
+                  curl -X POST http://prometheus-pushgateway.monitoring.svc.cluster.local:9091/metrics/job/scraper-metrics/instance/$pod \
+                    --data-binary @/tmp/metrics.txt
+                else
+                  echo "Failed to collect metrics from pod: $pod"
+                fi
+              done
+              
+              # Collect Kubernetes job metrics
+              kubectl get jobs -n neuronews -l app=neuronews-scrapers -o json | \
+                jq -r '.items[] | "neuronews_scraper_job_status{name=\"\(.metadata.name)\",status=\"\(.status.conditions[0].type)\"} 1"' | \
+                curl -X POST http://prometheus-pushgateway.monitoring.svc.cluster.local:9091/metrics/job/scraper-job-status \
+                  --data-binary @-
+            resources:
+              requests:
+                cpu: 50m
+                memory: 64Mi
+              limits:
+                cpu: 100m
+                memory: 128Mi
