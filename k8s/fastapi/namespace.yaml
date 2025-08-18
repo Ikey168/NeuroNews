@@ -1,0 +1,130 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: neuronews
+  labels:
+    name: neuronews
+    app: neuronews
+    environment: production
+    team: neuronews-team
+  annotations:
+    description: "NeuroNews application namespace for production deployment"
+    contact: "team@neuronews.io"
+    version: "1.0.0"
+spec:
+  finalizers:
+  - kubernetes
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: neuronews
+  name: neuronews-fastapi-role
+  labels:
+    app: neuronews-fastapi
+    component: api
+rules:
+# ConfigMaps
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch"]
+# Secrets
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list", "watch"]
+# Pods (for health checks)
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+# Services
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: neuronews-fastapi-binding
+  namespace: neuronews
+  labels:
+    app: neuronews-fastapi
+    component: api
+subjects:
+- kind: ServiceAccount
+  name: neuronews-fastapi
+  namespace: neuronews
+roleRef:
+  kind: Role
+  name: neuronews-fastapi-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: v1
+kind: NetworkPolicy
+metadata:
+  name: neuronews-fastapi-network-policy
+  namespace: neuronews
+  labels:
+    app: neuronews-fastapi
+    component: api
+spec:
+  podSelector:
+    matchLabels:
+      app: neuronews-fastapi
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow traffic from ingress controller
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8000
+  # Allow traffic from monitoring namespace
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 8000
+  # Allow internal cluster communication
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: neuronews
+    ports:
+    - protocol: TCP
+      port: 8000
+  egress:
+  # Allow DNS resolution
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+  # Allow HTTPS outbound
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+  # Allow database access
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: neuronews
+    ports:
+    - protocol: TCP
+      port: 5432
+  # Allow Redis access
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: neuronews
+    ports:
+    - protocol: TCP
+      port: 6379

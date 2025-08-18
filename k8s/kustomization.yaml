@@ -1,0 +1,107 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: neuronews-fastapi
+  namespace: neuronews
+
+# Resources to include
+resources:
+- fastapi/namespace.yaml
+- fastapi/configmap.yaml
+- fastapi/deployment.yaml
+- fastapi/service.yaml
+- fastapi/ingress.yaml
+- fastapi/hpa.yaml
+- fastapi/policies.yaml
+- fastapi/monitoring.yaml
+
+# Images to customize
+images:
+- name: neuronews/fastapi
+  newTag: latest
+
+# ConfigMap generators
+configMapGenerator:
+- name: neuronews-fastapi-env
+  env: .env.production
+
+# Secret generators
+secretGenerator:
+- name: neuronews-fastapi-secrets
+  env: .env.secrets
+
+# Common labels
+commonLabels:
+  app: neuronews-fastapi
+  version: v1.0.0
+  component: api
+  tier: backend
+  managed-by: kustomize
+
+# Common annotations
+commonAnnotations:
+  deployment.kubernetes.io/revision: "1"
+  kubectl.kubernetes.io/last-applied-configuration: ""
+
+# Namespace
+namespace: neuronews
+
+# Name prefix
+namePrefix: ""
+
+# Name suffix
+nameSuffix: ""
+
+# Replica count patches
+patchesStrategicMerge:
+- |-
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: neuronews-fastapi
+    namespace: neuronews
+  spec:
+    replicas: 3
+
+# JSON patches
+patchesJson6902:
+- target:
+    group: apps
+    version: v1
+    kind: Deployment
+    name: neuronews-fastapi
+    namespace: neuronews
+  patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests/memory
+      value: 512Mi
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/limits/memory
+      value: 2Gi
+
+# Replacements for environment-specific values
+replacements:
+- source:
+    kind: ConfigMap
+    name: neuronews-config
+    fieldPath: data.app.environment
+  targets:
+  - select:
+      kind: Deployment
+      name: neuronews-fastapi
+    fieldPaths:
+    - spec.template.spec.containers.[name=fastapi].env.[name=ENVIRONMENT].value
+
+# Generators
+generators: []
+
+# Transformers
+transformers: []
+
+# Inventory
+inventory:
+  type: ConfigMap
+  configMap:
+    name: inventory
+    namespace: neuronews

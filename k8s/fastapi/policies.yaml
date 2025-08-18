@@ -1,0 +1,64 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: neuronews-fastapi-pdb
+  namespace: neuronews
+  labels:
+    app: neuronews-fastapi
+    component: api
+    tier: backend
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: neuronews-fastapi
+
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: neuronews-fastapi-limits
+  namespace: neuronews
+  labels:
+    app: neuronews-fastapi
+    component: api
+spec:
+  limits:
+  - type: Container
+    default:
+      cpu: 1000m
+      memory: 2Gi
+    defaultRequest:
+      cpu: 200m
+      memory: 512Mi
+    max:
+      cpu: 2000m
+      memory: 4Gi
+    min:
+      cpu: 100m
+      memory: 256Mi
+  - type: Pod
+    max:
+      cpu: 2000m
+      memory: 4Gi
+
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: neuronews-fastapi-quota
+  namespace: neuronews
+  labels:
+    app: neuronews-fastapi
+    component: api
+spec:
+  hard:
+    requests.cpu: "10"
+    requests.memory: 20Gi
+    limits.cpu: "20"
+    limits.memory: 40Gi
+    pods: "50"
+    persistentvolumeclaims: "10"
+    services: "10"
+    secrets: "20"
+    configmaps: "20"
