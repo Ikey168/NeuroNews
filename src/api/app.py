@@ -36,15 +36,28 @@ try:
 except ImportError:
     RATE_LIMITING_AVAILABLE = False
 
+# Try to import RBAC components (Issue #60)
+try:
+    from src.api.rbac.rbac_middleware import EnhancedRBACMiddleware, RBACMetricsMiddleware
+    from src.api.routes import rbac_routes
+    RBAC_AVAILABLE = True
+except ImportError:
+    RBAC_AVAILABLE = False
+
 app = FastAPI(
     title="NeuroNews API",
-    description="API for accessing news articles and knowledge graph with rate limiting",
+    description="API for accessing news articles and knowledge graph with RBAC and rate limiting",
     version="0.1.0"
 )
 
 # Add rate limiting middleware first (Issue #59)
 if RATE_LIMITING_AVAILABLE:
     app.add_middleware(RateLimitMiddleware, config=RateLimitConfig())
+
+# Add RBAC middleware (Issue #60)
+if RBAC_AVAILABLE:
+    app.add_middleware(EnhancedRBACMiddleware)
+    app.add_middleware(RBACMetricsMiddleware)
 
 # CORS configuration
 app.add_middleware(
@@ -66,6 +79,10 @@ if RATE_LIMITING_AVAILABLE:
     app.include_router(auth_routes.router)
     app.include_router(rate_limit_routes.router)
 
+# Include RBAC routes (Issue #60)
+if RBAC_AVAILABLE:
+    app.include_router(rbac_routes.router)
+
 # Include enhanced knowledge graph routes if available (Issue #37)
 if ENHANCED_KG_AVAILABLE:
     app.include_router(enhanced_kg_routes.router)
@@ -86,6 +103,7 @@ async def root():
         "message": "NeuroNews API is running",
         "features": {
             "rate_limiting": RATE_LIMITING_AVAILABLE,
+            "rbac": RBAC_AVAILABLE,
             "enhanced_kg": ENHANCED_KG_AVAILABLE,
             "event_timeline": EVENT_TIMELINE_AVAILABLE,
             "quicksight": QUICKSIGHT_AVAILABLE
@@ -102,6 +120,7 @@ async def health_check():
         "components": {
             "api": "operational",
             "rate_limiting": "operational" if RATE_LIMITING_AVAILABLE else "disabled",
+            "rbac": "operational" if RBAC_AVAILABLE else "disabled",
             "database": "unknown",  # Would check actual DB connection
             "cache": "unknown"      # Would check Redis connection
         }
