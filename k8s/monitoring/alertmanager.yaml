@@ -1,0 +1,284 @@
+---
+# AlertManager ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: alertmanager
+    app.kubernetes.io/component: monitoring
+data:
+  alertmanager.yml: |
+    global:
+      smtp_smarthost: 'localhost:587'
+      smtp_from: 'alerts@neuronews.com'
+      smtp_auth_username: 'alerts@neuronews.com'
+      smtp_auth_password: 'password'
+      slack_api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+
+    templates:
+    - '/etc/alertmanager/templates/*.tmpl'
+
+    route:
+      group_by: ['alertname', 'cluster', 'service']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 1h
+      receiver: 'web.hook'
+      routes:
+      - match:
+          severity: critical
+        receiver: 'critical-alerts'
+        group_wait: 5s
+        repeat_interval: 30m
+      - match:
+          severity: warning
+        receiver: 'warning-alerts'
+        repeat_interval: 2h
+      - match:
+          service: scraper
+        receiver: 'scraper-alerts'
+      - match:
+          service: nlp
+        receiver: 'nlp-alerts'
+      - match:
+          service: infrastructure
+        receiver: 'infrastructure-alerts'
+
+    receivers:
+    - name: 'web.hook'
+      webhook_configs:
+      - url: 'http://localhost:5001/'
+        send_resolved: true
+
+    - name: 'critical-alerts'
+      email_configs:
+      - to: 'ops-team@neuronews.com'
+        subject: 'CRITICAL: {{ .GroupLabels.alertname }} - {{ .GroupLabels.cluster }}'
+        body: |
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Labels: {{ range .Labels.SortedPairs }}
+            {{ .Name }}: {{ .Value }}
+          {{ end }}
+          {{ end }}
+      slack_configs:
+      - channel: '#alerts-critical'
+        color: 'danger'
+        title: 'CRITICAL Alert - {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        send_resolved: true
+
+    - name: 'warning-alerts'
+      email_configs:
+      - to: 'dev-team@neuronews.com'
+        subject: 'WARNING: {{ .GroupLabels.alertname }} - {{ .GroupLabels.cluster }}'
+        body: |
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          {{ end }}
+      slack_configs:
+      - channel: '#alerts-warning'
+        color: 'warning'
+        title: 'Warning Alert - {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+
+    - name: 'scraper-alerts'
+      slack_configs:
+      - channel: '#scrapers'
+        color: 'warning'
+        title: 'Scraper Alert - {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        send_resolved: true
+
+    - name: 'nlp-alerts'
+      slack_configs:
+      - channel: '#nlp-processing'
+        color: 'warning'
+        title: 'NLP Alert - {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        send_resolved: true
+
+    - name: 'infrastructure-alerts'
+      email_configs:
+      - to: 'infrastructure@neuronews.com'
+        subject: 'INFRA: {{ .GroupLabels.alertname }} - {{ .GroupLabels.cluster }}'
+      slack_configs:
+      - channel: '#infrastructure'
+        color: 'danger'
+        title: 'Infrastructure Alert - {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+
+    inhibit_rules:
+    - source_match:
+        severity: 'critical'
+      target_match:
+        severity: 'warning'
+      equal: ['alertname', 'cluster', 'service']
+
+  # Email template
+  email.tmpl: |
+    {{ define "email.subject" }}
+    [{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .GroupLabels.SortedPairs.Values | join " " }} {{ if gt (len .CommonLabels) (len .GroupLabels) }}({{ with .CommonLabels.Remove .GroupLabels.Names }}{{ .Values | join " " }}{{ end }}){{ end }}
+    {{ end }}
+
+    {{ define "email.html" }}
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .alert { border: 1px solid #ddd; margin: 10px 0; padding: 15px; border-radius: 5px; }
+    .firing { background-color: #ffe6e6; border-color: #ff9999; }
+    .resolved { background-color: #e6ffe6; border-color: #99ff99; }
+    .critical { border-left: 5px solid #ff0000; }
+    .warning { border-left: 5px solid #ff9900; }
+    </style>
+    </head>
+    <body>
+    <h2>NeuroNews Alert Summary</h2>
+    {{ range .Alerts }}
+    <div class="alert {{ .Status }}{{ if eq .Labels.severity "critical" }} critical{{ else if eq .Labels.severity "warning" }} warning{{ end }}">
+    <h3>{{ .Annotations.summary }}</h3>
+    <p><strong>Status:</strong> {{ .Status | title }}</p>
+    <p><strong>Service:</strong> {{ .Labels.service }}</p>
+    <p><strong>Description:</strong> {{ .Annotations.description }}</p>
+    <p><strong>Time:</strong> {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}</p>
+    {{ if .Labels }}
+    <details>
+    <summary>Labels</summary>
+    <ul>
+    {{ range .Labels.SortedPairs }}
+    <li><strong>{{ .Name }}:</strong> {{ .Value }}</li>
+    {{ end }}
+    </ul>
+    </details>
+    {{ end }}
+    </div>
+    {{ end }}
+    </body>
+    </html>
+    {{ end }}
+---
+# AlertManager PersistentVolumeClaim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: alertmanager-storage
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: alertmanager
+    app.kubernetes.io/component: monitoring
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+---
+# AlertManager Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: alertmanager
+    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/part-of: neuronews
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: alertmanager
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: alertmanager
+        app.kubernetes.io/component: monitoring
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9093"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: alertmanager
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        fsGroup: 65534
+      containers:
+      - name: alertmanager
+        image: prom/alertmanager:v0.26.0
+        args:
+          - '--config.file=/etc/alertmanager/alertmanager.yml'
+          - '--storage.path=/alertmanager'
+          - '--data.retention=120h'
+          - '--log.level=info'
+          - '--web.listen-address=:9093'
+          - '--cluster.listen-address='
+        ports:
+        - containerPort: 9093
+          name: web
+          protocol: TCP
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        volumeMounts:
+        - name: alertmanager-config
+          mountPath: /etc/alertmanager/
+        - name: alertmanager-storage
+          mountPath: /alertmanager
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: 9093
+          initialDelaySeconds: 30
+          timeoutSeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: 9093
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+          periodSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+      volumes:
+      - name: alertmanager-config
+        configMap:
+          name: alertmanager-config
+      - name: alertmanager-storage
+        persistentVolumeClaim:
+          claimName: alertmanager-storage
+---
+# AlertManager Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: alertmanager
+    app.kubernetes.io/component: monitoring
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9093
+    targetPort: 9093
+    protocol: TCP
+    name: web
+  selector:
+    app.kubernetes.io/name: alertmanager
