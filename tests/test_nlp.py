@@ -1,9 +1,7 @@
 import pytest
 
-from src.nlp.sentiment_analysis import \
-    SentimentAnalyzer  # Changed from BaseSentimentAnalyzer
-from src.nlp.sentiment_analysis import \
-    create_analyzer  # VaderSentimentAnalyzer, # Commented out as it's not defined
+from src.nlp.sentiment_analysis import (  # Changed from BaseSentimentAnalyzer; VaderSentimentAnalyzer, # Commented out as it's not defined
+    SentimentAnalyzer, create_analyzer)
 
 # Commenting out TestBaseSentimentAnalyzer as it's for a non-existent class
 # and its methods (e.g., preprocess_text) are not in SentimentAnalyzer
