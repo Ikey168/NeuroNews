@@ -5,19 +5,16 @@ These tests verify the functionality of the RedshiftETLProcessor and its
 integration with the data validation pipeline.
 """
 
-import json
+from database.redshift_loader import ArticleRecord, RedshiftETLProcessor
 import logging
 import os
 import sys
 import unittest
-from datetime import datetime, timedelta, timezone
-from unittest.mock import MagicMock, Mock, patch
+from datetime import datetime
+from unittest.mock import Mock, patch
 
 # Add src to path for imports
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "src"))
-
-from database.data_validation_pipeline import ValidationResult
-from database.redshift_loader import ArticleRecord, RedshiftETLProcessor
 
 
 class TestArticleRecord(unittest.TestCase):

@@ -17,7 +17,6 @@ Key enhancements over Issue #37:
 """
 
 import asyncio
-import json
 import logging
 from collections import defaultdict
 from dataclasses import dataclass
@@ -192,7 +191,10 @@ class EventTimelineService:
             # Sort events chronologically
             enhanced_events.sort(key=lambda x: x.timestamp)
 
-            logger.info(f"Tracked {len(enhanced_events)} historical events for {topic}")
+            logger.info(
+                f"Tracked {
+                    len(enhanced_events)} historical events for {topic}"
+            )
             return enhanced_events
 
         except Exception as e:
@@ -208,7 +210,10 @@ class EventTimelineService:
         This implements the second requirement of Issue #38:
         "Store event timestamps & relationships in Neptune."
         """
-        logger.info(f"Storing {len(events)} events and relationships in Neptune")
+        logger.info(
+            f"Storing {
+                len(events)} events and relationships in Neptune"
+        )
 
         try:
             storage_results = {
@@ -290,7 +295,10 @@ class EventTimelineService:
                 )
                 response["visualization"] = visualization_data
 
-            logger.info(f"Generated timeline response with {len(events)} events")
+            logger.info(
+                f"Generated timeline response with {
+                    len(events)} events"
+            )
             return response
 
         except Exception as e:
@@ -397,7 +405,8 @@ class EventTimelineService:
                 event_data = {
                     "event_id": safe_extract("id", f"event_{len(events)}"),
                     "title": safe_extract("title", "Unknown Event"),
-                    "description": str(safe_extract("content", ""))[:500],  # Truncate
+                    # Truncate
+                    "description": str(safe_extract("content", ""))[:500],
                     "timestamp": self._parse_timestamp(
                         safe_extract("published_date", "")
                     ),
@@ -437,8 +446,13 @@ class EventTimelineService:
             event_time = start_date + (time_span * i / num_events)
 
             sample_event = {
-                "id": f"sample_event_{i}_{topic.replace(' ', '_').lower()}",
-                "title": f"Sample Event {i+1} for {topic}",
+                "id": f"sample_event_{i}_{
+                    topic.replace(
+                        ' ',
+                        '_').lower()}",
+                "title": f"Sample Event {
+                    i +
+                    1} for {topic}",
                 "content": f"This is a sample event related to {topic}. This demonstrates the event timeline functionality for Issue #38.",
                 "published_date": event_time.isoformat(),
                 "author": "Sample Author",
@@ -509,7 +523,10 @@ class EventTimelineService:
             if not force_update:
                 existing = await self._check_event_exists(event.event_id)
                 if existing:
-                    logger.debug(f"Event {event.event_id} already exists, skipping")
+                    logger.debug(
+                        f"Event {
+                            event.event_id} already exists, skipping"
+                    )
                     return True
 
             # Create event vertex in Neptune
@@ -595,7 +612,9 @@ class EventTimelineService:
                     )
 
             logger.debug(
-                f"Created {len(relationships)} relationships for event {event.event_id}"
+                f"Created {
+                    len(relationships)} relationships for event {
+                    event.event_id}"
             )
             return relationships
 
@@ -1012,7 +1031,10 @@ async def demo_event_timeline_service():
             storage_result = await service.store_event_relationships(events[:5])
             print(f"   Stored {storage_result.get('events_stored', 0)} events")
             print(
-                f"   Created {storage_result.get('relationships_created', 0)} relationships"
+                f"   Created {
+                    storage_result.get(
+                        'relationships_created',
+                        0)} relationships"
             )
 
         # Test 3: Generate API response
@@ -1021,10 +1043,18 @@ async def demo_event_timeline_service():
             topic="Artificial Intelligence", max_events=10, include_visualizations=True
         )
         print(
-            f"   Generated response with {api_response.get('total_events', 0)} events"
+            f"   Generated response with {
+                api_response.get(
+                    'total_events',
+                    0)} events"
         )
         print(
-            f"   Visualization included: {api_response.get('metadata', {}).get('visualization_included', False)}"
+            f"   Visualization included: {
+                api_response.get(
+                    'metadata',
+                    {}).get(
+                    'visualization_included',
+                    False)}"
         )
 
         # Test 4: Generate visualization data

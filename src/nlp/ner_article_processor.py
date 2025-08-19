@@ -5,8 +5,7 @@ Extends the base ArticleProcessor to include entity extraction and storage.
 
 import json
 import logging
-from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import psycopg2
 from psycopg2.extras import execute_batch
@@ -107,15 +106,15 @@ class NERArticleProcessor(ArticleProcessor):
             extracted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (article_id) REFERENCES article_sentiment(article_id)
         );
-        
+
         -- Index for efficient querying
         CREATE INDEX IF NOT EXISTS idx_article_entities_article_id ON article_entities(article_id);
         CREATE INDEX IF NOT EXISTS idx_article_entities_type ON article_entities(entity_type);
         CREATE INDEX IF NOT EXISTS idx_article_entities_text ON article_entities(entity_text);
-        
+
         -- View for entity statistics
         CREATE OR REPLACE VIEW entity_statistics AS
-        SELECT 
+        SELECT
             entity_type,
             COUNT(*) as entity_count,
             COUNT(DISTINCT article_id) as article_count,
@@ -125,10 +124,10 @@ class NERArticleProcessor(ArticleProcessor):
         FROM article_entities
         GROUP BY entity_type
         ORDER BY entity_count DESC;
-        
+
         -- View for most common entities
         CREATE OR REPLACE VIEW common_entities AS
-        SELECT 
+        SELECT
             entity_text,
             entity_type,
             COUNT(*) as frequency,
@@ -162,7 +161,9 @@ class NERArticleProcessor(ArticleProcessor):
         """
         try:
             logger.info(
-                f"Processing {len(articles)} articles with NER enabled: {self.ner_enabled}"
+                f"Processing {
+                    len(articles)} articles with NER enabled: {
+                    self.ner_enabled}"
             )
 
             # First, process with sentiment analysis (parent class)
@@ -178,7 +179,13 @@ class NERArticleProcessor(ArticleProcessor):
 
             for article, sentiment_result in zip(articles, sentiment_results):
                 # Combine title and content for entity extraction
-                full_text = f"{article.get('title', '')}. {article.get('content', '')}"
+                full_text = f"{
+                    article.get(
+                        'title',
+                        '')}. {
+                    article.get(
+                        'content',
+                        '')}"
 
                 # Extract entities
                 entities = self.ner_processor.extract_entities(
@@ -213,7 +220,9 @@ class NERArticleProcessor(ArticleProcessor):
             self._update_articles_with_entities(enhanced_results)
 
             logger.info(
-                f"Successfully processed {len(articles)} articles with {len(entity_batch)} entities"
+                f"Successfully processed {
+                    len(articles)} articles with {
+                    len(entity_batch)} entities"
             )
             return enhanced_results
 
@@ -244,7 +253,10 @@ class NERArticleProcessor(ArticleProcessor):
                 with conn.cursor() as cur:
                     execute_batch(cur, insert_sql, entities, page_size=self.batch_size)
                     conn.commit()
-                    logger.info(f"Successfully stored {len(entities)} entities")
+                    logger.info(
+                        f"Successfully stored {
+                            len(entities)} entities"
+                    )
         except Exception as e:
             logger.error(f"Failed to store entities: {e}")
             # Don't raise - continue processing
@@ -278,7 +290,7 @@ class NERArticleProcessor(ArticleProcessor):
             return
 
         update_sql = """
-        UPDATE news_articles 
+        UPDATE news_articles
         SET entities = %(entities)s
         WHERE id = %(article_id)s;
         """
@@ -289,7 +301,8 @@ class NERArticleProcessor(ArticleProcessor):
                     execute_batch(cur, update_sql, updates, page_size=self.batch_size)
                     conn.commit()
                     logger.info(
-                        f"Successfully updated {len(updates)} articles with entity data"
+                        f"Successfully updated {
+                            len(updates)} articles with entity data"
                     )
         except Exception as e:
             logger.error(f"Failed to update articles with entities: {e}")
@@ -380,7 +393,7 @@ class NERArticleProcessor(ArticleProcessor):
             where_clause = " AND ".join(conditions)
 
             search_sql = f"""
-            SELECT 
+            SELECT
                 ae.entity_text,
                 ae.entity_type,
                 ae.confidence,

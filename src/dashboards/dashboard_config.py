@@ -115,4 +115,5 @@ if os.getenv("ENVIRONMENT") == "production":
 
 elif os.getenv("ENVIRONMENT") == "development":
     DATA_CONFIG["cache_ttl"] = 60  # 1 minute in development
-    PERFORMANCE_CONFIG["enable_caching"] = False  # Disable caching for development
+    # Disable caching for development
+    PERFORMANCE_CONFIG["enable_caching"] = False

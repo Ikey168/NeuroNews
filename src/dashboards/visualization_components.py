@@ -4,11 +4,9 @@ Visualization Components for NeuroNews Streamlit Dashboard (Issue #50)
 Contains specialized chart and graph components for the dashboard.
 """
 
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 
 import networkx as nx
-import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -309,14 +307,16 @@ class NetworkVisualization:
         fig = go.Figure(
             data=[edge_trace, node_trace],
             layout=go.Layout(
-                title=f"Entity Network ({G.number_of_nodes()} entities, {edge_count} relationships)",
+                title=f"Entity Network ({
+                    G.number_of_nodes()} entities, {edge_count} relationships)",
                 titlefont_size=16,
                 showlegend=False,
                 hovermode="closest",
                 margin=dict(b=20, l=5, r=5, t=40),
                 annotations=[
                     dict(
-                        text=f"Layout: {layout_type.title()}",
+                        text=f"Layout: {
+                            layout_type.title()}",
                         showarrow=False,
                         xref="paper",
                         yref="paper",
@@ -366,7 +366,7 @@ class NetworkVisualization:
         # Use hierarchical layout
         try:
             pos = nx.nx_agraph.graphviz_layout(G, prog="dot")
-        except:
+        except BaseException:
             # Fallback to spring layout if graphviz not available
             pos = nx.spring_layout(G)
 

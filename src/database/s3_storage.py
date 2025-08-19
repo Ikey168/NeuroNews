@@ -1,15 +1,13 @@
-import asyncio
 import hashlib
 import json
 import logging
 import os
 import uuid
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
-import aiohttp
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
 
@@ -220,7 +218,8 @@ class S3ArticleStorage:
             article_id = str(uuid.uuid4())
             prefix = article_type.value
             current_date = datetime.now(timezone.utc)
-            return f"{prefix}/{current_date.strftime('%Y/%m/%d')}/{article_id}.json"
+            return f"{prefix}/{
+                current_date.strftime('%Y/%m/%d')}/{article_id}.json"
 
     async def store_raw_article(
         self, article: Dict[str, Any], metadata: Optional[Dict[str, Any]] = None
@@ -245,7 +244,10 @@ class S3ArticleStorage:
         required_fields = ["title", "content", "url"]
         missing_fields = [field for field in required_fields if not article.get(field)]
         if missing_fields:
-            raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
+            raise ValueError(
+                f"Missing required fields: {
+                    ', '.join(missing_fields)}"
+            )
 
         try:
             # Generate article metadata
@@ -574,7 +576,10 @@ class S3ArticleStorage:
                 results.append(error_metadata)
 
         if errors:
-            logger.warning(f"Batch operation completed with {len(errors)} errors")
+            logger.warning(
+                f"Batch operation completed with {
+                    len(errors)} errors"
+            )
 
         return results
 
@@ -796,7 +801,16 @@ class S3Storage(S3ArticleStorage):
         year, month, day = date_parts
 
         # Generate content hash
-        content = f"{article.get('title', '')}{article.get('content', '')}{article.get('url', '')}"
+        content = f"{
+            article.get(
+                'title',
+                '')}{
+            article.get(
+                'content',
+                '')}{
+                    article.get(
+                        'url',
+                        '')}"
         content_hash = self._calculate_content_hash(content)[:8]
 
         # Create legacy key structure
@@ -810,7 +824,10 @@ class S3Storage(S3ArticleStorage):
         required_fields = ["title", "content", "source"]
         missing_fields = [field for field in required_fields if not article.get(field)]
         if missing_fields:
-            raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
+            raise ValueError(
+                f"Missing required fields: {
+                    ', '.join(missing_fields)}"
+            )
 
         if not self.s3_client:
             raise ValueError("S3 client not available")
@@ -1018,7 +1035,8 @@ async def verify_s3_data_consistency(
 
         return {
             "status": "success" if invalid_count == 0 else "warning",
-            "message": f"Verified {len(all_keys)} articles",
+            "message": f"Verified {
+                len(all_keys)} articles",
             "total_checked": len(all_keys),
             "valid_articles": valid_count,
             "invalid_articles": invalid_count,

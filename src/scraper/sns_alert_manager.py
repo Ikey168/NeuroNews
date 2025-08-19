@@ -158,7 +158,9 @@ class SNSAlertManager:
             self._cleanup_old_alerts()
 
             self.logger.info(
-                f"Sent alert: {alert.title} (MessageId: {response['MessageId']})"
+                f"Sent alert: {
+                    alert.title} (MessageId: {
+                    response['MessageId']})"
             )
             return True
 
@@ -344,7 +346,9 @@ class SNSAlertManager:
             alert_type=AlertType.PERFORMANCE_DEGRADATION,
             severity=AlertSeverity.WARNING,
             title=f"Performance Degradation Detected",
-            message=f"Average response time ({avg_response_time:.0f}ms) exceeds threshold ({threshold:.0f}ms) "
+            message=f"Average response time ({
+                avg_response_time:.0f}ms) exceeds threshold ({
+                threshold:.0f}ms) "
             f"over the last {time_period} hours.",
             timestamp=time.time(),
             metadata={

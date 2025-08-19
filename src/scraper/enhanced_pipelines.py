@@ -7,7 +7,7 @@ pipeline to implement Issue #21 requirements within the scraping workflow.
 
 import logging
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from scrapy import Item
 from scrapy.exceptions import DropItem
@@ -15,7 +15,6 @@ from scrapy.exceptions import DropItem
 from src.database.data_validation_pipeline import (
     DataValidationPipeline,
     SourceReputationConfig,
-    ValidationResult,
 )
 
 logger = logging.getLogger(__name__)
@@ -82,7 +81,9 @@ class EnhancedValidationPipeline:
         if result is None:
             # Article was rejected by validation pipeline
             spider.logger.info(
-                f"Article dropped by validation pipeline: {article_dict.get('url', 'Unknown URL')}"
+                f"Article dropped by validation pipeline: {
+                    article_dict.get(
+                        'url', 'Unknown URL')}"
             )
             raise DropItem("Article failed validation pipeline")
 
@@ -101,7 +102,10 @@ class EnhancedValidationPipeline:
         # Log warnings if any
         if result.warnings:
             spider.logger.warning(
-                f"Article validation warnings for {item.get('url', 'Unknown URL')}: {result.warnings}"
+                f"Article validation warnings for {
+                    item.get(
+                        'url', 'Unknown URL')}: {
+                    result.warnings}"
             )
 
         # Log quality info
@@ -189,10 +193,16 @@ class QualityFilterPipeline:
         if validation_score < self.min_score:
             self.filtered_count += 1
             spider.logger.info(
-                f"Article filtered - low score ({validation_score:.1f}): {item.get('url', 'Unknown URL')}"
+                f"Article filtered - low score ({
+                    validation_score:.1f}): {
+                    item.get(
+                        'url',
+                        'Unknown URL')}"
             )
             raise DropItem(
-                f"Article validation score ({validation_score:.1f}) below threshold ({self.min_score})"
+                f"Article validation score ({
+                    validation_score:.1f}) below threshold ({
+                    self.min_score})"
             )
 
         # Check content length
@@ -203,7 +213,8 @@ class QualityFilterPipeline:
                 f"Article filtered - short content ({content_length}): {item.get('url', 'Unknown URL')}"
             )
             raise DropItem(
-                f"Article content length ({content_length}) below threshold ({self.min_content_length})"
+                f"Article content length ({content_length}) below threshold ({
+                    self.min_content_length})"
             )
 
         # Check for critical validation flags
@@ -229,7 +240,8 @@ class QualityFilterPipeline:
     def close_spider(self, spider):
         """Log filtering statistics when spider closes."""
         spider.logger.info(
-            f"Quality filter removed {self.filtered_count} low-quality articles"
+            f"Quality filter removed {
+                self.filtered_count} low-quality articles"
         )
         spider.crawler.stats.set_value("quality_filtered_count", self.filtered_count)
 
@@ -321,11 +333,11 @@ class SourceCredibilityPipeline:
             f"""
 === Source Credibility Statistics ===
 Total articles: {total}
-Trusted: {self.credibility_stats['trusted']} ({self.credibility_stats['trusted']/total*100:.1f}%)
-Reliable: {self.credibility_stats['reliable']} ({self.credibility_stats['reliable']/total*100:.1f}%)
-Questionable: {self.credibility_stats['questionable']} ({self.credibility_stats['questionable']/total*100:.1f}%)
-Unreliable: {self.credibility_stats['unreliable']} ({self.credibility_stats['unreliable']/total*100:.1f}%)
-Unknown: {self.credibility_stats['unknown']} ({self.credibility_stats['unknown']/total*100:.1f}%)
+Trusted: {self.credibility_stats['trusted']} ({self.credibility_stats['trusted'] / total * 100:.1f}%)
+Reliable: {self.credibility_stats['reliable']} ({self.credibility_stats['reliable'] / total * 100:.1f}%)
+Questionable: {self.credibility_stats['questionable']} ({self.credibility_stats['questionable'] / total * 100:.1f}%)
+Unreliable: {self.credibility_stats['unreliable']} ({self.credibility_stats['unreliable'] / total * 100:.1f}%)
+Unknown: {self.credibility_stats['unknown']} ({self.credibility_stats['unknown'] / total * 100:.1f}%)
 Blocked unreliable: {self.blocked_count}
 ====================================
 """
@@ -379,7 +391,9 @@ class DuplicateFilterPipeline:
             self.duplicate_reasons[reason] = self.duplicate_reasons.get(reason, 0) + 1
 
             spider.logger.info(
-                f"Duplicate article detected ({reason}): {item.get('url', 'Unknown URL')}"
+                f"Duplicate article detected ({reason}): {
+                    item.get(
+                        'url', 'Unknown URL')}"
             )
             raise DropItem(f"Duplicate article: {reason}")
 

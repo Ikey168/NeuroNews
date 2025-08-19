@@ -148,7 +148,8 @@ async def get_related_entities(
                             "name", r.get("orgName", r.get("eventName", "Unknown"))
                         )
                     ),
-                    # T.label is a Gremlin token, valueMap(True) should provide it.
+                    # T.label is a Gremlin token, valueMap(True) should provide
+                    # it.
                     "type": r.get(T.label, "Unknown") if T.label in r else "Unknown",
                     "properties": {
                         k: v[0] if isinstance(v, list) and len(v) == 1 else v
@@ -164,14 +165,23 @@ async def get_related_entities(
     except ConnectionError as ce:
         logger.error(f"Connection error in get_related_entities: {str(ce)}")
         raise HTTPException(
-            status_code=503, detail=f"Graph database connection error: {str(ce)}"
+            status_code=503,
+            detail=f"Graph database connection error: {
+                str(ce)}",
         )
     except Exception as e:
-        logger.error(f"Error getting related entities for '{entity}': {str(e)}")
+        logger.error(
+            f"Error getting related entities for '{entity}': {
+                str(e)}"
+        )
         import traceback
 
         logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {
+                str(e)}",
+        )
 
 
 @router.get("/event_timeline")
@@ -217,14 +227,23 @@ async def get_event_timeline(
     except ConnectionError as ce:
         logger.error(f"Connection error in get_event_timeline: {str(ce)}")
         raise HTTPException(
-            status_code=503, detail=f"Graph database connection error: {str(ce)}"
+            status_code=503,
+            detail=f"Graph database connection error: {
+                str(ce)}",
         )
     except Exception as e:
-        logger.error(f"Error getting event timeline for topic '{topic}': {str(e)}")
+        logger.error(
+            f"Error getting event timeline for topic '{topic}': {
+                str(e)}"
+        )
         import traceback
 
         logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {
+                str(e)}",
+        )
 
 
 @router.get("/health")
@@ -235,7 +254,9 @@ async def health_check(graph: GraphBuilder = Depends(get_graph)) -> Dict[str, st
     except ConnectionError as ce:
         logger.error(f"Health check failed due to connection error: {str(ce)}")
         raise HTTPException(
-            status_code=503, detail=f"Graph database connection error: {str(ce)}"
+            status_code=503,
+            detail=f"Graph database connection error: {
+                str(ce)}",
         )
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
@@ -243,5 +264,7 @@ async def health_check(graph: GraphBuilder = Depends(get_graph)) -> Dict[str, st
 
         logger.error(traceback.format_exc())
         raise HTTPException(
-            status_code=503, detail=f"Graph database connection failed: {str(e)}"
+            status_code=503,
+            detail=f"Graph database connection failed: {
+                str(e)}",
         )

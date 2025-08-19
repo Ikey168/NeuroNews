@@ -11,8 +11,7 @@ This module implements comprehensive API protection:
 import json
 import logging
 import os
-import time
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -154,7 +153,9 @@ class AWSWAFManager:
 
             self.web_acl_arn = response["Summary"]["ARN"]
             logger.info(
-                f"Created Web ACL: {self.web_acl_name} with ARN: {self.web_acl_arn}"
+                f"Created Web ACL: {
+                    self.web_acl_name} with ARN: {
+                    self.web_acl_arn}"
             )
             return True
 
@@ -294,7 +295,8 @@ class AWSWAFManager:
                         "VendorName": "AWS",
                         "Name": "AWSManagedRulesCommonRuleSet",
                         "ExcludedRules": [
-                            # Exclude rules that might be too restrictive for API
+                            # Exclude rules that might be too restrictive for
+                            # API
                             {"Name": "SizeRestrictions_BODY"},
                             {"Name": "SizeRestrictions_QUERYSTRING"},
                         ],
@@ -633,7 +635,9 @@ class AWSWAFManager:
             )
 
             # Enable WAF logging
-            log_destination_arn = f"arn:aws:logs:{self.region}:{self._get_account_id()}:log-group:{log_group_name}"
+            log_destination_arn = f"arn:aws:logs:{
+                self.region}:{
+                self._get_account_id()}:log-group:{log_group_name}"
 
             self.wafv2_client.put_logging_configuration(
                 LoggingConfiguration={

@@ -4,7 +4,6 @@ Tests performance improvements, functionality, and integration with existing sys
 """
 
 import asyncio
-import json
 import logging
 import shutil
 import sys
@@ -12,8 +11,7 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
-from typing import Any, Dict, List
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
@@ -157,7 +155,8 @@ class TestOptimizedIngestionPipeline(unittest.TestCase):
         self.assertEqual(len(results["processed_articles"]), 30)
 
         # Test processing time is reasonable
-        self.assertLess(concurrent_time, 10.0)  # Should complete within 10 seconds
+        # Should complete within 10 seconds
+        self.assertLess(concurrent_time, 10.0)
 
     def test_adaptive_batching(self):
         """Test adaptive batching functionality."""
@@ -435,8 +434,14 @@ class TestPerformanceBenchmarks(unittest.TestCase):
         )  # Complete within 20 seconds
 
         print(f"\nThroughput Benchmark Results:")
-        print(f"Processing Time: {benchmark_results['processing_time']:.2f} seconds")
-        print(f"Throughput: {benchmark_results['throughput']:.1f} articles/second")
+        print(
+            f"Processing Time: {
+                benchmark_results['processing_time']:.2f} seconds"
+        )
+        print(
+            f"Throughput: {
+                benchmark_results['throughput']:.1f} articles/second"
+        )
         print(f"Articles Processed: {benchmark_results['articles_processed']}")
 
     def test_memory_efficiency_benchmark(self):
@@ -460,13 +465,15 @@ class TestPerformanceBenchmarks(unittest.TestCase):
         memory_increase = asyncio.run(run_memory_test())
 
         # Memory efficiency assertions
-        self.assertLess(memory_increase, 200)  # Memory increase should be reasonable
+        # Memory increase should be reasonable
+        self.assertLess(memory_increase, 200)
 
         print(f"\nMemory Efficiency Benchmark Results:")
         print(f"Initial Memory: {initial_memory:.1f} MB")
         print(f"Memory Increase: {memory_increase:.1f} MB")
         print(
-            f"Memory Efficiency: {len(self.large_dataset) / max(memory_increase, 1):.1f} articles/MB"
+            f"Memory Efficiency: {len(self.large_dataset) /
+                                    max(memory_increase, 1):.1f} articles/MB"
         )
 
     def test_concurrent_processing_scaling(self):
@@ -481,7 +488,7 @@ class TestPerformanceBenchmarks(unittest.TestCase):
 
             try:
                 start_time = time.time()
-                results = await pipeline.process_articles_async(test_data)
+                await pipeline.process_articles_async(test_data)
                 processing_time = time.time() - start_time
 
                 return {
@@ -673,7 +680,7 @@ if __name__ == "__main__":
     result = runner.run(test_suite)
 
     # Print summary
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print(f"Test Summary:")
     print(f"Tests run: {result.testsRun}")
     print(f"Failures: {len(result.failures)}")
@@ -681,4 +688,4 @@ if __name__ == "__main__":
     print(
         f"Success rate: {((result.testsRun - len(result.failures) - len(result.errors)) / result.testsRun * 100):.1f}%"
     )
-    print(f"{'='*50}")
+    print(f"{'=' * 50}")

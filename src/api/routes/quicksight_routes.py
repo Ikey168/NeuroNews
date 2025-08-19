@@ -15,7 +15,6 @@ Endpoints:
 
 import logging
 from datetime import datetime
-from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
@@ -155,10 +154,10 @@ async def get_quicksight_service() -> QuickSightDashboardService:
     summary="Set up QuickSight Resources",
     description="""
     Set up AWS QuickSight for interactive visualization.
-    
+
     This endpoint implements the first requirement of Issue #49:
     "Set up AWS QuickSight for interactive visualization."
-    
+
     Creates:
     - Redshift data source connection
     - Datasets for different analysis types
@@ -197,7 +196,9 @@ async def setup_quicksight_resources(
     except Exception as e:
         logger.error(f"Failed to set up QuickSight resources: {e}")
         raise HTTPException(
-            status_code=500, detail=f"Failed to set up QuickSight resources: {str(e)}"
+            status_code=500,
+            detail=f"Failed to set up QuickSight resources: {
+                str(e)}",
         )
 
 
@@ -251,14 +252,14 @@ async def list_dashboards(
     summary="Create Dashboard Layout",
     description="""
     Create a dashboard layout for specific insights.
-    
+
     This implements the second requirement of Issue #49:
     "Create a dashboard layout for trending topics by sentiment,
     knowledge graph entity relationships, event timeline analysis."
-    
+
     Supported layout types:
     - sentiment_trends: Trending topics by sentiment
-    - entity_relationships: Knowledge graph entity relationships  
+    - entity_relationships: Knowledge graph entity relationships
     - event_timeline: Event timeline analysis
     - comprehensive: All insights combined
     """,
@@ -278,7 +279,9 @@ async def create_dashboard_layout(
         except ValueError:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid layout type: {layout_type}. Supported types: {[t.value for t in DashboardType]}",
+                detail=f"Invalid layout type: {layout_type}. Supported types: {
+                    [
+                        t.value for t in DashboardType]}",
             )
 
         # Create dashboard layout
@@ -302,7 +305,9 @@ async def create_dashboard_layout(
     except Exception as e:
         logger.error(f"Failed to create dashboard layout {layout_type}: {e}")
         raise HTTPException(
-            status_code=500, detail=f"Failed to create dashboard layout: {str(e)}"
+            status_code=500,
+            detail=f"Failed to create dashboard layout: {
+                str(e)}",
         )
 
 
@@ -312,10 +317,10 @@ async def create_dashboard_layout(
     summary="Set up Real-time Updates",
     description="""
     Implement real-time updates from Redshift.
-    
+
     This implements the fourth requirement of Issue #49:
     "Implement real-time updates from Redshift."
-    
+
     Sets up automatic refresh schedules for all datasets to ensure
     dashboards show the latest data from the Redshift data warehouse.
     """,
@@ -365,13 +370,13 @@ async def setup_real_time_updates(
     summary="Validate Setup",
     description="""
     Validate QuickSight setup and resources.
-    
+
     Checks the status of:
     - Data source connection
     - Created datasets
     - Analysis objects
     - Dashboard availability
-    
+
     Returns comprehensive validation results.
     """,
 )
@@ -385,7 +390,8 @@ async def validate_quicksight_setup(
         result = await service.validate_setup()
 
         logger.info(
-            f"Validation completed: {'Success' if result['overall_valid'] else 'Issues found'}"
+            f"Validation completed: {
+                'Success' if result['overall_valid'] else 'Issues found'}"
         )
         return ValidationResponse(**result)
 

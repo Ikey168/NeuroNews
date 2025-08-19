@@ -90,14 +90,19 @@ class EnhancedRBACMiddleware(BaseHTTPMiddleware):
             if not has_access:
                 # Log access denied attempt
                 logger.warning(
-                    f"Access denied: {user_role.value} user {user_data.get('sub', 'unknown')} "
+                    f"Access denied: {
+                        user_role.value} user {
+                        user_data.get(
+                            'sub',
+                            'unknown')} "
                     f"attempted to access {method} {path}"
                 )
 
                 return JSONResponse(
                     status_code=403,
                     content={
-                        "detail": f"Access denied. {user_role.value.title()} users cannot access this endpoint",
+                        "detail": f"Access denied. {
+                            user_role.value.title()} users cannot access this endpoint",
                         "error_code": "ACCESS_DENIED",
                         "required_role": self._get_minimum_required_role(method, path),
                         "user_role": user_role.value,
@@ -110,7 +115,11 @@ class EnhancedRBACMiddleware(BaseHTTPMiddleware):
 
             # Log successful access
             logger.info(
-                f"Access granted: {user_role.value} user {user_data.get('sub', 'unknown')} "
+                f"Access granted: {
+                    user_role.value} user {
+                    user_data.get(
+                        'sub',
+                        'unknown')} "
                 f"accessing {method} {path}"
             )
 

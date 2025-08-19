@@ -68,7 +68,8 @@ class PlaywrightNewsSpider(scrapy.Spider):
                             href = response.urljoin(href)
                         article_links.append(href)
 
-            # If no links found with specific selectors, try a more generic approach
+            # If no links found with specific selectors, try a more generic
+            # approach
             if not article_links:
                 # Get all links
                 all_links = await page.query_selector_all("a")

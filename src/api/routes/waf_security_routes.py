@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, Field
 
 from src.api.auth.jwt_auth import require_auth
-from src.api.security.aws_waf_manager import ActionType, ThreatType, waf_manager
+from src.api.security.aws_waf_manager import waf_manager
 
 router = APIRouter(prefix="/api/security", tags=["waf-security"])
 
@@ -135,7 +135,11 @@ async def deploy_waf(admin_user: dict = Depends(require_admin)):
         }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to deploy WAF: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to deploy WAF: {
+                str(e)}",
+        )
 
 
 @router.post("/waf/associate/{api_gateway_arn}")
@@ -447,7 +451,9 @@ async def get_sql_injection_attempts(
 
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to get SQL injection attempts: {str(e)}"
+            status_code=500,
+            detail=f"Failed to get SQL injection attempts: {
+                str(e)}",
         )
 
 
@@ -537,7 +543,9 @@ async def get_geofencing_status(admin_user: dict = Depends(require_admin)):
 
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to get geofencing status: {str(e)}"
+            status_code=500,
+            detail=f"Failed to get geofencing status: {
+                str(e)}",
         )
 
 

@@ -14,17 +14,15 @@ Endpoints:
 - /graph_analytics - Graph analytics and metrics
 """
 
-import json
 import logging
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Union
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, Field
 
 # Import enhanced knowledge graph components
 try:
-    from src.knowledge_graph.enhanced_entity_extractor import EnhancedEntity
     from src.knowledge_graph.enhanced_graph_populator import (
         EnhancedKnowledgeGraphPopulator,
         create_enhanced_knowledge_graph_populator,
@@ -187,7 +185,9 @@ async def get_enhanced_graph_populator() -> EnhancedKnowledgeGraphPopulator:
     except Exception as e:
         logger.error(f"Failed to create enhanced graph populator: {e}")
         raise HTTPException(
-            status_code=503, detail=f"Knowledge graph service not available: {str(e)}"
+            status_code=503,
+            detail=f"Knowledge graph service not available: {
+                str(e)}",
         )
 
 
@@ -273,7 +273,8 @@ async def get_related_entities(
         )
 
         logger.info(
-            f"Successfully returned {len(related_entities)} related entities for {entity}"
+            f"Successfully returned {
+                len(related_entities)} related entities for {entity}"
         )
         return response
 
@@ -284,7 +285,9 @@ async def get_related_entities(
             f"Error processing related entities request for {entity}: {str(e)}"
         )
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve related entities: {str(e)}"
+            status_code=500,
+            detail=f"Failed to retrieve related entities: {
+                str(e)}",
         )
 
 
@@ -380,16 +383,22 @@ async def get_event_timeline(
         )
 
         logger.info(
-            f"Successfully returned {len(timeline_events)} timeline events for {topic}"
+            f"Successfully returned {
+                len(timeline_events)} timeline events for {topic}"
         )
         return response
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error processing event timeline request for {topic}: {str(e)}")
+        logger.error(
+            f"Error processing event timeline request for {topic}: {
+                str(e)}"
+        )
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve event timeline: {str(e)}"
+            status_code=500,
+            detail=f"Failed to retrieve event timeline: {
+                str(e)}",
         )
 
 
@@ -433,9 +442,14 @@ async def get_entity_details(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error retrieving entity details for {entity_id}: {str(e)}")
+        logger.error(
+            f"Error retrieving entity details for {entity_id}: {
+                str(e)}"
+        )
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve entity details: {str(e)}"
+            status_code=500,
+            detail=f"Failed to retrieve entity details: {
+                str(e)}",
         )
 
 
@@ -462,7 +476,10 @@ async def advanced_graph_search(
     }
     """
     try:
-        logger.info(f"API request for advanced graph search: {query.query_type}")
+        logger.info(
+            f"API request for advanced graph search: {
+                query.query_type}"
+        )
 
         # Validate query type
         valid_query_types = ["entity", "relationship", "path"]
@@ -490,7 +507,10 @@ async def advanced_graph_search(
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-        logger.info(f"Successfully returned {len(search_results)} search results")
+        logger.info(
+            f"Successfully returned {
+                len(search_results)} search results"
+        )
         return response
 
     except HTTPException:
@@ -556,7 +576,9 @@ async def get_graph_analytics(
     except Exception as e:
         logger.error(f"Error processing graph analytics request: {str(e)}")
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve graph analytics: {str(e)}"
+            status_code=500,
+            detail=f"Failed to retrieve graph analytics: {
+                str(e)}",
         )
 
 
@@ -633,9 +655,11 @@ async def _query_timeline_events(
 
         # Add date filters if provided
         if start_date:
-            gremlin_query += f".has('published_date', gte('{start_date.isoformat()}'))"
+            gremlin_query += f".has('published_date', gte('{
+                start_date.isoformat()}'))"
         if end_date:
-            gremlin_query += f".has('published_date', lte('{end_date.isoformat()}'))"
+            gremlin_query += f".has('published_date', lte('{
+                end_date.isoformat()}'))"
 
         gremlin_query += (
             f".order().by('published_date', desc).limit({max_events}).valueMap(true)"
@@ -1158,7 +1182,8 @@ async def _get_clustering_analytics(
     """Get clustering analytics."""
     try:
         # This is a simplified clustering analysis
-        # In practice, you'd want more sophisticated community detection algorithms
+        # In practice, you'd want more sophisticated community detection
+        # algorithms
 
         # Get densely connected entity groups
         results = await populator.graph_builder._execute_traversal(
@@ -1197,4 +1222,8 @@ async def health_check():
             "timestamp": datetime.utcnow().isoformat(),
         }
     except Exception as e:
-        raise HTTPException(status_code=503, detail=f"Service unhealthy: {str(e)}")
+        raise HTTPException(
+            status_code=503,
+            detail=f"Service unhealthy: {
+                str(e)}",
+        )

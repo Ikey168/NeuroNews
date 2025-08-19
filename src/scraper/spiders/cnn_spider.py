@@ -106,7 +106,7 @@ class CNNSpider(scrapy.Spider):
                 date_str = date_match.group(1)
                 parsed_date = datetime.strptime(date_str, "%B %d, %Y")
                 return parsed_date.isoformat()
-        except:
+        except BaseException:
             pass
         return datetime.now().isoformat()
 

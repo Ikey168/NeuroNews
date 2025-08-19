@@ -6,7 +6,7 @@ Provides endpoints for checking and managing API rate limits.
 
 import logging
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -89,7 +89,8 @@ async def get_api_limits(
     Raises:
         HTTPException: If user not found or access denied
     """
-    # Authorization check - users can only see their own limits, admins can see any
+    # Authorization check - users can only see their own limits, admins can
+    # see any
     if current_user.get("user_id") != user_id and current_user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Access denied")
 
@@ -130,7 +131,7 @@ async def get_api_limits(
                 concurrent_requests = (
                     await rate_limit_store._get_concurrent_count_redis(user_id)
                 )
-            except:
+            except BaseException:
                 pass
         else:
             concurrent_requests = rate_limit_store.memory_store[user_id]["concurrent"]
@@ -339,7 +340,8 @@ async def reset_user_limits(
             _reset_user_limits_memory(user_id)
 
         logger.info(
-            f"Rate limits reset for user {user_id} by admin {current_user.get('user_id')}"
+            f"Rate limits reset for user {user_id} by admin {
+                current_user.get('user_id')}"
         )
 
         return {"message": f"Rate limits reset successfully for user {user_id}"}

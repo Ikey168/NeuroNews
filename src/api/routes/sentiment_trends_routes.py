@@ -7,7 +7,7 @@ alerts, and analysis results from the sentiment trend analyzer.
 
 import logging
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -15,10 +15,6 @@ from pydantic import BaseModel, Field
 from src.core.config import get_settings
 from src.nlp.sentiment_trend_analyzer import (
     SentimentTrendAnalyzer,
-    TopicTrendSummary,
-    TrendAlert,
-    analyze_sentiment_trends_for_topic,
-    generate_daily_sentiment_alerts,
 )
 
 # Set up logging
@@ -209,7 +205,8 @@ async def analyze_sentiment_trends(
         }
 
         logger.info(
-            f"Successfully analyzed trends for {len(response_summaries)} topics"
+            f"Successfully analyzed trends for {
+                len(response_summaries)} topics"
         )
         return response
 
@@ -218,7 +215,9 @@ async def analyze_sentiment_trends(
     except Exception as e:
         logger.error(f"Error analyzing sentiment trends: {str(e)}")
         raise HTTPException(
-            status_code=500, detail=f"Failed to analyze sentiment trends: {str(e)}"
+            status_code=500,
+            detail=f"Failed to analyze sentiment trends: {
+                str(e)}",
         )
 
 
@@ -299,7 +298,9 @@ async def generate_sentiment_alerts(
     except Exception as e:
         logger.error(f"Error generating sentiment alerts: {str(e)}")
         raise HTTPException(
-            status_code=500, detail=f"Failed to generate sentiment alerts: {str(e)}"
+            status_code=500,
+            detail=f"Failed to generate sentiment alerts: {
+                str(e)}",
         )
 
 
@@ -384,7 +385,9 @@ async def get_sentiment_alerts(
     except Exception as e:
         logger.error(f"Error retrieving sentiment alerts: {str(e)}")
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve sentiment alerts: {str(e)}"
+            status_code=500,
+            detail=f"Failed to retrieve sentiment alerts: {
+                str(e)}",
         )
 
 
@@ -485,14 +488,18 @@ async def get_topic_sentiment_trends(
         }
 
         logger.info(
-            f"Retrieved sentiment trends for topic '{topic}' with {len(trend_points)} data points"
+            f"Retrieved sentiment trends for topic '{topic}' with {
+                len(trend_points)} data points"
         )
         return response
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error retrieving topic sentiment trends for {topic}: {str(e)}")
+        logger.error(
+            f"Error retrieving topic sentiment trends for {topic}: {
+                str(e)}"
+        )
         raise HTTPException(
             status_code=500,
             detail=f"Failed to retrieve sentiment trends for topic: {str(e)}",
@@ -613,7 +620,8 @@ async def get_sentiment_trends_summary(
         }
 
         logger.info(
-            f"Generated sentiment trends summary for {len(topic_summaries)} topics"
+            f"Generated sentiment trends summary for {
+                len(topic_summaries)} topics"
         )
         return response
 

@@ -18,13 +18,10 @@ import json
 import logging
 import os
 import re
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
-import numpy as np
-import pandas as pd
-from sklearn.cluster import KMeans
 from sklearn.decomposition import LatentDirichletAllocation
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 
@@ -322,7 +319,7 @@ class TextPreprocessor:
                             keywords.append(lemmatized)
                         else:
                             keywords.append(word)
-                    except:
+                    except BaseException:
                         keywords.append(word)  # Fallback to original word
 
             # Remove duplicates while preserving order
@@ -361,7 +358,8 @@ class TFIDFKeywordExtractor:
             ngram_range=ngram_range,
             stop_words="english",
             lowercase=True,
-            token_pattern=r"\b[a-zA-Z][a-zA-Z0-9]{2,}\b",  # Minimum 3 chars, start with letter
+            # Minimum 3 chars, start with letter
+            token_pattern=r"\b[a-zA-Z][a-zA-Z0-9]{2,}\b",
             min_df=1,  # Minimum document frequency
             max_df=0.95,  # Maximum document frequency
         )
@@ -394,7 +392,8 @@ class TFIDFKeywordExtractor:
             # For multiple documents, use TF-IDF
             actual_texts = [text for _, text in non_empty_texts]
 
-            # Create a new vectorizer with adjusted parameters for small datasets
+            # Create a new vectorizer with adjusted parameters for small
+            # datasets
             vectorizer = TfidfVectorizer(
                 max_features=self.max_features,
                 ngram_range=self.ngram_range,
@@ -411,7 +410,8 @@ class TFIDFKeywordExtractor:
             tfidf_matrix = vectorizer.fit_transform(actual_texts)
             feature_names = vectorizer.get_feature_names_out()
 
-            results = [[] for _ in texts]  # Initialize results for all original texts
+            # Initialize results for all original texts
+            results = [[] for _ in texts]
 
             # Process each non-empty text
             for result_idx, (original_idx, _) in enumerate(non_empty_texts):
@@ -682,7 +682,11 @@ class KeywordTopicExtractor:
         full_text = f"{title} {content}".strip()
 
         if not full_text:
-            logger.warning(f"Empty text for article {article.get('id', 'unknown')}")
+            logger.warning(
+                f"Empty text for article {
+                    article.get(
+                        'id', 'unknown')}"
+            )
             return self._empty_result(article, start_time)
 
         # Extract keywords using TF-IDF
@@ -773,7 +777,9 @@ class KeywordTopicExtractor:
                 results.append(result)
             except Exception as e:
                 logger.error(
-                    f"Error processing article {article.get('id', 'unknown')}: {e}"
+                    f"Error processing article {
+                        article.get(
+                            'id', 'unknown')}: {e}"
                 )
                 results.append(self._empty_result(article, datetime.now()))
 
@@ -979,8 +985,7 @@ def create_keyword_extractor(
         # Check if all required ML dependencies are available
         sklearn_available = False
         try:
-            from sklearn.decomposition import LatentDirichletAllocation
-            from sklearn.feature_extraction.text import TfidfVectorizer
+            pass
 
             sklearn_available = True
         except ImportError:
@@ -988,7 +993,7 @@ def create_keyword_extractor(
 
         nltk_available = False
         try:
-            import nltk
+            pass
 
             # Try to use NLTK to check if it's properly set up
             from nltk.corpus import stopwords
@@ -1009,7 +1014,7 @@ def create_keyword_extractor(
 
             # Check if the model is available
             try:
-                nlp = spacy.load("en_core_web_sm")
+                spacy.load("en_core_web_sm")
                 spacy_available = True
             except OSError:
                 # Model not available

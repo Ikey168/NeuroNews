@@ -5,7 +5,7 @@ Role-based access control (RBAC) system for API endpoints.
 import logging
 from enum import Enum
 from functools import wraps
-from typing import Dict, List, Optional, Set
+from typing import Dict, Set
 
 from fastapi import HTTPException, Request
 
@@ -139,7 +139,8 @@ def require_permissions(*permissions: Permission):
 
                 raise HTTPException(
                     status_code=403,
-                    detail=f"Missing required permissions: {', '.join(missing_permissions)}",
+                    detail=f"Missing required permissions: {
+                        ', '.join(missing_permissions)}",
                 )
 
             # Log successful authorization

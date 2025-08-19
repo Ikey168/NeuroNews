@@ -3,13 +3,19 @@ Test suite for multi-language news processing functionality.
 Tests language detection, translation, quality checking, and pipeline integration.
 """
 
-import asyncio
-import json
-
 # Mock psycopg2 before any imports that might use it
+from src.scraper.pipelines.multi_language_pipeline import (
+    LanguageFilterPipeline,
+    MultiLanguagePipeline,
+)
+from src.nlp.multi_language_processor import MultiLanguageArticleProcessor
+from src.nlp.language_processor import (
+    AWSTranslateService,
+    LanguageDetector,
+    TranslationQualityChecker,
+)
 import sys
-from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
@@ -36,16 +42,6 @@ sys.modules["psycopg2"] = mock_psycopg2
 sys.modules["psycopg2.extras"] = mock_psycopg2.extras
 
 # Import our multi-language components
-from src.nlp.language_processor import (
-    AWSTranslateService,
-    LanguageDetector,
-    TranslationQualityChecker,
-)
-from src.nlp.multi_language_processor import MultiLanguageArticleProcessor
-from src.scraper.pipelines.multi_language_pipeline import (
-    LanguageFilterPipeline,
-    MultiLanguagePipeline,
-)
 
 
 class TestLanguageDetector:
@@ -113,7 +109,8 @@ class TestLanguageDetector:
         """Test handling of mixed language content."""
         mixed_text = "Hello world and welcome to this news article. Bonjour le monde and technology updates. Hola mundo."
         result = self.detector.detect_language(mixed_text)
-        # Should detect the most prominent language or unknown for mixed content
+        # Should detect the most prominent language or unknown for mixed
+        # content
         assert result["language"] in ["en", "fr", "es", "unknown"]
 
 
@@ -225,7 +222,8 @@ class TestTranslationQualityChecker:
     def test_untranslated_content_detection(self):
         """Test detection of untranslated content."""
         original = "Technology news article"
-        translated = "Technology news article"  # Exactly the same (no translation)
+        # Exactly the same (no translation)
+        translated = "Technology news article"
 
         quality = self.checker.assess_translation_quality(
             original, translated, "en", "es"
@@ -316,7 +314,8 @@ class TestMultiLanguageArticleProcessor:
                 redshift_password="test_pass",
             )
 
-            # Manually set the connection since database initialization might fail
+            # Manually set the connection since database initialization might
+            # fail
             processor.connection = mock_conn
 
         # Test language detection storage
@@ -480,7 +479,6 @@ class TestLanguageFilterPipeline:
 
     def test_allowed_language_pass(self):
         """Test that allowed languages pass through."""
-        from scrapy.exceptions import DropItem
 
         from src.scraper.items import NewsItem
 
@@ -499,7 +497,8 @@ class TestLanguageFilterPipeline:
         item = NewsItem()
         item["original_language"] = "de"  # Not in allowed list
 
-        # Set allowed languages in spider settings (use the correct setting name)
+        # Set allowed languages in spider settings (use the correct setting
+        # name)
         self.spider.settings["ALLOWED_LANGUAGES"] = ["en", "es", "fr"]
 
         with pytest.raises(DropItem):

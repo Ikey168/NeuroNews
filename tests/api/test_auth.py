@@ -9,7 +9,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.api.auth.jwt_auth import JWTAuth, auth_handler
+from src.api.auth.jwt_auth import auth_handler
 from src.api.middleware.auth_middleware import configure_auth_middleware
 from src.api.routes.auth_routes import router as auth_router
 

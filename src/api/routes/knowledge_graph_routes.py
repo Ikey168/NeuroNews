@@ -14,7 +14,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from src.core.config import get_settings
 from src.knowledge_graph.nlp_populator import (
     KnowledgeGraphPopulator,
-    get_entity_relationships,
 )
 
 # Set up logging
@@ -110,16 +109,20 @@ async def get_related_entities_endpoint(
         }
 
         logger.info(
-            f"Successfully returned {len(related_entities)} related entities for {entity_name}"
+            f"Successfully returned {
+                len(related_entities)} related entities for {entity_name}"
         )
         return response
 
     except Exception as e:
         logger.error(
-            f"Error processing related entities request for {entity_name}: {str(e)}"
+            f"Error processing related entities request for {entity_name}: {
+                str(e)}"
         )
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve related entities: {str(e)}"
+            status_code=500,
+            detail=f"Failed to retrieve related entities: {
+                str(e)}",
         )
     finally:
         await populator.close()
@@ -176,7 +179,8 @@ async def get_entity_details(
             response["relationships"] = related_entities
 
         if include_articles:
-            # Get source articles (placeholder - would need implementation in graph_builder)
+            # Get source articles (placeholder - would need implementation in
+            # graph_builder)
             response["source_articles"] = entity.get("source_articles", [])
 
         logger.info(f"Successfully returned details for entity {entity_id}")
@@ -187,7 +191,9 @@ async def get_entity_details(
     except Exception as e:
         logger.error(f"Error getting entity details for {entity_id}: {str(e)}")
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve entity details: {str(e)}"
+            status_code=500,
+            detail=f"Failed to retrieve entity details: {
+                str(e)}",
         )
     finally:
         await populator.close()
@@ -213,7 +219,10 @@ async def populate_article_endpoint(
         HTTPException: If article data is invalid or processing fails
     """
     try:
-        logger.info(f"API request to populate article: {article_data.get('id')}")
+        logger.info(
+            f"API request to populate article: {
+                article_data.get('id')}"
+        )
 
         # Validate required fields
         required_fields = ["id", "title", "content"]
@@ -232,7 +241,8 @@ async def populate_article_endpoint(
                 )
             except ValueError:
                 logger.warning(
-                    f"Invalid published_date format: {article_data['published_date']}"
+                    f"Invalid published_date format: {
+                        article_data['published_date']}"
                 )
 
         # Process article
@@ -253,7 +263,11 @@ async def populate_article_endpoint(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error populating article {article_data.get('id')}: {str(e)}")
+        logger.error(
+            f"Error populating article {
+                article_data.get('id')}: {
+                str(e)}"
+        )
         raise HTTPException(
             status_code=500, detail=f"Failed to populate article: {str(e)}"
         )
@@ -279,7 +293,10 @@ async def batch_populate_articles_endpoint(
         HTTPException: If processing fails
     """
     try:
-        logger.info(f"API request for batch population of {len(articles)} articles")
+        logger.info(
+            f"API request for batch population of {
+                len(articles)} articles"
+        )
 
         if not articles:
             raise HTTPException(
@@ -326,7 +343,8 @@ async def get_knowledge_graph_stats(
     try:
         logger.info("API request for knowledge graph statistics")
 
-        # Get graph statistics (placeholder - would need implementation in graph_builder)
+        # Get graph statistics (placeholder - would need implementation in
+        # graph_builder)
         stats = {
             "total_entities": 0,  # Would query from Neptune
             "total_relationships": 0,  # Would query from Neptune
@@ -382,7 +400,8 @@ async def search_entities(
             )
 
         # Search entities (placeholder - would need implementation in graph_builder)
-        # This would perform text search across entity names and normalized forms
+        # This would perform text search across entity names and normalized
+        # forms
         results = []  # Would query from Neptune with text search
 
         response = {
@@ -394,7 +413,10 @@ async def search_entities(
             "status": "success",
         }
 
-        logger.info(f"Successfully returned {len(results)} search results for: {query}")
+        logger.info(
+            f"Successfully returned {
+                len(results)} search results for: {query}"
+        )
         return response
 
     except HTTPException:

@@ -6,13 +6,11 @@ the AWS Neptune knowledge graph, populating entities, relationships,
 and linking articles to events and policies.
 """
 
-import asyncio
 import hashlib
-import json
 import logging
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from src.knowledge_graph.graph_builder import GraphBuilder
 from src.nlp.article_processor import ArticleProcessor
@@ -287,7 +285,9 @@ class KnowledgeGraphPopulator:
 
         except Exception as e:
             logger.error(
-                f"Error linking entity {entity.text} to article {article_id}: {str(e)}"
+                f"Error linking entity {
+                    entity.text} to article {article_id}: {
+                    str(e)}"
             )
             return None
 
@@ -324,7 +324,8 @@ class KnowledgeGraphPopulator:
                             )
                             context = text[context_start:context_end]
 
-                            # Calculate confidence based on distance and entity confidence
+                            # Calculate confidence based on distance and entity
+                            # confidence
                             confidence = min(entity1.confidence, entity2.confidence) * (
                                 1 - distance / 200
                             )
@@ -460,7 +461,11 @@ class KnowledgeGraphPopulator:
             return query_result
 
         except Exception as e:
-            logger.error(f"Error finding historical events for {entity.text}: {str(e)}")
+            logger.error(
+                f"Error finding historical events for {
+                    entity.text}: {
+                    str(e)}"
+            )
             return []
 
     async def _find_related_policies(self, entity: Entity) -> List[Dict[str, Any]]:
@@ -544,7 +549,10 @@ class KnowledgeGraphPopulator:
             return result
 
         except Exception as e:
-            logger.error(f"Error updating entity mentions {entity_id}: {str(e)}")
+            logger.error(
+                f"Error updating entity mentions {entity_id}: {
+                    str(e)}"
+            )
             return None
 
     async def get_related_entities(
@@ -595,12 +603,16 @@ class KnowledgeGraphPopulator:
                 formatted_results.append(formatted_entity)
 
             logger.info(
-                f"Found {len(formatted_results)} related entities for {entity_name}"
+                f"Found {
+                    len(formatted_results)} related entities for {entity_name}"
             )
             return formatted_results
 
         except Exception as e:
-            logger.error(f"Error getting related entities for {entity_name}: {str(e)}")
+            logger.error(
+                f"Error getting related entities for {entity_name}: {
+                    str(e)}"
+            )
             return []
 
     async def _find_entity_by_name(
@@ -614,7 +626,10 @@ class KnowledgeGraphPopulator:
             return result[0] if result else None
 
         except Exception as e:
-            logger.error(f"Error finding entity by name {normalized_name}: {str(e)}")
+            logger.error(
+                f"Error finding entity by name {normalized_name}: {
+                    str(e)}"
+            )
             return None
 
     async def batch_populate_articles(
@@ -630,7 +645,10 @@ class KnowledgeGraphPopulator:
             Batch processing statistics
         """
         try:
-            logger.info(f"Starting batch processing of {len(articles)} articles")
+            logger.info(
+                f"Starting batch processing of {
+                    len(articles)} articles"
+            )
 
             total_entities = 0
             total_relationships = 0
@@ -661,7 +679,9 @@ class KnowledgeGraphPopulator:
 
                 except Exception as e:
                     logger.error(
-                        f"Failed to process article {article.get('id')}: {str(e)}"
+                        f"Failed to process article {
+                            article.get('id')}: {
+                            str(e)}"
                     )
                     failed_articles += 1
 

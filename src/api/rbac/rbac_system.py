@@ -8,7 +8,6 @@ This module implements a comprehensive RBAC system that:
 4. Provides role management and permission checking
 """
 
-import json
 import logging
 import os
 from dataclasses import dataclass

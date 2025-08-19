@@ -6,10 +6,8 @@ including entity extraction, relationship detection, historical linking,
 and API endpoints.
 """
 
-import asyncio
-import json
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -149,7 +147,7 @@ class TestKnowledgeGraphPopulator:
         # Mock that entity doesn't exist
         populator._find_entity = AsyncMock(return_value=None)
 
-        result = await populator._add_entity_node(entity, "article_123")
+        await populator._add_entity_node(entity, "article_123")
 
         populator.graph_builder.add_vertex.assert_called_once()
         call_args = populator.graph_builder.add_vertex.call_args
@@ -171,7 +169,7 @@ class TestKnowledgeGraphPopulator:
         populator._find_entity = AsyncMock(return_value={"id": "existing_id"})
         populator._update_entity_mentions = AsyncMock(return_value={"updated": True})
 
-        result = await populator._add_entity_node(entity, "article_123")
+        await populator._add_entity_node(entity, "article_123")
 
         # Should call update instead of add
         populator._update_entity_mentions.assert_called_once()
@@ -185,7 +183,7 @@ class TestKnowledgeGraphPopulator:
         )
         article_id = "article_123"
 
-        result = await populator._link_entity_to_article(entity, article_id)
+        await populator._link_entity_to_article(entity, article_id)
 
         populator.graph_builder.add_edge.assert_called_once()
         call_args = populator.graph_builder.add_edge.call_args
@@ -248,7 +246,7 @@ class TestKnowledgeGraphPopulator:
         # Mock entity label lookup
         populator._get_entity_label = Mock(return_value="PERSON")
 
-        result = await populator._add_relationship_edge(relationship)
+        await populator._add_relationship_edge(relationship)
 
         populator.graph_builder.add_edge.assert_called_once()
         call_args = populator.graph_builder.add_edge.call_args

@@ -12,8 +12,8 @@ from enum import Enum
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 from .cloudwatch_logger import CloudWatchLogger, ScrapingMetrics, ScrapingStatus
-from .dynamodb_failure_manager import DynamoDBFailureManager, FailedUrl
-from .sns_alert_manager import AlertSeverity, AlertType, SNSAlertManager
+from .dynamodb_failure_manager import DynamoDBFailureManager
+from .sns_alert_manager import SNSAlertManager
 
 
 class RetryReason(Enum):
@@ -155,7 +155,7 @@ class EnhancedRetryManager:
 
             except Exception as e:
                 last_exception = e
-                attempt_duration = time.time() - attempt_start
+                time.time() - attempt_start
 
                 # Determine retry reason
                 retry_reason = self._determine_retry_reason(e, context)

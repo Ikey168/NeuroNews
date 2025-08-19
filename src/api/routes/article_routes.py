@@ -41,13 +41,9 @@ class ArticleBase(BaseModel):
 class ArticleCreate(ArticleBase):
     """Article creation request."""
 
-    pass
-
 
 class ArticleUpdate(ArticleBase):
     """Article update request."""
-
-    pass
 
 
 class Article(ArticleBase):

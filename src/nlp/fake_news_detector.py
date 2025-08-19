@@ -5,15 +5,13 @@ This module implements fake news detection using transformer models like RoBERTa
 It includes model training, inference, and integration with the NeuroNews pipeline.
 """
 
-import json
 import logging
 import os
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
-import requests
 import torch
 from sklearn.metrics import (
     accuracy_score,
@@ -21,7 +19,7 @@ from sklearn.metrics import (
     precision_recall_fscore_support,
 )
 from sklearn.model_selection import train_test_split
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import Dataset
 from transformers import (
     AutoModelForSequenceClassification,
     AutoTokenizer,
@@ -409,10 +407,12 @@ def main():
     logger.info("\\nTesting predictions:")
     for i, article in enumerate(test_articles):
         result = detector.predict_trustworthiness(article)
-        logger.info(f"\\nArticle {i+1}: {article[:100]}...")
+        logger.info(f"\\nArticle {i + 1}: {article[:100]}...")
         logger.info(f"Trustworthiness: {result['trustworthiness_score']}%")
         logger.info(
-            f"Classification: {result['classification']} (confidence: {result['confidence']}%)"
+            f"Classification: {
+                result['classification']} (confidence: {
+                result['confidence']}%)"
         )
 
     # Evaluate on test set

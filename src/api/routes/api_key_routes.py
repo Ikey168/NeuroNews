@@ -5,12 +5,12 @@ Provides endpoints for generating, managing, and revoking API keys.
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, Field
 
-from src.api.auth.api_key_manager import APIKeyStatus, api_key_manager
+from src.api.auth.api_key_manager import api_key_manager
 from src.api.auth.jwt_auth import require_auth
 
 router = APIRouter(prefix="/api/keys", tags=["api-keys"])

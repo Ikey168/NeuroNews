@@ -230,7 +230,8 @@ class ProxyRotationManager:
                     if response.status == 200:
                         data = await response.json()
                         self.logger.debug(
-                            f"Proxy {key} health check passed: {data.get('origin')}"
+                            f"Proxy {key} health check passed: {
+                                data.get('origin')}"
                         )
                         return True
                     else:
@@ -278,7 +279,8 @@ class ProxyRotationManager:
         """Start background health monitoring."""
         if self.health_check_interval > 0:
             self.logger.info(
-                f"Starting proxy health monitor (interval: {self.health_check_interval}s)"
+                f"Starting proxy health monitor (interval: {
+                    self.health_check_interval}s)"
             )
             while True:
                 try:

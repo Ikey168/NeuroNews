@@ -15,21 +15,17 @@ Key features:
 """
 
 import asyncio
-import concurrent.futures
 import gc
 import hashlib
-import json
 import logging
 import pickle
 import threading
 import time
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from dataclasses import dataclass
-from datetime import datetime, timedelta
 from functools import lru_cache
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional
 
-import numpy as np
 import psutil
 
 # Optional imports with fallbacks
@@ -43,7 +39,6 @@ except ImportError:
 
 try:
     import torch
-    import torch.nn as nn
 
     TORCH_AVAILABLE = True
 except ImportError:
@@ -51,7 +46,7 @@ except ImportError:
     torch = None
 
 try:
-    from transformers import AutoModel, AutoTokenizer, pipeline
+    from transformers import pipeline
 
     TRANSFORMERS_AVAILABLE = True
 except ImportError:
@@ -406,7 +401,8 @@ class OptimizedNLPPipeline:
             operations = ["sentiment", "embedding"]
 
         logger.info(
-            f"Processing {len(articles)} articles with operations: {operations}"
+            f"Processing {
+                len(articles)} articles with operations: {operations}"
         )
         start_time = time.time()
 
@@ -519,7 +515,10 @@ class OptimizedNLPPipeline:
             results = []
 
             try:
-                logger.debug(f"Processing batch {batch_id} with {len(batch)} articles")
+                logger.debug(
+                    f"Processing batch {batch_id} with {
+                        len(batch)} articles"
+                )
 
                 # Check memory pressure
                 self.memory_manager.check_memory_pressure()
@@ -549,7 +548,10 @@ class OptimizedNLPPipeline:
                     results.append(article_result)
 
                 batch_time = time.time() - batch_start_time
-                logger.debug(f"Batch {batch_id} completed in {batch_time:.2f}s")
+                logger.debug(
+                    f"Batch {batch_id} completed in {
+                        batch_time:.2f}s"
+                )
 
                 return results
 
@@ -772,12 +774,18 @@ class OptimizedNLPPipeline:
                 self.current_batch_size = min(
                     self.current_batch_size + 4, self.config.max_batch_size
                 )
-                logger.debug(f"Increased batch size to {self.current_batch_size}")
+                logger.debug(
+                    f"Increased batch size to {
+                        self.current_batch_size}"
+                )
 
             # If performance is poor, decrease batch size
             elif avg_throughput < 20 and self.current_batch_size > 8:
                 self.current_batch_size = max(self.current_batch_size - 4, 8)
-                logger.debug(f"Decreased batch size to {self.current_batch_size}")
+                logger.debug(
+                    f"Decreased batch size to {
+                        self.current_batch_size}"
+                )
 
     def get_performance_stats(self) -> Dict[str, Any]:
         """Get comprehensive performance statistics."""
@@ -888,7 +896,10 @@ if __name__ == "__main__":
             print(f"Processing time: {results['processing_time']:.2f}s")
             print(f"Throughput: {results['throughput']:.2f} articles/sec")
             print(f"Cache hit rate: {results['cache_stats']['hit_rate']:.2%}")
-            print(f"Memory usage: {results['memory_stats']['current_usage_mb']:.1f}MB")
+            print(
+                f"Memory usage: {
+                    results['memory_stats']['current_usage_mb']:.1f}MB"
+            )
 
         finally:
             await pipeline.cleanup()

@@ -15,20 +15,15 @@ Author: NeuroNews Development Team
 Created: August 2025
 """
 
-import asyncio
-import json
 import logging
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
-import boto3
 import psycopg2
-from botocore.exceptions import ClientError
 
 from .ai_summarizer import (
-    SummarizationModel,
     Summary,
     SummaryLength,
     create_summary_hash,
@@ -150,18 +145,18 @@ class SummaryDatabase:
             created_at TIMESTAMP DEFAULT GETDATE(),
             updated_at TIMESTAMP DEFAULT GETDATE()
         );
-        
+
         -- Create indexes for performance
-        CREATE INDEX IF NOT EXISTS idx_article_summaries_article_id 
+        CREATE INDEX IF NOT EXISTS idx_article_summaries_article_id
         ON {self.table_name} (article_id);
-        
-        CREATE INDEX IF NOT EXISTS idx_article_summaries_content_hash 
+
+        CREATE INDEX IF NOT EXISTS idx_article_summaries_content_hash
         ON {self.table_name} (content_hash);
-        
-        CREATE INDEX IF NOT EXISTS idx_article_summaries_length 
+
+        CREATE INDEX IF NOT EXISTS idx_article_summaries_length
         ON {self.table_name} (summary_length);
-        
-        CREATE INDEX IF NOT EXISTS idx_article_summaries_created_at 
+
+        CREATE INDEX IF NOT EXISTS idx_article_summaries_created_at
         ON {self.table_name} (created_at);
         """
 
@@ -261,7 +256,10 @@ class SummaryDatabase:
             cache_key = f"hash:{content_hash}"
             self._cache_set(cache_key, record)
 
-            logger.info(f"Summary stored with ID {summary_id} in {query_time:.2f}s")
+            logger.info(
+                f"Summary stored with ID {summary_id} in {
+                    query_time:.2f}s"
+            )
             return summary_id
 
         except Exception as e:
@@ -332,7 +330,10 @@ class SummaryDatabase:
             return None
 
         except Exception as e:
-            logger.error(f"Failed to get summary by hash {content_hash}: {str(e)}")
+            logger.error(
+                f"Failed to get summary by hash {content_hash}: {
+                    str(e)}"
+            )
             raise
 
     async def get_summaries_by_article(self, article_id: str) -> List[SummaryRecord]:
@@ -395,7 +396,10 @@ class SummaryDatabase:
             return records
 
         except Exception as e:
-            logger.error(f"Failed to get summaries for article {article_id}: {str(e)}")
+            logger.error(
+                f"Failed to get summaries for article {article_id}: {
+                    str(e)}"
+            )
             raise
 
     async def get_summary_by_article_and_length(
@@ -517,7 +521,8 @@ class SummaryDatabase:
 
         except Exception as e:
             logger.error(
-                f"Failed to delete summaries for article {article_id}: {str(e)}"
+                f"Failed to delete summaries for article {article_id}: {
+                    str(e)}"
             )
             raise
 
@@ -529,7 +534,7 @@ class SummaryDatabase:
             Dictionary with summary statistics
         """
         stats_sql = f"""
-        SELECT 
+        SELECT
             COUNT(*) as total_summaries,
             COUNT(DISTINCT article_id) as unique_articles,
             AVG(confidence_score) as avg_confidence,
@@ -540,10 +545,10 @@ class SummaryDatabase:
             COUNT(*) as length_count
         FROM {self.table_name}
         GROUP BY summary_length
-        
+
         UNION ALL
-        
-        SELECT 
+
+        SELECT
             COUNT(*) as total_summaries,
             COUNT(DISTINCT article_id) as unique_articles,
             AVG(confidence_score) as avg_confidence,

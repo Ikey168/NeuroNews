@@ -5,10 +5,9 @@ Handles all API interactions with the NeuroNews backend services.
 """
 
 import asyncio
-import json
 import logging
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Union
+from datetime import datetime
+from typing import Any, Dict, List
 
 import aiohttp
 import requests
@@ -28,8 +27,6 @@ PERFORMANCE_CONFIG = get_config("performance")
 
 class APIError(Exception):
     """Custom exception for API errors."""
-
-    pass
 
 
 class NeuroNewsAPIClient:
@@ -65,7 +62,8 @@ class NeuroNewsAPIClient:
                 logger.warning(f"Request attempt {attempt + 1} failed: {e}")
                 if attempt == self.retry_attempts - 1:
                     raise APIError(
-                        f"API request failed after {self.retry_attempts} attempts: {e}"
+                        f"API request failed after {
+                            self.retry_attempts} attempts: {e}"
                     )
 
                 # Wait before retry
@@ -251,7 +249,7 @@ class NeuroNewsAPIClient:
             endpoint = "/health"
             response = self._make_request("GET", endpoint)
             return response.status_code == 200
-        except:
+        except BaseException:
             return False
 
 
@@ -272,7 +270,8 @@ class BatchAPIClient:
             async def fetch_relationship(entity_id: str) -> tuple:
                 async with semaphore:
                     try:
-                        url = f"{self.api_client.base_url}/graph/entity/{entity_id}/relationships"
+                        url = f"{
+                            self.api_client.base_url}/graph/entity/{entity_id}/relationships"
                         async with session.get(
                             url, timeout=self.api_client.timeout
                         ) as response:

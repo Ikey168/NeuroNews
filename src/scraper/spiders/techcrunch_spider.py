@@ -2,7 +2,6 @@
 TechCrunch news spider for NeuroNews.
 """
 
-import re
 from datetime import datetime
 
 import scrapy
@@ -98,7 +97,7 @@ class TechCrunchSpider(scrapy.Spider):
                 return date_string
             else:
                 return datetime.now().isoformat()
-        except:
+        except BaseException:
             return datetime.now().isoformat()
 
     def _extract_category(self, url, response):

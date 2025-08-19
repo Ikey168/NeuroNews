@@ -2,7 +2,6 @@
 Reuters news spider for NeuroNews.
 """
 
-import re
 from datetime import datetime
 
 import scrapy

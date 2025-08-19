@@ -11,21 +11,16 @@ Addresses Issue #34 requirements:
 3. Store trend data in Redshift for visualization
 """
 
-import asyncio
-import json
 import logging
 import statistics
 from collections import defaultdict
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, NamedTuple, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
-import numpy as np
-import pandas as pd
 import psycopg2
 from psycopg2.extras import Json, execute_batch
 from scipy import stats
-from sklearn.preprocessing import MinMaxScaler
 
 from src.nlp.keyword_topic_extractor import KeywordTopicExtractor
 from src.nlp.sentiment_analysis import SentimentAnalyzer
@@ -219,14 +214,14 @@ class SentimentTrendAnalyzer:
                     # Create indexes for better query performance
                     cursor.execute(
                         """
-                        CREATE INDEX IF NOT EXISTS idx_sentiment_trends_topic_date 
+                        CREATE INDEX IF NOT EXISTS idx_sentiment_trends_topic_date
                         ON sentiment_trends(topic, date DESC);
                     """
                     )
 
                     cursor.execute(
                         """
-                        CREATE INDEX IF NOT EXISTS idx_sentiment_alerts_topic_triggered 
+                        CREATE INDEX IF NOT EXISTS idx_sentiment_alerts_topic_triggered
                         ON sentiment_alerts(topic, triggered_at DESC);
                     """
                     )
@@ -259,7 +254,8 @@ class SentimentTrendAnalyzer:
         """
         try:
             logger.info(
-                f"Analyzing historical sentiment trends for topic: {topic or 'all'}"
+                f"Analyzing historical sentiment trends for topic: {
+                    topic or 'all'}"
             )
 
             # Set default date range if not provided
@@ -284,7 +280,8 @@ class SentimentTrendAnalyzer:
             for topic_name, topic_data in topics_data.items():
                 if len(topic_data) < self.config["min_articles_for_trend"]:
                     logger.warning(
-                        f"Insufficient data for topic {topic_name}: {len(topic_data)} articles"
+                        f"Insufficient data for topic {topic_name}: {
+                            len(topic_data)} articles"
                     )
                     continue
 
@@ -306,7 +303,10 @@ class SentimentTrendAnalyzer:
 
                 trend_summaries.append(trend_summary)
 
-            logger.info(f"Completed trend analysis for {len(trend_summaries)} topics")
+            logger.info(
+                f"Completed trend analysis for {
+                    len(trend_summaries)} topics"
+            )
             return trend_summaries
 
         except Exception as e:
@@ -327,7 +327,10 @@ class SentimentTrendAnalyzer:
             List of trend alerts
         """
         try:
-            logger.info(f"Generating sentiment alerts for topic: {topic or 'all'}")
+            logger.info(
+                f"Generating sentiment alerts for topic: {
+                    topic or 'all'}"
+            )
 
             end_date = datetime.now(timezone.utc)
             start_date = end_date - timedelta(
@@ -378,7 +381,7 @@ class SentimentTrendAnalyzer:
                         # Query for specific topic
                         cursor.execute(
                             """
-                            SELECT 
+                            SELECT
                                 na.id,
                                 na.title,
                                 na.content,
@@ -401,7 +404,7 @@ class SentimentTrendAnalyzer:
                         # Query for all topics
                         cursor.execute(
                             """
-                            SELECT 
+                            SELECT
                                 na.id,
                                 na.title,
                                 na.content,
@@ -566,7 +569,8 @@ class SentimentTrendAnalyzer:
                 x_values, sentiment_scores
             )
 
-            trend_strength = abs(r_value)  # Correlation coefficient as trend strength
+            # Correlation coefficient as trend strength
+            trend_strength = abs(r_value)
 
             if slope > 0.01:
                 trend_direction = "increasing"
@@ -739,7 +743,8 @@ class SentimentTrendAnalyzer:
 
         # Generate alert ID
         timestamp = datetime.now(timezone.utc)
-        alert_id = f"{topic}_{alert_type}_{timestamp.strftime('%Y%m%d_%H%M%S')}"
+        alert_id = f"{topic}_{alert_type}_{
+            timestamp.strftime('%Y%m%d_%H%M%S')}"
 
         # Create description
         direction = "improved" if current_sentiment > previous_sentiment else "declined"
@@ -802,11 +807,11 @@ class SentimentTrendAnalyzer:
                     execute_batch(
                         cursor,
                         """
-                        INSERT INTO sentiment_trends 
-                        (topic, date, sentiment_score, sentiment_label, confidence, 
+                        INSERT INTO sentiment_trends
+                        (topic, date, sentiment_score, sentiment_label, confidence,
                          article_count, source_articles, trend_metadata)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (topic, date) 
+                        ON CONFLICT (topic, date)
                         DO UPDATE SET
                             sentiment_score = EXCLUDED.sentiment_score,
                             sentiment_label = EXCLUDED.sentiment_label,
@@ -859,7 +864,7 @@ class SentimentTrendAnalyzer:
                     execute_batch(
                         cursor,
                         """
-                        INSERT INTO sentiment_alerts 
+                        INSERT INTO sentiment_alerts
                         (alert_id, topic, alert_type, severity, current_sentiment,
                          previous_sentiment, change_magnitude, change_percentage, confidence,
                          time_window, triggered_at, description, affected_articles, alert_metadata)
@@ -892,7 +897,10 @@ class SentimentTrendAnalyzer:
             return summaries[0] if summaries else None
 
         except Exception as e:
-            logger.error(f"Error getting topic trend summary for {topic}: {str(e)}")
+            logger.error(
+                f"Error getting topic trend summary for {topic}: {
+                    str(e)}"
+            )
             return None
 
     async def get_active_alerts(
@@ -982,7 +990,10 @@ class SentimentTrendAnalyzer:
                     if summary:
                         await self._store_topic_summary(summary)
                 except Exception as e:
-                    logger.error(f"Error updating summary for topic {topic}: {str(e)}")
+                    logger.error(
+                        f"Error updating summary for topic {topic}: {
+                            str(e)}"
+                    )
 
             logger.info(f"Updated summaries for {len(topics)} topics")
 
@@ -996,11 +1007,11 @@ class SentimentTrendAnalyzer:
                 with conn.cursor() as cursor:
                     cursor.execute(
                         """
-                        INSERT INTO topic_sentiment_summary 
+                        INSERT INTO topic_sentiment_summary
                         (topic, current_sentiment, average_sentiment, sentiment_volatility,
                          trend_direction, trend_strength, data_points_count, summary_metadata)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (topic) 
+                        ON CONFLICT (topic)
                         DO UPDATE SET
                             current_sentiment = EXCLUDED.current_sentiment,
                             average_sentiment = EXCLUDED.average_sentiment,

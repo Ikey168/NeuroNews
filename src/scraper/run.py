@@ -5,7 +5,6 @@ Command-line interface for running the NeuroNews scrapers.
 import argparse
 import json
 import os
-import sys
 from pathlib import Path
 
 from scrapy.crawler import CrawlerProcess
@@ -13,7 +12,6 @@ from scrapy.utils.project import get_project_settings
 
 from .data_validator import ScrapedDataValidator
 from .multi_source_runner import MultiSourceRunner
-from .pipelines.s3_pipeline import S3StoragePipeline
 from .spiders.news_spider import NewsSpider
 
 
@@ -311,12 +309,12 @@ def main():
 
     if args.report:
         runner = MultiSourceRunner()
-        report = runner.generate_report()
+        runner.generate_report()
         return
 
     if args.validate:
         validator = ScrapedDataValidator()
-        results = validator.save_validation_report()
+        validator.save_validation_report()
         print("Data validation completed. Report saved.")
         return
 

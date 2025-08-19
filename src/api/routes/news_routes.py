@@ -92,7 +92,11 @@ async def get_articles_by_topic(
         return articles
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database error: {
+                str(e)}",
+        )
 
 
 @router.get("/articles")
@@ -133,9 +137,9 @@ async def get_articles(
         where_clause = " AND ".join(conditions) if conditions else "1=1"
 
         query = f"""
-            SELECT id, title, url, publish_date, source, category, 
+            SELECT id, title, url, publish_date, source, category,
                    sentiment_score, sentiment_label
-            FROM news_articles 
+            FROM news_articles
             WHERE {where_clause}
             ORDER BY publish_date DESC
         """
@@ -162,7 +166,11 @@ async def get_articles(
         return articles
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database error: {
+                str(e)}",
+        )
 
 
 @router.get("/articles/{article_id}")
@@ -174,7 +182,7 @@ async def get_article(
     """
     try:
         query = """
-            SELECT a.id, a.title, a.url, a.publish_date, a.source, 
+            SELECT a.id, a.title, a.url, a.publish_date, a.source,
                    a.category, a.content, a.sentiment_score, a.sentiment_label,
                    array_agg(DISTINCT e.entity) as entities
             FROM news_articles a
@@ -209,4 +217,8 @@ async def get_article(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database error: {
+                str(e)}",
+        )

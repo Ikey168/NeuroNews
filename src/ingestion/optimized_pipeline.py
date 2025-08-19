@@ -10,24 +10,21 @@ and advanced error handling.
 import asyncio
 import json
 import logging
-import multiprocessing as mp
-import os
 import queue
 
 # Internal imports
 import sys
 import threading
 import time
-from collections import defaultdict, deque
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from collections import deque
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List
 from urllib.parse import urlparse
 
 import aiofiles
-import aiohttp
 import psutil
 
 sys.path.append(str(Path(__file__).parent.parent))
@@ -240,7 +237,8 @@ class MemoryMonitor:
 
                     gc.collect()
                     logger.warning(
-                        f"High memory usage detected: {self.current_usage:.1f}MB, triggered GC"
+                        f"High memory usage detected: {
+                            self.current_usage:.1f}MB, triggered GC"
                     )
 
                 time.sleep(self.check_interval)
@@ -303,8 +301,10 @@ class AdaptiveBatchProcessor:
             return
 
         logger.info(
-            f"Adjusting batch size from {self.current_batch_size} to {new_size} "
-            f"(performance score: {recent_avg:.3f})"
+            f"Adjusting batch size from {
+                self.current_batch_size} to {new_size} "
+            f"(performance score: {
+                recent_avg:.3f})"
         )
         self.current_batch_size = new_size
 
@@ -356,7 +356,8 @@ class OptimizedIngestionPipeline:
         self._stop_requested = False
 
         logger.info(
-            f"Optimized ingestion pipeline initialized with config: {self.config}"
+            f"Optimized ingestion pipeline initialized with config: {
+                self.config}"
         )
 
     async def process_articles_async(
@@ -382,7 +383,8 @@ class OptimizedIngestionPipeline:
 
         try:
             logger.info(
-                f"Starting optimized ingestion pipeline for {len(articles)} articles"
+                f"Starting optimized ingestion pipeline for {
+                    len(articles)} articles"
             )
 
             # Process articles in optimized batches
@@ -393,7 +395,10 @@ class OptimizedIngestionPipeline:
 
             # Create batches for processing
             batches = self._create_adaptive_batches(articles)
-            logger.info(f"Created {len(batches)} adaptive batches for processing")
+            logger.info(
+                f"Created {
+                    len(batches)} adaptive batches for processing"
+            )
 
             # Process batches concurrently
             batch_tasks = []
@@ -466,7 +471,8 @@ class OptimizedIngestionPipeline:
             content_size = len(article.get("content", "")) / 1024  # KB
             estimated_memory = max(estimated_memory_per_article, content_size)
 
-            # Check if adding this article would exceed memory or batch size limits
+            # Check if adding this article would exceed memory or batch size
+            # limits
             if (
                 current_batch_size + estimated_memory
                 > self.config.max_memory_usage_mb * 1024 / 10
@@ -500,7 +506,10 @@ class OptimizedIngestionPipeline:
             processed_articles = []
 
             try:
-                logger.debug(f"Processing batch {batch_id} with {len(batch)} articles")
+                logger.debug(
+                    f"Processing batch {batch_id} with {
+                        len(batch)} articles"
+                )
 
                 # Process articles in the batch concurrently
                 tasks = []
@@ -587,7 +596,9 @@ class OptimizedIngestionPipeline:
             processing_time = time.time() - article_start_time
             self.metrics.update_metrics(processing_time, False, type(e).__name__)
             logger.warning(
-                f"Article processing failed for {article.get('url', 'unknown')}: {e}"
+                f"Article processing failed for {
+                    article.get(
+                        'url', 'unknown')}: {e}"
             )
             return None
 
@@ -879,7 +890,10 @@ if __name__ == "__main__":
             print(f"Processed: {len(results['processed_articles'])} articles")
             print(f"Processing time: {results['processing_time']:.2f}s")
             print(
-                f"Throughput: {len(results['processed_articles']) / results['processing_time']:.2f} articles/sec"
+                f"Throughput: {
+                    len(
+                        results['processed_articles']) /
+                    results['processing_time']:.2f} articles/sec"
             )
             print("\nMetrics:")
             print(json.dumps(results["metrics"], indent=2))

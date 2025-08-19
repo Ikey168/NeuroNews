@@ -4,8 +4,8 @@ import pytest
 import pytest_asyncio
 from gremlin_python.driver.client import Client
 from gremlin_python.driver.connection import (
-    Connection as GremlinConnection,
-)  # Alias to avoid conflict
+    Connection as GremlinConnection,  # Alias to avoid conflict
+)
 from gremlin_python.driver.driver_remote_connection import DriverRemoteConnection
 from gremlin_python.driver.resultset import ResultSet
 
@@ -172,7 +172,8 @@ async def test_close(graph_builder: GraphBuilder):
     # If we want to test calling close() explicitly within a test:
     # graph_builder.client.close.reset_mock() # Reset from fixture's connect/setup
     # await graph_builder.close()
-    # graph_builder.client.close.assert_called_once() # This would be the second call if not reset
+    # graph_builder.client.close.assert_called_once() # This would be the
+    # second call if not reset
     pass  # Covered by fixture teardown
 
 

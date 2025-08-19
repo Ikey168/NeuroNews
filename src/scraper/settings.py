@@ -35,15 +35,18 @@ COOKIES_ENABLED = False
 ITEM_PIPELINES = {
     "src.scraper.pipelines.enhanced_pipelines.ValidationPipeline": 100,
     "src.scraper.pipelines.enhanced_pipelines.DuplicateFilterPipeline": 200,
-    "src.scraper.pipelines.multi_language_pipeline.MultiLanguagePipeline": 250,  # Language detection & translation
-    "src.scraper.pipelines.multi_language_pipeline.LanguageFilterPipeline": 260,  # Optional language filtering
+    # Language detection & translation
+    "src.scraper.pipelines.multi_language_pipeline.MultiLanguagePipeline": 250,
+    # Optional language filtering
+    "src.scraper.pipelines.multi_language_pipeline.LanguageFilterPipeline": 260,
     "src.scraper.pipelines.enhanced_pipelines.EnhancedJsonWriterPipeline": 300,
     "src.scraper.pipelines.s3_pipeline.S3StoragePipeline": 400,
 }
 
 # S3 storage pipeline configuration
 
-# AWS settings (override these with environment variables or command line arguments)
+# AWS settings (override these with environment variables or command line
+# arguments)
 AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID", "")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY", "")
 AWS_REGION = os.environ.get("AWS_REGION", config["aws"]["region"])
@@ -78,7 +81,8 @@ REDSHIFT_DATABASE = os.environ.get("REDSHIFT_DATABASE", "")
 REDSHIFT_USER = os.environ.get("REDSHIFT_USER", "")
 REDSHIFT_PASSWORD = os.environ.get("REDSHIFT_PASSWORD", "")
 
-# CloudWatch logging settings (disabled by default, enabled with --cloudwatch flag)
+# CloudWatch logging settings (disabled by default, enabled with
+# --cloudwatch flag)
 CLOUDWATCH_LOGGING_ENABLED = True  # Enable CloudWatch logging by default
 CLOUDWATCH_LOG_GROUP = os.environ.get(
     "CLOUDWATCH_LOG_GROUP", config["aws"]["cloudwatch"]["log_group"]

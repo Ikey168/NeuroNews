@@ -3,9 +3,7 @@ Main entry point for NeuroNews application.
 """
 
 import argparse
-import json
 import os
-from pathlib import Path
 
 from scraper.run import load_aws_config, run_spider
 
@@ -146,7 +144,8 @@ def main():
                 "log_level", cloudwatch_log_level
             )
 
-        # Check if AWS services are enabled but required credentials are missing
+        # Check if AWS services are enabled but required credentials are
+        # missing
         aws_services_enabled = s3_storage or cloudwatch_logging
         aws_creds_available = (
             os.environ.get("AWS_ACCESS_KEY_ID") or args.aws_key_id

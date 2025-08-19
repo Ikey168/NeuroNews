@@ -5,11 +5,10 @@ Multi-language article processor that handles language detection, translation, a
 import hashlib
 import json
 import logging
-from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import psycopg2
-from psycopg2.extras import RealDictCursor, execute_batch
+from psycopg2.extras import RealDictCursor
 
 from .article_processor import ArticleProcessor
 from .language_processor import (
@@ -229,7 +228,8 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
             result["detection_confidence"] = confidence
 
             logger.info(
-                f"Detected language: {detected_language} (confidence: {confidence:.2f})"
+                f"Detected language: {detected_language} (confidence: {
+                    confidence:.2f})"
             )
 
             # Step 2: Translate if needed
@@ -244,7 +244,8 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
                 )
                 result.update(translation_result)
 
-            # Step 3: Process with sentiment analysis (use translated text if available)
+            # Step 3: Process with sentiment analysis (use translated text if
+            # available)
             processing_text = result.get("translated_content", content)
             processing_title = result.get("translated_title", title)
 
@@ -311,7 +312,9 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
 
             if title_translation["error"] or content_translation["error"]:
                 logger.warning(
-                    f"Translation errors: title={title_translation['error']}, content={content_translation['error']}"
+                    f"Translation errors: title={
+                        title_translation['error']}, content={
+                        content_translation['error']}"
                 )
                 return result
 
@@ -363,12 +366,15 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
                 )
 
                 logger.info(
-                    f"Translation completed with quality score: {overall_quality:.2f}"
+                    f"Translation completed with quality score: {
+                        overall_quality:.2f}"
                 )
 
             else:
                 logger.warning(
-                    f"Translation quality too low: {overall_quality:.2f} < {self.quality_threshold}"
+                    f"Translation quality too low: {
+                        overall_quality:.2f} < {
+                        self.quality_threshold}"
                 )
 
         except Exception as e:
@@ -391,7 +397,7 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
                 with conn.cursor() as cursor:
                     cursor.execute(
                         """
-                        INSERT INTO language_detections 
+                        INSERT INTO language_detections
                         (article_id, detected_language, detection_confidence, detection_method, text_length)
                         VALUES (%s, %s, %s, %s, %s)
                         ON CONFLICT (article_id) DO UPDATE SET
@@ -435,7 +441,7 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
                 with conn.cursor() as cursor:
                     cursor.execute(
                         """
-                        INSERT INTO article_translations 
+                        INSERT INTO article_translations
                         (article_id, original_language, target_language, original_title, translated_title,
                          original_content, translated_content, translation_quality_score, translation_confidence,
                          translation_issues, translation_recommendations)
@@ -498,7 +504,7 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
                     # Translation success rates
                     cursor.execute(
                         """
-                        SELECT 
+                        SELECT
                             original_language,
                             target_language,
                             COUNT(*) as translation_count,
@@ -514,8 +520,8 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
                     # Quality distribution
                     cursor.execute(
                         """
-                        SELECT 
-                            CASE 
+                        SELECT
+                            CASE
                                 WHEN translation_quality_score >= 0.8 THEN 'high'
                                 WHEN translation_quality_score >= 0.6 THEN 'medium'
                                 ELSE 'low'
@@ -651,7 +657,7 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
             True if successful, False otherwise
         """
         insert_sql = """
-        INSERT INTO language_detections 
+        INSERT INTO language_detections
         (article_id, detected_language, detection_confidence, detection_method)
         VALUES (%s, %s, %s, %s);
         """
@@ -669,7 +675,8 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
                 )
                 self.connection.commit()
                 logger.debug(
-                    f"Language detection stored for article {detection_data.get('article_id')}"
+                    f"Language detection stored for article {
+                        detection_data.get('article_id')}"
                 )
                 return True
         except Exception as e:
@@ -687,9 +694,9 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
             True if successful, False otherwise
         """
         insert_sql = """
-        INSERT INTO article_translations 
-        (article_id, original_language, target_language, original_title, 
-         translated_title, original_content, translated_content, 
+        INSERT INTO article_translations
+        (article_id, original_language, target_language, original_title,
+         translated_title, original_content, translated_content,
          translation_quality_score, translation_issues)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
         """
@@ -712,7 +719,8 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
                 )
                 self.connection.commit()
                 logger.debug(
-                    f"Translation stored for article {translation_data.get('article_id')}"
+                    f"Translation stored for article {
+                        translation_data.get('article_id')}"
                 )
                 return True
         except Exception as e:

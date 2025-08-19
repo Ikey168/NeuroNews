@@ -3,8 +3,6 @@ Enhanced sentiment analysis pipeline for news articles.
 Supports both AWS Comprehend and Hugging Face transformers.
 """
 
-import asyncio
-import json
 import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -86,7 +84,7 @@ class SentimentPipeline:
             publish_date DATE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            
+
             -- Sentiment analysis fields (Issue #28 requirement)
             sentiment_label VARCHAR(50),
             sentiment_score FLOAT,
@@ -111,12 +109,12 @@ class SentimentPipeline:
         );
 
         -- Index for efficient sentiment trend queries (Issue #28 requirement)
-        CREATE INDEX IF NOT EXISTS idx_articles_sentiment_date 
+        CREATE INDEX IF NOT EXISTS idx_articles_sentiment_date
         ON news_articles(sentiment_label, publish_date);
-        
-        CREATE INDEX IF NOT EXISTS idx_articles_topic_sentiment 
+
+        CREATE INDEX IF NOT EXISTS idx_articles_topic_sentiment
         ON news_articles(sentiment_label) WHERE title IS NOT NULL;
-        
+
         CREATE INDEX IF NOT EXISTS idx_articles_source_sentiment
         ON news_articles(source, sentiment_label, publish_date);
         """
@@ -216,7 +214,8 @@ class SentimentPipeline:
 
                     conn.commit()
                     logger.info(
-                        f"Successfully stored sentiment results for {len(results)} articles"
+                        f"Successfully stored sentiment results for {
+                            len(results)} articles"
                     )
 
         except Exception as e:
@@ -252,7 +251,9 @@ class SentimentPipeline:
                 texts.append(combined_text)
 
             logger.info(
-                f"Analyzing sentiment for {len(articles)} articles using {self.sentiment_provider}"
+                f"Analyzing sentiment for {
+                    len(articles)} articles using {
+                    self.sentiment_provider}"
             )
 
             # Perform batch sentiment analysis
@@ -269,7 +270,9 @@ class SentimentPipeline:
                 # Handle different response formats
                 if sentiment.get("label") == "ERROR":
                     logger.warning(
-                        f"Sentiment analysis failed for article {article.get('article_id')}: {sentiment.get('message')}"
+                        f"Sentiment analysis failed for article {
+                            article.get('article_id')}: {
+                            sentiment.get('message')}"
                     )
                     sentiment_label = None
                     sentiment_score = None
@@ -278,7 +281,8 @@ class SentimentPipeline:
                     sentiment_label = sentiment.get("label", "").upper()
                     sentiment_score = sentiment.get("score", 0.0)
 
-                    # Some providers use 'score' as confidence, others have separate fields
+                    # Some providers use 'score' as confidence, others have
+                    # separate fields
                     sentiment_confidence = sentiment.get(
                         "confidence", sentiment.get("score", 0.0)
                     )
@@ -309,7 +313,8 @@ class SentimentPipeline:
             self._store_sentiment_results(processed_results)
 
             logger.info(
-                f"Successfully processed sentiment analysis for {len(processed_results)} articles"
+                f"Successfully processed sentiment analysis for {
+                    len(processed_results)} articles"
             )
             return processed_results
 
@@ -336,7 +341,7 @@ class SentimentPipeline:
                 placeholders = ",".join(["%s"] * len(article_ids))
                 query = f"""
                 SELECT id, title, content, url, source, publish_date
-                FROM news_articles 
+                FROM news_articles
                 WHERE id IN ({placeholders})
                 """
                 params = article_ids
@@ -395,14 +400,14 @@ class SentimentPipeline:
         """Get sentiment analysis statistics for the last N days."""
         try:
             query = """
-            SELECT 
+            SELECT
                 sentiment_label,
                 COUNT(*) as count,
                 AVG(sentiment_score) as avg_score,
                 MIN(sentiment_score) as min_score,
                 MAX(sentiment_score) as max_score,
                 sentiment_provider
-            FROM news_articles 
+            FROM news_articles
             WHERE sentiment_processed_at >= CURRENT_DATE - INTERVAL '%s days'
                 AND sentiment_label IS NOT NULL
             GROUP BY sentiment_label, sentiment_provider

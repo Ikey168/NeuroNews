@@ -4,11 +4,9 @@ Local test runner for the NeuroNews Lambda scraper function.
 This script tests the Lambda function locally without AWS dependencies.
 """
 
-import json
 import logging
 import os
 import sys
-from datetime import datetime, timezone
 
 # Add project root to path
 sys.path.insert(0, "/workspaces/NeuroNews")
@@ -48,7 +46,6 @@ def test_lambda_function():
         sys.path.append("/workspaces/NeuroNews/deployment/terraform/lambda_functions")
         from news_scraper import (
             _extract_configuration,
-            _run_basic_scraper,
             lambda_handler,
         )
 
@@ -69,9 +66,15 @@ def test_lambda_function():
         config = _extract_configuration(test_event)
         logger.info("✅ Configuration extraction successful")
         logger.info(f"   Sources: {config['sources']}")
-        logger.info(f"   Max articles per source: {config['max_articles_per_source']}")
+        logger.info(
+            f"   Max articles per source: {
+                config['max_articles_per_source']}"
+        )
         logger.info(f"   S3 bucket: {config['s3_bucket']}")
-        logger.info(f"   CloudWatch namespace: {config['cloudwatch_namespace']}")
+        logger.info(
+            f"   CloudWatch namespace: {
+                config['cloudwatch_namespace']}"
+        )
     except Exception as e:
         logger.error(f"❌ Configuration extraction failed: {e}")
         return False
@@ -135,23 +138,37 @@ def test_lambda_function():
                 body = result["body"]
                 logger.info(f"✅ {test_case['name']} passed")
                 logger.info(f"   Status: {body['status']}")
-                logger.info(f"   Execution time: {body['execution_time_seconds']:.2f}s")
+                logger.info(
+                    f"   Execution time: {
+                        body['execution_time_seconds']:.2f}s"
+                )
 
                 if "scraper_results" in body:
                     scraper_results = body["scraper_results"]
                     logger.info(
-                        f"   Articles scraped: {scraper_results.get('total_articles', 'N/A')}"
+                        f"   Articles scraped: {
+                            scraper_results.get(
+                                'total_articles',
+                                'N/A')}"
                     )
                     logger.info(
-                        f"   Scraper type: {scraper_results.get('scraper_type', 'N/A')}"
+                        f"   Scraper type: {
+                            scraper_results.get(
+                                'scraper_type',
+                                'N/A')}"
                     )
 
             else:
                 logger.error(
-                    f"❌ {test_case['name']} failed with status: {result['statusCode']}"
+                    f"❌ {
+                        test_case['name']} failed with status: {
+                        result['statusCode']}"
                 )
                 if "body" in result and "error_message" in result["body"]:
-                    logger.error(f"   Error: {result['body']['error_message']}")
+                    logger.error(
+                        f"   Error: {
+                            result['body']['error_message']}"
+                    )
                 all_tests_passed = False
 
         except Exception as e:
@@ -269,8 +286,14 @@ def main():
     logger.info(
         f"Terraform Configuration: {'✅ PASS' if terraform_valid else '❌ FAIL'}"
     )
-    logger.info(f"Deployment Files: {'✅ PASS' if deployment_valid else '❌ FAIL'}")
-    logger.info(f"Lambda Function: {'✅ PASS' if function_tests_passed else '❌ FAIL'}")
+    logger.info(
+        f"Deployment Files: {
+            '✅ PASS' if deployment_valid else '❌ FAIL'}"
+    )
+    logger.info(
+        f"Lambda Function: {
+            '✅ PASS' if function_tests_passed else '❌ FAIL'}"
+    )
 
     if terraform_valid and deployment_valid and function_tests_passed:
         logger.info("\n🎉 ALL TESTS PASSED! Issue #20 implementation is ready!")

@@ -6,7 +6,6 @@ This version excludes heavy ML dependencies to test core functionality.
 
 import logging
 import os
-import subprocess
 import sys
 import time
 

@@ -14,17 +14,16 @@ Features:
 """
 
 import hashlib
-import json
 import logging
 import time
-from dataclasses import asdict, dataclass, field
-from datetime import datetime, timedelta, timezone
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 import boto3
 from boto3.dynamodb.conditions import Attr, Key
-from botocore.exceptions import BotoCoreError, ClientError
+from botocore.exceptions import ClientError
 
 
 class IndexType(Enum):
@@ -354,7 +353,10 @@ class DynamoDBMetadataManager:
                 )
 
             self.table = table
-            self.logger.info(f"Created DynamoDB table with indexes: {self.table_name}")
+            self.logger.info(
+                f"Created DynamoDB table with indexes: {
+                    self.table_name}"
+            )
 
         except Exception as e:
             self.logger.error(f"Failed to create DynamoDB table: {e}")
@@ -383,7 +385,9 @@ class DynamoDBMetadataManager:
 
             execution_time = (time.time() - start_time) * 1000
             self.logger.debug(
-                f"Indexed article metadata: {metadata.article_id} ({execution_time:.2f}ms)"
+                f"Indexed article metadata: {
+                    metadata.article_id} ({
+                    execution_time:.2f}ms)"
             )
 
             return metadata
@@ -847,7 +851,8 @@ class DynamoDBMetadataManager:
 
         # Remove punctuation and convert to lowercase
         query_text = re.sub(r"[^\w\s]", " ", query_text.lower())
-        # Split and filter stop words and very short words (but keep important acronyms)
+        # Split and filter stop words and very short words (but keep important
+        # acronyms)
         tokens = []
         for word in query_text.split():
             word = word.strip()

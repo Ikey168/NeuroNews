@@ -3,7 +3,6 @@ S3 storage pipeline for NeuroNews scrapers.
 """
 
 import json
-import os
 from datetime import datetime
 
 import boto3
@@ -47,13 +46,19 @@ class S3StoragePipeline:
         except ClientError as e:
             error_code = e.response["Error"]["Code"]
             if error_code == "404":
-                spider.logger.error(f"S3 bucket {self.s3_bucket} does not exist")
+                spider.logger.error(
+                    f"S3 bucket {
+                        self.s3_bucket} does not exist"
+                )
             elif error_code == "403":
                 spider.logger.error(
                     f"Access to S3 bucket {self.s3_bucket} is forbidden"
                 )
             else:
-                spider.logger.error(f"Error accessing S3 bucket {self.s3_bucket}: {e}")
+                spider.logger.error(
+                    f"Error accessing S3 bucket {
+                        self.s3_bucket}: {e}"
+                )
             raise DropItem("S3 bucket not accessible")
 
     def process_item(self, item, spider):
@@ -72,7 +77,8 @@ class S3StoragePipeline:
         title_slug = re.sub(r"[^a-z0-9-]", "", title_slug)
 
         # Create the S3 key
-        s3_key = f"{self.s3_prefix}/{source_domain}/{timestamp}_{title_slug}.json"
+        s3_key = f"{
+            self.s3_prefix}/{source_domain}/{timestamp}_{title_slug}.json"
 
         # Prepare metadata
         metadata = {

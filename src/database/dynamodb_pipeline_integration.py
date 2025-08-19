@@ -17,12 +17,11 @@ Integration Points:
 import logging
 import time
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 # Scrapy integration
 try:
     from scrapy import signals
-    from scrapy.exceptions import DropItem
 
     SCRAPY_AVAILABLE = True
 except ImportError:
@@ -106,7 +105,10 @@ class DynamoDBMetadataPipeline:
 
     async def spider_opened(self, spider):
         """Initialize when spider opens."""
-        self.logger.info(f"DynamoDB metadata pipeline opened for spider: {spider.name}")
+        self.logger.info(
+            f"DynamoDB metadata pipeline opened for spider: {
+                spider.name}"
+        )
         self.stats["start_time"] = time.time()
 
         try:
@@ -121,13 +123,18 @@ class DynamoDBMetadataPipeline:
         end_time = time.time()
         total_time = end_time - (self.stats["start_time"] or end_time)
 
-        self.logger.info(f"DynamoDB metadata pipeline closed for spider: {spider.name}")
+        self.logger.info(
+            f"DynamoDB metadata pipeline closed for spider: {
+                spider.name}"
+        )
         self.logger.info(f"Indexing statistics:")
         self.logger.info(f"  - Indexed articles: {self.stats['indexed_articles']}")
         self.logger.info(f"  - Failed articles: {self.stats['failed_articles']}")
         self.logger.info(f"  - Total time: {total_time:.2f}s")
         self.logger.info(
-            f"  - Average indexing time: {self.stats['total_processing_time']/max(1, self.stats['indexed_articles']):.3f}s"
+            f"  - Average indexing time: {
+                self.stats['total_processing_time'] / max(
+                    1, self.stats['indexed_articles']):.3f}s"
         )
 
     async def process_item(self, item, spider):
@@ -160,7 +167,9 @@ class DynamoDBMetadataPipeline:
             self.stats["total_processing_time"] += processing_time
 
             self.logger.debug(
-                f"Indexed metadata for article: {metadata.article_id} ({processing_time:.3f}s)"
+                f"Indexed metadata for article: {
+                    metadata.article_id} ({
+                    processing_time:.3f}s)"
             )
 
             return item
@@ -241,7 +250,10 @@ class S3MetadataSync:
             metadata = await integrate_with_s3_storage(
                 s3_metadata, self.dynamodb_manager
             )
-            self.logger.debug(f"Synced S3 metadata for article: {metadata.article_id}")
+            self.logger.debug(
+                f"Synced S3 metadata for article: {
+                    metadata.article_id}"
+            )
             return metadata
         except Exception as e:
             self.logger.error(f"Failed to sync S3 metadata: {e}")
@@ -310,7 +322,9 @@ class S3MetadataSync:
         }
 
         self.logger.info(
-            f"S3 metadata sync: {synced_count}/{len(s3_metadata_list)} articles ({sync_time:.2f}ms)"
+            f"S3 metadata sync: {synced_count}/{
+                len(s3_metadata_list)} articles ({
+                sync_time:.2f}ms)"
         )
         return result
 
@@ -355,7 +369,8 @@ class RedshiftMetadataSync:
             )
             if success:
                 self.logger.debug(
-                    f"Updated metadata for Redshift load: {redshift_record.get('article_id')}"
+                    f"Updated metadata for Redshift load: {
+                        redshift_record.get('article_id')}"
                 )
             return success
         except Exception as e:
@@ -414,7 +429,9 @@ class RedshiftMetadataSync:
         }
 
         self.logger.info(
-            f"Redshift metadata sync: {updated_count}/{len(redshift_records)} updates ({sync_time:.2f}ms)"
+            f"Redshift metadata sync: {updated_count}/{
+                len(redshift_records)} updates ({
+                sync_time:.2f}ms)"
         )
         return result
 

@@ -19,15 +19,13 @@ Created: August 2025
 
 import asyncio
 import hashlib
-import json
 import logging
 import time
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, Optional, Tuple
 
 import nltk
-import numpy as np
 import torch
 from nltk.tokenize import sent_tokenize, word_tokenize
 from transformers import (
@@ -160,7 +158,10 @@ class AIArticleSummarizer:
             "model_usage_count": {model: 0 for model in SummarizationModel},
         }
 
-        logger.info(f"AIArticleSummarizer initialized with device: {self.device}")
+        logger.info(
+            f"AIArticleSummarizer initialized with device: {
+                self.device}"
+        )
 
     def _load_model(self, model_type: SummarizationModel) -> Tuple:
         """
@@ -253,7 +254,7 @@ class AIArticleSummarizer:
         """
         original_words = len(word_tokenize(original_text))
         summary_words = len(word_tokenize(summary_text))
-        original_sentences = len(sent_tokenize(original_text))
+        len(sent_tokenize(original_text))
         summary_sentences = len(sent_tokenize(summary_text))
 
         compression_ratio = summary_words / original_words if original_words > 0 else 0
@@ -261,7 +262,8 @@ class AIArticleSummarizer:
         # Simple confidence score based on text properties
         confidence_score = min(
             0.95,
-            max(0.1, 0.8 - abs(compression_ratio - 0.2) * 2),  # Prefer ~20% compression
+            # Prefer ~20% compression
+            max(0.1, 0.8 - abs(compression_ratio - 0.2) * 2),
         )
 
         return {
@@ -356,15 +358,22 @@ class AIArticleSummarizer:
             )
 
             logger.info(
-                f"Summary generated: {length.value} ({metrics['word_count']} words, "
-                f"{processing_time:.2f}s)"
+                f"Summary generated: {
+                    length.value} ({
+                    metrics['word_count']} words, "
+                f"{
+                    processing_time:.2f}s)"
             )
 
             return summary
 
         except Exception as e:
             processing_time = time.time() - start_time
-            logger.error(f"Summarization failed after {processing_time:.2f}s: {str(e)}")
+            logger.error(
+                f"Summarization failed after {
+                    processing_time:.2f}s: {
+                    str(e)}"
+            )
             raise
 
     async def summarize_article_all_lengths(
@@ -477,7 +486,9 @@ async def demo_summarization():
         print(f"\n{length.value.upper()} SUMMARY:")
         print(f"Text: {summary.text}")
         print(
-            f"Words: {summary.word_count}, Compression: {summary.compression_ratio:.2%}"
+            f"Words: {
+                summary.word_count}, Compression: {
+                summary.compression_ratio:.2%}"
         )
         print(f"Processing time: {summary.processing_time:.2f}s")
 

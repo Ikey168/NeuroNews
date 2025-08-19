@@ -2,6 +2,8 @@
 Test script for multi-source scraper functionality.
 """
 
+from src.scraper.multi_source_runner import MultiSourceRunner
+from src.scraper.data_validator import ScrapedDataValidator
 import json
 import os
 import sys
@@ -10,9 +12,6 @@ from pathlib import Path
 # Add the project root to the Python path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
-
-from src.scraper.data_validator import ScrapedDataValidator
-from src.scraper.multi_source_runner import MultiSourceRunner
 
 
 def test_spider_imports():
@@ -58,7 +57,7 @@ def test_data_validator():
     print("\nTesting data validator...")
 
     try:
-        validator = ScrapedDataValidator()
+        ScrapedDataValidator()
         print("✅ Data validator initialized successfully")
         return True
     except Exception as e:
@@ -93,7 +92,9 @@ def test_pipelines():
             return True
         else:
             print(
-                f"❌ Missing pipeline classes: {set(pipeline_classes) - set(found_classes)}"
+                f"❌ Missing pipeline classes: {
+                    set(pipeline_classes) -
+                    set(found_classes)}"
             )
             return False
 
@@ -149,7 +150,7 @@ def run_all_tests():
             print(f"❌ Test {test.__name__} failed with exception: {e}")
             failed += 1
 
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print(f"📊 Test Results: {passed} passed, {failed} failed")
 
     if failed == 0:

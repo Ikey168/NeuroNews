@@ -5,9 +5,7 @@ This module tests the FastAPI endpoints for knowledge graph functionality,
 including the /related_entities endpoint and other knowledge graph operations.
 """
 
-import json
-from datetime import datetime
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient

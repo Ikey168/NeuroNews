@@ -6,7 +6,6 @@ import logging
 import os
 from typing import Any, Dict, Optional
 
-from scrapy import signals
 from scrapy.exceptions import DropItem
 
 from src.nlp.multi_language_processor import MultiLanguageArticleProcessor
@@ -127,8 +126,14 @@ class MultiLanguagePipeline:
         logger.info(f"  Items processed: {self.stats['items_processed']}")
         logger.info(f"  Items translated: {self.stats['items_translated']}")
         logger.info(f"  Items dropped: {self.stats['items_dropped']}")
-        logger.info(f"  Translation errors: {self.stats['translation_errors']}")
-        logger.info(f"  Language distribution: {self.stats['language_distribution']}")
+        logger.info(
+            f"  Translation errors: {
+                self.stats['translation_errors']}"
+        )
+        logger.info(
+            f"  Language distribution: {
+                self.stats['language_distribution']}"
+        )
 
         # Get detailed statistics from processor
         if self.processor:
@@ -190,7 +195,9 @@ class MultiLanguagePipeline:
             if result.get("errors"):
                 self.stats["translation_errors"] += 1
                 logger.warning(
-                    f"Translation errors for {article_data['id']}: {result['errors']}"
+                    f"Translation errors for {
+                        article_data['id']}: {
+                        result['errors']}"
                 )
 
             # Add processing metadata to item
@@ -215,7 +222,12 @@ class MultiLanguagePipeline:
 
         except Exception as e:
             self.stats["items_dropped"] += 1
-            logger.error(f"Error processing item {item.get('url', 'unknown')}: {e}")
+            logger.error(
+                f"Error processing item {
+                    item.get(
+                        'url',
+                        'unknown')}: {e}"
+            )
             raise DropItem(f"Processing failed: {str(e)}")
 
     def _validate_item(self, item: NewsItem) -> bool:
@@ -239,7 +251,9 @@ class MultiLanguagePipeline:
         content = item.get("content", "")
         if len(content.strip()) < self.min_content_length:
             logger.warning(
-                f"Content too short: {len(content)} < {self.min_content_length}"
+                f"Content too short: {
+                    len(content)} < {
+                    self.min_content_length}"
             )
             return False
 

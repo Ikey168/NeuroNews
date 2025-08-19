@@ -4,10 +4,8 @@ This module provides high-performance async scraping with Playwright and ThreadP
 """
 
 import asyncio
-import hashlib
 import json
 import logging
-import re
 import threading
 import time
 from collections import defaultdict, deque
@@ -16,7 +14,6 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
-from urllib.parse import urljoin, urlparse
 
 import aiofiles
 import aiohttp
@@ -25,7 +22,7 @@ import aiohttp
 import psutil
 
 # Playwright imports
-from playwright.async_api import Browser, BrowserContext, Page, async_playwright
+from playwright.async_api import BrowserContext, async_playwright
 
 
 @dataclass
@@ -92,7 +89,7 @@ class PerformanceMonitor:
                     )  # MB
                     self.cpu_usage.append(process.cpu_percent())
                 time.sleep(1)
-            except:
+            except BaseException:
                 pass
 
     def record_article(self, source: str):
@@ -302,9 +299,17 @@ class AsyncNewsScraperEngine:
             # Use proxy rotation manager
             proxy_config = await self.proxy_manager.get_proxy()
             if proxy_config:
-                proxy = f"{proxy_config.proxy_type}://{proxy_config.host}:{proxy_config.port}"
+                proxy = f"{
+                    proxy_config.proxy_type}://{
+                    proxy_config.host}:{
+                    proxy_config.port}"
                 if proxy_config.username:
-                    proxy = f"{proxy_config.proxy_type}://{proxy_config.username}:{proxy_config.password}@{proxy_config.host}:{proxy_config.port}"
+                    proxy = f"{
+                        proxy_config.proxy_type}://{
+                        proxy_config.username}:{
+                        proxy_config.password}@{
+                        proxy_config.host}:{
+                        proxy_config.port}"
         elif self.use_tor and self.tor_manager:
             proxy = self.tor_manager.get_proxy_url()
         elif self.proxy:
@@ -358,7 +363,8 @@ class AsyncNewsScraperEngine:
             asyncio.create_task(self.proxy_manager.start_health_monitor())
 
         self.logger.info(
-            f"AsyncNewsScraperEngine started with {self.max_concurrent} concurrent connections"
+            f"AsyncNewsScraperEngine started with {
+                self.max_concurrent} concurrent connections"
         )
         self.logger.info(f"Monitoring enabled: {self.enable_monitoring}")
         if proxy:
@@ -379,7 +385,8 @@ class AsyncNewsScraperEngine:
 
             if self.failure_manager:
                 try:
-                    # Clean up old failures (optional, can be done periodically instead)
+                    # Clean up old failures (optional, can be done periodically
+                    # instead)
                     await self.failure_manager.cleanup_old_failures(days=30)
                     self.logger.info("Cleaned up old failure records")
                 except Exception as e:
@@ -427,7 +434,10 @@ class AsyncNewsScraperEngine:
         all_articles = []
         for i, result in enumerate(results):
             if isinstance(result, Exception):
-                self.logger.error(f"Error scraping {sources[i].name}: {result}")
+                self.logger.error(
+                    f"Error scraping {
+                        sources[i].name}: {result}"
+                )
                 self.monitor.record_error(sources[i].name)
             else:
                 all_articles.extend(result)
@@ -444,7 +454,9 @@ class AsyncNewsScraperEngine:
         async with rate_limiter:
             try:
                 self.logger.info(
-                    f"Scraping {source.name} ({'JS' if source.requires_js else 'HTTP'})"
+                    f"Scraping {
+                        source.name} ({
+                        'JS' if source.requires_js else 'HTTP'})"
                 )
 
                 if source.requires_js:
@@ -523,7 +535,8 @@ class AsyncNewsScraperEngine:
                     # CAPTCHA detection (simple placeholder)
                     if "captcha" in html.lower() and self.captcha_solver:
                         self.logger.warning(
-                            f"CAPTCHA detected on {source.base_url}, attempting to solve..."
+                            f"CAPTCHA detected on {
+                                source.base_url}, attempting to solve..."
                         )
                         # Here you would extract sitekey and call self.captcha_solver.solve_recaptcha_v2(...)
                         # For now, just log and skip
@@ -535,10 +548,17 @@ class AsyncNewsScraperEngine:
                     )
                     return links
                 else:
-                    self.logger.warning(f"HTTP {response.status} for {source.base_url}")
+                    self.logger.warning(
+                        f"HTTP {
+                            response.status} for {
+                            source.base_url}"
+                    )
                     return []
         except Exception as e:
-            self.logger.error(f"Error getting links from {source.base_url}: {e}")
+            self.logger.error(
+                f"Error getting links from {
+                    source.base_url}: {e}"
+            )
             return []
 
     async def scrape_article_http(
@@ -643,7 +663,7 @@ class AsyncNewsScraperEngine:
         try:
             element = soup.select_one(selector)
             return element.get_text(strip=True) if element else ""
-        except:
+        except BaseException:
             return ""
 
     def extract_content_by_selector(self, soup, selector: str) -> str:
@@ -651,13 +671,16 @@ class AsyncNewsScraperEngine:
         try:
             elements = soup.select(selector)
             return " ".join(elem.get_text(strip=True) for elem in elements)
-        except:
+        except BaseException:
             return ""
 
     async def scrape_js_source(self, source: NewsSource) -> List[Article]:
         """Scrape JavaScript-heavy source using Playwright."""
         if not self.browser_contexts:
-            self.logger.warning(f"No browser contexts available for {source.name}")
+            self.logger.warning(
+                f"No browser contexts available for {
+                    source.name}"
+            )
             return []
 
         # Use available browser context
@@ -671,7 +694,6 @@ class AsyncNewsScraperEngine:
             self.logger.info(f"Found {len(links)} JS links for {source.name}")
 
             # Scrape articles with controlled concurrency
-            articles = []
             semaphore = asyncio.Semaphore(2)  # Limit browser concurrency
 
             tasks = []
@@ -730,7 +752,10 @@ class AsyncNewsScraperEngine:
             return links
 
         except Exception as e:
-            self.logger.error(f"Error getting JS links from {source.base_url}: {e}")
+            self.logger.error(
+                f"Error getting JS links from {
+                    source.base_url}: {e}"
+            )
             return []
         finally:
             await page.close()
@@ -758,17 +783,17 @@ class AsyncNewsScraperEngine:
                     f"""
                     () => {{
                         const selectors = {json.dumps(source.article_selectors)};
-                        
+
                         const getTextBySelector = (selector) => {{
                             const element = document.querySelector(selector);
                             return element ? element.textContent.trim() : '';
                         }};
-                        
+
                         const getContentBySelector = (selector) => {{
                             const elements = document.querySelectorAll(selector);
                             return Array.from(elements).map(el => el.textContent.trim()).join(' ');
                         }};
-                        
+
                         return {{
                             title: getTextBySelector(selectors.title || 'h1'),
                             content: getContentBySelector(selectors.content || 'p'),
@@ -787,7 +812,9 @@ class AsyncNewsScraperEngine:
                     title=article_data["title"],
                     url=url,
                     content=article_data["content"],
-                    author=article_data["author"] or f"{source.name} Staff",
+                    author=article_data["author"]
+                    or f"{
+                        source.name} Staff",
                     published_date=article_data["date"] or datetime.now().isoformat(),
                     source=source.name,
                     scraped_date=datetime.now().isoformat(),

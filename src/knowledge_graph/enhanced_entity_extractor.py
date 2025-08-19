@@ -18,16 +18,13 @@ import logging
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from functools import lru_cache
-from typing import Any, Dict, List, Optional, Set, Tuple
-
-import numpy as np
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 # Import optimized NLP components from Issue #35
 try:
     from src.nlp.nlp_integration import IntegratedNLPProcessor
-    from src.nlp.optimized_nlp_pipeline import NLPConfig, OptimizedNLPPipeline
+    from src.nlp.optimized_nlp_pipeline import NLPConfig
 
     OPTIMIZED_NLP_AVAILABLE = True
 except ImportError:
@@ -35,12 +32,6 @@ except ImportError:
 
 # Import existing components
 try:
-    from src.knowledge_graph.graph_builder import GraphBuilder
-    from src.knowledge_graph.nlp_populator import (
-        Entity,
-        KnowledgeGraphPopulator,
-        Relationship,
-    )
     from src.nlp.ner_processor import NERProcessor
 
     KNOWLEDGE_GRAPH_AVAILABLE = True
@@ -142,7 +133,8 @@ class AdvancedEntityExtractor:
             "neptune_label": "Person",
             "properties": ["name", "title", "organization", "role"],
             "patterns": [
-                r"\b[A-Z][a-z]+ [A-Z][a-z]+(?:\s+[A-Z][a-z]+)?\b",  # Full names
+                # Full names
+                r"\b[A-Z][a-z]+ [A-Z][a-z]+(?:\s+[A-Z][a-z]+)?\b",
                 r"\b(?:Dr\.|Prof\.|Mr\.|Ms\.|Mrs\.)\s+[A-Z][a-z]+\b",  # Titles
             ],
         },
@@ -212,8 +204,10 @@ class AdvancedEntityExtractor:
             "neptune_label": "Location",
             "properties": ["locationName", "type", "country", "region"],
             "patterns": [
-                r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*,\s*[A-Z]{2}\b",  # City, State
-                r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+Valley\b",  # Silicon Valley, etc.
+                # City, State
+                r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*,\s*[A-Z]{2}\b",
+                # Silicon Valley, etc.
+                r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+Valley\b",
             ],
         },
     }
@@ -251,7 +245,8 @@ class AdvancedEntityExtractor:
         ],
         "LOCATED_IN": [
             r"(\w+(?:\s+\w+)*)\s+(?:(?:is\s+)?(?:located|based|headquartered)\s+in)\s+(\w+(?:\s+\w+)*)",
-            r"(\w+(?:\s+\w+)*),?\s+(\w+(?:\s+\w+)*(?:,\s*[A-Z]{2})?)",  # Company, Location
+            # Company, Location
+            r"(\w+(?:\s+\w+)*),?\s+(\w+(?:\s+\w+)*(?:,\s*[A-Z]{2})?)",
         ],
     }
 
@@ -379,7 +374,8 @@ class AdvancedEntityExtractor:
             self.stats["processing_time"] += processing_time
 
             logger.info(
-                f"Extracted {len(deduplicated_entities)} entities from article {article_id}"
+                f"Extracted {
+                    len(deduplicated_entities)} entities from article {article_id}"
             )
             return deduplicated_entities
 
@@ -435,7 +431,8 @@ class AdvancedEntityExtractor:
             self.stats["relationships_found"] += len(filtered_relationships)
 
             logger.info(
-                f"Extracted {len(filtered_relationships)} relationships for article {article_id}"
+                f"Extracted {
+                    len(filtered_relationships)} relationships for article {article_id}"
             )
             return filtered_relationships
 
@@ -638,7 +635,8 @@ class AdvancedEntityExtractor:
                     relation_type = self._infer_relationship_type(entity1, entity2)
 
                     if relation_type:
-                        # Calculate confidence based on distance and entity confidence
+                        # Calculate confidence based on distance and entity
+                        # confidence
                         distance_factor = 1 - (distance / self.max_entity_distance)
                         confidence = (
                             min(entity1.confidence, entity2.confidence)
@@ -699,7 +697,8 @@ class AdvancedEntityExtractor:
 
                 for relation_type, indicators in relationship_indicators.items():
                     if any(indicator in sentence_lower for indicator in indicators):
-                        # Create relationships between entities in this sentence
+                        # Create relationships between entities in this
+                        # sentence
                         for i, entity1 in enumerate(sentence_entities):
                             for entity2 in sentence_entities[i + 1 :]:
                                 if self._validate_relationship_types(
@@ -854,14 +853,14 @@ if __name__ == "__main__":
             "content": """
             Google has announced a new partnership with OpenAI to advance artificial intelligence safety research.
             The collaboration will focus on developing responsible AI technologies and addressing potential risks.
-            
+
             Dr. Sarah Chen, Director of AI Research at Google, will lead the initiative alongside Dr. Sam Altman
             from OpenAI. The partnership aims to create new standards for AI development and deployment.
-            
+
             The two organizations plan to use machine learning and deep learning techniques to build safer
             AI systems. This partnership follows recent discussions about AI regulation and ethical guidelines
             in the technology industry.
-            
+
             Both companies are headquartered in Silicon Valley and have been working on similar AI projects.
             The partnership is expected to influence future AI policies and help establish industry best practices.
             """,

@@ -1,14 +1,13 @@
 # Simplified pytest configuration for containerized testing
 import asyncio
 import os
-from typing import Generator
 
 import pytest
 
-# Try to import database dependencies, but make them optional for backward compatibility
+# Try to import database dependencies, but make them optional for backward
+# compatibility
 try:
-    import psycopg2
-    from psycopg2.extras import RealDictCursor
+    pass
 
     PSYCOPG2_AVAILABLE = True
 except ImportError:

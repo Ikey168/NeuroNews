@@ -3,12 +3,12 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from gremlin_python.driver.client import Client
 from gremlin_python.driver.resultset import ResultSet  # Added import
-from gremlin_python.process.graph_traversal import GraphTraversal, __
-from gremlin_python.process.traversal import P, T
+from gremlin_python.process.graph_traversal import GraphTraversal
+from gremlin_python.process.traversal import T
 
 from src.api.routes.graph_routes import get_graph as original_get_graph_dependency
 from src.api.routes.graph_routes import lifespan as graph_api_lifespan
@@ -69,10 +69,12 @@ def mock_graph_builder_methods(app_for_test: FastAPI):
     mock_g.__.addE.return_value = mock_traversal_obj  # if used
 
     mock_gb_instance.g = mock_g
-    # _execute_traversal is the method called by routes. It should be an async method.
+    # _execute_traversal is the method called by routes. It should be an async
+    # method.
     mock_gb_instance._execute_traversal = AsyncMock(return_value=[])
 
-    # Also mock the internal client and its submit_async, though _execute_traversal mock should prevent its use.
+    # Also mock the internal client and its submit_async, though
+    # _execute_traversal mock should prevent its use.
     mock_internal_client = AsyncMock(spec=Client)
     # submit_async should return a mock ResultSet or an awaitable that yields one.
     # For simplicity, if _execute_traversal is correctly mocked, this won't be hit.
@@ -221,15 +223,18 @@ def test_error_handling(
         )
         mock_builder_instance_for_lifespan.is_connected = True
 
-    # Patch the GraphBuilder class *before* FastAPI app is created for this test
+    # Patch the GraphBuilder class *before* FastAPI app is created for this
+    # test
     with patch(
         "src.api.routes.graph_routes.GraphBuilder",
         return_value=mock_builder_instance_for_lifespan,
     ) as MockedGBClassInLifespan:
-        # Create a new app instance for this specific test run to ensure lifespan uses the patched GraphBuilder
+        # Create a new app instance for this specific test run to ensure
+        # lifespan uses the patched GraphBuilder
         current_test_app = FastAPI(lifespan=graph_api_lifespan)
         current_test_app.include_router(graph_api_router)
-        # No dependency_overrides for get_graph needed here, as we test the lifespan's effect on the global instance.
+        # No dependency_overrides for get_graph needed here, as we test the
+        # lifespan's effect on the global instance.
 
         with TestClient(current_test_app) as temp_client:
             MockedGBClassInLifespan.assert_called_once_with(test_specific_endpoint)
@@ -256,7 +261,8 @@ def test_error_handling(
 
 
 def test_health_check(app_for_test: FastAPI, mock_graph_builder_methods: AsyncMock):
-    # mock_graph_builder_methods has already overridden get_graph for app_for_test
+    # mock_graph_builder_methods has already overridden get_graph for
+    # app_for_test
     mock_graph_builder_methods._execute_traversal.return_value = [
         {"some_vertex_data": True}
     ]

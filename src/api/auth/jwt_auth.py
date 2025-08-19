@@ -4,12 +4,11 @@ JWT-based authentication system for the NeuroNews API.
 
 import os
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import jwt
-from fastapi import HTTPException, Request, Security
+from fastapi import HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from fastapi.security.utils import get_authorization_scheme_param
 
 
 class JWTAuth:

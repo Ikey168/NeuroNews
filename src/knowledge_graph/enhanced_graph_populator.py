@@ -19,10 +19,8 @@ Key Features:
 import asyncio
 import json
 import logging
-import uuid
-from collections import defaultdict
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Set, Tuple
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 # Import enhanced components
 try:
@@ -40,7 +38,6 @@ except ImportError:
 # Import existing knowledge graph components
 try:
     from .graph_builder import GraphBuilder
-    from .nlp_populator import KnowledgeGraphPopulator as BasePopulator
 
     GRAPH_BUILDER_AVAILABLE = True
 except ImportError:
@@ -48,8 +45,7 @@ except ImportError:
 
 # Import optimized NLP components
 try:
-    from src.nlp.nlp_integration import IntegratedNLPProcessor
-    from src.nlp.optimized_nlp_pipeline import NLPConfig, OptimizedNLPPipeline
+    pass
 
     OPTIMIZED_NLP_AVAILABLE = True
 except ImportError:
@@ -459,7 +455,8 @@ class EnhancedKnowledgeGraphPopulator:
                     continue
 
                 # Check if relationship already exists
-                relationship_key = f"{source_vertex_id}:{relationship.relation_type}:{target_vertex_id}"
+                relationship_key = f"{source_vertex_id}:{
+                    relationship.relation_type}:{target_vertex_id}"
                 if relationship_key in self.relationship_registry:
                     skipped_relationships.append(relationship.to_dict())
                     continue
@@ -467,7 +464,8 @@ class EnhancedKnowledgeGraphPopulator:
                 # Add relationship edge
                 edge_properties = {
                     "confidence": relationship.confidence,
-                    "context": relationship.context[:500],  # Truncate for storage
+                    # Truncate for storage
+                    "context": relationship.context[:500],
                     "article_id": article_id,
                     "evidence_count": len(relationship.evidence_sentences),
                     "created_at": datetime.utcnow().isoformat(),
@@ -526,7 +524,8 @@ class EnhancedKnowledgeGraphPopulator:
             # Update mention count and confidence
             update_properties = {
                 "mention_count": entity.mention_count,
-                "confidence": max(entity.confidence, 0.0),  # Keep higher confidence
+                # Keep higher confidence
+                "confidence": max(entity.confidence, 0.0),
                 "last_mentioned": datetime.utcnow().isoformat(),
             }
 
@@ -619,7 +618,8 @@ class EnhancedKnowledgeGraphPopulator:
 
             except Exception as e:
                 logger.error(
-                    f"Error linking entity {entity.text} to historical data: {e}"
+                    f"Error linking entity {
+                        entity.text} to historical data: {e}"
                 )
                 continue
 
@@ -629,7 +629,7 @@ class EnhancedKnowledgeGraphPopulator:
         """Find similar entities in the knowledge graph."""
         try:
             # Query for entities with similar normalized forms
-            similarity_threshold = 0.8
+            pass
 
             results = await self.graph_builder._execute_traversal(
                 self.graph_builder.g.V()
@@ -642,7 +642,10 @@ class EnhancedKnowledgeGraphPopulator:
             return results or []
 
         except Exception as e:
-            logger.debug(f"Error finding similar entities for {entity.text}: {e}")
+            logger.debug(
+                f"Error finding similar entities for {
+                    entity.text}: {e}"
+            )
             return []
 
     async def query_entity_relationships(
@@ -723,7 +726,8 @@ class EnhancedKnowledgeGraphPopulator:
             Query results
         """
         try:
-            # This would need to be implemented based on Neptune's SPARQL endpoint
+            # This would need to be implemented based on Neptune's SPARQL
+            # endpoint
             logger.warning(
                 "SPARQL queries not yet implemented - using Gremlin fallback"
             )
@@ -919,10 +923,10 @@ if __name__ == "__main__":
                 Apple Inc. and Google LLC have announced a groundbreaking partnership to develop
                 artificial intelligence technologies. The collaboration will focus on machine learning
                 and deep learning applications for consumer devices.
-                
+
                 Tim Cook, CEO of Apple, and Sundar Pichai, CEO of Google, will oversee the initiative.
                 The partnership aims to create new AI standards and improve user privacy protections.
-                
+
                 Both companies are headquartered in Silicon Valley and have been investing heavily
                 in AI research. The partnership will utilize TensorFlow and other open-source
                 machine learning frameworks.
@@ -956,8 +960,14 @@ if __name__ == "__main__":
             print(f"  • Article ID: {result['article_id']}")
             print(f"  • Entities extracted: {result['entities']['extracted']}")
             print(f"  • Entities created: {result['entities']['created']}")
-            print(f"  • Relationships found: {result['relationships']['extracted']}")
-            print(f"  • Relationships created: {result['relationships']['created']}")
+            print(
+                f"  • Relationships found: {
+                    result['relationships']['extracted']}"
+            )
+            print(
+                f"  • Relationships created: {
+                    result['relationships']['created']}"
+            )
             print(f"  • Processing time: {result['processing_time']:.2f}s")
 
             # Query entity relationships
@@ -969,14 +979,20 @@ if __name__ == "__main__":
 
             print(f"\n🔍 Entity Relationship Query:")
             print(f"  • Query entity: {query_result['query_entity']}")
-            print(f"  • Related entities found: {query_result['total_results']}")
+            print(
+                f"  • Related entities found: {
+                    query_result['total_results']}"
+            )
 
             # Validate graph data
             validation = await populator.validate_graph_data()
 
             print(f"\n✅ Graph Validation:")
             print(f"  • Entity counts: {validation['entity_counts']}")
-            print(f"  • Relationship counts: {validation['relationship_counts']}")
+            print(
+                f"  • Relationship counts: {
+                    validation['relationship_counts']}"
+            )
             print(f"  • Orphaned entities: {validation['orphaned_entities']}")
 
             # Get processing statistics
@@ -985,12 +1001,17 @@ if __name__ == "__main__":
             print(f"\n📈 Processing Statistics:")
             print(f"  • Articles processed: {stats['articles_processed']}")
             print(f"  • Entities created: {stats['entities_created']}")
-            print(f"  • Relationships created: {stats['relationships_created']}")
             print(
-                f"  • Average entities per article: {stats['entities_per_article']:.1f}"
+                f"  • Relationships created: {
+                    stats['relationships_created']}"
             )
             print(
-                f"  • Average relationships per article: {stats['relationships_per_article']:.1f}"
+                f"  • Average entities per article: {
+                    stats['entities_per_article']:.1f}"
+            )
+            print(
+                f"  • Average relationships per article: {
+                    stats['relationships_per_article']:.1f}"
             )
 
             # Clean up

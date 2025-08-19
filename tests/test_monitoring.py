@@ -4,28 +4,23 @@ Test suite for monitoring and error handling system.
 Tests CloudWatch logging, DynamoDB failure tracking, SNS alerting, and retry logic.
 """
 
+from scraper.sns_alert_manager import Alert, AlertSeverity, AlertType, SNSAlertManager
+from scraper.enhanced_retry_manager import (
+    EnhancedRetryManager,
+    RetryConfig,
+)
+from scraper.dynamodb_failure_manager import DynamoDBFailureManager
+from scraper.cloudwatch_logger import CloudWatchLogger, ScrapingMetrics, ScrapingStatus
 import asyncio
 import json
 import sys
-import tempfile
 import time
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import patch
 
-import boto3
 import pytest
 from moto import mock_aws
 
 sys.path.append("/workspaces/NeuroNews/src")
-
-from scraper.cloudwatch_logger import CloudWatchLogger, ScrapingMetrics, ScrapingStatus
-from scraper.dynamodb_failure_manager import DynamoDBFailureManager, FailedUrl
-from scraper.enhanced_retry_manager import (
-    EnhancedRetryManager,
-    RetryConfig,
-    RetryReason,
-)
-from scraper.sns_alert_manager import Alert, AlertSeverity, AlertType, SNSAlertManager
 
 
 class TestCloudWatchLogger:
@@ -197,7 +192,7 @@ class TestSNSAlertManager:
             mock_publish.return_value = {"MessageId": "test-123"}
 
             result = await manager.send_alert(alert)
-            assert result == True
+            assert result
             mock_publish.assert_called_once()
 
     @pytest.mark.asyncio
@@ -225,8 +220,8 @@ class TestSNSAlertManager:
             # First two alerts should go through
             result1 = await manager.send_alert(alert)
             result2 = await manager.send_alert(alert)
-            assert result1 == True
-            assert result2 == True
+            assert result1
+            assert result2
 
             # Third alert should be rate limited
             result3 = await manager.send_alert(alert)
@@ -307,7 +302,7 @@ class TestEnhancedRetryManager:
         manager._record_circuit_breaker_failure(url)
 
         # Circuit breaker should be open
-        assert manager._is_circuit_breaker_open(url) == True
+        assert manager._is_circuit_breaker_open(url)
 
         # Reset circuit breaker
         manager._reset_circuit_breaker(url)
@@ -382,7 +377,7 @@ class TestMonitoringConfiguration:
             assert "cloudwatch" in config["monitoring"]
             assert "dynamodb" in config["monitoring"]
             assert "sns" in config["monitoring"]
-            assert config["monitoring"]["enabled"] == True
+            assert config["monitoring"]["enabled"]
 
         except FileNotFoundError:
             pytest.skip("Config file not found")
@@ -428,7 +423,10 @@ if __name__ == "__main__":
                 failure_reason="timeout",
                 error_details="Connection timeout after 30s",
             )
-            print(f"✅ DynamoDB failure recording test passed: {failed_url.url}")
+            print(
+                f"✅ DynamoDB failure recording test passed: {
+                    failed_url.url}"
+            )
         except Exception as e:
             print(f"❌ DynamoDB failure recording test failed: {e}")
 
@@ -449,7 +447,8 @@ if __name__ == "__main__":
                 metadata={"test": True},
             )
 
-            # This would fail without proper AWS credentials, but tests the code path
+            # This would fail without proper AWS credentials, but tests the
+            # code path
             print("✅ SNS alert manager initialization test passed")
         except Exception as e:
             print(f"⚠️ SNS alert manager test: {e}")

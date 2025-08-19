@@ -4,7 +4,6 @@ Authentication routes for the API.
 
 import os
 from datetime import datetime, timezone
-from typing import Optional
 
 import bcrypt
 from fastapi import APIRouter, Depends, HTTPException, Response

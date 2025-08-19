@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Any, Dict, List
 
-from gremlin_python.process.graph_traversal import GraphTraversal, __
+from gremlin_python.process.graph_traversal import __
 from gremlin_python.process.traversal import P
 
 

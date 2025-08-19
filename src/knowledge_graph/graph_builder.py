@@ -1,6 +1,4 @@
-import asyncio
 import logging
-import os
 
 from gremlin_python.driver.aiohttp.transport import AiohttpTransport
 from gremlin_python.driver.client import Client
@@ -32,7 +30,10 @@ class GraphBuilder:
             logger.info("Connection already established.")
             return
 
-        logger.info(f"Attempting to connect to Gremlin server at {self.endpoint}...")
+        logger.info(
+            f"Attempting to connect to Gremlin server at {
+                self.endpoint}..."
+        )
         try:
             # For AiohttpTransport, the loop is implicitly handled by asyncio.get_event_loop()
             # when running in an async context.
@@ -80,14 +81,16 @@ class GraphBuilder:
 
         logger.debug(f"Executing Gremlin Bytecode: {traversal_obj.bytecode}")
         try:
-            # Use client.submit_async for executing traversals constructed with 'g'
+            # Use client.submit_async for executing traversals constructed with
+            # 'g'
             result_set = await self.client.submit_async(traversal_obj.bytecode)
             results = await result_set.all()  # Get all results as a list
             logger.debug(f"Traversal results: {results}")
             return results
         except Exception as e:
             logger.error(f"Error executing Gremlin traversal: {e}")
-            # Consider how to handle different types of errors, e.g., connection vs. query errors
+            # Consider how to handle different types of errors, e.g.,
+            # connection vs. query errors
             raise
 
     async def add_vertex(self, label: str, properties: dict):
@@ -109,7 +112,8 @@ class GraphBuilder:
         """Adds an article vertex."""
         if "id" not in article_data:
             raise ValueError("Article data must include an 'id' field.")
-        # Could add more validation for required fields like headline, publishDate
+        # Could add more validation for required fields like headline,
+        # publishDate
         return await self.add_vertex("Article", article_data)
 
     async def add_relationship(
@@ -160,7 +164,8 @@ class GraphBuilder:
             await self.connect()
 
         t = self.g.V().has("id", vertex_id).drop()
-        await self._execute_traversal(t)  # Drop typically doesn't return results
+        # Drop typically doesn't return results
+        await self._execute_traversal(t)
 
     async def clear_graph(self):
         """Clears all vertices and edges from the graph."""

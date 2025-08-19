@@ -10,7 +10,6 @@ This module implements secure API key generation, storage, and management:
 
 import hashlib
 import hmac
-import json
 import logging
 import os
 import secrets
@@ -109,7 +108,7 @@ class APIKeyGenerator:
     def generate_api_key() -> str:
         """Generate a cryptographically secure API key."""
         # Generate 32 bytes (256 bits) of random data
-        random_bytes = secrets.token_bytes(32)
+        secrets.token_bytes(32)
         # Convert to base64-like string but URL safe
         api_key = secrets.token_urlsafe(32)
         # Add prefix to identify as NeuroNews API key
@@ -217,7 +216,11 @@ class DynamoDBAPIKeyStore:
 
         try:
             self.table.put_item(Item=api_key.to_dict())
-            logger.info(f"Stored API key {api_key.key_id} for user {api_key.user_id}")
+            logger.info(
+                f"Stored API key {
+                    api_key.key_id} for user {
+                    api_key.user_id}"
+            )
             return True
 
         except Exception as e:
@@ -345,7 +348,8 @@ class APIKeyManager:
 
         if len(active_keys) >= self.max_keys_per_user:
             raise ValueError(
-                f"User has reached maximum API key limit ({self.max_keys_per_user})"
+                f"User has reached maximum API key limit ({
+                    self.max_keys_per_user})"
             )
 
         # Generate new API key

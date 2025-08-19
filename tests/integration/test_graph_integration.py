@@ -239,7 +239,8 @@ async def test_graph_management_operations(mocked_graph: GraphBuilder):
         # In mocked environment, this should succeed
         assert True
     except Exception as e:
-        # If method doesn't exist or fails, that's also acceptable for basic testing
+        # If method doesn't exist or fails, that's also acceptable for basic
+        # testing
         print(f"Graph clearing not available in mock: {e}")
         assert True
 
@@ -362,7 +363,9 @@ async def test_complex_entity_scenario(mocked_graph: GraphBuilder):
     assert len(edge_ops) >= 4  # 4 relationships
 
     print(
-        f"✅ Complex scenario test completed: {len(vertex_ops)} vertices, {len(edge_ops)} edges created"
+        f"✅ Complex scenario test completed: {
+            len(vertex_ops)} vertices, {
+            len(edge_ops)} edges created"
     )
 
 

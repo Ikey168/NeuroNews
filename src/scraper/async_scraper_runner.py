@@ -3,6 +3,11 @@ Async News Scraper Runner
 Main entry point for running the high-performance async news scraper.
 """
 
+from src.scraper.async_scraper_engine import (
+    ASYNC_NEWS_SOURCES,
+    AsyncNewsScraperEngine,
+    NewsSource,
+)
 import argparse
 import asyncio
 import json
@@ -15,12 +20,6 @@ from pathlib import Path
 
 # Add the src directory to the path
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
-
-from src.scraper.async_scraper_engine import (
-    ASYNC_NEWS_SOURCES,
-    AsyncNewsScraperEngine,
-    NewsSource,
-)
 
 
 class AsyncScraperRunner:
@@ -87,7 +86,9 @@ class AsyncScraperRunner:
         """Run the async scraper."""
         self.logger.info(f"🚀 Starting Async News Scraper")
         self.logger.info(
-            f"📊 Configuration: {self.config['max_concurrent']} concurrent, {self.config['max_threads']} threads"
+            f"📊 Configuration: {
+                self.config['max_concurrent']} concurrent, {
+                self.config['max_threads']} threads"
         )
         self.logger.info(f"🎯 Sources: {[s.name for s in sources]}")
 
@@ -126,7 +127,11 @@ class AsyncScraperRunner:
             self.logger.info("🎉 Async scraping completed!")
             self.logger.info(f"⏱️  Duration: {duration:.2f} seconds")
             self.logger.info(f"📰 Articles: {len(articles)}")
-            self.logger.info(f"📈 Rate: {len(articles)/duration:.2f} articles/second")
+            self.logger.info(
+                f"📈 Rate: {
+                    len(articles) /
+                    duration:.2f} articles/second"
+            )
 
             return articles
 
@@ -182,7 +187,9 @@ class AsyncScraperRunner:
         print(f"📈 Articles/Second: {stats['articles_per_second']:.2f}")
         print(f"✅ Success Rate: {stats['success_rate']:.1f}%")
         print(
-            f"🔄 Total Requests: {stats['successful_requests'] + stats['failed_requests']}"
+            f"🔄 Total Requests: {
+                stats['successful_requests'] +
+                stats['failed_requests']}"
         )
         print(f"⚡ Avg Response Time: {stats['avg_response_time']:.2f}s")
         print(f"💾 Avg Memory Usage: {stats['avg_memory_mb']:.1f} MB")
@@ -191,7 +198,9 @@ class AsyncScraperRunner:
         print(f"\n📋 Source Breakdown:")
         for source, source_stats in stats["source_stats"].items():
             print(
-                f"  {source}: {source_stats['articles']} articles, {source_stats['errors']} errors"
+                f"  {source}: {
+                    source_stats['articles']} articles, {
+                    source_stats['errors']} errors"
             )
 
         # Quality breakdown

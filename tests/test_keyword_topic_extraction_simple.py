@@ -1,7 +1,5 @@
 """Simple test to verify basic functionality works."""
 
-import pytest
-
 from src.nlp.keyword_topic_extractor import (
     SimpleKeywordExtractor,
     create_keyword_extractor,

@@ -5,24 +5,20 @@ Tests the complete validation pipeline with real-world scenarios
 to ensure all components work together correctly.
 """
 
+from src.database.data_validation_pipeline import (
+    DataValidationPipeline,
+    DuplicateDetector,
+    HTMLCleaner,
+    SourceReputationConfig,
+)
 import json
 import os
 import sys
 import tempfile
 import unittest
 from datetime import datetime, timedelta
-from unittest.mock import Mock, patch
 
 sys.path.append("/workspaces/NeuroNews")
-
-from src.database.data_validation_pipeline import (
-    ContentValidator,
-    DataValidationPipeline,
-    DuplicateDetector,
-    HTMLCleaner,
-    SourceReputationAnalyzer,
-    SourceReputationConfig,
-)
 
 
 class TestDataValidationPipeline(unittest.TestCase):
@@ -50,18 +46,18 @@ class TestDataValidationPipeline(unittest.TestCase):
             "url": "https://reuters.com/news/technology/ai-breakthrough",
             "title": "Major AI Breakthrough Announced by Leading Researchers",
             "content": """
-                <p>Scientists at leading universities have announced a significant breakthrough 
-                in artificial intelligence research. The new method shows promising results 
-                in natural language understanding and could revolutionize how AI systems 
+                <p>Scientists at leading universities have announced a significant breakthrough
+                in artificial intelligence research. The new method shows promising results
+                in natural language understanding and could revolutionize how AI systems
                 process human communication.</p>
-                
-                <p>Dr. Jane Smith, lead researcher on the project, explained that the 
-                breakthrough involves a novel approach to neural network architecture 
-                that dramatically improves performance while reducing computational 
+
+                <p>Dr. Jane Smith, lead researcher on the project, explained that the
+                breakthrough involves a novel approach to neural network architecture
+                that dramatically improves performance while reducing computational
                 requirements.</p>
-                
-                <p>"This represents a major step forward in making AI more accessible 
-                and efficient," Smith said in an interview. "We're excited about the 
+
+                <p>"This represents a major step forward in making AI more accessible
+                and efficient," Smith said in an interview. "We're excited about the
                 potential applications in healthcare, education, and scientific research."</p>
             """,
             "source": "reuters.com",
@@ -163,7 +159,8 @@ class TestDataValidationPipeline(unittest.TestCase):
         pipeline1 = DataValidationPipeline(self.config)
         trusted_article = self.valid_article.copy()
         trusted_article["source"] = "reuters.com"
-        trusted_article["url"] = "https://reuters.com/trusted-article"  # Unique URL
+        # Unique URL
+        trusted_article["url"] = "https://reuters.com/trusted-article"
         trusted_article["title"] = (
             "Trusted Source Article: AI Development"  # Unique title
         )
@@ -184,14 +181,14 @@ class TestDataValidationPipeline(unittest.TestCase):
         questionable_article[
             "content"
         ] = """
-            <p>Scientists at leading universities have announced a significant breakthrough 
-            in artificial intelligence research. The new method shows promising results 
-            in natural language understanding and could revolutionize how AI systems 
+            <p>Scientists at leading universities have announced a significant breakthrough
+            in artificial intelligence research. The new method shows promising results
+            in natural language understanding and could revolutionize how AI systems
             process human communication.</p>
-            
-            <p>Dr. Jane Smith, lead researcher on the project, explained that the 
-            breakthrough involves a novel approach to neural network architecture 
-            that dramatically improves performance while reducing computational 
+
+            <p>Dr. Jane Smith, lead researcher on the project, explained that the
+            breakthrough involves a novel approach to neural network architecture
+            that dramatically improves performance while reducing computational
             requirements.</p>
         """
         result = pipeline2.process_article(questionable_article)
@@ -210,12 +207,14 @@ class TestDataValidationPipeline(unittest.TestCase):
         )
         result = pipeline3.process_article(unknown_article)
         self.assertIsNotNone(result)
-        # Unknown sources are classified as 'questionable' in the implementation
+        # Unknown sources are classified as 'questionable' in the
+        # implementation
         self.assertEqual(result.cleaned_data["source_credibility"], "questionable")
 
     def test_content_validation(self):
         """Test content quality validation."""
-        # Test short content (should be between 100-200 chars to trigger warning)
+        # Test short content (should be between 100-200 chars to trigger
+        # warning)
         short_article = self.valid_article.copy()
         short_article["content"] = (
             "<p>This is short content that is just under 200 characters but above 100 characters to test the warning functionality for articles that have minimal content but still pass validation.</p>"
@@ -400,8 +399,8 @@ class TestHTMLCleaner(unittest.TestCase):
         """Test whitespace normalization."""
         html_content = """
         <p>Paragraph   with    extra      spaces.</p>
-        
-        
+
+
         <p>Another paragraph.</p>
         """
 

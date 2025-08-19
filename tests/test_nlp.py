@@ -104,19 +104,22 @@ from src.nlp.sentiment_analysis import (  # Changed from BaseSentimentAnalyzer; 
 
 
 class TestAnalyzerFactory:
-    def test_create_default_analyzer(self):  # Renamed from test_create_vader_analyzer
+    # Renamed from test_create_vader_analyzer
+    def test_create_default_analyzer(self):
         analyzer = create_analyzer()  # No argument for default
         assert isinstance(analyzer, SentimentAnalyzer)
 
     def test_create_specific_analyzer(self):
         # Example with a different model if available and configured
-        # For now, just test creating the default one again or a known Hugging Face model
+        # For now, just test creating the default one again or a known Hugging
+        # Face model
         analyzer = create_analyzer("distilbert-base-uncased-finetuned-sst-2-english")
         assert isinstance(analyzer, SentimentAnalyzer)
 
     def test_create_invalid_analyzer(self):
         # This test might need adjustment based on how create_analyzer handles invalid model names
-        # The current create_analyzer will raise an exception from Hugging Face if model is not found
+        # The current create_analyzer will raise an exception from Hugging Face
+        # if model is not found
         with pytest.raises(Exception):  # Changed from ValueError to generic Exception
             create_analyzer("invalid_provider_or_model_name_that_does_not_exist")
 

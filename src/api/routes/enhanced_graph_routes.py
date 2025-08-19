@@ -9,7 +9,7 @@ with caching, performance monitoring, and real-time execution capabilities.
 import logging
 import os
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
@@ -634,7 +634,10 @@ async def clear_cache_v2_post(
             "forced": request.force,
         }
 
-        logger.info(f"Cache cleared via POST: {result['cleared_entries']} entries")
+        logger.info(
+            f"Cache cleared via POST: {
+                result['cleared_entries']} entries"
+        )
         return result
 
     except Exception as e:

@@ -5,11 +5,10 @@ Tracks execution success/failure rates, performance metrics, and sends alerts.
 
 import json
 import logging
-import time
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 import boto3
 
@@ -288,7 +287,7 @@ class CloudWatchLogger:
             successful_attempts = sum(
                 1 for m in self.metrics_buffer if m.status == ScrapingStatus.SUCCESS
             )
-            failed_attempts = total_attempts - successful_attempts
+            total_attempts - successful_attempts
             avg_duration = (
                 sum(m.duration_ms for m in self.metrics_buffer) / total_attempts
             )

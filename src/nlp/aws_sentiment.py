@@ -2,12 +2,11 @@
 AWS Comprehend sentiment analysis implementation.
 """
 
-import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import boto3
-from botocore.exceptions import BotoCoreError, ClientError
+from botocore.exceptions import ClientError
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +27,10 @@ class AWSComprehendSentimentAnalyzer:
             self.client = boto3.client("comprehend", region_name=region_name, **kwargs)
             logger.info(f"Initialized AWS Comprehend client in region {region_name}")
         except Exception as e:
-            logger.error(f"Failed to initialize AWS Comprehend client: {str(e)}")
+            logger.error(
+                f"Failed to initialize AWS Comprehend client: {
+                    str(e)}"
+            )
             raise
 
     def analyze(self, text: str, language_code: str = "en") -> Dict[str, Any]:
@@ -194,7 +196,9 @@ class AWSComprehendSentimentAnalyzer:
                         "label": "ERROR",
                         "score": 0.0,
                         "text": texts[error_idx],
-                        "message": f"AWS error {error['ErrorCode']}: {error['ErrorMessage']}",
+                        "message": f"AWS error {
+                            error['ErrorCode']}: {
+                            error['ErrorMessage']}",
                         "provider": "aws_comprehend",
                     }
 

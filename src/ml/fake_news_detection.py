@@ -331,7 +331,10 @@ class FakeNewsDetector:
                 results.append(result)
 
             except Exception as e:
-                logger.error(f"Error processing article {article.get('id')}: {e}")
+                logger.error(
+                    f"Error processing article {
+                        article.get('id')}: {e}"
+                )
                 results.append(self._get_fallback_result())
 
         return results

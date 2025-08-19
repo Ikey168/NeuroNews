@@ -1,7 +1,7 @@
+from database.s3_storage import S3Storage
 import json
 import os
 import sys
-from datetime import datetime
 
 import boto3
 import pytest
@@ -10,8 +10,6 @@ from moto import mock_aws
 
 # Add src directory to Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../src")))
-
-from database.s3_storage import S3Storage
 
 
 @pytest.fixture(autouse=True)

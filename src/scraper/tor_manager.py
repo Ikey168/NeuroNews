@@ -5,10 +5,6 @@ Handles Tor proxy setup, identity rotation, and health checks.
 
 import asyncio
 import logging
-import subprocess
-from typing import Optional
-
-import aiohttp
 
 
 class TorManager:
@@ -36,7 +32,10 @@ class TorManager:
                 self.logger.info("Tor identity rotated successfully.")
                 return True
             else:
-                self.logger.error(f"Tor identity rotation failed: {stderr.decode()}")
+                self.logger.error(
+                    f"Tor identity rotation failed: {
+                        stderr.decode()}"
+                )
                 return False
         except Exception as e:
             self.logger.error(f"Tor rotation error: {e}")

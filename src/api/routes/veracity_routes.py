@@ -9,7 +9,6 @@ import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-import psycopg2
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
@@ -112,11 +111,11 @@ def store_veracity_result(
 
         # Insert or update veracity result
         insert_sql = f"""
-        INSERT INTO {FakeNewsConfig.VERACITY_TABLE} 
-        (article_id, trustworthiness_score, classification, confidence, 
+        INSERT INTO {FakeNewsConfig.VERACITY_TABLE}
+        (article_id, trustworthiness_score, classification, confidence,
          fake_probability, real_probability, model_used, analysis_timestamp)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-        ON CONFLICT (article_id) 
+        ON CONFLICT (article_id)
         DO UPDATE SET
             trustworthiness_score = EXCLUDED.trustworthiness_score,
             classification = EXCLUDED.classification,
@@ -212,8 +211,8 @@ async def get_news_veracity(
             try:
                 redshift_conn = RedshiftConnection()
                 query = """
-                SELECT content, title 
-                FROM articles 
+                SELECT content, title
+                FROM articles
                 WHERE article_id = %s;
                 """
                 result = redshift_conn.fetch_query(query, (article_id,))
@@ -229,7 +228,9 @@ async def get_news_veracity(
 
             except Exception as e:
                 raise HTTPException(
-                    status_code=500, detail=f"Could not retrieve article text: {str(e)}"
+                    status_code=500,
+                    detail=f"Could not retrieve article text: {
+                        str(e)}",
                 )
 
         # Perform veracity analysis
@@ -264,7 +265,11 @@ async def get_news_veracity(
         raise
     except Exception as e:
         logger.error(f"Error in news veracity analysis: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {
+                str(e)}",
+        )
 
 
 @router.post("/batch_veracity", response_model=BatchVeracityResponse)
@@ -307,7 +312,10 @@ async def batch_veracity_analysis(request: BatchVeracityRequest):
                 )
 
             except Exception as e:
-                logger.error(f"Error processing article {article.article_id}: {e}")
+                logger.error(
+                    f"Error processing article {
+                        article.article_id}: {e}"
+                )
                 results.append(
                     {
                         "article_id": article.article_id,
@@ -322,7 +330,11 @@ async def batch_veracity_analysis(request: BatchVeracityRequest):
 
     except Exception as e:
         logger.error(f"Error in batch veracity analysis: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {
+                str(e)}",
+        )
 
 
 @router.get("/veracity_stats", response_model=StatisticsResponse)
@@ -337,7 +349,7 @@ async def get_veracity_statistics(
 
         # Get overall statistics
         stats_query = f"""
-        SELECT 
+        SELECT
             COUNT(*) as total_articles,
             AVG(trustworthiness_score) as avg_trustworthiness,
             COUNT(CASE WHEN classification = 'real' THEN 1 END) as real_articles,
@@ -376,8 +388,8 @@ async def get_veracity_statistics(
 
         # Get distribution by trust level
         distribution_query = f"""
-        SELECT 
-            CASE 
+        SELECT
+            CASE
                 WHEN trustworthiness_score >= {FakeNewsConfig.HIGH_CONFIDENCE_THRESHOLD} THEN 'high'
                 WHEN trustworthiness_score >= {FakeNewsConfig.MEDIUM_CONFIDENCE_THRESHOLD} THEN 'medium'
                 ELSE 'low'
@@ -400,7 +412,11 @@ async def get_veracity_statistics(
 
     except Exception as e:
         logger.error(f"Error getting veracity statistics: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {
+                str(e)}",
+        )
 
 
 @router.get("/model_info", response_model=ModelInfoResponse)
@@ -430,4 +446,8 @@ async def get_model_info():
 
     except Exception as e:
         logger.error(f"Error getting model info: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {
+                str(e)}",
+        )

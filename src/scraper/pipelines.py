@@ -5,7 +5,6 @@ Pipelines for processing scraped items in NeuroNews.
 import hashlib
 import json
 import os
-import re
 from datetime import datetime
 from urllib.parse import urlparse
 
@@ -51,7 +50,7 @@ class ValidationPipeline:
                 parsed_url = urlparse(item["url"])
                 if not parsed_url.scheme or not parsed_url.netloc:
                     validation_score -= 15
-            except:
+            except BaseException:
                 validation_score -= 15
 
         # Validate date format
@@ -62,7 +61,7 @@ class ValidationPipeline:
                     datetime.fromisoformat(
                         item["published_date"].replace("Z", "+00:00")
                     )
-            except:
+            except BaseException:
                 validation_score -= 10
 
         # Add scraped timestamp
@@ -112,7 +111,10 @@ class DuplicateFilterPipeline:
             content_hash = hashlib.md5(item["content"].encode("utf-8")).hexdigest()
             if content_hash in self.content_hashes:
                 item["duplicate_check"] = "content_duplicate"
-                spider.logger.info(f"Duplicate content found for URL: {item['url']}")
+                spider.logger.info(
+                    f"Duplicate content found for URL: {
+                        item['url']}"
+                )
                 return None
             self.content_hashes.add(content_hash)
 

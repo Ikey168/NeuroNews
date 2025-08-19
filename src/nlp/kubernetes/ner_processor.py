@@ -16,18 +16,16 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import psycopg2
 import torch
-from transformers import AutoModelForTokenClassification, AutoTokenizer, pipeline
 
 # Add src to path for imports
 sys.path.append(os.path.join(os.path.dirname(__file__), "../../.."))
 
 try:
     from database.redshift_loader import RedshiftETLProcessor
-    from nlp.ner_article_processor import NERArticleProcessor
     from nlp.ner_processor import NERProcessor
 except ImportError as e:
     print(f"Import error: {e}")
@@ -182,7 +180,7 @@ class KubernetesNERProcessor:
                 )
 
                 query = """
-                SELECT 
+                SELECT
                     article_id,
                     title,
                     content,
@@ -190,9 +188,9 @@ class KubernetesNERProcessor:
                     source,
                     published_date,
                     scraped_at
-                FROM news_articles 
-                WHERE 
-                    (ner_processed_at IS NULL 
+                FROM news_articles
+                WHERE
+                    (ner_processed_at IS NULL
                      OR ner_processed_at < %s)
                     AND LENGTH(content) >= %s
                     AND published_date >= %s
@@ -225,7 +223,10 @@ class KubernetesNERProcessor:
                     }
                     articles.append(article)
 
-                logger.info(f"Fetched {len(articles)} articles for NER processing")
+                logger.info(
+                    f"Fetched {
+                        len(articles)} articles for NER processing"
+                )
                 return articles
 
         except Exception as e:
@@ -248,7 +249,10 @@ class KubernetesNERProcessor:
         results = []
 
         try:
-            logger.info(f"Processing batch of {len(articles)} articles for NER")
+            logger.info(
+                f"Processing batch of {
+                    len(articles)} articles for NER"
+            )
 
             for article in articles:
                 try:
@@ -293,7 +297,8 @@ class KubernetesNERProcessor:
 
                 except Exception as e:
                     logger.error(
-                        f"Failed to process article {article['article_id']}: {e}"
+                        f"Failed to process article {
+                            article['article_id']}: {e}"
                     )
                     self.stats["articles_failed"] += 1
 
@@ -302,7 +307,9 @@ class KubernetesNERProcessor:
             self.stats["batches_processed"] += 1
 
             logger.info(
-                f"Processed batch in {batch_processing_time:.2f}s, extracted {len(results)} entities"
+                f"Processed batch in {
+                    batch_processing_time:.2f}s, extracted {
+                    len(results)} entities"
             )
             return results
 
@@ -390,7 +397,7 @@ class KubernetesNERProcessor:
             with self.postgres_conn.cursor() as cur:
                 # Update processing timestamp
                 update_sql = """
-                UPDATE news_articles 
+                UPDATE news_articles
                 SET ner_processed_at = %s
                 WHERE article_id = ANY(%s)
                 """
@@ -399,7 +406,8 @@ class KubernetesNERProcessor:
 
                 self.postgres_conn.commit()
                 logger.info(
-                    f"Updated NER processing status for {len(article_ids)} articles"
+                    f"Updated NER processing status for {
+                        len(article_ids)} articles"
                 )
 
         except Exception as e:
@@ -435,16 +443,29 @@ class KubernetesNERProcessor:
 
             logger.info(f"Processing statistics saved to {stats_file}")
             logger.info(f"NER Job Summary:")
-            logger.info(f"  Articles Processed: {self.stats['articles_processed']}")
-            logger.info(f"  Articles Failed: {self.stats['articles_failed']}")
-            logger.info(f"  Entities Extracted: {self.stats['entities_extracted']}")
-            logger.info(f"  Batches Processed: {self.stats['batches_processed']}")
             logger.info(
-                f"  Total Duration: {self.stats['total_duration_seconds']:.2f}s"
+                f"  Articles Processed: {
+                    self.stats['articles_processed']}"
+            )
+            logger.info(f"  Articles Failed: {self.stats['articles_failed']}")
+            logger.info(
+                f"  Entities Extracted: {
+                    self.stats['entities_extracted']}"
+            )
+            logger.info(
+                f"  Batches Processed: {
+                    self.stats['batches_processed']}"
+            )
+            logger.info(
+                f"  Total Duration: {
+                    self.stats['total_duration_seconds']:.2f}s"
             )
             if self.stats["articles_processed"] > 0:
                 logger.info(
-                    f"  Throughput: {self.stats.get('throughput_articles_per_second', 0):.2f} articles/sec"
+                    f"  Throughput: {
+                        self.stats.get(
+                            'throughput_articles_per_second',
+                            0):.2f} articles/sec"
                 )
                 logger.info(
                     f"  Avg Entities/Article: {self.stats.get('average_entities_per_article', 0):.2f}"
@@ -492,7 +513,7 @@ class KubernetesNERProcessor:
 
                 # Collect results as they complete
                 for future in as_completed(future_to_batch):
-                    batch = future_to_batch[future]
+                    future_to_batch[future]
                     try:
                         batch_results = future.result()
                         all_results.extend(batch_results)
@@ -514,8 +535,14 @@ class KubernetesNERProcessor:
             self.save_processing_stats()
 
             logger.info(f"Entity extraction job completed successfully")
-            logger.info(f"Processed {self.stats['articles_processed']} articles")
-            logger.info(f"Extracted {self.stats['entities_extracted']} entities total")
+            logger.info(
+                f"Processed {
+                    self.stats['articles_processed']} articles"
+            )
+            logger.info(
+                f"Extracted {
+                    self.stats['entities_extracted']} entities total"
+            )
 
         except Exception as e:
             logger.error(f"Entity extraction job failed: {e}")

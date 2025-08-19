@@ -4,12 +4,10 @@ Comprehensive containerized test demonstrating the superiority of this approach.
 This replaces complex mocking with real service integration.
 """
 
-import asyncio
 import logging
 import os
 import sys
 import time
-from typing import Any, Dict
 
 # Configure logging
 logging.basicConfig(
@@ -48,7 +46,7 @@ def test_database_operations():
             # Insert test data
             cur.execute(
                 """
-                INSERT INTO test_articles (title, content) 
+                INSERT INTO test_articles (title, content)
                 VALUES (%s, %s) RETURNING id
             """,
                 ("Test Article", "This is test content"),
@@ -59,10 +57,10 @@ def test_database_operations():
             # Query with complex operations
             cur.execute(
                 """
-                SELECT id, title, 
+                SELECT id, title,
                        length(content) as content_length,
                        created_at
-                FROM test_articles 
+                FROM test_articles
                 WHERE id = %s
             """,
                 (article_id,),
@@ -188,7 +186,7 @@ def test_service_integration():
 
             cur.execute(
                 """
-                INSERT INTO integration_test (data, cache_key) 
+                INSERT INTO integration_test (data, cache_key)
                 VALUES (%s, %s) RETURNING id
             """,
                 (json.dumps(test_data), cache_key),
@@ -210,7 +208,7 @@ def test_service_integration():
 
             cur.execute("SELECT data FROM integration_test WHERE id = %s", (record_id,))
             db_data = cur.fetchone()[0]
-            assert db_data["integration"] == True
+            assert db_data["integration"]
 
             # Clean up
             cur.execute("DROP TABLE integration_test")
@@ -272,9 +270,9 @@ def run_comprehensive_tests():
     passed = sum(results)
     total = len(results)
 
-    logger.info(f"\n{'='*60}")
+    logger.info(f"\n{'=' * 60}")
     logger.info(f"🏆 COMPREHENSIVE TEST RESULTS: {passed}/{total} PASSED")
-    logger.info(f"{'='*60}")
+    logger.info(f"{'=' * 60}")
 
     if passed == total:
         logger.info("🎉 ALL TESTS PASSED! Containerization approach validated!")

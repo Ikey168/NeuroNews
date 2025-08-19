@@ -5,10 +5,9 @@ FastAPI routes for article clustering and event detection system.
 Provides endpoints for accessing breaking news and event clusters.
 """
 
-import asyncio
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -241,7 +240,7 @@ async def get_event_clusters(
 
         # Build query
         query = """
-            SELECT 
+            SELECT
                 cluster_id, cluster_name, event_type, category, cluster_size,
                 silhouette_score, cohesion_score, separation_score,
                 trending_score, impact_score, velocity_score,
@@ -329,7 +328,9 @@ async def get_event_clusters(
     except Exception as e:
         logger.error(f"Error getting event clusters: {e}")
         raise HTTPException(
-            status_code=500, detail=f"Error retrieving event clusters: {str(e)}"
+            status_code=500,
+            detail=f"Error retrieving event clusters: {
+                str(e)}",
         )
 
 
@@ -364,7 +365,7 @@ async def get_articles_in_cluster(
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(
                     """
-                    SELECT 
+                    SELECT
                         aca.article_id, a.title, a.source, a.published_date,
                         aca.assignment_confidence, aca.distance_to_centroid,
                         aca.is_cluster_representative, aca.contribution_score,
@@ -403,7 +404,10 @@ async def get_articles_in_cluster(
                 )
             )
 
-        logger.info(f"Returned {len(articles)} articles for cluster {cluster_id}")
+        logger.info(
+            f"Returned {
+                len(articles)} articles for cluster {cluster_id}"
+        )
         return articles
 
     except HTTPException:
@@ -462,7 +466,7 @@ async def trigger_event_detection(
         logger.info(f"Found {len(embeddings_data)} articles with embeddings")
 
         # Detect events
-        events = await clusterer.detect_events(embeddings_data, request.category)
+        await clusterer.detect_events(embeddings_data, request.category)
 
         # Get statistics
         clusterer_stats = clusterer.get_statistics()
@@ -539,7 +543,9 @@ async def get_trending_categories():
     except Exception as e:
         logger.error(f"Error getting trending categories: {e}")
         raise HTTPException(
-            status_code=500, detail=f"Error retrieving trending categories: {str(e)}"
+            status_code=500,
+            detail=f"Error retrieving trending categories: {
+                str(e)}",
         )
 
 
@@ -562,7 +568,7 @@ async def get_event_detection_stats():
                 # Get overall statistics
                 cur.execute(
                     """
-                    SELECT 
+                    SELECT
                         COUNT(*) as total_clusters,
                         COUNT(CASE WHEN status = 'active' THEN 1 END) as active_clusters,
                         AVG(cluster_size) as avg_cluster_size,
@@ -581,7 +587,7 @@ async def get_event_detection_stats():
                 # Get embedding statistics
                 cur.execute(
                     """
-                    SELECT 
+                    SELECT
                         COUNT(*) as total_embeddings,
                         COUNT(DISTINCT embedding_model) as unique_models,
                         AVG(embedding_quality_score) as avg_quality_score,
@@ -596,7 +602,7 @@ async def get_event_detection_stats():
                 # Get assignment statistics
                 cur.execute(
                     """
-                    SELECT 
+                    SELECT
                         COUNT(*) as total_assignments,
                         AVG(assignment_confidence) as avg_confidence,
                         COUNT(CASE WHEN is_cluster_representative THEN 1 END) as representative_articles

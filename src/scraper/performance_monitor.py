@@ -3,7 +3,6 @@ Real-time performance monitoring dashboard for async scraper.
 Provides live metrics visualization and performance tracking.
 """
 
-import asyncio
 import json
 import logging
 import threading
@@ -425,7 +424,8 @@ class PerformanceDashboard:
 
         if problematic_sources:
             recommendations.append(
-                f"🎯 Review configuration for problematic sources: {', '.join(problematic_sources)}"
+                f"🎯 Review configuration for problematic sources: {
+                    ', '.join(problematic_sources)}"
             )
 
         # Based on concurrent connections
@@ -462,7 +462,9 @@ class PerformanceDashboard:
         print(f"\n📋 Source Performance:")
         for source, stats in metrics["sources"].items():
             print(
-                f"   {source}: {stats['articles']} articles, {stats['success_rate']:.1f}% success"
+                f"   {source}: {
+                    stats['articles']} articles, {
+                    stats['success_rate']:.1f}% success"
             )
 
         print("=" * 80)

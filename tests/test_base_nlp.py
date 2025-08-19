@@ -21,7 +21,8 @@ LABELED_TEXTS = [
     # Let's keep it for now and see.
     {
         "text": "The company announced its quarterly earnings report today.",
-        "expected_sentiment": "NEUTRAL",  # Or potentially POSITIVE/NEGATIVE depending on model
+        # Or potentially POSITIVE/NEGATIVE depending on model
+        "expected_sentiment": "NEUTRAL",
     },
 ]
 
@@ -51,7 +52,8 @@ def test_transformer_accuracy(
         # Handle potential neutral case if model is binary
         elif item["expected_sentiment"] == "NEUTRAL":
             # If model predicts low confidence POS or NEG, maybe count as correct?
-            # Or adjust the test data/model choice. For now, let's count it wrong if not explicitly NEUTRAL.
+            # Or adjust the test data/model choice. For now, let's count it
+            # wrong if not explicitly NEUTRAL.
             pass
 
     accuracy = correct / total
@@ -62,7 +64,8 @@ def test_transformer_accuracy(
 
 def test_preprocessing(transformer_analyzer):  # Using new fixture
     """Test text preprocessing functionality (if applicable)."""
-    # This test might need adjustment based on SentimentAnalyzer's internal preprocessing
+    # This test might need adjustment based on SentimentAnalyzer's internal
+    # preprocessing
     analyzer = transformer_analyzer
 
     # Test whitespace handling - assuming preprocess_text exists and works similarly

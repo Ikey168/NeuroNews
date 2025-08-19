@@ -7,10 +7,6 @@ Focuses on core functionality without heavy ML dependencies.
 import json
 import os
 import sys
-from datetime import datetime
-from unittest.mock import MagicMock, Mock, patch
-
-import pytest
 
 # Add src to path for imports
 sys.path.insert(0, "/workspaces/NeuroNews/src")
@@ -198,7 +194,8 @@ def test_demo_results():
             assert field in event, f"Missing field in event: {field}"
 
     print(
-        f"✅ Demo results validation passed: {clustering['events_detected']} events detected"
+        f"✅ Demo results validation passed: {
+            clustering['events_detected']} events detected"
     )
 
 

@@ -124,7 +124,9 @@ async def get_role_info(role_name: str, _: dict = Depends(require_auth)):
         )
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve role information: {str(e)}"
+            status_code=500,
+            detail=f"Failed to retrieve role information: {
+                str(e)}",
         )
 
 
@@ -155,7 +157,8 @@ async def update_user_role(
             )
 
         return {
-            "message": f"Successfully updated user {user_id} to role {role_update.new_role.value}",
+            "message": f"Successfully updated user {user_id} to role {
+                role_update.new_role.value}",
             "user_id": user_id,
             "new_role": role_update.new_role.value,
             "updated_by": admin_user.get("sub"),
@@ -219,7 +222,9 @@ async def get_user_permissions(
 
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve user permissions: {str(e)}"
+            status_code=500,
+            detail=f"Failed to retrieve user permissions: {
+                str(e)}",
         )
 
 
@@ -268,7 +273,11 @@ async def check_access(
         )
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to check access: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to check access: {
+                str(e)}",
+        )
 
 
 @router.get("/permissions", response_model=List[str])
@@ -315,7 +324,9 @@ async def get_endpoint_permissions(
 
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to get endpoint permissions: {str(e)}"
+            status_code=500,
+            detail=f"Failed to get endpoint permissions: {
+                str(e)}",
         )
 
 
@@ -343,7 +354,9 @@ async def get_rbac_metrics(admin_user: dict = Depends(require_admin)):
 
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve RBAC metrics: {str(e)}"
+            status_code=500,
+            detail=f"Failed to retrieve RBAC metrics: {
+                str(e)}",
         )
 
 
@@ -378,5 +391,7 @@ async def delete_user_permissions(
 
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to delete user permissions: {str(e)}"
+            status_code=500,
+            detail=f"Failed to delete user permissions: {
+                str(e)}",
         )

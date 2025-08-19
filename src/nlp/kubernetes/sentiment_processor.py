@@ -17,18 +17,16 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import psycopg2
 import torch
-from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
 
 # Add src to path for imports
 sys.path.append(os.path.join(os.path.dirname(__file__), "../../.."))
 
 try:
     from database.redshift_loader import RedshiftETLProcessor
-    from nlp.ner_article_processor import NERArticleProcessor
     from nlp.sentiment_analysis import SentimentAnalyzer
 except ImportError as e:
     print(f"Import error: {e}")
@@ -176,7 +174,7 @@ class KubernetesSentimentProcessor:
                 )
 
                 query = """
-                SELECT 
+                SELECT
                     article_id,
                     title,
                     content,
@@ -184,9 +182,9 @@ class KubernetesSentimentProcessor:
                     source,
                     published_date,
                     scraped_at
-                FROM news_articles 
-                WHERE 
-                    (sentiment_processed_at IS NULL 
+                FROM news_articles
+                WHERE
+                    (sentiment_processed_at IS NULL
                      OR sentiment_processed_at < %s)
                     AND LENGTH(content) >= %s
                     AND published_date >= %s
@@ -248,7 +246,13 @@ class KubernetesSentimentProcessor:
             texts = []
             for article in articles:
                 # Combine title and content for analysis
-                full_text = f"{article.get('title', '')}. {article.get('content', '')}"
+                full_text = f"{
+                    article.get(
+                        'title',
+                        '')}. {
+                    article.get(
+                        'content',
+                        '')}"
                 # Truncate to maximum length
                 max_length = int(os.getenv("ARTICLE_TEXT_MAX_LENGTH", "10000"))
                 if len(full_text) > max_length:
@@ -296,7 +300,8 @@ class KubernetesSentimentProcessor:
 
                 except Exception as e:
                     logger.error(
-                        f"Failed to process article {article['article_id']}: {e}"
+                        f"Failed to process article {
+                            article['article_id']}: {e}"
                     )
                     self.stats["articles_failed"] += 1
 
@@ -403,7 +408,7 @@ class KubernetesSentimentProcessor:
             with self.postgres_conn.cursor() as cur:
                 # Update processing timestamp
                 update_sql = """
-                UPDATE news_articles 
+                UPDATE news_articles
                 SET sentiment_processed_at = %s
                 WHERE article_id = ANY(%s)
                 """
@@ -412,7 +417,8 @@ class KubernetesSentimentProcessor:
 
                 self.postgres_conn.commit()
                 logger.info(
-                    f"Updated processing status for {len(article_ids)} articles"
+                    f"Updated processing status for {
+                        len(article_ids)} articles"
                 )
 
         except Exception as e:
@@ -445,15 +451,25 @@ class KubernetesSentimentProcessor:
 
             logger.info(f"Processing statistics saved to {stats_file}")
             logger.info(f"Job Summary:")
-            logger.info(f"  Articles Processed: {self.stats['articles_processed']}")
-            logger.info(f"  Articles Failed: {self.stats['articles_failed']}")
-            logger.info(f"  Batches Processed: {self.stats['batches_processed']}")
             logger.info(
-                f"  Total Duration: {self.stats['total_duration_seconds']:.2f}s"
+                f"  Articles Processed: {
+                    self.stats['articles_processed']}"
+            )
+            logger.info(f"  Articles Failed: {self.stats['articles_failed']}")
+            logger.info(
+                f"  Batches Processed: {
+                    self.stats['batches_processed']}"
+            )
+            logger.info(
+                f"  Total Duration: {
+                    self.stats['total_duration_seconds']:.2f}s"
             )
             if self.stats["articles_processed"] > 0:
                 logger.info(
-                    f"  Throughput: {self.stats.get('throughput_articles_per_second', 0):.2f} articles/sec"
+                    f"  Throughput: {
+                        self.stats.get(
+                            'throughput_articles_per_second',
+                            0):.2f} articles/sec"
                 )
 
         except Exception as e:
@@ -498,7 +514,7 @@ class KubernetesSentimentProcessor:
 
                 # Collect results as they complete
                 for future in as_completed(future_to_batch):
-                    batch = future_to_batch[future]
+                    future_to_batch[future]
                     try:
                         batch_results = future.result()
                         all_results.extend(batch_results)

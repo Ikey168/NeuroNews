@@ -8,7 +8,6 @@ import asyncio
 import logging
 import os
 import sys
-from typing import Any, Dict, List
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -75,7 +74,7 @@ async def test_s3_connection():
         # Create bucket if it doesn't exist
         try:
             s3_client.head_bucket(Bucket=bucket_name)
-        except:
+        except BaseException:
             s3_client.create_bucket(Bucket=bucket_name)
 
         # Test put/get object

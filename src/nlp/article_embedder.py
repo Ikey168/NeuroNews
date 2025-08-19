@@ -12,13 +12,12 @@ import logging
 import re
 import time
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import nltk
 import numpy as np
 import psycopg2
 from nltk.corpus import stopwords
-from nltk.tokenize import sent_tokenize, word_tokenize
 from psycopg2.extras import RealDictCursor
 from sentence_transformers import SentenceTransformer
 
@@ -138,7 +137,8 @@ class ArticleEmbedder:
             # Remove leading/trailing whitespace
             full_text = full_text.strip()
 
-            # Truncate if too long (keep first part which usually contains main info)
+            # Truncate if too long (keep first part which usually contains main
+            # info)
             words = full_text.split()
             if len(words) > 400:  # Approximate token limit
                 full_text = " ".join(words[:400])
@@ -215,7 +215,8 @@ class ArticleEmbedder:
             self.stats["total_processing_time"] += processing_time
 
             logger.debug(
-                f"Generated embedding for article {article_id} in {processing_time:.2f}s"
+                f"Generated embedding for article {article_id} in {
+                    processing_time:.2f}s"
             )
 
             return result
@@ -269,7 +270,10 @@ class ArticleEmbedder:
             # Generate embeddings in batch
             texts_to_embed = [item["preprocessed_text"] for item in preprocessed_data]
 
-            logger.info(f"Generating embeddings for {len(texts_to_embed)} new articles")
+            logger.info(
+                f"Generating embeddings for {
+                    len(texts_to_embed)} new articles"
+            )
             embedding_vectors = self.model.encode(
                 texts_to_embed,
                 batch_size=self.batch_size,
@@ -385,7 +389,7 @@ class ArticleEmbedder:
                 with conn.cursor(cursor_factory=RealDictCursor) as cur:
                     cur.execute(
                         """
-                        SELECT 
+                        SELECT
                             article_id,
                             embedding_vector::text as embedding_vector_json,
                             embedding_dimension,
@@ -396,11 +400,11 @@ class ArticleEmbedder:
                             processing_time,
                             embedding_model,
                             created_at
-                        FROM article_embeddings 
-                        WHERE article_id = %s 
-                        AND text_hash = %s 
+                        FROM article_embeddings
+                        WHERE article_id = %s
+                        AND text_hash = %s
                         AND embedding_model = %s
-                        ORDER BY created_at DESC 
+                        ORDER BY created_at DESC
                         LIMIT 1
                     """,
                         (article_id, text_hash, self.model_name),
@@ -461,8 +465,8 @@ class ArticleEmbedder:
                     cur.execute(
                         """
                         SELECT DISTINCT article_id, text_hash
-                        FROM article_embeddings 
-                        WHERE article_id = ANY(%s) 
+                        FROM article_embeddings
+                        WHERE article_id = ANY(%s)
                         AND text_hash = ANY(%s)
                         AND embedding_model = %s
                     """,
@@ -482,7 +486,9 @@ class ArticleEmbedder:
                     self.stats["cache_hits"] += 1
 
             logger.info(
-                f"Filtered out {len(articles_data) - len(filtered_data)} existing embeddings"
+                f"Filtered out {
+                    len(articles_data) -
+                    len(filtered_data)} existing embeddings"
             )
             return filtered_data
 
@@ -571,7 +577,7 @@ class ArticleEmbedder:
                 with conn.cursor(cursor_factory=RealDictCursor) as cur:
                     # Build query
                     query = """
-                        SELECT 
+                        SELECT
                             ae.article_id,
                             ae.embedding_vector::text as embedding_vector_json,
                             ae.embedding_dimension,
@@ -636,7 +642,8 @@ class ArticleEmbedder:
                         )
 
                     logger.info(
-                        f"Retrieved {len(embeddings)} embeddings for clustering"
+                        f"Retrieved {
+                            len(embeddings)} embeddings for clustering"
                     )
                     return embeddings
 
@@ -664,7 +671,8 @@ class ArticleEmbedder:
         try:
             with psycopg2.connect(**self.conn_params) as conn:
                 with conn.cursor() as cur:
-                    # This should already be created by schema.sql, but ensure it exists
+                    # This should already be created by schema.sql, but ensure
+                    # it exists
                     cur.execute(
                         """
                         CREATE TABLE IF NOT EXISTS article_embeddings (
@@ -752,7 +760,10 @@ if __name__ == "__main__":
             sample_article["content"], sample_article["title"], sample_article["id"]
         )
 
-        print(f"Generated embedding with dimension: {result['embedding_dimension']}")
+        print(
+            f"Generated embedding with dimension: {
+                result['embedding_dimension']}"
+        )
         print(f"Quality score: {result['embedding_quality_score']:.3f}")
         print(f"Processing time: {result['processing_time']:.3f}s")
 

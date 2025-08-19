@@ -5,6 +5,7 @@ This pipeline automatically stores validated articles in AWS Redshift
 as part of the scraping workflow.
 """
 
+from database.redshift_loader import RedshiftETLProcessor
 import logging
 import os
 
@@ -17,7 +18,6 @@ from scrapy.exceptions import DropItem
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from database.redshift_loader import RedshiftETLProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +98,10 @@ class RedshiftStoragePipeline:
 
             # Connect to Redshift
             self.etl_processor.connect()
-            spider.logger.info(f"Connected to Redshift cluster: {self.redshift_host}")
+            spider.logger.info(
+                f"Connected to Redshift cluster: {
+                    self.redshift_host}"
+            )
 
             # Initialize schema if needed
             try:
@@ -138,7 +141,9 @@ class RedshiftStoragePipeline:
             # Ensure item has required validation metadata
             if not self._is_validated_item(item):
                 spider.logger.warning(
-                    f"Item missing validation metadata: {item.get('url', 'Unknown')}"
+                    f"Item missing validation metadata: {
+                        item.get(
+                            'url', 'Unknown')}"
                 )
                 # Add basic validation metadata if missing
                 self._add_basic_validation_metadata(item)
@@ -151,7 +156,9 @@ class RedshiftStoragePipeline:
                 self._process_batch(spider)
 
             spider.logger.debug(
-                f"Article queued for Redshift storage: {item.get('url', 'Unknown')}"
+                f"Article queued for Redshift storage: {
+                    item.get(
+                        'url', 'Unknown')}"
             )
             return item
 
@@ -387,7 +394,7 @@ class RedshiftAnalyticsPipeline:
             from urllib.parse import urlparse
 
             return urlparse(url).netloc.lower()
-        except:
+        except BaseException:
             return "unknown"
 
     def _process_analytics_batch(self, spider: Spider, final: bool = False):
@@ -396,7 +403,8 @@ class RedshiftAnalyticsPipeline:
             return
 
         try:
-            # Insert analytics records (implementation depends on analytics table schema)
+            # Insert analytics records (implementation depends on analytics
+            # table schema)
             spider.logger.info(
                 f"Processing analytics batch: {len(self.analytics_batch)} records"
             )

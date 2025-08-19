@@ -9,7 +9,6 @@ import json
 import logging
 import os
 import re
-import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -17,7 +16,6 @@ from urllib.parse import urlparse
 
 import aiofiles
 import boto3
-from botocore.exceptions import ClientError
 
 
 class AsyncPipelineProcessor:
@@ -69,13 +67,18 @@ class AsyncPipelineProcessor:
         self.processed_articles = valid_articles
 
         self.logger.info(
-            f"✅ Pipeline processing completed: {len(valid_articles)} valid articles"
+            f"✅ Pipeline processing completed: {
+                len(valid_articles)} valid articles"
         )
         self.logger.info(
-            f"📊 Validation: {self.validation_stats['passed']} passed, {self.validation_stats['failed']} failed"
+            f"📊 Validation: {
+                self.validation_stats['passed']} passed, {
+                self.validation_stats['failed']} failed"
         )
         self.logger.info(
-            f"🔍 Duplicates: {self.duplicate_stats['unique']} unique, {self.duplicate_stats['duplicates']} duplicates"
+            f"🔍 Duplicates: {
+                self.duplicate_stats['unique']} unique, {
+                self.duplicate_stats['duplicates']} duplicates"
         )
 
         return valid_articles
@@ -107,7 +110,9 @@ class AsyncPipelineProcessor:
 
             except Exception as e:
                 self.logger.error(
-                    f"Error processing article {article.get('url', 'unknown')}: {e}"
+                    f"Error processing article {
+                        article.get(
+                            'url', 'unknown')}: {e}"
                 )
                 return None
 
@@ -149,7 +154,7 @@ class AsyncPipelineProcessor:
             parsed_url = urlparse(url)
             if not parsed_url.scheme or not parsed_url.netloc:
                 validation_score -= 15
-        except:
+        except BaseException:
             validation_score -= 15
 
         # Check for spam indicators
@@ -199,7 +204,7 @@ class AsyncPipelineProcessor:
         content_hash = hashlib.md5(content_sample.encode()).hexdigest()
 
         # Title similarity check
-        title_words = set(title.lower().split())
+        set(title.lower().split())
 
         # Store hashes for future duplicate detection
         article["url_hash"] = url_hash

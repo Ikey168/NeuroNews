@@ -21,20 +21,17 @@ import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path, Query
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path
 from pydantic import BaseModel, Field, validator
-from starlette.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_404_NOT_FOUND
+from starlette.status import HTTP_201_CREATED, HTTP_404_NOT_FOUND
 
 from ..nlp.ai_summarizer import (
     AIArticleSummarizer,
     SummarizationModel,
-    Summary,
     SummaryLength,
 )
 from ..nlp.summary_database import (
     SummaryDatabase,
-    SummaryRecord,
     get_redshift_connection_params,
 )
 
@@ -173,7 +170,8 @@ async def generate_summary(
 
             if existing:
                 logger.info(
-                    f"Returning cached summary for article {request.article_id}"
+                    f"Returning cached summary for article {
+                        request.article_id}"
                 )
                 return SummarizationResponse(
                     article_id=existing.article_id,
@@ -194,7 +192,9 @@ async def generate_summary(
 
         # Generate new summary
         logger.info(
-            f"Generating {request.length.value} summary for article {request.article_id}"
+            f"Generating {
+                request.length.value} summary for article {
+                request.article_id}"
         )
         summary = await summarizer.summarize_article(
             text=request.text, length=request.length, model=request.model
@@ -229,8 +229,16 @@ async def generate_summary(
 
     except Exception as e:
         processing_time = time.time() - start_time
-        logger.error(f"Summarization failed after {processing_time:.2f}s: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Summarization failed: {str(e)}")
+        logger.error(
+            f"Summarization failed after {
+                processing_time:.2f}s: {
+                str(e)}"
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Summarization failed: {
+                str(e)}",
+        )
 
 
 @router.post("/batch", response_model=BatchSummarizationResponse)
@@ -327,7 +335,9 @@ async def generate_batch_summaries(
             except Exception as e:
                 failed += 1
                 logger.error(
-                    f"Failed to process article {article_request.article_id}: {str(e)}"
+                    f"Failed to process article {
+                        article_request.article_id}: {
+                        str(e)}"
                 )
                 return None
 
@@ -402,7 +412,10 @@ async def get_article_summaries(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get summaries for article {article_id}: {str(e)}")
+        logger.error(
+            f"Failed to get summaries for article {article_id}: {
+                str(e)}"
+        )
         raise HTTPException(
             status_code=500, detail=f"Failed to retrieve summaries: {str(e)}"
         )
@@ -434,7 +447,8 @@ async def get_specific_summary(
         if not summary:
             raise HTTPException(
                 status_code=HTTP_404_NOT_FOUND,
-                detail=f"No {length.value} summary found for article {article_id}",
+                detail=f"No {
+                    length.value} summary found for article {article_id}",
             )
 
         return SummarizationResponse(
@@ -456,7 +470,9 @@ async def get_specific_summary(
         raise
     except Exception as e:
         logger.error(
-            f"Failed to get {length.value} summary for article {article_id}: {str(e)}"
+            f"Failed to get {
+                length.value} summary for article {article_id}: {
+                str(e)}"
         )
         raise HTTPException(
             status_code=500, detail=f"Failed to retrieve summary: {str(e)}"
@@ -499,7 +515,10 @@ async def delete_article_summaries(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to delete summaries for article {article_id}: {str(e)}")
+        logger.error(
+            f"Failed to delete summaries for article {article_id}: {
+                str(e)}"
+        )
         raise HTTPException(
             status_code=500, detail=f"Failed to delete summaries: {str(e)}"
         )
@@ -584,7 +603,11 @@ async def clear_caches(
 
     except Exception as e:
         logger.error(f"Failed to clear caches: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to clear caches: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to clear caches: {
+                str(e)}",
+        )
 
 
 @router.get("/models/info")
@@ -613,7 +636,9 @@ async def get_model_information(
     except Exception as e:
         logger.error(f"Failed to get model information: {str(e)}")
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve model information: {str(e)}"
+            status_code=500,
+            detail=f"Failed to retrieve model information: {
+                str(e)}",
         )
 
 

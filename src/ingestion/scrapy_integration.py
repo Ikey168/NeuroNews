@@ -4,18 +4,19 @@ with the high-performance ingestion pipeline to improve overall throughput
 and efficiency of the news scraping workflow.
 """
 
+from scraper.items import NewsItem
+from ingestion.optimized_pipeline import OptimizationConfig, OptimizedIngestionPipeline
 import asyncio
 import logging
 import queue
 
 # Internal imports
 import sys
-import threading
 import time
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from scrapy import Spider
 from scrapy.exceptions import DropItem
@@ -23,8 +24,6 @@ from scrapy.utils.project import get_project_settings
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from ingestion.optimized_pipeline import OptimizationConfig, OptimizedIngestionPipeline
-from scraper.items import NewsItem
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +61,10 @@ class OptimizedScrapyPipeline:
             enable_fast_validation=settings.getbool("OPTIMIZED_FAST_VALIDATION", True),
         )
 
-        logger.info(f"OptimizedScrapyPipeline initialized with config: {self.config}")
+        logger.info(
+            f"OptimizedScrapyPipeline initialized with config: {
+                self.config}"
+        )
 
     def open_spider(self, spider: Spider):
         """Initialize the pipeline when spider opens."""
@@ -263,7 +265,10 @@ class HighThroughputValidationPipeline:
 
             if not validation_result["is_valid"]:
                 self.items_failed += 1
-                raise DropItem(f"Validation failed: {validation_result['reason']}")
+                raise DropItem(
+                    f"Validation failed: {
+                        validation_result['reason']}"
+                )
 
             # Add to seen URLs
             self.url_seen.add(url)
@@ -533,7 +538,10 @@ class OptimizedStoragePipeline:
             self.items_stored += len(items_to_store)
             self.batches_written += 1
 
-            spider.logger.debug(f"Storage batch written: {len(items_to_store)} items")
+            spider.logger.debug(
+                f"Storage batch written: {
+                    len(items_to_store)} items"
+            )
 
         except Exception as e:
             self.storage_errors += 1

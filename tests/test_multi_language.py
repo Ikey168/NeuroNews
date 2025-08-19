@@ -3,13 +3,19 @@ Test suite for multi-language news processing functionality.
 Tests language detection, translation, quality checking, and pipeline integration.
 """
 
-import asyncio
-import json
-
 # Mock psycopg2 before any imports that might use it
+from src.scraper.pipelines.multi_language_pipeline import (
+    LanguageFilterPipeline,
+    MultiLanguagePipeline,
+)
+from src.nlp.multi_language_processor import MultiLanguageArticleProcessor
+from src.nlp.language_processor import (
+    AWSTranslateService,
+    LanguageDetector,
+    TranslationQualityChecker,
+)
 import sys
-from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
@@ -36,16 +42,6 @@ sys.modules["psycopg2"] = mock_psycopg2
 sys.modules["psycopg2.extras"] = mock_psycopg2.extras
 
 # Import our multi-language components
-from src.nlp.language_processor import (
-    AWSTranslateService,
-    LanguageDetector,
-    TranslationQualityChecker,
-)
-from src.nlp.multi_language_processor import MultiLanguageArticleProcessor
-from src.scraper.pipelines.multi_language_pipeline import (
-    LanguageFilterPipeline,
-    MultiLanguagePipeline,
-)
 
 
 class TestLanguageDetector:
@@ -113,7 +109,8 @@ class TestLanguageDetector:
         """Test handling of mixed language content."""
         mixed_text = "Hello world and welcome to this news article. Bonjour le monde and technology updates. Hola mundo."
         result = self.detector.detect_language(mixed_text)
-        # Should detect the most prominent language or unknown for mixed content
+        # Should detect the most prominent language or unknown for mixed
+        # content
         assert result["language"] in ["en", "fr", "es", "unknown"]
 
 
@@ -236,7 +233,8 @@ class TestTranslationQualityChecker:
     def test_untranslated_content_detection(self):
         """Test detection of untranslated content."""
         original = "Technology news article"
-        translated = "Technology news article"  # Exactly the same (no translation)
+        # Exactly the same (no translation)
+        translated = "Technology news article"
 
         quality = self.checker.assess_translation_quality(
             original, translated, "en", "es"
@@ -249,7 +247,8 @@ class TestMultiLanguageArticleProcessor:
     """Test multi-language article processing."""
 
     def setup_method(self):
-        # Patch the _initialize_database method to prevent actual database connections
+        # Patch the _initialize_database method to prevent actual database
+        # connections
         with patch.object(MultiLanguageArticleProcessor, "_initialize_database"), patch(
             "src.nlp.sentiment_analysis.SentimentAnalyzer"
         ):
@@ -367,7 +366,8 @@ class TestMultiLanguagePipeline:
     """Test Scrapy pipeline integration."""
 
     def setup_method(self):
-        # Patch the _initialize_database method to prevent actual database connections
+        # Patch the _initialize_database method to prevent actual database
+        # connections
         with patch.object(MultiLanguageArticleProcessor, "_initialize_database"):
             self.spider = Mock()
             self.spider.settings = {
@@ -439,7 +439,7 @@ class TestMultiLanguagePipeline:
 
             # Check that the item has been processed with multi-language data
             assert result["original_language"] == "es"
-            assert result["translation_performed"] == True
+            assert result["translation_performed"]
             assert result["translation_quality"] == 0.85
             assert result["detection_confidence"] == 0.95
             assert result["translated_title"] is not None

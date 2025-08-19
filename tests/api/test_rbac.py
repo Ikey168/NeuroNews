@@ -2,14 +2,11 @@
 Tests for role-based access control.
 """
 
-from datetime import datetime
-
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from src.api.auth.jwt_auth import auth_handler
-from src.api.auth.permissions import Permission
 from src.api.middleware.auth_middleware import configure_auth_middleware
 from src.api.routes.article_routes import router as article_router
 

@@ -15,10 +15,9 @@ import hashlib
 import json
 import logging
 import os
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple, Union
-from urllib.parse import urlparse
 
 import psycopg2
 import psycopg2.extras
@@ -382,8 +381,13 @@ class RedshiftETLProcessor:
                 errors.extend(batch_result["errors"])
 
                 logger.info(
-                    f"Processed batch {i//self._batch_size + 1}: "
-                    f"{batch_result['loaded']} loaded, {batch_result['failed']} failed"
+                    f"Processed batch {
+                        i //
+                        self._batch_size +
+                        1}: "
+                    f"{
+                        batch_result['loaded']} loaded, {
+                        batch_result['failed']} failed"
                 )
 
             processing_time = (datetime.now() - start_time).total_seconds()
@@ -527,7 +531,7 @@ class RedshiftETLProcessor:
                 WHERE m.id IS NULL
             """
 
-            result = self.execute_query(merge_query)
+            self.execute_query(merge_query)
             loaded = self._cursor.rowcount
             skipped = len(records) - loaded
 
@@ -557,13 +561,13 @@ class RedshiftETLProcessor:
             "total_articles": "SELECT COUNT(*) FROM news_articles",
             "by_source_credibility": """
                 SELECT source_credibility, COUNT(*) as count
-                FROM news_articles 
+                FROM news_articles
                 GROUP BY source_credibility
                 ORDER BY count DESC
             """,
             "by_content_quality": """
                 SELECT content_quality, COUNT(*) as count
-                FROM news_articles 
+                FROM news_articles
                 GROUP BY content_quality
                 ORDER BY count DESC
             """,
@@ -625,7 +629,8 @@ class RedshiftETLProcessor:
             Processing statistics
         """
         logger.info(
-            f"Processing {len(validation_results)} validated articles for Redshift storage"
+            f"Processing {
+                len(validation_results)} validated articles for Redshift storage"
         )
 
         # Filter out invalid results
@@ -640,7 +645,9 @@ class RedshiftETLProcessor:
 
         if len(valid_articles) != len(validation_results):
             logger.warning(
-                f"Filtered out {len(validation_results) - len(valid_articles)} invalid articles"
+                f"Filtered out {
+                    len(validation_results) -
+                    len(valid_articles)} invalid articles"
             )
 
         if not valid_articles:
@@ -776,7 +783,7 @@ class RedshiftLoader(RedshiftETLProcessor):
 
         query = """
             INSERT INTO news_articles (
-                id, title, url, content, publish_date, 
+                id, title, url, content, publish_date,
                 source, category, sentiment_score, sentiment_label
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """

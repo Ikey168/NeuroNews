@@ -2,9 +2,7 @@
 CloudWatch logging handler for NeuroNews scrapers.
 """
 
-import json
 import logging
-import os
 from datetime import datetime
 
 import boto3
@@ -58,7 +56,8 @@ class CloudWatchLoggingHandler(logging.Handler):
         try:
             self.logs_client.create_log_group(logGroupName=self.log_group_name)
         except ClientError as e:
-            # ResourceAlreadyExistsException is expected if the log group already exists
+            # ResourceAlreadyExistsException is expected if the log group
+            # already exists
             if e.response["Error"]["Code"] != "ResourceAlreadyExistsException":
                 raise
 
@@ -68,7 +67,8 @@ class CloudWatchLoggingHandler(logging.Handler):
                 logGroupName=self.log_group_name, logStreamName=self.log_stream_name
             )
         except ClientError as e:
-            # ResourceAlreadyExistsException is expected if the log stream already exists
+            # ResourceAlreadyExistsException is expected if the log stream
+            # already exists
             if e.response["Error"]["Code"] != "ResourceAlreadyExistsException":
                 raise
 
@@ -108,7 +108,7 @@ class CloudWatchLoggingHandler(logging.Handler):
             # Update the sequence token for the next call
             self.sequence_token = response.get("nextSequenceToken")
 
-        except Exception as e:
+        except Exception:
             # Don't raise exceptions from the logging handler
             self.handleError(record)
 

@@ -9,20 +9,6 @@ Tests comprehensive metadata indexing functionality including:
 - Integration with existing systems
 """
 
-import asyncio
-import json
-import os
-
-# Import the modules to test
-import sys
-import time
-import unittest
-from datetime import datetime, timezone
-from typing import Any, Dict, List
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
-
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
-
 from src.database.dynamodb_metadata_manager import (
     ArticleMetadataIndex,
     DynamoDBMetadataConfig,
@@ -34,6 +20,15 @@ from src.database.dynamodb_metadata_manager import (
     integrate_with_s3_storage,
     sync_metadata_from_scraper,
 )
+import asyncio
+import os
+
+# Import the modules to test
+import sys
+import unittest
+from unittest.mock import AsyncMock, Mock, patch
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 
 class TestArticleMetadataIndex(unittest.TestCase):
@@ -751,7 +746,7 @@ class TestStatisticsAndHealth(unittest.TestCase):
 async def run_async_tests():
     """Run all async tests."""
     # Create test instances
-    metadata_test = TestArticleMetadataIndex()
+    TestArticleMetadataIndex()
     manager_test = TestDynamoDBMetadataManager()
     query_test = TestQueryAPI()
     search_test = TestFullTextSearch()

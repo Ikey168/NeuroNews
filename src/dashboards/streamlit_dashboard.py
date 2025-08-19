@@ -5,11 +5,7 @@ A comprehensive interactive dashboard for visualizing news data, entity relation
 trending topics, and event clusters.
 """
 
-import asyncio
-import json
-import logging
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Dict, List
 
 import networkx as nx
 import pandas as pd

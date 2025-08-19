@@ -19,7 +19,6 @@ from src.api.security.aws_waf_manager import (
     ActionType,
     SecurityEvent,
     ThreatType,
-    waf_manager,
 )
 
 logger = logging.getLogger(__name__)
@@ -67,7 +66,8 @@ class WAFSecurityMiddleware(BaseHTTPMiddleware):
         self.blocked_ips = set()
 
         # Geofencing - blocked countries (ISO codes)
-        self.blocked_countries = {"CN", "RU", "KP", "IR"}  # Example blocked countries
+        # Example blocked countries
+        self.blocked_countries = {"CN", "RU", "KP", "IR"}
 
     async def dispatch(self, request: Request, call_next):
         """
@@ -310,7 +310,8 @@ class WAFSecurityMiddleware(BaseHTTPMiddleware):
                     return {
                         "detected": True,
                         "pattern_matched": pattern,
-                        "content_sample": content_to_check[:100],  # First 100 chars
+                        # First 100 chars
+                        "content_sample": content_to_check[:100],
                         "location": "query" if pattern in query_string else "body",
                     }
 

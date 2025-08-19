@@ -8,14 +8,6 @@ Author: NeuroNews Development Team
 Created: August 2025
 """
 
-import os
-import sys
-
-import pytest
-
-# Add src to path
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
-
 from src.nlp.ai_summarizer import (
     AIArticleSummarizer,
     SummarizationModel,
@@ -24,6 +16,13 @@ from src.nlp.ai_summarizer import (
     SummaryLength,
     create_summary_hash,
 )
+import os
+import sys
+
+import pytest
+
+# Add src to path
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
 
 class TestBasicFunctionality:
@@ -176,7 +175,8 @@ class TestBasicFunctionality:
         assert "confidence_score" in metrics
         assert "processing_time" in metrics
 
-        # Check word count using NLTK tokenization (like the actual implementation)
+        # Check word count using NLTK tokenization (like the actual
+        # implementation)
         from nltk.tokenize import word_tokenize
 
         expected_words = len(word_tokenize(summary_text))

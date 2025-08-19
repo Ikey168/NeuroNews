@@ -5,12 +5,9 @@ This module tests the sentiment trend analysis functionality,
 including trend calculation, alert generation, and API endpoints.
 """
 
-import asyncio
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
-import numpy as np
-import pandas as pd
 import pytest
 
 from src.nlp.sentiment_trend_analyzer import (
@@ -558,7 +555,8 @@ class TestSentimentTrendAnalyzer:
                 )
 
                 # Should return summaries for both topics in sample data
-                assert len(summaries) >= 1  # At least one topic should have enough data
+                # At least one topic should have enough data
+                assert len(summaries) >= 1
 
                 for summary in summaries:
                     assert isinstance(summary, TopicTrendSummary)
@@ -651,7 +649,8 @@ class TestSentimentTrendAnalyzer:
             )
 
             assert isinstance(alerts, list)
-            # The mock will return all alerts, but in real implementation would filter by topic
+            # The mock will return all alerts, but in real implementation would
+            # filter by topic
 
             for alert in alerts:
                 assert isinstance(alert, TrendAlert)
@@ -708,7 +707,7 @@ class TestUtilityFunctions:
             mock_instance.generate_sentiment_alerts = AsyncMock(return_value=[])
             MockAnalyzer.return_value = mock_instance
 
-            result = await generate_daily_sentiment_alerts(redshift_config)
+            await generate_daily_sentiment_alerts(redshift_config)
 
             MockAnalyzer.assert_called_once_with(**redshift_config)
             mock_instance.generate_sentiment_alerts.assert_called_once_with(

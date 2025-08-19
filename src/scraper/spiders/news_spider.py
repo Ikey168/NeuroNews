@@ -4,7 +4,6 @@ News spider for NeuroNews.
 
 from datetime import datetime
 
-import scrapy
 from scrapy.linkextractors import LinkExtractor
 from scrapy.spiders import CrawlSpider, Rule
 
@@ -40,14 +39,16 @@ class NewsSpider(CrawlSpider):
         item = NewsItem()
 
         # Extract information using CSS or XPath selectors
-        # These selectors are generic and would need to be adjusted for real sites
+        # These selectors are generic and would need to be adjusted for real
+        # sites
         item["title"] = (
             response.css("h1::text").get() or response.css("title::text").get()
         )
         item["url"] = response.url
 
         # Extract the main content
-        # This is a simplified approach; real implementation would be more complex
+        # This is a simplified approach; real implementation would be more
+        # complex
         content_selectors = [
             "article p::text",
             ".article-body p::text",

@@ -1,6 +1,5 @@
 import json  # For loading LABELED_TEXTS
 import os  # For path joining
-from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
 
@@ -37,7 +36,8 @@ EDGE_CASE_TEXTS_FOR_DEFAULT_ANALYZER = [
         "NEGATIVE",
         0.0,
     ),  # Special characters are interpreted as negative by the model
-    ("This is a test.", "NEGATIVE", 0.0),  # Model interprets this as slightly negative
+    # Model interprets this as slightly negative
+    ("This is a test.", "NEGATIVE", 0.0),
     ("I love this product, it's amazing!", "POSITIVE", 0.0),
 ]
 
@@ -49,7 +49,8 @@ def mock_hf_analyzer(mocker):
     )
     mock_pipeline_instance = mocker.MagicMock()
     mock_pipeline_func.return_value = mock_pipeline_instance
-    # SentimentAnalyzer() will use its default model name, but pipeline is mocked.
+    # SentimentAnalyzer() will use its default model name, but pipeline is
+    # mocked.
     analyzer = SentimentAnalyzer()
     assert (
         analyzer.pipeline is mock_pipeline_instance

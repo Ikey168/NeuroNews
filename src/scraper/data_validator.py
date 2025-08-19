@@ -4,8 +4,6 @@ Data validation tests for multi-source scraper.
 
 import json
 import os
-import re
-import unittest
 from collections import defaultdict
 from datetime import datetime, timedelta
 from urllib.parse import urlparse
@@ -105,7 +103,7 @@ class ScrapedDataValidator:
                             or domain in expected_domain.lower()
                         ):
                             domain_matches += 1
-                except:
+                except BaseException:
                     pass
 
         return {
@@ -144,7 +142,7 @@ class ScrapedDataValidator:
                     elif date_obj >= thirty_days_ago:
                         recent_dates += 1
 
-                except:
+                except BaseException:
                     pass
 
         return {
@@ -383,8 +381,18 @@ def main():
         summary = results["summary"]
         print("\n=== VALIDATION SUMMARY ===")
         print(f"Sources analyzed: {summary.get('total_sources_analyzed', 0)}")
-        print(f"Total articles: {summary.get('total_articles_across_sources', 0)}")
-        print(f"Average accuracy score: {summary.get('average_accuracy_score', 0):.2f}")
+        print(
+            f"Total articles: {
+                summary.get(
+                    'total_articles_across_sources',
+                    0)}"
+        )
+        print(
+            f"Average accuracy score: {
+                summary.get(
+                    'average_accuracy_score',
+                    0):.2f}"
+        )
         print(f"Best source: {summary.get('best_performing_source', 'N/A')}")
         print(f"Worst source: {summary.get('worst_performing_source', 'N/A')}")
 
@@ -393,7 +401,14 @@ def main():
     for source, data in results.items():
         if source != "summary" and "error" not in data:
             print(
-                f"{source.upper()}: {data.get('accuracy_score', 0):.2f}% accuracy, {data.get('total_articles', 0)} articles"
+                f"{
+                    source.upper()}: {
+                    data.get(
+                        'accuracy_score',
+                        0):.2f}% accuracy, {
+                    data.get(
+                        'total_articles',
+                        0)} articles"
             )
 
 

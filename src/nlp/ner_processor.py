@@ -6,10 +6,10 @@ Extracts People, Organizations, Locations, Technologies, and Policies from text.
 import logging
 import re
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 
 import torch
-from transformers import AutoModelForTokenClassification, AutoTokenizer, pipeline
+from transformers import pipeline
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +127,8 @@ class NERProcessor:
             self.device = device
 
         logger.info(
-            f"Initializing NER processor with model: {model_name} on device: {self.device}"
+            f"Initializing NER processor with model: {model_name} on device: {
+                self.device}"
         )
 
         try:
@@ -192,7 +193,8 @@ class NERProcessor:
                 )
 
             logger.info(
-                f"Extracted {len(processed_entities)} entities from article {article_id}"
+                f"Extracted {
+                    len(processed_entities)} entities from article {article_id}"
             )
             return processed_entities
 

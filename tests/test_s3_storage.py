@@ -1,16 +1,3 @@
-import asyncio
-import hashlib
-import json
-import os
-import sys
-import tempfile
-from datetime import datetime, timezone
-from unittest.mock import MagicMock, Mock, patch
-
-import pytest
-
-sys.path.append("/workspaces/NeuroNews")
-
 from src.database.s3_storage import (
     ArticleMetadata,
     ArticleType,
@@ -19,6 +6,15 @@ from src.database.s3_storage import (
     ingest_scraped_articles_to_s3,
     verify_s3_data_consistency,
 )
+import hashlib
+import json
+import sys
+from datetime import datetime, timezone
+from unittest.mock import Mock, patch
+
+import pytest
+
+sys.path.append("/workspaces/NeuroNews")
 
 
 class TestS3ArticleStorage:

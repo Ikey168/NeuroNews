@@ -3,8 +3,7 @@ Article processing pipeline that analyzes sentiment and stores results in Redshi
 """
 
 import logging
-from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import psycopg2
 from psycopg2.extras import execute_batch
@@ -115,7 +114,8 @@ class ArticleProcessor:
                     execute_batch(cur, insert_sql, results, page_size=self.batch_size)
                     conn.commit()
                     logger.info(
-                        f"Successfully stored {len(results)} results in Redshift"
+                        f"Successfully stored {
+                            len(results)} results in Redshift"
                     )
         except Exception as e:
             logger.error(f"Failed to store results in Redshift: {str(e)}")

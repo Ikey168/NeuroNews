@@ -9,10 +9,9 @@ Comprehensive test suite covering:
 - API endpoints
 """
 
-import asyncio
+import sys
 import json
 from datetime import datetime, timedelta
-from typing import Any, Dict, List
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import numpy as np
@@ -79,7 +78,6 @@ sklearn_metrics_mock.__spec__ = MagicMock()
 sklearn_preprocessing_mock.__spec__ = MagicMock()
 
 # Mock the modules before any imports
-import sys
 
 sys.modules["sklearn"] = sklearn_mock
 sys.modules["sklearn.cluster"] = sklearn_cluster_mock

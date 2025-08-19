@@ -6,7 +6,7 @@ This module provides functions to set up test databases and manage connections.
 import asyncio
 import logging
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import asyncpg
 import psycopg2
@@ -99,8 +99,8 @@ async def setup_test_database():
                 # Verify tables exist
                 cur.execute(
                     """
-                    SELECT table_name 
-                    FROM information_schema.tables 
+                    SELECT table_name
+                    FROM information_schema.tables
                     WHERE table_schema = 'neuronews'
                 """
                 )
@@ -193,9 +193,9 @@ def create_test_articles(count: int = 10) -> list:
                 for article in sample_articles:
                     cur.execute(
                         """
-                        INSERT INTO neuronews.articles 
+                        INSERT INTO neuronews.articles
                         (url, title, content, author, source, category, language)
-                        VALUES (%(url)s, %(title)s, %(content)s, %(author)s, 
+                        VALUES (%(url)s, %(title)s, %(content)s, %(author)s,
                                %(source)s, %(category)s, %(language)s)
                         RETURNING id
                     """,

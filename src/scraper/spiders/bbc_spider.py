@@ -25,7 +25,8 @@ class BBCSpider(scrapy.Spider):
         for link in article_links:
             if link.startswith("/"):
                 link = response.urljoin(link)
-            # Filter for actual article URLs (contain numbers indicating article ID)
+            # Filter for actual article URLs (contain numbers indicating
+            # article ID)
             if re.search(r"/news/[a-z-]+-\d+", link):
                 yield scrapy.Request(url=link, callback=self.parse_article)
 
@@ -91,7 +92,7 @@ class BBCSpider(scrapy.Spider):
             else:
                 # Try to parse relative dates like "2 hours ago"
                 return datetime.now().isoformat()
-        except:
+        except BaseException:
             return datetime.now().isoformat()
 
     def _extract_category(self, url, response):

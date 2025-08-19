@@ -10,10 +10,9 @@ import json
 import logging
 import re
 import time
-import uuid
 from collections import Counter, defaultdict
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Set, Tuple
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import psycopg2
@@ -82,13 +81,17 @@ class EventClusterer:
         Returns:
             List of detected event clusters
         """
-        logger.info(f"Starting event detection for {len(embeddings_data)} articles")
+        logger.info(
+            f"Starting event detection for {
+                len(embeddings_data)} articles"
+        )
         start_time = time.time()
 
         try:
             if len(embeddings_data) < self.min_cluster_size:
                 logger.warning(
-                    f"Not enough articles ({len(embeddings_data)}) for clustering"
+                    f"Not enough articles ({
+                        len(embeddings_data)}) for clustering"
                 )
                 return []
 
@@ -136,7 +139,11 @@ class EventClusterer:
                 }
             )
 
-            logger.info(f"Detected {len(events)} events in {processing_time:.2f}s")
+            logger.info(
+                f"Detected {
+                    len(events)} events in {
+                    processing_time:.2f}s"
+            )
             return events
 
         except Exception as e:
@@ -187,7 +194,8 @@ class EventClusterer:
 
             logger.info(f"Silhouette scores: {dict(zip(k_range, silhouette_scores))}")
             logger.info(
-                f"Best silhouette score: {max(silhouette_scores):.3f} for k={optimal_k}"
+                f"Best silhouette score: {
+                    max(silhouette_scores):.3f} for k={optimal_k}"
             )
 
             return optimal_k
@@ -257,7 +265,10 @@ class EventClusterer:
                 }
 
             else:
-                raise ValueError(f"Unknown clustering method: {self.clustering_method}")
+                raise ValueError(
+                    f"Unknown clustering method: {
+                        self.clustering_method}"
+                )
 
             logger.info(f"Clustering metrics: {metrics}")
             return cluster_labels, metrics
@@ -370,7 +381,10 @@ class EventClusterer:
             peak_activity_date = self._find_peak_activity(articles)
 
             # Generate unique cluster ID
-            cluster_uid = f"{category or 'general'}_event_{datetime.now().strftime('%Y%m%d')}_{cluster_id:03d}"
+            cluster_uid = f"{
+                category or 'general'}_event_{
+                datetime.now().strftime('%Y%m%d')}_{
+                cluster_id:03d}"
 
             # Calculate distances for assignment confidence
             embeddings_matrix = np.array(
@@ -420,8 +434,8 @@ class EventClusterer:
                         "is_cluster_representative": i == 0,  # First article by date
                         "contribution_score": 1.0
                         / len(articles),  # Equal contribution for now
-                        "novelty_score": 1.0
-                        - (i / len(articles)),  # Earlier articles are more novel
+                        "novelty_score": 1.0 - (i / len(articles)),
+                        # Earlier articles are more novel
                     }
                     for i, article in enumerate(articles)
                 ],
@@ -603,7 +617,8 @@ class EventClusterer:
             # Volume factor
             volume_factor = min(1.0, len(articles) / 20)
 
-            # Sentiment factor (extreme sentiment often indicates higher impact)
+            # Sentiment factor (extreme sentiment often indicates higher
+            # impact)
             sentiments = [article.get("sentiment_score", 0.0) for article in articles]
             avg_sentiment = np.mean(sentiments) if sentiments else 0.0
             sentiment_extremity = abs(avg_sentiment - 0.5) * 2  # 0.5 is neutral
@@ -875,7 +890,8 @@ class EventClusterer:
 
                         except Exception as e:
                             logger.warning(
-                                f"Error storing event {event['cluster_id']}: {e}"
+                                f"Error storing event {
+                                    event['cluster_id']}: {e}"
                             )
                             continue
 
@@ -987,7 +1003,9 @@ if __name__ == "__main__":
                     f"- {event['cluster_name']} ({event['event_type']}) - {event['cluster_size']} articles"
                 )
                 print(
-                    f"  Trending: {event['trending_score']:.2f}, Impact: {event['impact_score']:.2f}"
+                    f"  Trending: {
+                        event['trending_score']:.2f}, Impact: {
+                        event['impact_score']:.2f}"
                 )
         else:
             print("No embeddings found for testing")

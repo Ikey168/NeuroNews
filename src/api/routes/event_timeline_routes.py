@@ -19,20 +19,18 @@ Routes:
 
 import csv
 import io
-import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, validator
 
 # Import our enhanced event timeline service
 from src.api.event_timeline_service import (
     EventTimelineService,
     HistoricalEvent,
-    TimelineVisualizationData,
 )
 
 # Import authentication and dependencies (if available)
@@ -198,12 +196,12 @@ def get_optional_auth():
     summary="Get Enhanced Event Timeline",
     description="""
     Get an enhanced event timeline for a specific topic with visualization support.
-    
+
     This endpoint implements Issue #38 requirements:
     - Track historical events related to a topic
     - Generate visualizations of event evolution
     - Provide structured timeline data
-    
+
     Enhanced features over Issue #37:
     - Detailed event metadata and impact scoring
     - Advanced visualization data
@@ -389,7 +387,11 @@ async def get_enhanced_event_timeline(
         raise
     except Exception as e:
         logger.error(f"Failed to generate enhanced event timeline: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {
+                str(e)}",
+        )
 
 
 @router.post(
@@ -398,11 +400,11 @@ async def get_enhanced_event_timeline(
     summary="Track Historical Events",
     description="""
     Track and optionally store historical events for a topic.
-    
+
     This endpoint implements Issue #38 requirements:
     - Track historical events related to a topic
     - Store event timestamps & relationships in Neptune
-    
+
     Features:
     - Configurable date ranges and event types
     - Automatic Neptune storage with relationship mapping
@@ -417,7 +419,10 @@ async def track_historical_events(
 ):
     """Track historical events and optionally store them in Neptune."""
     try:
-        logger.info(f"API request for tracking historical events: {request.topic}")
+        logger.info(
+            f"API request for tracking historical events: {
+                request.topic}"
+        )
         start_time = datetime.now()
 
         # Track historical events
@@ -451,12 +456,20 @@ async def track_historical_events(
             timeline_id=f"timeline_{request.topic}_{int(start_time.timestamp())}",
         )
 
-        logger.info(f"Successfully tracked {len(events)} events for {request.topic}")
+        logger.info(
+            f"Successfully tracked {
+                len(events)} events for {
+                request.topic}"
+        )
         return response
 
     except Exception as e:
         logger.error(f"Failed to track historical events: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to track events: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to track events: {
+                str(e)}",
+        )
 
 
 @router.get(
@@ -465,10 +478,10 @@ async def track_historical_events(
     summary="Get Timeline Visualization Data",
     description="""
     Generate visualization data for event evolution.
-    
+
     This endpoint implements Issue #38 requirement:
     - Generate visualizations of event evolution
-    
+
     Features:
     - Multiple chart types and themes
     - Event clustering and impact analysis
@@ -527,7 +540,9 @@ async def get_timeline_visualization(
     except Exception as e:
         logger.error(f"Failed to generate visualization: {e}")
         raise HTTPException(
-            status_code=500, detail=f"Failed to generate visualization: {str(e)}"
+            status_code=500,
+            detail=f"Failed to generate visualization: {
+                str(e)}",
         )
 
 
@@ -536,7 +551,7 @@ async def get_timeline_visualization(
     summary="Export Timeline Data",
     description="""
     Export timeline data in various formats.
-    
+
     Supported formats:
     - json: Structured JSON data
     - csv: Comma-separated values
@@ -650,7 +665,11 @@ async def export_timeline_data(
         raise
     except Exception as e:
         logger.error(f"Failed to export timeline data: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to export data: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to export data: {
+                str(e)}",
+        )
 
 
 @router.get(
@@ -658,7 +677,7 @@ async def export_timeline_data(
     summary="Get Timeline Analytics",
     description="""
     Get analytics and insights across all tracked timelines.
-    
+
     Features:
     - Cross-topic event analysis
     - Trending topics identification
@@ -766,11 +785,11 @@ def _generate_html_timeline(topic: str, timeline_data: Dict[str, Any]) -> str:
             body {{ font-family: Arial, sans-serif; margin: 20px; }}
             .header {{ background-color: #f8f9fa; padding: 20px; border-radius: 5px; }}
             .timeline {{ margin-top: 20px; }}
-            .event {{ 
-                border-left: 3px solid #007bff; 
-                padding: 10px; 
-                margin: 10px 0; 
-                background-color: #f8f9fa; 
+            .event {{
+                border-left: 3px solid #007bff;
+                padding: 10px;
+                margin: 10px 0;
+                background-color: #f8f9fa;
             }}
             .event-title {{ font-weight: bold; color: #007bff; }}
             .event-meta {{ font-size: 0.9em; color: #666; margin-top: 5px; }}
@@ -783,7 +802,7 @@ def _generate_html_timeline(topic: str, timeline_data: Dict[str, Any]) -> str:
             <p>Total Events: {timeline_data.get('total_events', 0)}</p>
             <p>Generated: {timeline_data.get('metadata', {}).get('generated_at', 'Unknown')}</p>
         </div>
-        
+
         <div class="timeline">
             <h2>Events</h2>
     """
@@ -795,8 +814,8 @@ def _generate_html_timeline(topic: str, timeline_data: Dict[str, Any]) -> str:
                 <div class="event-title">{event.get('title', 'Unknown Event')}</div>
                 <div>{event.get('description', '')[:200]}...</div>
                 <div class="event-meta">
-                    Date: {event.get('timestamp', '')} | 
-                    Type: {event.get('event_type', 'Unknown')} | 
+                    Date: {event.get('timestamp', '')} |
+                    Type: {event.get('event_type', 'Unknown')} |
                     Confidence: {event.get('confidence', 0):.2f}
                 </div>
             </div>
@@ -804,12 +823,12 @@ def _generate_html_timeline(topic: str, timeline_data: Dict[str, Any]) -> str:
 
     html_template += """
         </div>
-        
+
         <div>
             <h2>Timeline Visualization</h2>
             <canvas id="timelineChart"></canvas>
         </div>
-        
+
         <script>
             // Add Chart.js visualization here
             const ctx = document.getElementById('timelineChart').getContext('2d');

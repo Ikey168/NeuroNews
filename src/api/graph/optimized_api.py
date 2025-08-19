@@ -11,10 +11,9 @@ import hashlib
 import json
 import logging
 import os
-from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 import redis.asyncio as redis
 from fastapi import HTTPException
@@ -229,7 +228,9 @@ class OptimizedGraphAPI:
                 # Limit results to prevent memory issues
                 if len(results) > self.optimization_config.max_results_per_query:
                     logger.warning(
-                        f"Query returned {len(results)} results, limiting to {self.optimization_config.max_results_per_query}"
+                        f"Query returned {
+                            len(results)} results, limiting to {
+                            self.optimization_config.max_results_per_query}"
                     )
                     results = results[: self.optimization_config.max_results_per_query]
 
@@ -239,7 +240,9 @@ class OptimizedGraphAPI:
                 self.metrics["query_time_total"] += query_time
 
                 logger.debug(
-                    f"Query '{query_description}' completed in {query_time:.3f}s, {len(results)} results"
+                    f"Query '{query_description}' completed in {
+                        query_time:.3f}s, {
+                        len(results)} results"
                 )
                 return results
 
@@ -256,7 +259,8 @@ class OptimizedGraphAPI:
                     self.metrics["errors_total"] += 1
                     raise HTTPException(
                         status_code=408,
-                        detail=f"Query timeout after {self.optimization_config.retry_attempts} attempts",
+                        detail=f"Query timeout after {
+                            self.optimization_config.retry_attempts} attempts",
                     )
 
             except Exception as e:
@@ -400,7 +404,9 @@ class OptimizedGraphAPI:
             logger.error(f"Error in get_related_entities_optimized: {e}")
             self.metrics["errors_total"] += 1
             raise HTTPException(
-                status_code=500, detail=f"Failed to retrieve related entities: {str(e)}"
+                status_code=500,
+                detail=f"Failed to retrieve related entities: {
+                    str(e)}",
             )
 
     def _extract_entity_name(self, result: Dict[str, Any]) -> str:
@@ -528,7 +534,9 @@ class OptimizedGraphAPI:
             logger.error(f"Error in get_event_timeline_optimized: {e}")
             self.metrics["errors_total"] += 1
             raise HTTPException(
-                status_code=500, detail=f"Failed to retrieve event timeline: {str(e)}"
+                status_code=500,
+                detail=f"Failed to retrieve event timeline: {
+                    str(e)}",
             )
 
     async def search_entities_optimized(

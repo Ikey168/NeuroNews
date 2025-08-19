@@ -5,7 +5,6 @@ Provides configuration and utilities for integrating with AWS API Gateway
 throttling and usage plans.
 """
 
-import json
 import logging
 import os
 from dataclasses import dataclass
@@ -79,7 +78,10 @@ class APIGatewayManager:
             self.usage_client = boto3.client(
                 "apigatewaymanagementapi", region_name=self.region
             )
-            logger.info(f"AWS API Gateway client initialized for region {self.region}")
+            logger.info(
+                f"AWS API Gateway client initialized for region {
+                    self.region}"
+            )
         except Exception as e:
             logger.error(f"Failed to initialize AWS API Gateway client: {e}")
             self.client = None

@@ -2,10 +2,9 @@
 Authentication and security middleware for the API.
 """
 
-import json
 import logging
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware

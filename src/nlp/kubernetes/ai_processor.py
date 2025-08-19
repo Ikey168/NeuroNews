@@ -14,9 +14,8 @@ import logging
 import os
 import sys
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
 import psycopg2
@@ -218,7 +217,7 @@ class KubernetesAIProcessor:
                 )
 
                 query = """
-                SELECT 
+                SELECT
                     article_id,
                     title,
                     content,
@@ -228,9 +227,9 @@ class KubernetesAIProcessor:
                     scraped_at,
                     sentiment_label,
                     sentiment_score
-                FROM news_articles 
-                WHERE 
-                    (topic_processed_at IS NULL 
+                FROM news_articles
+                WHERE
+                    (topic_processed_at IS NULL
                      OR topic_processed_at < %s)
                     AND LENGTH(content) >= %s
                     AND published_date >= %s
@@ -270,7 +269,10 @@ class KubernetesAIProcessor:
                     }
                     articles.append(article)
 
-                logger.info(f"Fetched {len(articles)} articles for topic modeling")
+                logger.info(
+                    f"Fetched {
+                        len(articles)} articles for topic modeling"
+                )
                 return articles
 
         except Exception as e:
@@ -317,9 +319,13 @@ class KubernetesAIProcessor:
 
             except Exception as e:
                 logger.error(
-                    f"Failed to preprocess article {article.get('article_id', 'unknown')}: {e}"
+                    f"Failed to preprocess article {
+                        article.get(
+                            'article_id',
+                            'unknown')}: {e}"
                 )
-                processed_texts.append("")  # Add empty string to maintain alignment
+                # Add empty string to maintain alignment
+                processed_texts.append("")
 
         return processed_texts
 
@@ -375,7 +381,10 @@ class KubernetesAIProcessor:
             Tuple of (topic assignments, topic descriptions)
         """
         try:
-            logger.info(f"Performing topic modeling using {self.topic_model_type}")
+            logger.info(
+                f"Performing topic modeling using {
+                    self.topic_model_type}"
+            )
 
             if self.topic_model_type.upper() == "LDA":
                 return self.perform_lda_topic_modeling(texts, embeddings)
@@ -436,13 +445,18 @@ class KubernetesAIProcessor:
                     "topic_id": topic_idx,
                     "topic_words": top_words,
                     "topic_weights": top_weights,
-                    "topic_label": f"Topic_{topic_idx}_{top_words[0]}_{top_words[1]}",
+                    "topic_label": f"Topic_{topic_idx}_{
+                        top_words[0]}_{
+                        top_words[1]}",
                     "model_type": "LDA",
                 }
                 topic_descriptions.append(topic_desc)
 
             self.stats["topics_extracted"] = len(topic_descriptions)
-            logger.info(f"Extracted {len(topic_descriptions)} topics using LDA")
+            logger.info(
+                f"Extracted {
+                    len(topic_descriptions)} topics using LDA"
+            )
 
             return topic_assignments, topic_descriptions
 
@@ -512,7 +526,9 @@ class KubernetesAIProcessor:
                             "topic_words": top_words,
                             "topic_weights": top_weights,
                             "topic_label": (
-                                f"Topic_{topic_idx}_{top_words[0]}_{top_words[1]}"
+                                f"Topic_{topic_idx}_{
+                                    top_words[0]}_{
+                                    top_words[1]}"
                                 if top_words
                                 else f"Topic_{topic_idx}"
                             ),
@@ -536,7 +552,10 @@ class KubernetesAIProcessor:
                         topic_descriptions.append(topic_desc)
 
             self.stats["topics_extracted"] = len(topic_descriptions)
-            logger.info(f"Extracted {len(topic_descriptions)} topics using UMAP+KMeans")
+            logger.info(
+                f"Extracted {
+                    len(topic_descriptions)} topics using UMAP+KMeans"
+            )
 
             return topic_assignments, topic_descriptions
 
@@ -561,7 +580,8 @@ class KubernetesAIProcessor:
 
         try:
             logger.info(
-                f"Processing batch of {len(articles)} articles for topic modeling"
+                f"Processing batch of {
+                    len(articles)} articles for topic modeling"
             )
 
             # Preprocess texts
@@ -623,7 +643,8 @@ class KubernetesAIProcessor:
 
                 except Exception as e:
                     logger.error(
-                        f"Failed to process article {article['article_id']}: {e}"
+                        f"Failed to process article {
+                            article['article_id']}: {e}"
                     )
                     self.stats["articles_failed"] += 1
 
@@ -632,7 +653,9 @@ class KubernetesAIProcessor:
             self.stats["batches_processed"] += 1
 
             logger.info(
-                f"Processed batch in {batch_processing_time:.2f}s, assigned topics to {len(results)} articles"
+                f"Processed batch in {
+                    batch_processing_time:.2f}s, assigned topics to {
+                    len(results)} articles"
             )
             return results
 
@@ -652,7 +675,10 @@ class KubernetesAIProcessor:
             if not results:
                 return
 
-            logger.info(f"Storing {len(results)} topic modeling results in Redshift")
+            logger.info(
+                f"Storing {
+                    len(results)} topic modeling results in Redshift"
+            )
 
             # Store in Redshift
             with self.redshift_processor as processor:
@@ -722,7 +748,7 @@ class KubernetesAIProcessor:
             with self.postgres_conn.cursor() as cur:
                 # Update processing timestamp
                 update_sql = """
-                UPDATE news_articles 
+                UPDATE news_articles
                 SET topic_processed_at = %s
                 WHERE article_id = ANY(%s)
                 """
@@ -731,7 +757,8 @@ class KubernetesAIProcessor:
 
                 self.postgres_conn.commit()
                 logger.info(
-                    f"Updated topic processing status for {len(article_ids)} articles"
+                    f"Updated topic processing status for {
+                        len(article_ids)} articles"
                 )
 
         except Exception as e:
@@ -764,17 +791,33 @@ class KubernetesAIProcessor:
 
             logger.info(f"Processing statistics saved to {stats_file}")
             logger.info(f"AI Topic Modeling Job Summary:")
-            logger.info(f"  Articles Processed: {self.stats['articles_processed']}")
-            logger.info(f"  Articles Failed: {self.stats['articles_failed']}")
-            logger.info(f"  Topics Extracted: {self.stats['topics_extracted']}")
-            logger.info(f"  Embeddings Generated: {self.stats['embeddings_generated']}")
-            logger.info(f"  Batches Processed: {self.stats['batches_processed']}")
             logger.info(
-                f"  Total Duration: {self.stats['total_duration_seconds']:.2f}s"
+                f"  Articles Processed: {
+                    self.stats['articles_processed']}"
+            )
+            logger.info(f"  Articles Failed: {self.stats['articles_failed']}")
+            logger.info(
+                f"  Topics Extracted: {
+                    self.stats['topics_extracted']}"
+            )
+            logger.info(
+                f"  Embeddings Generated: {
+                    self.stats['embeddings_generated']}"
+            )
+            logger.info(
+                f"  Batches Processed: {
+                    self.stats['batches_processed']}"
+            )
+            logger.info(
+                f"  Total Duration: {
+                    self.stats['total_duration_seconds']:.2f}s"
             )
             if self.stats["articles_processed"] > 0:
                 logger.info(
-                    f"  Throughput: {self.stats.get('throughput_articles_per_second', 0):.2f} articles/sec"
+                    f"  Throughput: {
+                        self.stats.get(
+                            'throughput_articles_per_second',
+                            0):.2f} articles/sec"
                 )
 
         except Exception as e:
@@ -800,8 +843,12 @@ class KubernetesAIProcessor:
                 logger.info("No articles found for topic modeling")
                 return
 
-            # For topic modeling, process all articles together for better topic coherence
-            logger.info(f"Processing {len(articles)} articles for topic modeling")
+            # For topic modeling, process all articles together for better
+            # topic coherence
+            logger.info(
+                f"Processing {
+                    len(articles)} articles for topic modeling"
+            )
 
             # Process all articles in one large batch (with memory management)
             batch_results = self.process_article_batch(articles)
@@ -818,8 +865,14 @@ class KubernetesAIProcessor:
             self.save_processing_stats()
 
             logger.info(f"AI topic modeling job completed successfully")
-            logger.info(f"Processed {self.stats['articles_processed']} articles")
-            logger.info(f"Extracted {self.stats['topics_extracted']} topics total")
+            logger.info(
+                f"Processed {
+                    self.stats['articles_processed']} articles"
+            )
+            logger.info(
+                f"Extracted {
+                    self.stats['topics_extracted']} topics total"
+            )
 
         except Exception as e:
             logger.error(f"AI topic modeling job failed: {e}")

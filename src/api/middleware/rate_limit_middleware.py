@@ -11,12 +11,12 @@ import logging
 import os
 import time
 from collections import defaultdict, deque
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Dict, List, Optional, Tuple
 
 import redis
-from fastapi import HTTPException, Request
+from fastapi import Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -112,7 +112,7 @@ class RateLimitStore:
     def _redis_available(self) -> bool:
         """Check if Redis is available."""
         try:
-            import redis
+            pass
 
             return True
         except ImportError:
@@ -437,7 +437,8 @@ class SuspiciousActivityDetector:
         self.alerts.append(alert_data)
 
         logger.warning(
-            f"Suspicious activity detected for user {user_id}: {', '.join(alerts)}",
+            f"Suspicious activity detected for user {user_id}: {
+                ', '.join(alerts)}",
             extra=alert_data,
         )
 
@@ -502,7 +503,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             await self.store.record_request(user_id, metrics)
 
             # Check for suspicious activity
-            alerts = await self.detector.analyze_request(user_id, metrics)
+            await self.detector.analyze_request(user_id, metrics)
 
             # Add rate limit headers
             self._add_rate_limit_headers(response, user_id, user_tier)

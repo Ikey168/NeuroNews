@@ -8,10 +8,10 @@ import logging
 from typing import Any, Dict, Optional
 
 from fastapi import HTTPException, Request
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security import HTTPBearer
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from src.api.auth.api_key_manager import APIKeyGenerator, APIKeyStatus, api_key_manager
+from src.api.auth.api_key_manager import api_key_manager
 
 logger = logging.getLogger(__name__)
 
@@ -75,19 +75,24 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
                 await api_key_manager.store.update_api_key_usage(key_details.key_id)
 
                 logger.info(
-                    f"API key authentication successful for user {key_details.user_id}"
+                    f"API key authentication successful for user {
+                        key_details.user_id}"
                 )
 
                 response = await call_next(request)
 
                 # Add API key headers to response
                 response.headers["X-API-Key-Auth"] = "true"
-                response.headers["X-API-Key-ID"] = key_details.key_id[:8]  # Only prefix
+                # Only prefix
+                response.headers["X-API-Key-ID"] = key_details.key_id[:8]
 
                 return response
             else:
                 # Invalid API key
-                logger.warning(f"Invalid API key attempted from {request.client.host}")
+                logger.warning(
+                    f"Invalid API key attempted from {
+                        request.client.host}"
+                )
                 raise HTTPException(status_code=401, detail="Invalid API key")
 
         # No API key provided - continue to other auth methods
@@ -138,7 +143,8 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
         """
         try:
             # For this implementation, we need to find the key by searching
-            # In a production system, this would be optimized with proper indexing
+            # In a production system, this would be optimized with proper
+            # indexing
 
             # Extract prefix for identification
             if not api_key.startswith("nn_"):
@@ -148,7 +154,8 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
 
             # Since we don't have a prefix index in this demo, we'll implement
             # a simplified validation approach
-            # In production, you'd have a separate table or index for efficient lookup
+            # In production, you'd have a separate table or index for efficient
+            # lookup
 
             # For now, let's create a mock implementation that works for demo
             # This is where you'd implement the efficient key lookup

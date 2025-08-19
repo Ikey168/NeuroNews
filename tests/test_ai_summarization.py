@@ -14,22 +14,7 @@ Author: NeuroNews Development Team
 Created: August 2025
 """
 
-import asyncio
-import json
-import os
-
-# Import modules to test
-import sys
-import time
-from typing import Any, Dict
-from unittest.mock import AsyncMock, Mock, patch
-
-import pytest
-import torch
-from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
-
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
-
+from src.nlp.summary_database import SummaryDatabase, SummaryRecord
 from src.nlp.ai_summarizer import (
     AIArticleSummarizer,
     SummarizationModel,
@@ -38,7 +23,18 @@ from src.nlp.ai_summarizer import (
     create_summary_hash,
     get_summary_pipeline,
 )
-from src.nlp.summary_database import SummaryDatabase, SummaryRecord
+import asyncio
+import os
+
+# Import modules to test
+import sys
+import time
+from unittest.mock import Mock, patch
+
+import pytest
+import torch
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
 
 class TestAIArticleSummarizer:
@@ -48,16 +44,16 @@ class TestAIArticleSummarizer:
     def sample_text(self):
         """Sample article text for testing."""
         return """
-        Artificial intelligence is rapidly transforming various industries by automating 
-        complex tasks and providing insights from large datasets. Machine learning algorithms 
-        can now process vast amounts of information to identify patterns, make predictions, 
-        and assist in decision-making processes across healthcare, finance, education, and 
-        many other sectors. The technology has evolved from simple rule-based systems to 
-        sophisticated neural networks capable of understanding natural language, recognizing 
-        images, and even generating creative content. However, the implementation of AI also 
-        raises important ethical considerations regarding privacy, bias, and the future of 
-        human employment. As AI systems become more powerful and ubiquitous, society must 
-        carefully balance the benefits of automation with the need to maintain human oversight 
+        Artificial intelligence is rapidly transforming various industries by automating
+        complex tasks and providing insights from large datasets. Machine learning algorithms
+        can now process vast amounts of information to identify patterns, make predictions,
+        and assist in decision-making processes across healthcare, finance, education, and
+        many other sectors. The technology has evolved from simple rule-based systems to
+        sophisticated neural networks capable of understanding natural language, recognizing
+        images, and even generating creative content. However, the implementation of AI also
+        raises important ethical considerations regarding privacy, bias, and the future of
+        human employment. As AI systems become more powerful and ubiquitous, society must
+        carefully balance the benefits of automation with the need to maintain human oversight
         and ensure equitable access to these transformative technologies.
         """
 
@@ -323,7 +319,7 @@ class TestUtilityFunctions:
         with patch("src.nlp.ai_summarizer.pipeline") as mock_pipeline:
             mock_pipeline.return_value = Mock()
 
-            pipeline_obj = get_summary_pipeline()
+            get_summary_pipeline()
 
             mock_pipeline.assert_called_once_with(
                 "summarization",
@@ -342,22 +338,22 @@ class TestIntegration:
             {
                 "id": "article_001",
                 "content": """
-                Machine learning has revolutionized data analysis by enabling computers 
-                to learn patterns from large datasets without explicit programming. 
-                This technology powers recommendation systems, image recognition, 
-                natural language processing, and many other applications that have 
-                become integral to modern life. The field continues to evolve rapidly 
+                Machine learning has revolutionized data analysis by enabling computers
+                to learn patterns from large datasets without explicit programming.
+                This technology powers recommendation systems, image recognition,
+                natural language processing, and many other applications that have
+                become integral to modern life. The field continues to evolve rapidly
                 with new algorithms and techniques being developed regularly.
                 """,
             },
             {
                 "id": "article_002",
                 "content": """
-                Climate change represents one of the most significant challenges facing 
-                humanity in the 21st century. Rising global temperatures, changing 
-                precipitation patterns, and extreme weather events are already impacting 
-                ecosystems, agriculture, and human societies worldwide. Urgent action 
-                is needed to reduce greenhouse gas emissions and adapt to unavoidable 
+                Climate change represents one of the most significant challenges facing
+                humanity in the 21st century. Rising global temperatures, changing
+                precipitation patterns, and extreme weather events are already impacting
+                ecosystems, agriculture, and human societies worldwide. Urgent action
+                is needed to reduce greenhouse gas emissions and adapt to unavoidable
                 changes that are already underway.
                 """,
             },
@@ -470,7 +466,8 @@ class TestPerformance:
                 for text in texts
             ]
 
-            # Note: This will actually fail due to mocking, but we're testing the structure
+            # Note: This will actually fail due to mocking, but we're testing
+            # the structure
             try:
                 await asyncio.gather(*tasks)
             except Exception:

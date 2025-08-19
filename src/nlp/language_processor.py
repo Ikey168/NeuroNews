@@ -2,10 +2,8 @@
 Language detection and processing utilities for multi-language news articles.
 """
 
-import json
 import logging
 import re
-from collections import Counter
 from typing import Any, Dict, List, Optional, Tuple
 
 import boto3
@@ -258,7 +256,8 @@ class LanguageDetector:
         """
         if not text or len(text.strip()) < min_length:
             logger.warning(
-                f"Text too short for reliable language detection: {len(text)} chars"
+                f"Text too short for reliable language detection: {
+                    len(text)} chars"
             )
             return {
                 "language": "unknown",
@@ -299,7 +298,8 @@ class LanguageDetector:
         best_language = max(language_scores, key=language_scores.get)
         confidence = language_scores[best_language]
 
-        # If confidence is too low, still return the best guess but mark as low confidence
+        # If confidence is too low, still return the best guess but mark as low
+        # confidence
         if confidence < 0.1:
             logger.warning(f"Low confidence language detection: {confidence}")
             return {
@@ -311,7 +311,8 @@ class LanguageDetector:
             }
 
         logger.info(
-            f"Detected language: {best_language} (confidence: {confidence:.2f})"
+            f"Detected language: {best_language} (confidence: {
+                confidence:.2f})"
         )
         return {
             "language": best_language,
@@ -580,7 +581,6 @@ class TranslationQualityChecker:
 
     def __init__(self):
         """Initialize translation quality checker."""
-        pass
 
     def assess_translation_quality(
         self,
@@ -677,10 +677,16 @@ class TranslationQualityChecker:
         if lang_pair in expected_ratios:
             min_ratio, max_ratio = expected_ratios[lang_pair]
             if length_ratio < min_ratio:
-                issues.append(f"Translation too short (ratio: {length_ratio:.2f})")
+                issues.append(
+                    f"Translation too short (ratio: {
+                        length_ratio:.2f})"
+                )
                 recommendations.append("Check for truncated translation")
             elif length_ratio > max_ratio:
-                issues.append(f"Translation too long (ratio: {length_ratio:.2f})")
+                issues.append(
+                    f"Translation too long (ratio: {
+                        length_ratio:.2f})"
+                )
                 recommendations.append("Check for repeated or expanded content")
 
         # Check for untranslated content (same text)

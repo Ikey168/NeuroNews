@@ -2,7 +2,7 @@
 
 import os
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -66,7 +66,8 @@ async def test_get_latest_articles_with_pagination(loader, mock_cursor, mock_con
     assert pagination["pages"] == 3
 
     # Verify OFFSET calculation
-    query = mock_cursor.execute.call_args_list[1][0][0]  # Second query (after count)
+    # Second query (after count)
+    query = mock_cursor.execute.call_args_list[1][0][0]
     params = mock_cursor.execute.call_args_list[1][0][1]
 
     assert "OFFSET" in query

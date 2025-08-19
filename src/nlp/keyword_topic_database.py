@@ -8,11 +8,10 @@ and provides querying capabilities for topic-based search functionality.
 import json
 import logging
 import os
-from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
-from src.database.redshift_loader import ArticleRecord, RedshiftLoader
-from src.nlp.keyword_topic_extractor import ExtractionResult, KeywordResult, TopicResult
+from src.database.redshift_loader import RedshiftLoader
+from src.nlp.keyword_topic_extractor import ExtractionResult
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +42,8 @@ class KeywordTopicDatabase:
                 error_count += 1
                 errors.append(f"Article {result.article_id}: {str(e)}")
                 logger.error(
-                    f"Error storing extraction result for {result.article_id}: {e}"
+                    f"Error storing extraction result for {
+                        result.article_id}: {e}"
                 )
 
         return {
@@ -87,8 +87,8 @@ class KeywordTopicDatabase:
 
         # Update the article record with keyword and topic data
         update_query = """
-            UPDATE news_articles 
-            SET 
+            UPDATE news_articles
+            SET
                 keywords = %s,
                 topics = %s,
                 dominant_topic = %s,
@@ -123,7 +123,7 @@ class KeywordTopicDatabase:
 
         # Query for articles with the specified topic
         query = """
-            SELECT 
+            SELECT
                 id, url, title, source, published_date,
                 keywords, topics, dominant_topic,
                 extraction_method, extraction_processed_at
@@ -165,7 +165,7 @@ class KeywordTopicDatabase:
 
         # Query for articles with the specified keyword
         query = """
-            SELECT 
+            SELECT
                 id, url, title, source, published_date,
                 keywords, topics, dominant_topic,
                 extraction_method, extraction_processed_at
@@ -216,7 +216,7 @@ class KeywordTopicDatabase:
             raise ValueError("Database connection not initialized")
 
         query = """
-            SELECT 
+            SELECT
                 JSON_EXTRACT_PATH_TEXT(dominant_topic, 'topic_name') as topic_name,
                 COUNT(*) as article_count,
                 AVG(CAST(JSON_EXTRACT_PATH_TEXT(dominant_topic, 'probability') AS FLOAT)) as avg_probability,
@@ -265,7 +265,7 @@ class KeywordTopicDatabase:
         # This is a complex query to extract and aggregate keywords from JSON
         query = """
             WITH keyword_counts AS (
-                SELECT 
+                SELECT
                     JSON_EXTRACT_PATH_TEXT(keyword_obj.value, 'keyword') as keyword,
                     CAST(JSON_EXTRACT_PATH_TEXT(keyword_obj.value, 'score') AS FLOAT) as score
                 FROM news_articles
@@ -274,7 +274,7 @@ class KeywordTopicDatabase:
                     AND published_date >= CURRENT_DATE - INTERVAL '%s days'
                     AND JSON_EXTRACT_PATH_TEXT(keyword_obj.value, 'keyword') IS NOT NULL
             )
-            SELECT 
+            SELECT
                 keyword,
                 COUNT(*) as frequency,
                 AVG(score) as avg_score,
@@ -348,7 +348,7 @@ class KeywordTopicDatabase:
 
         # Count query
         count_query = f"""
-            SELECT COUNT(*) 
+            SELECT COUNT(*)
             FROM news_articles
             WHERE {where_clause}
         """
@@ -358,7 +358,7 @@ class KeywordTopicDatabase:
 
         # Main query
         main_query = f"""
-            SELECT 
+            SELECT
                 id, url, title, content, source, published_date,
                 keywords, topics, dominant_topic,
                 extraction_method, extraction_processed_at,

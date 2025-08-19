@@ -4,22 +4,19 @@ Test suite for proxy rotation and anti-detection system.
 Tests proxy manager, user agent rotation, CAPTCHA solver, and Tor integration.
 """
 
+from scraper.user_agent_rotator import UserAgentRotator
+from scraper.tor_manager import TorManager
+from scraper.proxy_manager import ProxyConfig, ProxyRotationManager
+from scraper.captcha_solver import CaptchaSolver
 import asyncio
 import json
 import sys
 import tempfile
-import time
-from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
 sys.path.append("/workspaces/NeuroNews/src")
-
-from scraper.captcha_solver import CaptchaSolver
-from scraper.proxy_manager import ProxyConfig, ProxyRotationManager, ProxyStats
-from scraper.tor_manager import TorManager
-from scraper.user_agent_rotator import UserAgentRotator
 
 
 class TestProxyRotationManager:
@@ -117,7 +114,7 @@ class TestProxyRotationManager:
         # Acquire connections up to limit
         for i in range(proxy.concurrent_limit):
             acquired = await proxy_manager.acquire_connection(proxy)
-            assert acquired == True
+            assert acquired
 
         # Should fail to acquire beyond limit
         acquired = await proxy_manager.acquire_connection(proxy)
@@ -126,7 +123,7 @@ class TestProxyRotationManager:
         # Release connection and try again
         await proxy_manager.release_connection(proxy)
         acquired = await proxy_manager.acquire_connection(proxy)
-        assert acquired == True
+        assert acquired
 
     def test_add_proxy(self, proxy_manager):
         """Test adding new proxy to rotation pool."""
@@ -202,7 +199,7 @@ class TestCaptchaSolver:
         page_content = '<div class="g-recaptcha" data-sitekey="test123"></div>'
 
         detected = await captcha_solver.detect_captcha(page_content)
-        assert detected == True
+        assert detected
 
         # Test page without CAPTCHA
         normal_content = "<div>Regular page content</div>"
@@ -253,7 +250,7 @@ class TestTorManager:
         mock_sock = Mock()
         mock_socket.return_value = mock_sock
 
-        success = await tor_manager.rotate_identity()
+        await tor_manager.rotate_identity()
         # Should attempt connection even if it fails in test
         mock_socket.assert_called()
 
@@ -350,14 +347,14 @@ if __name__ == "__main__":
         # Test rotation
         for i in range(5):
             proxy = await proxy_manager.get_proxy()
-            print(f"Request {i+1}: Using proxy {proxy.host}:{proxy.port}")
+            print(f"Request {i + 1}: Using proxy {proxy.host}:{proxy.port}")
 
         # Test user agent rotator
         ua_rotator = UserAgentRotator()
         print("\nTesting user agent rotation...")
         for i in range(3):
             headers = ua_rotator.get_random_headers()
-            print(f"Headers {i+1}: {headers['User-Agent'][:50]}...")
+            print(f"Headers {i + 1}: {headers['User-Agent'][:50]}...")
 
         # Test CAPTCHA detection
         captcha_solver = CaptchaSolver(api_key="test_key")

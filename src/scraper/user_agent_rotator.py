@@ -121,7 +121,9 @@ class UserAgentRotator:
         self.max_profile_usage = random.randint(50, 150)
 
         self.logger.info(
-            f"Rotated to new browser profile: {self.current_profile.browser_name} {self.current_profile.version}"
+            f"Rotated to new browser profile: {
+                self.current_profile.browser_name} {
+                self.current_profile.version}"
         )
 
     def _initialize_default_profiles(self):
@@ -329,8 +331,11 @@ class UserAgentRotator:
         self.max_profile_usage = random.randint(50, 150)  # Randomize next rotation
 
         self.logger.info(
-            f"Rotated to new profile: {self.current_profile.browser_name} "
-            f"{self.current_profile.version} on {self.current_profile.platform}"
+            f"Rotated to new profile: {
+                self.current_profile.browser_name} "
+            f"{
+                self.current_profile.version} on {
+                self.current_profile.platform}"
         )
 
     def get_headers(
@@ -354,15 +359,21 @@ class UserAgentRotator:
     def _generate_sec_ch_ua(self, profile: BrowserProfile) -> str:
         """Generate realistic Sec-CH-UA header."""
         if profile.browser_name == "Chrome":
-            return f'"Google Chrome";v="{profile.version.split(".")[0]}", "Chromium";v="{profile.version.split(".")[0]}", "Not_A Brand";v="8"'
+            return f'"Google Chrome";v="{
+                profile.version.split(".")[0]}", "Chromium";v="{
+                profile.version.split(".")[0]}", "Not_A Brand";v="8"'
         elif profile.browser_name == "Firefox":
             return f'"Firefox";v="{profile.version.split(".")[0]}"'
         elif profile.browser_name == "Safari":
             return f'"Safari";v="{profile.version.split(".")[0]}"'
         elif profile.browser_name == "Edge":
-            return f'"Microsoft Edge";v="{profile.version.split(".")[0]}", "Chromium";v="{profile.version.split(".")[0]}", "Not_A Brand";v="8"'
+            return f'"Microsoft Edge";v="{
+                profile.version.split(".")[0]}", "Chromium";v="{
+                profile.version.split(".")[0]}", "Not_A Brand";v="8"'
         else:
-            return f'"{profile.browser_name}";v="{profile.version.split(".")[0]}"'
+            return f'"{
+                profile.browser_name}";v="{
+                profile.version.split(".")[0]}"'
 
     def get_realistic_delays(self) -> Tuple[float, float]:
         """Get realistic delay ranges for human-like behavior."""

@@ -4,11 +4,9 @@ Multi-source spider runner for NeuroNews.
 
 import argparse
 import json
-import logging
 import os
 from datetime import datetime
 
-import scrapy
 from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
 
@@ -48,7 +46,9 @@ class MultiSourceRunner:
         """Run a single spider."""
         if spider_name not in self.spiders:
             raise ValueError(
-                f"Spider '{spider_name}' not found. Available: {list(self.spiders.keys())}"
+                f"Spider '{spider_name}' not found. Available: {
+                    list(
+                        self.spiders.keys())}"
             )
 
         process = CrawlerProcess(self.settings)

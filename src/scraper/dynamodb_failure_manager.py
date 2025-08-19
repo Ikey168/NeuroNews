@@ -3,11 +3,9 @@ DynamoDB integration for storing failed URLs and managing retry attempts.
 Tracks failed scraping attempts and implements intelligent retry logic.
 """
 
-import json
 import logging
 import time
-from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta, timezone
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
@@ -228,7 +226,8 @@ class DynamoDBFailureManager:
             )
 
             self.logger.info(
-                f"Recorded failure for URL: {url} (attempt {failed_url.retry_count})"
+                f"Recorded failure for URL: {url} (attempt {
+                    failed_url.retry_count})"
             )
             return failed_url
 

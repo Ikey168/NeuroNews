@@ -105,7 +105,7 @@ async def get_sentiment_trends(
 
         # Query for sentiment trends over time
         trends_query = f"""
-            SELECT 
+            SELECT
                 {date_trunc} as period,
                 sentiment_label,
                 COUNT(*) as article_count,
@@ -122,7 +122,7 @@ async def get_sentiment_trends(
 
         # Query for overall sentiment statistics
         overall_query = f"""
-            SELECT 
+            SELECT
                 sentiment_label,
                 COUNT(*) as count,
                 AVG(sentiment_score) as avg_score,
@@ -186,7 +186,9 @@ async def get_sentiment_trends(
 
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Error retrieving sentiment trends: {str(e)}"
+            status_code=500,
+            detail=f"Error retrieving sentiment trends: {
+                str(e)}",
         )
 
 
@@ -221,7 +223,7 @@ async def get_sentiment_summary(
         where_clause = " AND ".join(conditions)
 
         query = f"""
-            SELECT 
+            SELECT
                 sentiment_label,
                 COUNT(*) as count,
                 AVG(sentiment_score) as avg_score,
@@ -261,7 +263,9 @@ async def get_sentiment_summary(
 
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Error retrieving sentiment summary: {str(e)}"
+            status_code=500,
+            detail=f"Error retrieving sentiment summary: {
+                str(e)}",
         )
 
 
@@ -288,13 +292,13 @@ async def get_topic_sentiment_analysis(
         # This is a simplified topic extraction - in production you might want
         # to use more sophisticated NLP techniques or pre-computed topic tags
         query = """
-            SELECT 
+            SELECT
                 UPPER(SPLIT_PART(title, ' ', 1)) as topic_word,
                 sentiment_label,
                 COUNT(*) as article_count,
                 AVG(sentiment_score) as avg_sentiment
             FROM news_articles
-            WHERE publish_date >= %s 
+            WHERE publish_date >= %s
                 AND sentiment_label IS NOT NULL
                 AND LENGTH(SPLIT_PART(title, ' ', 1)) > 3
             GROUP BY UPPER(SPLIT_PART(title, ' ', 1)), sentiment_label

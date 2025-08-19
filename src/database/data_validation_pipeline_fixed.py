@@ -17,7 +17,7 @@ import logging
 import re
 import unicodedata
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from difflib import SequenceMatcher
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlparse
@@ -343,7 +343,7 @@ class SourceReputationAnalyzer:
 
         try:
             domain = urlparse(url).netloc.lower()
-        except:
+        except BaseException:
             domain = ""
 
         reputation_score = self._calculate_reputation_score(domain, source)
@@ -756,7 +756,10 @@ class DataValidationPipeline:
 
             if has_critical_issues or overall_score < 50:
                 logger.info(
-                    f"Article failed validation (score: {overall_score:.1f}): {cleaned_article.get('url', 'Unknown URL')}"
+                    f"Article failed validation (score: {
+                        overall_score:.1f}): {
+                        cleaned_article.get(
+                            'url', 'Unknown URL')}"
                 )
                 self.rejected_count += 1
                 return None
@@ -810,7 +813,7 @@ class DataValidationPipeline:
                 try:
                     domain = urlparse(url).netloc.lower()
                     cleaned["source"] = domain
-                except:
+                except BaseException:
                     cleaned["source"] = "unknown"
 
         return cleaned

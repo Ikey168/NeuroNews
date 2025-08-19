@@ -5,16 +5,13 @@ Advanced monitoring and analysis of API usage patterns to detect abuse
 and suspicious activities.
 """
 
-import asyncio
-import json
 import logging
-import re
 import statistics
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -339,7 +336,8 @@ class AdvancedSuspiciousActivityDetector:
         recent_requests = [
             req
             for req in requests
-            if (now - req.get("timestamp", now)).total_seconds() < 300  # Last 5 minutes
+            # Last 5 minutes
+            if (now - req.get("timestamp", now)).total_seconds() < 300
         ]
 
         if not recent_requests:
@@ -627,7 +625,8 @@ class AdvancedSuspiciousActivityDetector:
             fast_requests = [
                 req
                 for req in recent_requests
-                if req.get("processing_time", 1.0) < 0.1  # Very fast processing
+                # Very fast processing
+                if req.get("processing_time", 1.0) < 0.1
             ]
 
             if len(fast_requests) / len(recent_requests) > 0.8:  # 80% fast requests
@@ -723,7 +722,8 @@ class AdvancedSuspiciousActivityDetector:
             )
         else:
             logger.info(
-                f"Potential suspicious activity: {activity.pattern_type.value}",
+                f"Potential suspicious activity: {
+                    activity.pattern_type.value}",
                 extra=log_data,
             )
 

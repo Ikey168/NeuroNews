@@ -4,25 +4,22 @@ Tests AsyncIO functionality, Playwright optimization, ThreadPoolExecutor paralle
 and performance monitoring.
 """
 
+from scraper.performance_monitor import PerformanceDashboard
+from scraper.async_scraper_runner import AsyncScraperRunner
+from scraper.async_scraper_engine import AsyncNewsScraperEngine, NewsSource
+from scraper.async_pipelines import AsyncPipelineProcessor
+import pytest_asyncio
 import asyncio
 import json
 import sys
 import tempfile
-import time
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, patch
 
 import aiohttp
 import pytest
 
 sys.path.append("/workspaces/NeuroNews/src")
-
-import pytest_asyncio
-
-from scraper.async_pipelines import AsyncPipelineProcessor
-from scraper.async_scraper_engine import AsyncNewsScraperEngine, NewsSource
-from scraper.async_scraper_runner import AsyncScraperRunner
-from scraper.performance_monitor import PerformanceDashboard
 
 
 class TestAsyncScraperEngine:
@@ -43,7 +40,7 @@ class TestAsyncScraperEngine:
         """Test engine initializes correctly."""
         assert scraper_engine.max_concurrent == 5
         assert scraper_engine.max_threads == 2
-        assert scraper_engine.headless == True
+        assert scraper_engine.headless
 
     @pytest.mark.asyncio
     async def test_basic_functionality(self, scraper_engine):
