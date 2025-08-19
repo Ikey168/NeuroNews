@@ -15,8 +15,12 @@ from typing import Any, Dict, Optional
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from src.api.security.aws_waf_manager import (ActionType, SecurityEvent,
-                                              ThreatType, waf_manager)
+from src.api.security.aws_waf_manager import (
+    ActionType,
+    SecurityEvent,
+    ThreatType,
+    waf_manager,
+)
 
 logger = logging.getLogger(__name__)
 

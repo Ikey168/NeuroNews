@@ -12,8 +12,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 from src.database.redshift_loader import ArticleRecord, RedshiftLoader
-from src.nlp.keyword_topic_extractor import (ExtractionResult, KeywordResult,
-                                             TopicResult)
+from src.nlp.keyword_topic_extractor import ExtractionResult, KeywordResult, TopicResult
 
 logger = logging.getLogger(__name__)
 

@@ -10,8 +10,10 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from src.nlp.ner_article_processor import (NERArticleProcessor,
-                                           create_ner_article_processor)
+from src.nlp.ner_article_processor import (
+    NERArticleProcessor,
+    create_ner_article_processor,
+)
 from src.nlp.ner_processor import NERProcessor, create_ner_processor
 
 

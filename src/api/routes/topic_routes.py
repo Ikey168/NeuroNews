@@ -14,8 +14,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from src.nlp.keyword_topic_database import (KeywordTopicDatabase,
-                                            create_keyword_topic_db)
+from src.nlp.keyword_topic_database import KeywordTopicDatabase, create_keyword_topic_db
 
 router = APIRouter(prefix="/topics", tags=["topics", "keywords"])
 

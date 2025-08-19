@@ -46,8 +46,11 @@ def test_lambda_function():
     # Import the Lambda function
     try:
         sys.path.append("/workspaces/NeuroNews/deployment/terraform/lambda_functions")
-        from news_scraper import (_extract_configuration, _run_basic_scraper,
-                                  lambda_handler)
+        from news_scraper import (
+            _extract_configuration,
+            _run_basic_scraper,
+            lambda_handler,
+        )
 
         logger.info("✅ Successfully imported Lambda function")
     except ImportError as e:

@@ -20,10 +20,12 @@ os.environ["TESTING"] = "true"
 # Only import database setup if dependencies are available
 if PSYCOPG2_AVAILABLE:
     try:
-        from src.database.setup import (cleanup_test_database,
-                                        create_test_articles,
-                                        get_sync_connection,
-                                        setup_test_database)
+        from src.database.setup import (
+            cleanup_test_database,
+            create_test_articles,
+            get_sync_connection,
+            setup_test_database,
+        )
 
         DATABASE_SETUP_AVAILABLE = True
     except ImportError:

@@ -7,6 +7,7 @@ and efficiency of the news scraping workflow.
 import asyncio
 import logging
 import queue
+
 # Internal imports
 import sys
 import threading
@@ -22,8 +23,7 @@ from scrapy.utils.project import get_project_settings
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from ingestion.optimized_pipeline import (OptimizationConfig,
-                                          OptimizedIngestionPipeline)
+from ingestion.optimized_pipeline import OptimizationConfig, OptimizedIngestionPipeline
 from scraper.items import NewsItem
 
 logger = logging.getLogger(__name__)

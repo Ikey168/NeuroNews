@@ -6,8 +6,7 @@ import pytest
 import pytest_asyncio
 from gremlin_python.driver.client import Client
 from gremlin_python.driver.connection import Connection
-from gremlin_python.driver.driver_remote_connection import \
-    DriverRemoteConnection
+from gremlin_python.driver.driver_remote_connection import DriverRemoteConnection
 from gremlin_python.driver.resultset import ResultSet
 
 from src.knowledge_graph.graph_builder import GraphBuilder

@@ -14,8 +14,13 @@ import pandas as pd
 import pytest
 
 from src.nlp.sentiment_trend_analyzer import (
-    SentimentTrendAnalyzer, SentimentTrendPoint, TopicTrendSummary, TrendAlert,
-    analyze_sentiment_trends_for_topic, generate_daily_sentiment_alerts)
+    SentimentTrendAnalyzer,
+    SentimentTrendPoint,
+    TopicTrendSummary,
+    TrendAlert,
+    analyze_sentiment_trends_for_topic,
+    generate_daily_sentiment_alerts,
+)
 
 
 class TestSentimentTrendAnalyzer:

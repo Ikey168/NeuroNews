@@ -2,9 +2,11 @@
 Pipelines package for NeuroNews scrapers.
 """
 
-from .enhanced_pipelines import (DuplicateFilterPipeline,
-                                 EnhancedJsonWriterPipeline,
-                                 ValidationPipeline)
+from .enhanced_pipelines import (
+    DuplicateFilterPipeline,
+    EnhancedJsonWriterPipeline,
+    ValidationPipeline,
+)
 from .s3_pipeline import S3StoragePipeline
 
 __all__ = [

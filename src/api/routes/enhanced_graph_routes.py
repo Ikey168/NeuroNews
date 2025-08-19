@@ -16,8 +16,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from src.api.graph.optimized_api import (OptimizedGraphAPI,
-                                         create_optimized_graph_api)
+from src.api.graph.optimized_api import OptimizedGraphAPI, create_optimized_graph_api
 
 logger = logging.getLogger(__name__)
 

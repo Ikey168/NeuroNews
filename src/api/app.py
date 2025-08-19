@@ -5,8 +5,7 @@ Main FastAPI application configuration.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.routes import (event_routes, graph_routes, news_routes,
-                            veracity_routes)
+from src.api.routes import event_routes, graph_routes, news_routes, veracity_routes
 
 # Try to import enhanced knowledge graph routes (Issue #37)
 try:
@@ -34,8 +33,10 @@ except ImportError:
 
 # Try to import rate limiting components (Issue #59)
 try:
-    from src.api.middleware.rate_limit_middleware import (RateLimitConfig,
-                                                          RateLimitMiddleware)
+    from src.api.middleware.rate_limit_middleware import (
+        RateLimitConfig,
+        RateLimitMiddleware,
+    )
     from src.api.routes import auth_routes, rate_limit_routes
 
     RATE_LIMITING_AVAILABLE = True
@@ -44,8 +45,10 @@ except ImportError:
 
 # Try to import RBAC components (Issue #60)
 try:
-    from src.api.rbac.rbac_middleware import (EnhancedRBACMiddleware,
-                                              RBACMetricsMiddleware)
+    from src.api.rbac.rbac_middleware import (
+        EnhancedRBACMiddleware,
+        RBACMetricsMiddleware,
+    )
     from src.api.routes import rbac_routes
 
     RBAC_AVAILABLE = True
@@ -54,8 +57,10 @@ except ImportError:
 
 # Try to import API key management components (Issue #61)
 try:
-    from src.api.auth.api_key_middleware import (APIKeyAuthMiddleware,
-                                                 APIKeyMetricsMiddleware)
+    from src.api.auth.api_key_middleware import (
+        APIKeyAuthMiddleware,
+        APIKeyMetricsMiddleware,
+    )
     from src.api.routes import api_key_routes
 
     API_KEY_MANAGEMENT_AVAILABLE = True
@@ -65,8 +70,10 @@ except ImportError:
 # Try to import AWS WAF security components (Issue #65)
 try:
     from src.api.routes import waf_security_routes
-    from src.api.security.waf_middleware import (WAFMetricsMiddleware,
-                                                 WAFSecurityMiddleware)
+    from src.api.security.waf_middleware import (
+        WAFMetricsMiddleware,
+        WAFSecurityMiddleware,
+    )
 
     WAF_SECURITY_AVAILABLE = True
 except ImportError:

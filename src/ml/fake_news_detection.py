@@ -13,8 +13,7 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 
 import torch
-from transformers import (AutoModelForSequenceClassification, AutoTokenizer,
-                          pipeline)
+from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)

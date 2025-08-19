@@ -21,16 +21,22 @@ import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from fastapi import (APIRouter, BackgroundTasks, Depends, HTTPException, Path,
-                     Query)
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, validator
 from starlette.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_404_NOT_FOUND
 
-from ..nlp.ai_summarizer import (AIArticleSummarizer, SummarizationModel,
-                                 Summary, SummaryLength)
-from ..nlp.summary_database import (SummaryDatabase, SummaryRecord,
-                                    get_redshift_connection_params)
+from ..nlp.ai_summarizer import (
+    AIArticleSummarizer,
+    SummarizationModel,
+    Summary,
+    SummaryLength,
+)
+from ..nlp.summary_database import (
+    SummaryDatabase,
+    SummaryRecord,
+    get_redshift_connection_params,
+)
 
 logger = logging.getLogger(__name__)
 

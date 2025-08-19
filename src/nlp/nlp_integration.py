@@ -25,9 +25,12 @@ from typing import Any, Dict, List, Optional, Union
 import numpy as np
 
 # Import optimized pipeline
-from .optimized_nlp_pipeline import (NLPConfig, OptimizedNLPPipeline,
-                                     create_high_performance_nlp_pipeline,
-                                     create_optimized_nlp_pipeline)
+from .optimized_nlp_pipeline import (
+    NLPConfig,
+    OptimizedNLPPipeline,
+    create_high_performance_nlp_pipeline,
+    create_optimized_nlp_pipeline,
+)
 
 # Import existing components
 try:

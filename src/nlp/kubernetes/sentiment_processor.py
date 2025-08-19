@@ -21,8 +21,7 @@ from typing import Any, Dict, List, Optional
 
 import psycopg2
 import torch
-from transformers import (AutoModelForSequenceClassification, AutoTokenizer,
-                          pipeline)
+from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
 
 # Add src to path for imports
 sys.path.append(os.path.join(os.path.dirname(__file__), "../../.."))

@@ -27,7 +27,8 @@ try:
     from src.knowledge_graph.enhanced_entity_extractor import EnhancedEntity
     from src.knowledge_graph.enhanced_graph_populator import (
         EnhancedKnowledgeGraphPopulator,
-        create_enhanced_knowledge_graph_populator)
+        create_enhanced_knowledge_graph_populator,
+    )
 
     ENHANCED_KG_AVAILABLE = True
 except ImportError:

@@ -27,8 +27,12 @@ import boto3
 import psycopg2
 from botocore.exceptions import ClientError
 
-from .ai_summarizer import (SummarizationModel, Summary, SummaryLength,
-                            create_summary_hash)
+from .ai_summarizer import (
+    SummarizationModel,
+    Summary,
+    SummaryLength,
+    create_summary_hash,
+)
 
 logger = logging.getLogger(__name__)
 

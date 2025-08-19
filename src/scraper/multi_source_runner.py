@@ -14,6 +14,7 @@ from scrapy.utils.project import get_project_settings
 
 from src.scraper.spiders.arstechnica_spider import ArsTechnicaSpider
 from src.scraper.spiders.bbc_spider import BBCSpider
+
 # Import all spider classes
 from src.scraper.spiders.cnn_spider import CNNSpider
 from src.scraper.spiders.guardian_spider import GuardianSpider

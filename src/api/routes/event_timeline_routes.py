@@ -29,9 +29,11 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field, validator
 
 # Import our enhanced event timeline service
-from src.api.event_timeline_service import (EventTimelineService,
-                                            HistoricalEvent,
-                                            TimelineVisualizationData)
+from src.api.event_timeline_service import (
+    EventTimelineService,
+    HistoricalEvent,
+    TimelineVisualizationData,
+)
 
 # Import authentication and dependencies (if available)
 try:

@@ -21,9 +21,15 @@ sys.path.insert(0, str(project_root))
 
 try:
     from src.ingestion.optimized_pipeline import (
-        AdaptiveBatchProcessor, CircuitBreaker, IngestionMetrics,
-        MemoryMonitor, OptimizationConfig, OptimizedIngestionPipeline,
-        create_optimized_pipeline, create_performance_optimized_pipeline)
+        AdaptiveBatchProcessor,
+        CircuitBreaker,
+        IngestionMetrics,
+        MemoryMonitor,
+        OptimizationConfig,
+        OptimizedIngestionPipeline,
+        create_optimized_pipeline,
+        create_performance_optimized_pipeline,
+    )
 except ImportError as e:
     print(f"Warning: Could not import optimized_pipeline: {e}")
 
@@ -43,9 +49,12 @@ except ImportError as e:
 
 try:
     from src.ingestion.scrapy_integration import (
-        AdaptiveRateLimitPipeline, HighThroughputValidationPipeline,
-        OptimizedScrapyPipeline, OptimizedStoragePipeline,
-        configure_optimized_settings)
+        AdaptiveRateLimitPipeline,
+        HighThroughputValidationPipeline,
+        OptimizedScrapyPipeline,
+        OptimizedStoragePipeline,
+        configure_optimized_settings,
+    )
 except ImportError as e:
     print(f"Warning: Could not import scrapy_integration: {e}")
 

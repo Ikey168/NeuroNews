@@ -11,10 +11,14 @@ import pytest
 
 sys.path.append("/workspaces/NeuroNews")
 
-from src.database.s3_storage import (ArticleMetadata, ArticleType,
-                                     S3ArticleStorage, S3StorageConfig,
-                                     ingest_scraped_articles_to_s3,
-                                     verify_s3_data_consistency)
+from src.database.s3_storage import (
+    ArticleMetadata,
+    ArticleType,
+    S3ArticleStorage,
+    S3StorageConfig,
+    ingest_scraped_articles_to_s3,
+    verify_s3_data_consistency,
+)
 
 
 class TestS3ArticleStorage:

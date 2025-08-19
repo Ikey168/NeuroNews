@@ -20,11 +20,12 @@ from urllib.parse import urljoin, urlparse
 
 import aiofiles
 import aiohttp
+
 # Performance monitoring
 import psutil
+
 # Playwright imports
-from playwright.async_api import (Browser, BrowserContext, Page,
-                                  async_playwright)
+from playwright.async_api import Browser, BrowserContext, Page, async_playwright
 
 
 @dataclass
@@ -181,8 +182,7 @@ class AsyncNewsScraperEngine:
             # Initialize monitoring components
             from .cloudwatch_logger import CloudWatchLogger
             from .dynamodb_failure_manager import DynamoDBFailureManager
-            from .enhanced_retry_manager import (EnhancedRetryManager,
-                                                 RetryConfig)
+            from .enhanced_retry_manager import EnhancedRetryManager, RetryConfig
             from .sns_alert_manager import SNSAlertManager
 
             self.cloudwatch_logger = CloudWatchLogger(

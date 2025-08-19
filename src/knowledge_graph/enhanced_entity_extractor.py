@@ -36,9 +36,11 @@ except ImportError:
 # Import existing components
 try:
     from src.knowledge_graph.graph_builder import GraphBuilder
-    from src.knowledge_graph.nlp_populator import (Entity,
-                                                   KnowledgeGraphPopulator,
-                                                   Relationship)
+    from src.knowledge_graph.nlp_populator import (
+        Entity,
+        KnowledgeGraphPopulator,
+        Relationship,
+    )
     from src.nlp.ner_processor import NERProcessor
 
     KNOWLEDGE_GRAPH_AVAILABLE = True

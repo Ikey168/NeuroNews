@@ -12,8 +12,10 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from src.core.config import get_settings
-from src.knowledge_graph.nlp_populator import (KnowledgeGraphPopulator,
-                                               get_entity_relationships)
+from src.knowledge_graph.nlp_populator import (
+    KnowledgeGraphPopulator,
+    get_entity_relationships,
+)
 
 # Set up logging
 logger = logging.getLogger(__name__)

@@ -5,6 +5,7 @@ Tests language detection, translation, quality checking, and pipeline integratio
 
 import asyncio
 import json
+
 # Mock psycopg2 before any imports that might use it
 import sys
 from datetime import datetime
@@ -35,11 +36,16 @@ sys.modules["psycopg2"] = mock_psycopg2
 sys.modules["psycopg2.extras"] = mock_psycopg2.extras
 
 # Import our multi-language components
-from src.nlp.language_processor import (AWSTranslateService, LanguageDetector,
-                                        TranslationQualityChecker)
+from src.nlp.language_processor import (
+    AWSTranslateService,
+    LanguageDetector,
+    TranslationQualityChecker,
+)
 from src.nlp.multi_language_processor import MultiLanguageArticleProcessor
 from src.scraper.pipelines.multi_language_pipeline import (
-    LanguageFilterPipeline, MultiLanguagePipeline)
+    LanguageFilterPipeline,
+    MultiLanguagePipeline,
+)
 
 
 class TestLanguageDetector:

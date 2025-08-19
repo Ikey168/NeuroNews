@@ -13,7 +13,10 @@ from pydantic import BaseModel
 
 from src.api.auth.jwt_auth import require_auth
 from src.api.middleware.rate_limit_middleware import (
-    RateLimitConfig, RateLimitStore, SuspiciousActivityDetector)
+    RateLimitConfig,
+    RateLimitStore,
+    SuspiciousActivityDetector,
+)
 
 logger = logging.getLogger(__name__)
 

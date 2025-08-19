@@ -14,8 +14,12 @@ from pydantic import BaseModel, Field
 
 from src.core.config import get_settings
 from src.nlp.sentiment_trend_analyzer import (
-    SentimentTrendAnalyzer, TopicTrendSummary, TrendAlert,
-    analyze_sentiment_trends_for_topic, generate_daily_sentiment_alerts)
+    SentimentTrendAnalyzer,
+    TopicTrendSummary,
+    TrendAlert,
+    analyze_sentiment_trends_for_topic,
+    generate_daily_sentiment_alerts,
+)
 
 # Set up logging
 logger = logging.getLogger(__name__)

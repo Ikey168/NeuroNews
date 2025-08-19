@@ -26,8 +26,9 @@ from typing import Any, Dict, List, Optional, Tuple
 
 # Import enhanced components from Issue #37
 try:
-    from src.knowledge_graph.enhanced_graph_populator import \
-        EnhancedKnowledgeGraphPopulator
+    from src.knowledge_graph.enhanced_graph_populator import (
+        EnhancedKnowledgeGraphPopulator,
+    )
     from src.nlp.advanced_entity_extractor import AdvancedEntityExtractor
 
     ENHANCED_COMPONENTS_AVAILABLE = True
@@ -512,11 +513,13 @@ class EventTimelineService:
                     return True
 
             # Create event vertex in Neptune
+            title_escaped = event.title.replace("'", "\\'")
+            description_escaped = event.description.replace("'", "\\'")
             event_vertex_query = f"""
             g.addV('EVENT')
              .property('event_id', '{event.event_id}')
-             .property('title', '{event.title.replace("'", "\\'")}')
-             .property('description', '{event.description.replace("'", "\\'")}')
+             .property('title', '{title_escaped}')
+             .property('description', '{description_escaped}')
              .property('timestamp', '{event.timestamp.isoformat()}')
              .property('topic', '{event.topic}')
              .property('event_type', '{event.event_type}')

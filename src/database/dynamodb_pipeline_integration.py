@@ -29,11 +29,13 @@ except ImportError:
     SCRAPY_AVAILABLE = False
 
 # Local imports
-from .dynamodb_metadata_manager import (ArticleMetadataIndex,
-                                        DynamoDBMetadataConfig,
-                                        DynamoDBMetadataManager,
-                                        integrate_with_redshift_etl,
-                                        integrate_with_s3_storage)
+from .dynamodb_metadata_manager import (
+    ArticleMetadataIndex,
+    DynamoDBMetadataConfig,
+    DynamoDBMetadataManager,
+    integrate_with_redshift_etl,
+    integrate_with_s3_storage,
+)
 
 
 class DynamoDBMetadataPipeline:

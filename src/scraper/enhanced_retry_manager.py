@@ -11,8 +11,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
-from .cloudwatch_logger import (CloudWatchLogger, ScrapingMetrics,
-                                ScrapingStatus)
+from .cloudwatch_logger import CloudWatchLogger, ScrapingMetrics, ScrapingStatus
 from .dynamodb_failure_manager import DynamoDBFailureManager, FailedUrl
 from .sns_alert_manager import AlertSeverity, AlertType, SNSAlertManager
 

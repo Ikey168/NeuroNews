@@ -30,10 +30,17 @@ import nltk
 import numpy as np
 import torch
 from nltk.tokenize import sent_tokenize, word_tokenize
-from transformers import (AutoModelForSeq2SeqLM, AutoTokenizer,
-                          BartForConditionalGeneration, BartTokenizer,
-                          PegasusForConditionalGeneration, PegasusTokenizer,
-                          T5ForConditionalGeneration, T5Tokenizer, pipeline)
+from transformers import (
+    AutoModelForSeq2SeqLM,
+    AutoTokenizer,
+    BartForConditionalGeneration,
+    BartTokenizer,
+    PegasusForConditionalGeneration,
+    PegasusTokenizer,
+    T5ForConditionalGeneration,
+    T5Tokenizer,
+    pipeline,
+)
 
 # Download required NLTK data
 try:

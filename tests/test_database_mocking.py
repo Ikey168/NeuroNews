@@ -48,8 +48,7 @@ def test_import_with_mocking():
 
             print("✅ Language processor import works")
 
-            from src.nlp.multi_language_processor import \
-                MultiLanguageArticleProcessor
+            from src.nlp.multi_language_processor import MultiLanguageArticleProcessor
 
             print("✅ Multi-language processor import works")
 

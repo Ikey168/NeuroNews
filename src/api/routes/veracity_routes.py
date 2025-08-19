@@ -13,8 +13,7 @@ import psycopg2
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from src.database.redshift_loader import \
-    RedshiftETLProcessor as RedshiftConnection
+from src.database.redshift_loader import RedshiftETLProcessor as RedshiftConnection
 from src.nlp.fake_news_detector import FakeNewsConfig, FakeNewsDetector
 
 # Configure logging

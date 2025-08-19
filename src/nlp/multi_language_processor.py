@@ -12,8 +12,11 @@ import psycopg2
 from psycopg2.extras import RealDictCursor, execute_batch
 
 from .article_processor import ArticleProcessor
-from .language_processor import (AWSTranslateService, LanguageDetector,
-                                 TranslationQualityChecker)
+from .language_processor import (
+    AWSTranslateService,
+    LanguageDetector,
+    TranslationQualityChecker,
+)
 
 logger = logging.getLogger(__name__)
 

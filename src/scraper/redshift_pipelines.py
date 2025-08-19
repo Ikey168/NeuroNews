@@ -7,6 +7,7 @@ as part of the scraping workflow.
 
 import logging
 import os
+
 # Add src to path for imports
 import sys
 from typing import Any, Dict, Optional

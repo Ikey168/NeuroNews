@@ -2,8 +2,10 @@
 
 import pytest
 
-from src.nlp.keyword_topic_extractor import (SimpleKeywordExtractor,
-                                             create_keyword_extractor)
+from src.nlp.keyword_topic_extractor import (
+    SimpleKeywordExtractor,
+    create_keyword_extractor,
+)
 
 
 def test_factory_creates_extractor():

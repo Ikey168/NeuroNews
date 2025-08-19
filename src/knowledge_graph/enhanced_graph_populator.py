@@ -26,10 +26,12 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 # Import enhanced components
 try:
-    from .enhanced_entity_extractor import (AdvancedEntityExtractor,
-                                            EnhancedEntity,
-                                            EnhancedRelationship,
-                                            create_advanced_entity_extractor)
+    from .enhanced_entity_extractor import (
+        AdvancedEntityExtractor,
+        EnhancedEntity,
+        EnhancedRelationship,
+        create_advanced_entity_extractor,
+    )
 
     ENHANCED_EXTRACTOR_AVAILABLE = True
 except ImportError:

@@ -15,12 +15,14 @@ from unittest.mock import Mock, patch
 
 sys.path.append("/workspaces/NeuroNews")
 
-from src.database.data_validation_pipeline import (ContentValidator,
-                                                   DataValidationPipeline,
-                                                   DuplicateDetector,
-                                                   HTMLCleaner,
-                                                   SourceReputationAnalyzer,
-                                                   SourceReputationConfig)
+from src.database.data_validation_pipeline import (
+    ContentValidator,
+    DataValidationPipeline,
+    DuplicateDetector,
+    HTMLCleaner,
+    SourceReputationAnalyzer,
+    SourceReputationConfig,
+)
 
 
 class TestDataValidationPipeline(unittest.TestCase):

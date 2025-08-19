@@ -16,9 +16,14 @@ import pytest
 # Add src to path
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from src.nlp.ai_summarizer import (AIArticleSummarizer, SummarizationModel,
-                                   Summary, SummaryConfig, SummaryLength,
-                                   create_summary_hash)
+from src.nlp.ai_summarizer import (
+    AIArticleSummarizer,
+    SummarizationModel,
+    Summary,
+    SummaryConfig,
+    SummaryLength,
+    create_summary_hash,
+)
 
 
 class TestBasicFunctionality:

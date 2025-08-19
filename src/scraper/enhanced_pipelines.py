@@ -12,9 +12,11 @@ from typing import Any, Dict, Optional
 from scrapy import Item
 from scrapy.exceptions import DropItem
 
-from src.database.data_validation_pipeline import (DataValidationPipeline,
-                                                   SourceReputationConfig,
-                                                   ValidationResult)
+from src.database.data_validation_pipeline import (
+    DataValidationPipeline,
+    SourceReputationConfig,
+    ValidationResult,
+)
 
 logger = logging.getLogger(__name__)
 

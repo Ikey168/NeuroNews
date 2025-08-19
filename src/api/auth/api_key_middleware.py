@@ -11,8 +11,7 @@ from fastapi import HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from src.api.auth.api_key_manager import (APIKeyGenerator, APIKeyStatus,
-                                          api_key_manager)
+from src.api.auth.api_key_manager import APIKeyGenerator, APIKeyStatus, api_key_manager
 
 logger = logging.getLogger(__name__)
 

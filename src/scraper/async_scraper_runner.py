@@ -16,9 +16,11 @@ from pathlib import Path
 # Add the src directory to the path
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from src.scraper.async_scraper_engine import (ASYNC_NEWS_SOURCES,
-                                              AsyncNewsScraperEngine,
-                                              NewsSource)
+from src.scraper.async_scraper_engine import (
+    ASYNC_NEWS_SOURCES,
+    AsyncNewsScraperEngine,
+    NewsSource,
+)
 
 
 class AsyncScraperRunner:

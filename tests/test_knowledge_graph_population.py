@@ -13,10 +13,13 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-from src.knowledge_graph.nlp_populator import (Entity, KnowledgeGraphPopulator,
-                                               Relationship,
-                                               get_entity_relationships,
-                                               populate_article_to_graph)
+from src.knowledge_graph.nlp_populator import (
+    Entity,
+    KnowledgeGraphPopulator,
+    Relationship,
+    get_entity_relationships,
+    populate_article_to_graph,
+)
 
 
 class TestKnowledgeGraphPopulator:

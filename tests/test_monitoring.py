@@ -18,13 +18,14 @@ from moto import mock_aws
 
 sys.path.append("/workspaces/NeuroNews/src")
 
-from scraper.cloudwatch_logger import (CloudWatchLogger, ScrapingMetrics,
-                                       ScrapingStatus)
+from scraper.cloudwatch_logger import CloudWatchLogger, ScrapingMetrics, ScrapingStatus
 from scraper.dynamodb_failure_manager import DynamoDBFailureManager, FailedUrl
-from scraper.enhanced_retry_manager import (EnhancedRetryManager, RetryConfig,
-                                            RetryReason)
-from scraper.sns_alert_manager import (Alert, AlertSeverity, AlertType,
-                                       SNSAlertManager)
+from scraper.enhanced_retry_manager import (
+    EnhancedRetryManager,
+    RetryConfig,
+    RetryReason,
+)
+from scraper.sns_alert_manager import Alert, AlertSeverity, AlertType, SNSAlertManager
 
 
 class TestCloudWatchLogger:

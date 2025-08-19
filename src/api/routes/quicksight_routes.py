@@ -21,8 +21,11 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, Field
 
-from src.dashboards.quicksight_service import (DashboardType, QuickSightConfig,
-                                               QuickSightDashboardService)
+from src.dashboards.quicksight_service import (
+    DashboardType,
+    QuickSightConfig,
+    QuickSightDashboardService,
+)
 
 logger = logging.getLogger(__name__)
 

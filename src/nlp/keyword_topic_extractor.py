@@ -989,6 +989,7 @@ def create_keyword_extractor(
         nltk_available = False
         try:
             import nltk
+
             # Try to use NLTK to check if it's properly set up
             from nltk.corpus import stopwords
 

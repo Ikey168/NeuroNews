@@ -4,8 +4,7 @@ import os
 
 from gremlin_python.driver.aiohttp.transport import AiohttpTransport
 from gremlin_python.driver.client import Client
-from gremlin_python.driver.driver_remote_connection import \
-    DriverRemoteConnection
+from gremlin_python.driver.driver_remote_connection import DriverRemoteConnection
 from gremlin_python.process.anonymous_traversal import traversal
 from gremlin_python.process.graph_traversal import __  # GraphTraversalSource
 

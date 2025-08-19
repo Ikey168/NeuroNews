@@ -13,14 +13,17 @@ from fastapi.testclient import TestClient
 
 from src.api.routes.topic_routes import router
 from src.nlp.keyword_topic_database import KeywordTopicDatabase
-from src.nlp.keyword_topic_extractor import (ExtractionResult, KeywordResult,
-                                             KeywordTopicExtractor,
-                                             LDATopicModeler,
-                                             SimpleKeywordExtractor,
-                                             TextPreprocessor,
-                                             TFIDFKeywordExtractor,
-                                             TopicResult,
-                                             create_keyword_extractor)
+from src.nlp.keyword_topic_extractor import (
+    ExtractionResult,
+    KeywordResult,
+    KeywordTopicExtractor,
+    LDATopicModeler,
+    SimpleKeywordExtractor,
+    TextPreprocessor,
+    TFIDFKeywordExtractor,
+    TopicResult,
+    create_keyword_extractor,
+)
 
 # Create test app
 app = FastAPI()
