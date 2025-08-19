@@ -4,12 +4,12 @@ Comprehensive containerized test demonstrating the superiority of this approach.
 This replaces complex mocking with real service integration.
 """
 
+import asyncio
+import logging
 import os
 import sys
 import time
-import logging
-import asyncio
-from typing import Dict, Any
+from typing import Any, Dict
 
 # Configure logging
 logging.basicConfig(
@@ -91,8 +91,9 @@ def test_database_operations():
 def test_redis_advanced():
     """Test Redis operations that demonstrate real service benefits."""
     try:
-        import redis
         import json
+
+        import redis
 
         r = redis.Redis(
             host=os.getenv("REDIS_HOST", "test-redis"),
@@ -148,9 +149,10 @@ def test_redis_advanced():
 def test_service_integration():
     """Test integration between services (impossible with mocking)."""
     try:
+        import json
+
         import psycopg2
         import redis
-        import json
 
         # Database connection
         db_conn = psycopg2.connect(

@@ -3,6 +3,7 @@ Basic NLP tests focusing on Transformer sentiment analysis
 """
 
 import pytest
+
 from src.nlp import create_analyzer
 
 # Test fixtures with labeled data

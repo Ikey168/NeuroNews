@@ -3,19 +3,21 @@ Comprehensive tests for AI-based fake news detection functionality.
 Tests the FakeNewsDetector class and API endpoints.
 """
 
-import pytest
+import json
 import os
 import sys
 import tempfile
-import json
-from unittest.mock import Mock, patch, MagicMock
 from typing import Dict, List
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 
 # Add project root to path
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
-from src.nlp.fake_news_detector import FakeNewsDetector, FakeNewsConfig
 from fastapi.testclient import TestClient
+
+from src.nlp.fake_news_detector import FakeNewsConfig, FakeNewsDetector
 
 
 class TestFakeNewsDetector:

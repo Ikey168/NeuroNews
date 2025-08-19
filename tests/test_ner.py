@@ -3,17 +3,16 @@ Unit tests for Named Entity Recognition (NER) functionality.
 Tests the NER processor and NER-enabled article processor.
 """
 
-import unittest
-from unittest.mock import Mock, patch, MagicMock
-import pytest
-from datetime import datetime
 import json
+import unittest
+from datetime import datetime
+from unittest.mock import MagicMock, Mock, patch
 
+import pytest
+
+from src.nlp.ner_article_processor import (NERArticleProcessor,
+                                           create_ner_article_processor)
 from src.nlp.ner_processor import NERProcessor, create_ner_processor
-from src.nlp.ner_article_processor import (
-    NERArticleProcessor,
-    create_ner_article_processor,
-)
 
 
 class TestNERProcessor(unittest.TestCase):

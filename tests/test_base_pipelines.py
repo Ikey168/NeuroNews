@@ -1,8 +1,9 @@
 """Test base pipeline functionality without S3 dependencies."""
 
-import os
 import json
+import os
 import tempfile
+
 import pytest
 
 

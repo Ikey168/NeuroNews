@@ -4,10 +4,10 @@ Local test runner for the NeuroNews Lambda scraper function.
 This script tests the Lambda function locally without AWS dependencies.
 """
 
-import os
-import sys
 import json
 import logging
+import os
+import sys
 from datetime import datetime, timezone
 
 # Add project root to path
@@ -46,11 +46,8 @@ def test_lambda_function():
     # Import the Lambda function
     try:
         sys.path.append("/workspaces/NeuroNews/deployment/terraform/lambda_functions")
-        from news_scraper import (
-            lambda_handler,
-            _extract_configuration,
-            _run_basic_scraper,
-        )
+        from news_scraper import (_extract_configuration, _run_basic_scraper,
+                                  lambda_handler)
 
         logger.info("✅ Successfully imported Lambda function")
     except ImportError as e:

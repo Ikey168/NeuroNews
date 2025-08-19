@@ -3,11 +3,9 @@ Minimal test file to verify the two failing tests work correctly.
 """
 
 import pytest
-from src.nlp.keyword_topic_extractor import (
-    TFIDFKeywordExtractor,
-    LDATopicModeler,
-    KeywordResult,
-)
+
+from src.nlp.keyword_topic_extractor import (KeywordResult, LDATopicModeler,
+                                             TFIDFKeywordExtractor)
 
 
 class TestTFIDFKeywordExtractorMinimal:

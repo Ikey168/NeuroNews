@@ -2,27 +2,25 @@
 Tests for keyword extraction and topic modeling functionality (Issue #29).
 """
 
-import pytest
 import asyncio
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime, timedelta
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from src.nlp.keyword_topic_extractor import (
-    KeywordTopicExtractor,
-    TFIDFKeywordExtractor,
-    LDATopicModeler,
-    TextPreprocessor,
-    KeywordResult,
-    TopicResult,
-    ExtractionResult,
-    SimpleKeywordExtractor,
-    create_keyword_extractor,
-)
-from src.nlp.keyword_topic_database import KeywordTopicDatabase
-from src.api.routes.topic_routes import router
-from fastapi.testclient import TestClient
+import pytest
 from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from src.api.routes.topic_routes import router
+from src.nlp.keyword_topic_database import KeywordTopicDatabase
+from src.nlp.keyword_topic_extractor import (ExtractionResult, KeywordResult,
+                                             KeywordTopicExtractor,
+                                             LDATopicModeler,
+                                             SimpleKeywordExtractor,
+                                             TextPreprocessor,
+                                             TFIDFKeywordExtractor,
+                                             TopicResult,
+                                             create_keyword_extractor)
 
 # Create test app
 app = FastAPI()

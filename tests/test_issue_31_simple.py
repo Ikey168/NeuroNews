@@ -4,12 +4,13 @@ Simplified tests for Issue #31 Event Detection System
 Focuses on core functionality without heavy ML dependencies.
 """
 
-import pytest
 import json
-import sys
 import os
+import sys
 from datetime import datetime
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 
 # Add src to path for imports
 sys.path.insert(0, "/workspaces/NeuroNews/src")

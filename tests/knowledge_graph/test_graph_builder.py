@@ -1,12 +1,14 @@
+from unittest.mock import AsyncMock, MagicMock, call, patch  # Added patch
+
 import pytest
 import pytest_asyncio
-from unittest.mock import AsyncMock, MagicMock, call, patch  # Added patch
-from gremlin_python.driver.resultset import ResultSet
-from gremlin_python.driver.connection import (
-    Connection as GremlinConnection,
-)  # Alias to avoid conflict
 from gremlin_python.driver.client import Client
-from gremlin_python.driver.driver_remote_connection import DriverRemoteConnection
+from gremlin_python.driver.connection import \
+    Connection as GremlinConnection  # Alias to avoid conflict
+from gremlin_python.driver.driver_remote_connection import \
+    DriverRemoteConnection
+from gremlin_python.driver.resultset import ResultSet
+
 from src.knowledge_graph.graph_builder import GraphBuilder
 
 NEPTUNE_MOCK_ENDPOINT_FOR_PLAIN_TESTS = "ws://dummy-plain:8182/gremlin"

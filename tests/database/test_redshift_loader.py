@@ -1,9 +1,10 @@
 """Tests for RedshiftLoader class."""
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime, timezone
 import os
+from datetime import datetime, timezone
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from src.database.redshift_loader import RedshiftLoader
 

@@ -3,15 +3,14 @@ Test suite for multi-language news processing functionality.
 Tests language detection, translation, quality checking, and pipeline integration.
 """
 
-import pytest
 import asyncio
 import json
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
-from datetime import datetime
-
 # Mock psycopg2 before any imports that might use it
 import sys
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
+from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
+import pytest
 
 # Create a comprehensive mock for psycopg2
 mock_psycopg2 = MagicMock()
@@ -36,16 +35,11 @@ sys.modules["psycopg2"] = mock_psycopg2
 sys.modules["psycopg2.extras"] = mock_psycopg2.extras
 
 # Import our multi-language components
-from src.nlp.language_processor import (
-    LanguageDetector,
-    AWSTranslateService,
-    TranslationQualityChecker,
-)
+from src.nlp.language_processor import (AWSTranslateService, LanguageDetector,
+                                        TranslationQualityChecker)
 from src.nlp.multi_language_processor import MultiLanguageArticleProcessor
 from src.scraper.pipelines.multi_language_pipeline import (
-    MultiLanguagePipeline,
-    LanguageFilterPipeline,
-)
+    LanguageFilterPipeline, MultiLanguagePipeline)
 
 
 class TestLanguageDetector:
@@ -481,6 +475,7 @@ class TestLanguageFilterPipeline:
     def test_allowed_language_pass(self):
         """Test that allowed languages pass through."""
         from scrapy.exceptions import DropItem
+
         from src.scraper.items import NewsItem
 
         item = NewsItem()
@@ -492,6 +487,7 @@ class TestLanguageFilterPipeline:
     def test_blocked_language_drop(self):
         """Test that blocked languages are dropped."""
         from scrapy.exceptions import DropItem
+
         from src.scraper.items import NewsItem
 
         item = NewsItem()

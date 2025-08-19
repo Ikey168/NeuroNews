@@ -5,15 +5,15 @@ Tests performance improvements, functionality, and integration with existing sys
 
 import asyncio
 import json
+import logging
+import shutil
+import sys
+import tempfile
 import time
 import unittest
-from unittest.mock import Mock, patch, MagicMock
-import sys
 from pathlib import Path
-import tempfile
-import shutil
-from typing import Dict, List, Any
-import logging
+from typing import Any, Dict, List
+from unittest.mock import MagicMock, Mock, patch
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
@@ -21,15 +21,9 @@ sys.path.insert(0, str(project_root))
 
 try:
     from src.ingestion.optimized_pipeline import (
-        OptimizedIngestionPipeline,
-        OptimizationConfig,
-        AdaptiveBatchProcessor,
-        MemoryMonitor,
-        CircuitBreaker,
-        IngestionMetrics,
-        create_optimized_pipeline,
-        create_performance_optimized_pipeline,
-    )
+        AdaptiveBatchProcessor, CircuitBreaker, IngestionMetrics,
+        MemoryMonitor, OptimizationConfig, OptimizedIngestionPipeline,
+        create_optimized_pipeline, create_performance_optimized_pipeline)
 except ImportError as e:
     print(f"Warning: Could not import optimized_pipeline: {e}")
 
@@ -49,12 +43,9 @@ except ImportError as e:
 
 try:
     from src.ingestion.scrapy_integration import (
-        OptimizedScrapyPipeline,
-        HighThroughputValidationPipeline,
-        AdaptiveRateLimitPipeline,
-        OptimizedStoragePipeline,
-        configure_optimized_settings,
-    )
+        AdaptiveRateLimitPipeline, HighThroughputValidationPipeline,
+        OptimizedScrapyPipeline, OptimizedStoragePipeline,
+        configure_optimized_settings)
 except ImportError as e:
     print(f"Warning: Could not import scrapy_integration: {e}")
 

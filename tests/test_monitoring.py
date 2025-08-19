@@ -6,26 +6,25 @@ Tests CloudWatch logging, DynamoDB failure tracking, SNS alerting, and retry log
 
 import asyncio
 import json
-import pytest
+import sys
 import tempfile
 import time
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
 from pathlib import Path
-import boto3
-from moto import mock_aws
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
-import sys
+import boto3
+import pytest
+from moto import mock_aws
 
 sys.path.append("/workspaces/NeuroNews/src")
 
-from scraper.cloudwatch_logger import CloudWatchLogger, ScrapingMetrics, ScrapingStatus
+from scraper.cloudwatch_logger import (CloudWatchLogger, ScrapingMetrics,
+                                       ScrapingStatus)
 from scraper.dynamodb_failure_manager import DynamoDBFailureManager, FailedUrl
-from scraper.sns_alert_manager import SNSAlertManager, AlertType, AlertSeverity, Alert
-from scraper.enhanced_retry_manager import (
-    EnhancedRetryManager,
-    RetryConfig,
-    RetryReason,
-)
+from scraper.enhanced_retry_manager import (EnhancedRetryManager, RetryConfig,
+                                            RetryReason)
+from scraper.sns_alert_manager import (Alert, AlertSeverity, AlertType,
+                                       SNSAlertManager)
 
 
 class TestCloudWatchLogger:

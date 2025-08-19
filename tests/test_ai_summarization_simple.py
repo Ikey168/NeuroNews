@@ -8,21 +8,17 @@ Author: NeuroNews Development Team
 Created: August 2025
 """
 
-import pytest
-import sys
 import os
+import sys
+
+import pytest
 
 # Add src to path
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from src.nlp.ai_summarizer import (
-    SummaryLength,
-    SummarizationModel,
-    Summary,
-    create_summary_hash,
-    SummaryConfig,
-    AIArticleSummarizer,
-)
+from src.nlp.ai_summarizer import (AIArticleSummarizer, SummarizationModel,
+                                   Summary, SummaryConfig, SummaryLength,
+                                   create_summary_hash)
 
 
 class TestBasicFunctionality:

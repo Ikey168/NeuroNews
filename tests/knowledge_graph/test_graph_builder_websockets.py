@@ -1,13 +1,16 @@
+import asyncio
+import unittest  # Import the full unittest module
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 import pytest_asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
-import unittest  # Import the full unittest module
-from gremlin_python.driver.driver_remote_connection import DriverRemoteConnection
 from gremlin_python.driver.client import Client
 from gremlin_python.driver.connection import Connection
+from gremlin_python.driver.driver_remote_connection import \
+    DriverRemoteConnection
 from gremlin_python.driver.resultset import ResultSet
+
 from src.knowledge_graph.graph_builder import GraphBuilder
-import asyncio
 
 NEPTUNE_MOCK_ENDPOINT = "ws://mock-neptune:8182/gremlin"
 

@@ -1,10 +1,9 @@
 """Simple test to verify basic functionality works."""
 
 import pytest
-from src.nlp.keyword_topic_extractor import (
-    create_keyword_extractor,
-    SimpleKeywordExtractor,
-)
+
+from src.nlp.keyword_topic_extractor import (SimpleKeywordExtractor,
+                                             create_keyword_extractor)
 
 
 def test_factory_creates_extractor():

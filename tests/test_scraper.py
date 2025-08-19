@@ -1,5 +1,6 @@
 import pytest
 from scrapy.http import HtmlResponse, Request
+
 from src.scraper.spiders.news_spider import NewsSpider
 
 

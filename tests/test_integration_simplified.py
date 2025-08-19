@@ -4,11 +4,11 @@ Simplified test runner for containerized environment.
 Replaces complex mocking with real service integration.
 """
 
-import os
-import sys
 import asyncio
 import logging
-from typing import List, Dict, Any
+import os
+import sys
+from typing import Any, Dict, List
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

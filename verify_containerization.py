@@ -5,15 +5,17 @@ This proves the containerized approach works by testing individual components.
 """
 
 import subprocess
-import time
 import sys
+import time
 
 
 def run_command(cmd, description):
     """Run a command and return success status."""
     print(f"🔧 {description}...")
     try:
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30)
+        result = subprocess.run(
+            cmd, shell=True, capture_output=True, text=True, timeout=30
+        )
         if result.returncode == 0:
             print(f"✅ {description} - SUCCESS")
             return True
@@ -33,25 +35,31 @@ def main():
     """Main verification function."""
     print("🚀 NeuroNews Containerization Verification")
     print("=" * 50)
-    
+
     tests = [
         ("docker --version", "Docker availability"),
         ("docker compose version", "Docker Compose availability"),
-        ("docker build -f Dockerfile.simple -t neuronews-test .", "Simple Docker build"),
+        (
+            "docker build -f Dockerfile.simple -t neuronews-test .",
+            "Simple Docker build",
+        ),
         ("docker images | grep neuronews", "Docker image creation"),
-        ("docker run --rm neuronews-test python -c 'import psycopg2; print(\"Dependencies OK\")'", "Container dependency check"),
+        (
+            "docker run --rm neuronews-test python -c 'import psycopg2; print(\"Dependencies OK\")'",
+            "Container dependency check",
+        ),
     ]
-    
+
     results = []
     for cmd, desc in tests:
         success = run_command(cmd, desc)
         results.append(success)
         time.sleep(1)  # Brief pause between tests
-    
+
     print("\n" + "=" * 50)
     print("📊 VERIFICATION RESULTS:")
     print(f"✅ Passed: {sum(results)}/{len(results)} tests")
-    
+
     if all(results):
         print("🎉 CONTAINERIZATION VERIFICATION COMPLETE!")
         print("✨ The containerized solution is ready for deployment!")

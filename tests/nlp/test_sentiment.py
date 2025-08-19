@@ -1,7 +1,8 @@
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, call
 import json  # For loading LABELED_TEXTS
 import os  # For path joining
+from unittest.mock import AsyncMock, MagicMock, call, patch
+
+import pytest
 
 from src.nlp import SentimentAnalyzer, create_analyzer
 

@@ -1,7 +1,9 @@
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import Mock, MagicMock, patch
-from gremlin_python.process.graph_traversal import __, GraphTraversal
+from gremlin_python.process.graph_traversal import GraphTraversal, __
 from gremlin_python.process.traversal import P
+
 from src.knowledge_graph.examples.graph_queries import GraphQueries
 
 

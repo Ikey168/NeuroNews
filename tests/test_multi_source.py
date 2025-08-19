@@ -2,17 +2,17 @@
 Test script for multi-source scraper functionality.
 """
 
+import json
 import os
 import sys
-import json
 from pathlib import Path
 
 # Add the project root to the Python path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.scraper.multi_source_runner import MultiSourceRunner
 from src.scraper.data_validator import ScrapedDataValidator
+from src.scraper.multi_source_runner import MultiSourceRunner
 
 
 def test_spider_imports():

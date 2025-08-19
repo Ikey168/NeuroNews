@@ -6,20 +6,20 @@ Tests proxy manager, user agent rotation, CAPTCHA solver, and Tor integration.
 
 import asyncio
 import json
-import pytest
+import sys
 import tempfile
 import time
-from unittest.mock import Mock, patch, AsyncMock
 from pathlib import Path
+from unittest.mock import AsyncMock, Mock, patch
 
-import sys
+import pytest
 
 sys.path.append("/workspaces/NeuroNews/src")
 
-from scraper.proxy_manager import ProxyRotationManager, ProxyConfig, ProxyStats
-from scraper.user_agent_rotator import UserAgentRotator
 from scraper.captcha_solver import CaptchaSolver
+from scraper.proxy_manager import ProxyConfig, ProxyRotationManager, ProxyStats
 from scraper.tor_manager import TorManager
+from scraper.user_agent_rotator import UserAgentRotator
 
 
 class TestProxyRotationManager:

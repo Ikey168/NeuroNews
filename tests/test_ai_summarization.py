@@ -14,30 +14,24 @@ Author: NeuroNews Development Team
 Created: August 2025
 """
 
-import pytest
 import asyncio
 import json
-import time
-from unittest.mock import Mock, patch, AsyncMock
-from typing import Dict, Any
-
-import torch
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-
+import os
 # Import modules to test
 import sys
-import os
+import time
+from typing import Any, Dict
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
+import torch
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from src.nlp.ai_summarizer import (
-    AIArticleSummarizer,
-    SummaryLength,
-    SummarizationModel,
-    Summary,
-    create_summary_hash,
-    get_summary_pipeline,
-)
+from src.nlp.ai_summarizer import (AIArticleSummarizer, SummarizationModel,
+                                   Summary, SummaryLength, create_summary_hash,
+                                   get_summary_pipeline)
 from src.nlp.summary_database import SummaryDatabase, SummaryRecord
 
 

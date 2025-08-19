@@ -12,19 +12,21 @@ and topic modeling system, including:
 Run this script to validate the implementation and see sample results.
 """
 
+import asyncio
+import json
+import logging
 import os
 import sys
-import json
-import asyncio
-import logging
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.nlp.keyword_topic_extractor import create_keyword_extractor, KeywordTopicExtractor
-from src.nlp.keyword_topic_database import create_keyword_topic_db, KeywordTopicDatabase
+from src.nlp.keyword_topic_database import (KeywordTopicDatabase,
+                                            create_keyword_topic_db)
+from src.nlp.keyword_topic_extractor import (KeywordTopicExtractor,
+                                             create_keyword_extractor)
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -33,13 +35,13 @@ logger = logging.getLogger(__name__)
 
 class KeywordTopicDemo:
     """Demonstration class for keyword extraction and topic modeling."""
-    
+
     def __init__(self):
         """Initialize demo with sample data and components."""
         self.extractor = None
         self.database = None
         self.sample_articles = self._create_sample_articles()
-    
+
     def _create_sample_articles(self) -> List[Dict[str, Any]]:
         """Create sample articles for demonstration."""
         return [
@@ -57,10 +59,10 @@ class KeywordTopicDemo:
                 optimization techniques and shows remarkable generalization capabilities.
                 """,
                 "source": "TechNews Daily",
-                "published_date": datetime(2025, 8, 10)
+                "published_date": datetime(2025, 8, 10),
             },
             {
-                "id": "demo_climate_1", 
+                "id": "demo_climate_1",
                 "url": "https://example.com/climate-change-impact",
                 "title": "Climate Change Accelerating: Global Temperatures Rise Beyond Critical Thresholds",
                 "content": """
@@ -74,7 +76,7 @@ class KeywordTopicDemo:
                 comprehensive climate action and sustainable development practices.
                 """,
                 "source": "Environmental Science Journal",
-                "published_date": datetime(2025, 8, 11)
+                "published_date": datetime(2025, 8, 11),
             },
             {
                 "id": "demo_healthcare_1",
@@ -90,7 +92,7 @@ class KeywordTopicDemo:
                 Medical technology advances in DNA sequencing and gene editing show promise for treating previously incurable conditions.
                 """,
                 "source": "Medical Innovation Weekly",
-                "published_date": datetime(2025, 8, 12)
+                "published_date": datetime(2025, 8, 12),
             },
             {
                 "id": "demo_finance_1",
@@ -106,7 +108,7 @@ class KeywordTopicDemo:
                 assets continue evolving as governments establish legal frameworks for blockchain-based financial instruments.
                 """,
                 "source": "Financial Times",
-                "published_date": datetime(2025, 8, 13)
+                "published_date": datetime(2025, 8, 13),
             },
             {
                 "id": "demo_space_1",
@@ -123,7 +125,7 @@ class KeywordTopicDemo:
                 to search for signs of past or present life beyond Earth.
                 """,
                 "source": "Space Science Today",
-                "published_date": datetime(2025, 8, 14)
+                "published_date": datetime(2025, 8, 14),
             },
             {
                 "id": "demo_education_1",
@@ -139,82 +141,96 @@ class KeywordTopicDemo:
                 Educational data analytics provide insights into learning patterns and academic performance optimization.
                 """,
                 "source": "Education Technology Review",
-                "published_date": datetime(2025, 8, 15)
-            }
+                "published_date": datetime(2025, 8, 15),
+            },
         ]
-    
+
     async def initialize_components(self):
         """Initialize the keyword extractor and database components."""
         logger.info("Initializing keyword extraction and topic modeling components...")
-        
+
         # Load configuration
         config_path = "config/keyword_topic_settings.json"
         config = None
         if os.path.exists(config_path):
-            with open(config_path, 'r') as f:
+            with open(config_path, "r") as f:
                 config = json.load(f)
-        
+
         # Initialize extractor
         self.extractor = create_keyword_extractor(config_path)
         logger.info("✅ Keyword extractor initialized")
-        
+
         # Initialize database (for demo purposes, we'll skip actual DB connection)
         logger.info("✅ Database components ready")
-    
+
     def demonstrate_keyword_extraction(self) -> Dict[str, Any]:
         """Demonstrate keyword extraction functionality."""
         logger.info("\n🔍 DEMONSTRATING KEYWORD EXTRACTION")
         logger.info("=" * 50)
-        
+
         # Process sample articles
         results = self.extractor.process_batch(self.sample_articles)
-        
+
         extraction_summary = {
             "total_articles": len(results),
             "successful_extractions": 0,
             "total_keywords": 0,
             "total_topics": 0,
-            "sample_results": []
+            "sample_results": [],
         }
-        
+
         for result in results:
             if result.keywords:
                 extraction_summary["successful_extractions"] += 1
                 extraction_summary["total_keywords"] += len(result.keywords)
                 extraction_summary["total_topics"] += len(result.topics)
-                
+
                 # Display sample result
                 logger.info(f"\n📄 Article: {result.title[:60]}...")
-                logger.info(f"   Keywords ({len(result.keywords)}): {[kw.keyword for kw in result.keywords[:5]]}")
-                
+                logger.info(
+                    f"   Keywords ({len(result.keywords)}): {[kw.keyword for kw in result.keywords[:5]]}"
+                )
+
                 if result.dominant_topic:
-                    logger.info(f"   Dominant Topic: {result.dominant_topic.topic_name}")
-                    logger.info(f"   Topic Probability: {result.dominant_topic.probability:.3f}")
-                
+                    logger.info(
+                        f"   Dominant Topic: {result.dominant_topic.topic_name}"
+                    )
+                    logger.info(
+                        f"   Topic Probability: {result.dominant_topic.probability:.3f}"
+                    )
+
                 logger.info(f"   Processing Time: {result.processing_time:.2f}s")
-                
+
                 # Store sample for summary
-                extraction_summary["sample_results"].append({
-                    "title": result.title,
-                    "keywords": [kw.keyword for kw in result.keywords[:5]],
-                    "dominant_topic": result.dominant_topic.topic_name if result.dominant_topic else None,
-                    "processing_time": result.processing_time
-                })
-        
+                extraction_summary["sample_results"].append(
+                    {
+                        "title": result.title,
+                        "keywords": [kw.keyword for kw in result.keywords[:5]],
+                        "dominant_topic": (
+                            result.dominant_topic.topic_name
+                            if result.dominant_topic
+                            else None
+                        ),
+                        "processing_time": result.processing_time,
+                    }
+                )
+
         return extraction_summary
-    
+
     def demonstrate_topic_modeling(self) -> Dict[str, Any]:
-        """Demonstrate topic modeling functionality.""" 
+        """Demonstrate topic modeling functionality."""
         logger.info("\n📊 DEMONSTRATING TOPIC MODELING")
         logger.info("=" * 50)
-        
+
         # Fit topic model on all articles
         topic_info = self.extractor.fit_corpus(self.sample_articles)
-        
+
         if topic_info["model_fitted"]:
-            logger.info(f"✅ LDA Model fitted successfully on {topic_info['n_texts']} articles")
+            logger.info(
+                f"✅ LDA Model fitted successfully on {topic_info['n_texts']} articles"
+            )
             logger.info(f"   Model Perplexity: {topic_info.get('perplexity', 'N/A')}")
-            
+
             # Display discovered topics
             logger.info(f"\n🏷️  DISCOVERED TOPICS ({len(topic_info['topics'])})")
             for i, topic in enumerate(topic_info["topics"][:5]):  # Show top 5 topics
@@ -222,33 +238,47 @@ class KeywordTopicDemo:
                 logger.info(f"   Top Words: {', '.join(topic['topic_words'][:5])}")
         else:
             logger.warning("❌ Topic modeling failed - insufficient data")
-        
+
         return topic_info
-    
+
     def demonstrate_search_functionality(self):
         """Demonstrate search functionality (simulated)."""
         logger.info("\n🔎 DEMONSTRATING SEARCH FUNCTIONALITY")
         logger.info("=" * 50)
-        
+
         # Simulate API queries
         search_examples = [
-            {"type": "topic", "query": "artificial_intelligence_machine", "description": "AI-related articles"},
-            {"type": "keyword", "query": "climate", "description": "Climate-related content"},
-            {"type": "advanced", "query": "healthcare technology", "description": "Healthcare tech intersection"}
+            {
+                "type": "topic",
+                "query": "artificial_intelligence_machine",
+                "description": "AI-related articles",
+            },
+            {
+                "type": "keyword",
+                "query": "climate",
+                "description": "Climate-related content",
+            },
+            {
+                "type": "advanced",
+                "query": "healthcare technology",
+                "description": "Healthcare tech intersection",
+            },
         ]
-        
+
         for example in search_examples:
             logger.info(f"\n🔍 {example['description']}:")
             logger.info(f"   Query Type: {example['type']}")
             logger.info(f"   Query: {example['query']}")
-            logger.info(f"   API Endpoint: /topics/{example['type']}?q={example['query']}")
+            logger.info(
+                f"   API Endpoint: /topics/{example['type']}?q={example['query']}"
+            )
             logger.info(f"   Expected Results: Articles matching '{example['query']}'")
-    
+
     def analyze_extraction_quality(self, results: List) -> Dict[str, Any]:
         """Analyze the quality of extraction results."""
         logger.info("\n📈 EXTRACTION QUALITY ANALYSIS")
         logger.info("=" * 50)
-        
+
         quality_metrics = {
             "articles_with_keywords": 0,
             "articles_with_topics": 0,
@@ -256,91 +286,121 @@ class KeywordTopicDemo:
             "avg_topics_per_article": 0,
             "avg_processing_time": 0,
             "keyword_diversity": 0,
-            "topic_coverage": 0
+            "topic_coverage": 0,
         }
-        
+
         all_keywords = set()
         all_topics = set()
         total_processing_time = 0
-        
+
         for result in results:
             if result.keywords:
                 quality_metrics["articles_with_keywords"] += 1
                 all_keywords.update([kw.keyword for kw in result.keywords])
-            
+
             if result.topics:
                 quality_metrics["articles_with_topics"] += 1
                 all_topics.update([topic.topic_name for topic in result.topics])
-            
+
             total_processing_time += result.processing_time
-        
+
         # Calculate averages and diversity
         total_articles = len(results)
         if total_articles > 0:
-            quality_metrics["avg_keywords_per_article"] = sum(len(r.keywords) for r in results) / total_articles
-            quality_metrics["avg_topics_per_article"] = sum(len(r.topics) for r in results) / total_articles
-            quality_metrics["avg_processing_time"] = total_processing_time / total_articles
-        
+            quality_metrics["avg_keywords_per_article"] = (
+                sum(len(r.keywords) for r in results) / total_articles
+            )
+            quality_metrics["avg_topics_per_article"] = (
+                sum(len(r.topics) for r in results) / total_articles
+            )
+            quality_metrics["avg_processing_time"] = (
+                total_processing_time / total_articles
+            )
+
         quality_metrics["keyword_diversity"] = len(all_keywords)
         quality_metrics["topic_coverage"] = len(all_topics)
-        
+
         # Display quality metrics
         logger.info(f"📊 Quality Metrics:")
-        logger.info(f"   Articles with Keywords: {quality_metrics['articles_with_keywords']}/{total_articles}")
-        logger.info(f"   Articles with Topics: {quality_metrics['articles_with_topics']}/{total_articles}")
-        logger.info(f"   Avg Keywords per Article: {quality_metrics['avg_keywords_per_article']:.1f}")
-        logger.info(f"   Avg Topics per Article: {quality_metrics['avg_topics_per_article']:.1f}")
-        logger.info(f"   Avg Processing Time: {quality_metrics['avg_processing_time']:.2f}s")
-        logger.info(f"   Keyword Diversity: {quality_metrics['keyword_diversity']} unique keywords")
-        logger.info(f"   Topic Coverage: {quality_metrics['topic_coverage']} unique topics")
-        
+        logger.info(
+            f"   Articles with Keywords: {quality_metrics['articles_with_keywords']}/{total_articles}"
+        )
+        logger.info(
+            f"   Articles with Topics: {quality_metrics['articles_with_topics']}/{total_articles}"
+        )
+        logger.info(
+            f"   Avg Keywords per Article: {quality_metrics['avg_keywords_per_article']:.1f}"
+        )
+        logger.info(
+            f"   Avg Topics per Article: {quality_metrics['avg_topics_per_article']:.1f}"
+        )
+        logger.info(
+            f"   Avg Processing Time: {quality_metrics['avg_processing_time']:.2f}s"
+        )
+        logger.info(
+            f"   Keyword Diversity: {quality_metrics['keyword_diversity']} unique keywords"
+        )
+        logger.info(
+            f"   Topic Coverage: {quality_metrics['topic_coverage']} unique topics"
+        )
+
         return quality_metrics
-    
+
     async def run_complete_demo(self):
         """Run the complete demonstration."""
         logger.info("🚀 STARTING KEYWORD EXTRACTION & TOPIC MODELING DEMO")
         logger.info("=" * 60)
-        
+
         try:
             # Initialize components
             await self.initialize_components()
-            
+
             # Demonstrate functionality
             extraction_results = self.demonstrate_keyword_extraction()
             topic_results = self.demonstrate_topic_modeling()
             self.demonstrate_search_functionality()
-            
+
             # Get processing results for quality analysis
             processing_results = self.extractor.process_batch(self.sample_articles)
             quality_metrics = self.analyze_extraction_quality(processing_results)
-            
+
             # Final summary
             logger.info("\n✅ DEMO COMPLETED SUCCESSFULLY")
             logger.info("=" * 60)
             logger.info(f"📊 Summary:")
-            logger.info(f"   Total Articles Processed: {extraction_results['total_articles']}")
-            logger.info(f"   Successful Extractions: {extraction_results['successful_extractions']}")
-            logger.info(f"   Total Keywords Extracted: {extraction_results['total_keywords']}")
-            logger.info(f"   Total Topics Identified: {extraction_results['total_topics']}")
+            logger.info(
+                f"   Total Articles Processed: {extraction_results['total_articles']}"
+            )
+            logger.info(
+                f"   Successful Extractions: {extraction_results['successful_extractions']}"
+            )
+            logger.info(
+                f"   Total Keywords Extracted: {extraction_results['total_keywords']}"
+            )
+            logger.info(
+                f"   Total Topics Identified: {extraction_results['total_topics']}"
+            )
             logger.info(f"   Topic Model Fitted: {topic_results['model_fitted']}")
-            logger.info(f"   Average Processing Time: {quality_metrics['avg_processing_time']:.2f}s")
-            
+            logger.info(
+                f"   Average Processing Time: {quality_metrics['avg_processing_time']:.2f}s"
+            )
+
             # Save results
             demo_results = {
                 "demo_completed_at": datetime.now().isoformat(),
                 "extraction_summary": extraction_results,
                 "topic_modeling_summary": topic_results,
                 "quality_metrics": quality_metrics,
-                "sample_articles_count": len(self.sample_articles)
+                "sample_articles_count": len(self.sample_articles),
             }
-            
+
             with open("keyword_topic_demo_results.json", "w") as f:
                 json.dump(demo_results, f, indent=2, default=str)
-            
+
             logger.info(f"📁 Results saved to: keyword_topic_demo_results.json")
-            
+
             return demo_results
-            
+
         except Exception as e:
             logger.error(f"❌ Demo failed: {e}")
             raise

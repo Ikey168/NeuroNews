@@ -1,11 +1,12 @@
-import pytest
-from fastapi.testclient import TestClient
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, patch, MagicMock
 import os
+from datetime import datetime, timezone
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 from src.api.routes.news_routes import router as news_api_router
-from fastapi import FastAPI
 from src.database.redshift_loader import RedshiftLoader
 
 

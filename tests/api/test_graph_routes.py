@@ -1,20 +1,20 @@
+import os
+from datetime import datetime, timezone
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
-from unittest.mock import AsyncMock, MagicMock, patch
-import os
-from datetime import datetime, timezone
-
-from src.api.routes.graph_routes import (
-    router as graph_api_router,
-    lifespan as graph_api_lifespan,
-)
-from src.api.routes.graph_routes import get_graph as original_get_graph_dependency
-from src.knowledge_graph.graph_builder import GraphBuilder
-from gremlin_python.process.graph_traversal import GraphTraversal, __
-from gremlin_python.process.traversal import P, T
 from gremlin_python.driver.client import Client
 from gremlin_python.driver.resultset import ResultSet  # Added import
+from gremlin_python.process.graph_traversal import GraphTraversal, __
+from gremlin_python.process.traversal import P, T
+
+from src.api.routes.graph_routes import \
+    get_graph as original_get_graph_dependency
+from src.api.routes.graph_routes import lifespan as graph_api_lifespan
+from src.api.routes.graph_routes import router as graph_api_router
+from src.knowledge_graph.graph_builder import GraphBuilder
 
 os.environ["NEPTUNE_ENDPOINT"] = "ws://default-mock-neptune:8182/gremlin"
 

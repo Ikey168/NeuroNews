@@ -2,15 +2,16 @@
 Tests for sentiment analysis pipeline functionality (Issue #28).
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime, timedelta
 import json
+from datetime import datetime, timedelta
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from src.nlp.sentiment_analysis import SentimentAnalyzer, create_analyzer
-from src.api.routes.sentiment_routes import router, get_db
-from fastapi.testclient import TestClient
+import pytest
 from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from src.api.routes.sentiment_routes import get_db, router
+from src.nlp.sentiment_analysis import SentimentAnalyzer, create_analyzer
 
 # Create test app
 app = FastAPI()

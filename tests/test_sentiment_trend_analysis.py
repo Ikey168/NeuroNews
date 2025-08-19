@@ -5,21 +5,17 @@ This module tests the sentiment trend analysis functionality,
 including trend calculation, alert generation, and API endpoints.
 """
 
-import pytest
 import asyncio
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
 from datetime import datetime, timedelta, timezone
-import pandas as pd
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
 import numpy as np
+import pandas as pd
+import pytest
 
 from src.nlp.sentiment_trend_analyzer import (
-    SentimentTrendAnalyzer,
-    SentimentTrendPoint,
-    TrendAlert,
-    TopicTrendSummary,
-    analyze_sentiment_trends_for_topic,
-    generate_daily_sentiment_alerts,
-)
+    SentimentTrendAnalyzer, SentimentTrendPoint, TopicTrendSummary, TrendAlert,
+    analyze_sentiment_trends_for_topic, generate_daily_sentiment_alerts)
 
 
 class TestSentimentTrendAnalyzer:

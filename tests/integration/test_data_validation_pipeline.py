@@ -5,24 +5,22 @@ Tests the complete validation pipeline with real-world scenarios
 to ensure all components work together correctly.
 """
 
-import unittest
 import json
-import tempfile
 import os
+import sys
+import tempfile
+import unittest
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch
-import sys
 
 sys.path.append("/workspaces/NeuroNews")
 
-from src.database.data_validation_pipeline import (
-    DataValidationPipeline,
-    HTMLCleaner,
-    DuplicateDetector,
-    SourceReputationAnalyzer,
-    ContentValidator,
-    SourceReputationConfig,
-)
+from src.database.data_validation_pipeline import (ContentValidator,
+                                                   DataValidationPipeline,
+                                                   DuplicateDetector,
+                                                   HTMLCleaner,
+                                                   SourceReputationAnalyzer,
+                                                   SourceReputationConfig)
 
 
 class TestDataValidationPipeline(unittest.TestCase):

@@ -1,8 +1,9 @@
 # Simplified pytest configuration for containerized testing
-import os
 import asyncio
-import pytest
+import os
 from typing import Generator
+
+import pytest
 
 # Try to import database dependencies, but make them optional for backward compatibility
 try:
@@ -19,12 +20,10 @@ os.environ["TESTING"] = "true"
 # Only import database setup if dependencies are available
 if PSYCOPG2_AVAILABLE:
     try:
-        from src.database.setup import (
-            get_sync_connection,
-            setup_test_database,
-            cleanup_test_database,
-            create_test_articles,
-        )
+        from src.database.setup import (cleanup_test_database,
+                                        create_test_articles,
+                                        get_sync_connection,
+                                        setup_test_database)
 
         DATABASE_SETUP_AVAILABLE = True
     except ImportError:

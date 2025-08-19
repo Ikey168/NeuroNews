@@ -4,7 +4,7 @@ Test database mocking approach for CI/CD
 """
 
 import sys
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
 
 
 def test_psycopg2_mocking():
@@ -48,7 +48,8 @@ def test_import_with_mocking():
 
             print("✅ Language processor import works")
 
-            from src.nlp.multi_language_processor import MultiLanguageArticleProcessor
+            from src.nlp.multi_language_processor import \
+                MultiLanguageArticleProcessor
 
             print("✅ Multi-language processor import works")
 

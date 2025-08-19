@@ -6,19 +6,17 @@ including entity extraction, relationship detection, historical linking,
 and API endpoints.
 """
 
-import pytest
 import asyncio
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-from datetime import datetime
 import json
+from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
-from src.knowledge_graph.nlp_populator import (
-    KnowledgeGraphPopulator,
-    Entity,
-    Relationship,
-    populate_article_to_graph,
-    get_entity_relationships,
-)
+import pytest
+
+from src.knowledge_graph.nlp_populator import (Entity, KnowledgeGraphPopulator,
+                                               Relationship,
+                                               get_entity_relationships,
+                                               populate_article_to_graph)
 
 
 class TestKnowledgeGraphPopulator:

@@ -4,14 +4,17 @@ These tests focus on verifying that GraphBuilder methods can be called successfu
 without requiring actual Neptune infrastructure.
 """
 
+import uuid
+from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 import pytest_asyncio
-from datetime import datetime
-import uuid
-from unittest.mock import AsyncMock, MagicMock, patch
-from gremlin_python.driver.resultset import ResultSet
 from gremlin_python.driver.client import Client
-from gremlin_python.driver.driver_remote_connection import DriverRemoteConnection
+from gremlin_python.driver.driver_remote_connection import \
+    DriverRemoteConnection
+from gremlin_python.driver.resultset import ResultSet
+
 from src.knowledge_graph.graph_builder import GraphBuilder
 
 NEPTUNE_MOCK_ENDPOINT = "ws://mock-neptune:8182/gremlin"

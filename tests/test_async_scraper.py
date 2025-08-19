@@ -5,23 +5,23 @@ and performance monitoring.
 """
 
 import asyncio
-import pytest
 import json
+import sys
 import tempfile
 import time
-from unittest.mock import Mock, AsyncMock, patch
 from pathlib import Path
-import aiohttp
+from unittest.mock import AsyncMock, Mock, patch
 
-import sys
+import aiohttp
+import pytest
 
 sys.path.append("/workspaces/NeuroNews/src")
 
 import pytest_asyncio
 
+from scraper.async_pipelines import AsyncPipelineProcessor
 from scraper.async_scraper_engine import AsyncNewsScraperEngine, NewsSource
 from scraper.async_scraper_runner import AsyncScraperRunner
-from scraper.async_pipelines import AsyncPipelineProcessor
 from scraper.performance_monitor import PerformanceDashboard
 
 
