@@ -8,17 +8,24 @@ from typing import Generator
 try:
     import psycopg2
     from psycopg2.extras import RealDictCursor
+
     PSYCOPG2_AVAILABLE = True
 except ImportError:
     PSYCOPG2_AVAILABLE = False
 
 # Set testing environment
-os.environ['TESTING'] = 'true'
+os.environ["TESTING"] = "true"
 
 # Only import database setup if dependencies are available
 if PSYCOPG2_AVAILABLE:
     try:
-        from src.database.setup import get_sync_connection, setup_test_database, cleanup_test_database, create_test_articles
+        from src.database.setup import (
+            get_sync_connection,
+            setup_test_database,
+            cleanup_test_database,
+            create_test_articles,
+        )
+
         DATABASE_SETUP_AVAILABLE = True
     except ImportError:
         DATABASE_SETUP_AVAILABLE = False
@@ -41,7 +48,7 @@ def setup_test_env():
         # Skip database setup in non-containerized environment
         yield
         return
-    
+
     # Set up test database
     setup_test_database()
     yield
@@ -55,6 +62,7 @@ def db_connection():
     if not DATABASE_SETUP_AVAILABLE:
         # Return a mock connection for non-containerized testing
         from unittest.mock import MagicMock
+
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
@@ -62,7 +70,7 @@ def db_connection():
         mock_conn.__exit__ = lambda *args: None
         yield mock_conn
         return
-    
+
     conn = get_sync_connection(testing=True)
     try:
         yield conn
@@ -75,7 +83,8 @@ def clean_db(db_connection):
     """Ensure clean database state for each test."""
     # Clear test data before test
     with db_connection.cursor() as cur:
-        cur.execute("""
+        cur.execute(
+            """
             TRUNCATE TABLE neuronews.article_clusters,
                           neuronews.article_embeddings,
                           neuronews.article_keywords,
@@ -84,14 +93,16 @@ def clean_db(db_connection):
                           neuronews.event_clusters,
                           neuronews.articles
             RESTART IDENTITY CASCADE
-        """)
+        """
+        )
         db_connection.commit()
-    
+
     yield db_connection
-    
+
     # Clean up after test (optional, but good practice)
     with db_connection.cursor() as cur:
-        cur.execute("""
+        cur.execute(
+            """
             TRUNCATE TABLE neuronews.article_clusters,
                           neuronews.article_embeddings,
                           neuronews.article_keywords,
@@ -100,7 +111,8 @@ def clean_db(db_connection):
                           neuronews.event_clusters,
                           neuronews.articles
             RESTART IDENTITY CASCADE
-        """)
+        """
+        )
         db_connection.commit()
 
 
@@ -113,19 +125,21 @@ def sample_articles(clean_db):
 @pytest.fixture
 def mock_sentence_transformer():
     """Provide a simple mock for SentenceTransformer in isolated tests."""
+
     class MockTransformer:
         def __init__(self, *args, **kwargs):
             self.embedding_dimension = 384
-        
+
         def encode(self, texts, **kwargs):
             import numpy as np
+
             if isinstance(texts, str):
                 texts = [texts]
             return np.random.rand(len(texts), 384)
-        
+
         def get_sentence_embedding_dimension(self):
             return 384
-    
+
     return MockTransformer
 
 
@@ -134,21 +148,21 @@ def mock_sentence_transformer():
 def app_config():
     """Provide application configuration for tests."""
     return {
-        'database': {
-            'host': os.getenv('DB_HOST', 'test-postgres'),
-            'port': int(os.getenv('DB_PORT', 5432)),
-            'database': os.getenv('DB_NAME', 'neuronews_test'),
-            'user': os.getenv('DB_USER', 'test_user'),
-            'password': os.getenv('DB_PASSWORD', 'test_password')
+        "database": {
+            "host": os.getenv("DB_HOST", "test-postgres"),
+            "port": int(os.getenv("DB_PORT", 5432)),
+            "database": os.getenv("DB_NAME", "neuronews_test"),
+            "user": os.getenv("DB_USER", "test_user"),
+            "password": os.getenv("DB_PASSWORD", "test_password"),
         },
-        'redis': {
-            'host': os.getenv('REDIS_HOST', 'test-redis'),
-            'port': int(os.getenv('REDIS_PORT', 6379))
+        "redis": {
+            "host": os.getenv("REDIS_HOST", "test-redis"),
+            "port": int(os.getenv("REDIS_PORT", 6379)),
         },
-        's3': {
-            'endpoint': os.getenv('S3_ENDPOINT', 'http://test-minio:9000'),
-            'access_key': os.getenv('S3_ACCESS_KEY', 'testuser'),
-            'secret_key': os.getenv('S3_SECRET_KEY', 'testpassword'),
-            'bucket': os.getenv('S3_BUCKET', 'test-bucket')
-        }
+        "s3": {
+            "endpoint": os.getenv("S3_ENDPOINT", "http://test-minio:9000"),
+            "access_key": os.getenv("S3_ACCESS_KEY", "testuser"),
+            "secret_key": os.getenv("S3_SECRET_KEY", "testpassword"),
+            "bucket": os.getenv("S3_BUCKET", "test-bucket"),
+        },
     }
