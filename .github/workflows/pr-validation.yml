@@ -85,7 +85,7 @@ jobs:
         run: bandit -r src/ -f json -o bandit-report.json || true
 
       - name: Upload Bandit report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: bandit-security-report
           path: bandit-report.json
@@ -204,7 +204,7 @@ jobs:
           name: ${{ matrix.component }}-coverage
 
       - name: Upload test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-results-${{ matrix.component }}
@@ -379,7 +379,7 @@ jobs:
             --env VUS=10
 
       - name: Upload performance results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: performance-test-results
           path: performance-results.json
