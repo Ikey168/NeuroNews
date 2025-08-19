@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock, patch, Mock
 import json
 from datetime import datetime
 
-from src.api.main import app  # Assuming main FastAPI app
+from src.api.app import app  # Fixed import path
 from src.knowledge_graph.nlp_populator import KnowledgeGraphPopulator
 
 

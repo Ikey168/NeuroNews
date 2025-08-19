@@ -1,7 +1,7 @@
 """
 API routes for AWS QuickSight Dashboard management.
 
-This module provides REST API endpoints for Issue #49: 
+This module provides REST API endpoints for Issue #49:
 Develop AWS QuickSight Dashboard for News Insights.
 
 Endpoints:
@@ -14,17 +14,15 @@ Endpoints:
 """
 
 import logging
-from typing import Dict, Any, Optional, List
-from fastapi import APIRouter, HTTPException, Depends, Query, Path
-from pydantic import BaseModel, Field
-from enum import Enum
 from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
-from src.dashboards.quicksight_service import (
-    QuickSightDashboardService,
-    QuickSightConfig,
-    DashboardType
-)
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from pydantic import BaseModel, Field
+
+from src.dashboards.quicksight_service import (DashboardType, QuickSightConfig,
+                                               QuickSightDashboardService)
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +30,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(
     prefix="/api/v1/dashboards",
     tags=["dashboards"],
-    responses={404: {"description": "Not found"}}
+    responses={404: {"description": "Not found"}},
 )
 
 # Global service instance
@@ -41,25 +39,33 @@ _quicksight_service: Optional[QuickSightDashboardService] = None
 
 # Pydantic models for requests and responses
 
+
 class QuickSightSetupRequest(BaseModel):
     """Request model for QuickSight setup."""
+
     aws_account_id: str = Field(..., description="AWS Account ID")
     region: str = Field(default="us-east-1", description="AWS Region")
     redshift_host: Optional[str] = Field(None, description="Redshift cluster endpoint")
-    redshift_database: str = Field(default="neuronews", description="Redshift database name")
+    redshift_database: str = Field(
+        default="neuronews", description="Redshift database name"
+    )
     redshift_username: Optional[str] = Field(None, description="Redshift username")
     redshift_password: Optional[str] = Field(None, description="Redshift password")
 
 
 class DashboardLayoutRequest(BaseModel):
     """Request model for creating dashboard layouts."""
+
     layout_type: str = Field(..., description="Dashboard layout type")
-    custom_filters: Optional[List[Dict[str, Any]]] = Field(None, description="Custom filters")
+    custom_filters: Optional[List[Dict[str, Any]]] = Field(
+        None, description="Custom filters"
+    )
     refresh_schedule: Optional[str] = Field("hourly", description="Refresh schedule")
 
 
 class QuickSightSetupResponse(BaseModel):
     """Response model for QuickSight setup."""
+
     success: bool
     data_source_created: bool
     datasets_created: List[str]
@@ -70,6 +76,7 @@ class QuickSightSetupResponse(BaseModel):
 
 class DashboardInfo(BaseModel):
     """Dashboard information model."""
+
     id: str
     name: str
     url: str
@@ -80,6 +87,7 @@ class DashboardInfo(BaseModel):
 
 class DashboardListResponse(BaseModel):
     """Response model for dashboard list."""
+
     success: bool
     dashboards: List[DashboardInfo]
     total_count: int
@@ -87,6 +95,7 @@ class DashboardListResponse(BaseModel):
 
 class DashboardLayoutResponse(BaseModel):
     """Response model for dashboard layout creation."""
+
     success: bool
     dashboard_id: Optional[str] = None
     dashboard_url: Optional[str] = None
@@ -95,6 +104,7 @@ class DashboardLayoutResponse(BaseModel):
 
 class ValidationResponse(BaseModel):
     """Response model for setup validation."""
+
     success: bool
     data_source_valid: bool
     datasets_valid: List[str]
@@ -106,6 +116,7 @@ class ValidationResponse(BaseModel):
 
 class RefreshSetupResponse(BaseModel):
     """Response model for refresh setup."""
+
     success: bool
     refresh_schedules: List[Dict[str, Any]]
     update_frequency: str
@@ -114,10 +125,11 @@ class RefreshSetupResponse(BaseModel):
 
 # Dependency functions
 
+
 async def get_quicksight_service() -> QuickSightDashboardService:
     """Get or create QuickSight service instance."""
     global _quicksight_service
-    
+
     if _quicksight_service is None:
         try:
             _quicksight_service = QuickSightDashboardService()
@@ -125,14 +137,14 @@ async def get_quicksight_service() -> QuickSightDashboardService:
         except Exception as e:
             logger.error(f"Failed to initialize QuickSight service: {e}")
             raise HTTPException(
-                status_code=503,
-                detail="QuickSight service not available"
+                status_code=503, detail="QuickSight service not available"
             )
-    
+
     return _quicksight_service
 
 
 # API Endpoints
+
 
 @router.post(
     "/setup",
@@ -149,16 +161,16 @@ async def get_quicksight_service() -> QuickSightDashboardService:
     - Datasets for different analysis types
     - Base analyses and visualizations
     - Comprehensive dashboard
-    """
+    """,
 )
 async def setup_quicksight_resources(
     setup_request: QuickSightSetupRequest,
-    service: QuickSightDashboardService = Depends(get_quicksight_service)
+    service: QuickSightDashboardService = Depends(get_quicksight_service),
 ):
     """Set up QuickSight resources for news insights."""
     try:
         logger.info("API request to set up QuickSight resources")
-        
+
         # Update service configuration
         config = QuickSightConfig(
             aws_account_id=setup_request.aws_account_id,
@@ -166,24 +178,23 @@ async def setup_quicksight_resources(
             redshift_host=setup_request.redshift_host,
             redshift_database=setup_request.redshift_database,
             redshift_username=setup_request.redshift_username,
-            redshift_password=setup_request.redshift_password
+            redshift_password=setup_request.redshift_password,
         )
-        
+
         # Reinitialize service with new config
         global _quicksight_service
         _quicksight_service = QuickSightDashboardService(config)
-        
+
         # Set up resources
         result = await service.setup_quicksight_resources()
-        
+
         logger.info("QuickSight setup completed successfully")
         return QuickSightSetupResponse(**result)
-        
+
     except Exception as e:
         logger.error(f"Failed to set up QuickSight resources: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to set up QuickSight resources: {str(e)}"
+            status_code=500, detail=f"Failed to set up QuickSight resources: {str(e)}"
         )
 
 
@@ -191,47 +202,43 @@ async def setup_quicksight_resources(
     "",
     response_model=DashboardListResponse,
     summary="List Dashboards",
-    description="Get list of all NeuroNews dashboards in QuickSight."
+    description="Get list of all NeuroNews dashboards in QuickSight.",
 )
 async def list_dashboards(
-    service: QuickSightDashboardService = Depends(get_quicksight_service)
+    service: QuickSightDashboardService = Depends(get_quicksight_service),
 ):
     """List all NeuroNews dashboards."""
     try:
         logger.info("API request to list dashboards")
-        
+
         result = await service.get_dashboard_info()
-        
-        if not result['success']:
+
+        if not result["success"]:
             raise HTTPException(
-                status_code=500,
-                detail=result.get('error', 'Failed to list dashboards')
+                status_code=500, detail=result.get("error", "Failed to list dashboards")
             )
-        
+
         dashboards = [
             DashboardInfo(
-                id=dashboard['id'],
-                name=dashboard['name'],
-                url=dashboard['url'],
-                last_updated=dashboard['last_updated'],
-                created_time=dashboard['created_time']
+                id=dashboard["id"],
+                name=dashboard["name"],
+                url=dashboard["url"],
+                last_updated=dashboard["last_updated"],
+                created_time=dashboard["created_time"],
             )
-            for dashboard in result['dashboards']
+            for dashboard in result["dashboards"]
         ]
-        
+
         return DashboardListResponse(
-            success=True,
-            dashboards=dashboards,
-            total_count=result['total_count']
+            success=True, dashboards=dashboards, total_count=result["total_count"]
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Failed to list dashboards: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to list dashboards: {str(e)}"
+            status_code=500, detail=f"Failed to list dashboards: {str(e)}"
         )
 
 
@@ -251,49 +258,48 @@ async def list_dashboards(
     - entity_relationships: Knowledge graph entity relationships  
     - event_timeline: Event timeline analysis
     - comprehensive: All insights combined
-    """
+    """,
 )
 async def create_dashboard_layout(
     layout_type: str = Path(..., description="Dashboard layout type"),
     layout_request: DashboardLayoutRequest = None,
-    service: QuickSightDashboardService = Depends(get_quicksight_service)
+    service: QuickSightDashboardService = Depends(get_quicksight_service),
 ):
     """Create specific dashboard layout."""
     try:
         logger.info(f"API request to create dashboard layout: {layout_type}")
-        
+
         # Validate layout type
         try:
             dashboard_type = DashboardType(layout_type)
         except ValueError:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid layout type: {layout_type}. Supported types: {[t.value for t in DashboardType]}"
+                detail=f"Invalid layout type: {layout_type}. Supported types: {[t.value for t in DashboardType]}",
             )
-        
+
         # Create dashboard layout
         result = await service.create_dashboard_layout(dashboard_type)
-        
-        if not result['success']:
+
+        if not result["success"]:
             raise HTTPException(
                 status_code=500,
-                detail=result.get('error', 'Failed to create dashboard layout')
+                detail=result.get("error", "Failed to create dashboard layout"),
             )
-        
+
         logger.info(f"Successfully created {layout_type} dashboard layout")
         return DashboardLayoutResponse(
             success=True,
-            dashboard_id=result['dashboard_id'],
-            dashboard_url=result['dashboard_url']
+            dashboard_id=result["dashboard_id"],
+            dashboard_url=result["dashboard_url"],
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Failed to create dashboard layout {layout_type}: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to create dashboard layout: {str(e)}"
+            status_code=500, detail=f"Failed to create dashboard layout: {str(e)}"
         )
 
 
@@ -309,43 +315,44 @@ async def create_dashboard_layout(
     
     Sets up automatic refresh schedules for all datasets to ensure
     dashboards show the latest data from the Redshift data warehouse.
-    """
+    """,
 )
 async def setup_real_time_updates(
-    refresh_frequency: str = Query("hourly", description="Refresh frequency (hourly, daily, weekly)"),
-    service: QuickSightDashboardService = Depends(get_quicksight_service)
+    refresh_frequency: str = Query(
+        "hourly", description="Refresh frequency (hourly, daily, weekly)"
+    ),
+    service: QuickSightDashboardService = Depends(get_quicksight_service),
 ):
     """Set up real-time updates from Redshift."""
     try:
         logger.info("API request to set up real-time updates")
-        
+
         # Validate refresh frequency
         valid_frequencies = ["hourly", "daily", "weekly"]
         if refresh_frequency not in valid_frequencies:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid refresh frequency: {refresh_frequency}. Supported: {valid_frequencies}"
+                detail=f"Invalid refresh frequency: {refresh_frequency}. Supported: {valid_frequencies}",
             )
-        
+
         # Set up real-time updates
         result = await service.setup_real_time_updates()
-        
-        if not result['success']:
+
+        if not result["success"]:
             raise HTTPException(
                 status_code=500,
-                detail=result.get('error', 'Failed to set up real-time updates')
+                detail=result.get("error", "Failed to set up real-time updates"),
             )
-        
+
         logger.info("Real-time updates set up successfully")
         return RefreshSetupResponse(**result)
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Failed to set up real-time updates: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to set up real-time updates: {str(e)}"
+            status_code=500, detail=f"Failed to set up real-time updates: {str(e)}"
         )
 
 
@@ -363,32 +370,33 @@ async def setup_real_time_updates(
     - Dashboard availability
     
     Returns comprehensive validation results.
-    """
+    """,
 )
 async def validate_quicksight_setup(
-    service: QuickSightDashboardService = Depends(get_quicksight_service)
+    service: QuickSightDashboardService = Depends(get_quicksight_service),
 ):
     """Validate QuickSight setup and resources."""
     try:
         logger.info("API request to validate QuickSight setup")
-        
+
         result = await service.validate_setup()
-        
-        logger.info(f"Validation completed: {'Success' if result['overall_valid'] else 'Issues found'}")
+
+        logger.info(
+            f"Validation completed: {'Success' if result['overall_valid'] else 'Issues found'}"
+        )
         return ValidationResponse(**result)
-        
+
     except Exception as e:
         logger.error(f"Failed to validate setup: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to validate setup: {str(e)}"
+            status_code=500, detail=f"Failed to validate setup: {str(e)}"
         )
 
 
 @router.get(
     "/health",
     summary="Health Check",
-    description="Health check endpoint for QuickSight dashboard service."
+    description="Health check endpoint for QuickSight dashboard service.",
 )
 async def health_check():
     """Health check for QuickSight dashboard service."""
@@ -396,48 +404,43 @@ async def health_check():
         # Simple health check - don't try to access service
         return {
             "status": "healthy",
-            "service": "quicksight-dashboard", 
+            "service": "quicksight-dashboard",
             "timestamp": datetime.now().isoformat(),
             "issue": "49",
-            "description": "AWS QuickSight Dashboard for News Insights"
+            "description": "AWS QuickSight Dashboard for News Insights",
         }
     except Exception as e:
         logger.error(f"Health check failed: {e}")
-        raise HTTPException(
-            status_code=503,
-            detail="Service unhealthy"
-        )
+        raise HTTPException(status_code=503, detail="Service unhealthy")
 
 
 @router.get(
     "/{dashboard_id}",
     response_model=Dict[str, Any],
     summary="Get Dashboard Info",
-    description="Get detailed information about a specific dashboard."
+    description="Get detailed information about a specific dashboard.",
 )
 async def get_dashboard_info(
     dashboard_id: str = Path(..., description="Dashboard ID"),
-    service: QuickSightDashboardService = Depends(get_quicksight_service)
+    service: QuickSightDashboardService = Depends(get_quicksight_service),
 ):
     """Get information about a specific dashboard."""
     try:
         logger.info(f"API request to get dashboard info: {dashboard_id}")
-        
+
         result = await service.get_dashboard_info(dashboard_id)
-        
-        if not result['success']:
+
+        if not result["success"]:
             raise HTTPException(
-                status_code=404,
-                detail=f"Dashboard not found: {dashboard_id}"
+                status_code=404, detail=f"Dashboard not found: {dashboard_id}"
             )
-        
+
         return result
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Failed to get dashboard info for {dashboard_id}: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to get dashboard info: {str(e)}"
+            status_code=500, detail=f"Failed to get dashboard info: {str(e)}"
         )

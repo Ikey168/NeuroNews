@@ -1,6 +1,7 @@
 # Multi-Source News Scraper
 
 This enhanced scraper collects news articles from 10+ major news sources with
+
 custom parsing, data validation, and comprehensive metadata extraction.
 
 ## Supported News Sources
@@ -49,6 +50,7 @@ Each article includes comprehensive metadata:
 - **Basic**: Title, URL, content, publication date, source, author, category
 
 - **Enhanced**: Scraped timestamp, content length, word count, reading time,
+
   language
 
 - **Quality**: Validation score, content quality rating, duplicate check status

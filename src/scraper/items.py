@@ -1,11 +1,13 @@
 """
 Items for the NeuroNews scrapers.
 """
+
 import scrapy
 
 
 class NewsItem(scrapy.Item):
     """Item for storing scraped news articles."""
+
     title = scrapy.Field()
     url = scrapy.Field()
     content = scrapy.Field()
@@ -13,7 +15,7 @@ class NewsItem(scrapy.Item):
     source = scrapy.Field()
     author = scrapy.Field()
     category = scrapy.Field()
-    
+
     # Additional metadata fields
     scraped_date = scrapy.Field()
     content_length = scrapy.Field()
@@ -24,12 +26,12 @@ class NewsItem(scrapy.Item):
     video_url = scrapy.Field()
     reading_time = scrapy.Field()
     word_count = scrapy.Field()
-    
+
     # Data quality fields
     validation_score = scrapy.Field()
     content_quality = scrapy.Field()
     duplicate_check = scrapy.Field()
-    
+
     # Multi-language processing fields
     language_info = scrapy.Field()
     translation_info = scrapy.Field()

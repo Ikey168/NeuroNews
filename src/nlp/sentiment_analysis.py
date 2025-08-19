@@ -1,10 +1,11 @@
 """Minimal sentiment analysis utilities used in tests."""
 
 import logging
-from typing import Dict, List, Optional
 from importlib import import_module
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
+
 
 def pipeline(*args: object, **kwargs: object):
     """Shallow wrapper around ``transformers.pipeline``.
@@ -27,12 +28,30 @@ class SentimentAnalyzer:
     DEFAULT_MODEL = "distilbert-base-uncased-finetuned-sst-2-english"
 
     POSITIVE_WORDS = {
-        "exceed", "growth", "grew", "profit", "excellent",
-        "love", "good", "great", "positive", "up", "wonderful", "amazing",
+        "exceed",
+        "growth",
+        "grew",
+        "profit",
+        "excellent",
+        "love",
+        "good",
+        "great",
+        "positive",
+        "up",
+        "wonderful",
+        "amazing",
     }
     NEGATIVE_WORDS = {
-        "crash", "wipe", "loss", "decline", "bad",
-        "terrible", "hate", "negative", "down", "dreadful",
+        "crash",
+        "wipe",
+        "loss",
+        "decline",
+        "bad",
+        "terrible",
+        "hate",
+        "negative",
+        "down",
+        "dreadful",
     }
 
     def __init__(self, model_name: Optional[str] = None, **_: object) -> None:
@@ -100,19 +119,23 @@ class SentimentAnalyzer:
                 for original in texts:
                     if original and str(original).strip():
                         item = raw_results[result_idx]
-                        processed.append({
-                            "label": str(item.get("label", "NEUTRAL")).upper(),
-                            "score": float(item.get("score", 0.0)),
-                            "text": original,
-                        })
+                        processed.append(
+                            {
+                                "label": str(item.get("label", "NEUTRAL")).upper(),
+                                "score": float(item.get("score", 0.0)),
+                                "text": original,
+                            }
+                        )
                         result_idx += 1
                     else:
-                        processed.append({
-                            "label": "ERROR",
-                            "score": 0.0,
-                            "text": original,
-                            "message": "Input text is empty or whitespace.",
-                        })
+                        processed.append(
+                            {
+                                "label": "ERROR",
+                                "score": 0.0,
+                                "text": original,
+                                "message": "Input text is empty or whitespace.",
+                            }
+                        )
                 return processed
             except Exception as exc:  # pragma: no cover - runtime error
                 logger.debug("Pipeline batch inference failed: %s", exc)
@@ -123,45 +146,55 @@ class SentimentAnalyzer:
     batch_analyze = analyze_batch
 
 
-def create_analyzer(model_name: Optional[str] = None, provider: Optional[str] = None, **kwargs: object):
+def create_analyzer(
+    model_name: Optional[str] = None, provider: Optional[str] = None, **kwargs: object
+):
     """
     Factory function to create sentiment analyzers.
-    
+
     Args:
         model_name: Name of the model to use (for HuggingFace transformers)
         provider: Provider type ('huggingface', 'aws', 'aws_comprehend')
         **kwargs: Additional configuration for the analyzer
-        
+
     Returns:
         Sentiment analyzer instance
     """
     # Handle backward compatibility - if model_name provided, use HuggingFace
     if model_name and not provider:
         provider = "huggingface"
-    
+
     # Default to HuggingFace if no provider specified
     if not provider:
         provider = "huggingface"
-    
+
     provider = provider.lower()
-    
+
     if provider in ["aws", "aws_comprehend"]:
         try:
             from .aws_sentiment import AWSComprehendSentimentAnalyzer
+
             return AWSComprehendSentimentAnalyzer(**kwargs)
         except ImportError as e:
-            logger.warning(f"AWS Comprehend not available: {e}. Falling back to HuggingFace.")
+            logger.warning(
+                f"AWS Comprehend not available: {e}. Falling back to HuggingFace."
+            )
             provider = "huggingface"
         except Exception as e:
-            logger.error(f"Failed to initialize AWS Comprehend: {e}. Falling back to HuggingFace.")
+            logger.error(
+                f"Failed to initialize AWS Comprehend: {e}. Falling back to HuggingFace."
+            )
             provider = "huggingface"
-    
+
     if provider == "huggingface":
         return SentimentAnalyzer(model_name=model_name)
-    
+
     raise ValueError(f"Unsupported sentiment provider: {provider}")
 
+
 # Backward compatibility function
-def create_huggingface_analyzer(model_name: Optional[str] = None, **kwargs: object) -> SentimentAnalyzer:
+def create_huggingface_analyzer(
+    model_name: Optional[str] = None, **kwargs: object
+) -> SentimentAnalyzer:
     """Create a HuggingFace transformer-based sentiment analyzer."""
     return SentimentAnalyzer(model_name=model_name)

@@ -4,11 +4,14 @@ Main FastAPI application configuration.
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from src.api.routes import graph_routes, news_routes, event_routes, veracity_routes
+
+from src.api.routes import (event_routes, graph_routes, news_routes,
+                            veracity_routes)
 
 # Try to import enhanced knowledge graph routes (Issue #37)
 try:
     from src.api.routes import enhanced_kg_routes
+
     ENHANCED_KG_AVAILABLE = True
 except ImportError:
     ENHANCED_KG_AVAILABLE = False
@@ -16,6 +19,7 @@ except ImportError:
 # Try to import event timeline routes (Issue #38)
 try:
     from src.api.routes import event_timeline_routes
+
     EVENT_TIMELINE_AVAILABLE = True
 except ImportError:
     EVENT_TIMELINE_AVAILABLE = False
@@ -23,39 +27,47 @@ except ImportError:
 # Try to import quicksight dashboard routes (Issue #49)
 try:
     from src.api.routes import quicksight_routes
+
     QUICKSIGHT_AVAILABLE = True
 except ImportError:
     QUICKSIGHT_AVAILABLE = False
 
 # Try to import rate limiting components (Issue #59)
 try:
-    from src.api.middleware.rate_limit_middleware import RateLimitMiddleware, RateLimitConfig
-    from src.api.routes import rate_limit_routes
-    from src.api.routes import auth_routes
+    from src.api.middleware.rate_limit_middleware import (RateLimitConfig,
+                                                          RateLimitMiddleware)
+    from src.api.routes import auth_routes, rate_limit_routes
+
     RATE_LIMITING_AVAILABLE = True
 except ImportError:
     RATE_LIMITING_AVAILABLE = False
 
 # Try to import RBAC components (Issue #60)
 try:
-    from src.api.rbac.rbac_middleware import EnhancedRBACMiddleware, RBACMetricsMiddleware
+    from src.api.rbac.rbac_middleware import (EnhancedRBACMiddleware,
+                                              RBACMetricsMiddleware)
     from src.api.routes import rbac_routes
+
     RBAC_AVAILABLE = True
 except ImportError:
     RBAC_AVAILABLE = False
 
 # Try to import API key management components (Issue #61)
 try:
-    from src.api.auth.api_key_middleware import APIKeyAuthMiddleware, APIKeyMetricsMiddleware
+    from src.api.auth.api_key_middleware import (APIKeyAuthMiddleware,
+                                                 APIKeyMetricsMiddleware)
     from src.api.routes import api_key_routes
+
     API_KEY_MANAGEMENT_AVAILABLE = True
 except ImportError:
     API_KEY_MANAGEMENT_AVAILABLE = False
 
 # Try to import AWS WAF security components (Issue #65)
 try:
-    from src.api.security.waf_middleware import WAFSecurityMiddleware, WAFMetricsMiddleware
     from src.api.routes import waf_security_routes
+    from src.api.security.waf_middleware import (WAFMetricsMiddleware,
+                                                 WAFSecurityMiddleware)
+
     WAF_SECURITY_AVAILABLE = True
 except ImportError:
     WAF_SECURITY_AVAILABLE = False
@@ -63,7 +75,7 @@ except ImportError:
 app = FastAPI(
     title="NeuroNews API",
     description="API for accessing news articles and knowledge graph with RBAC, rate limiting, API key management, and AWS WAF security",
-    version="0.1.0"
+    version="0.1.0",
 )
 
 # Add WAF security middleware first for maximum protection (Issue #65)
@@ -129,6 +141,7 @@ if EVENT_TIMELINE_AVAILABLE:
 if QUICKSIGHT_AVAILABLE:
     app.include_router(quicksight_routes.router)
 
+
 @app.get("/")
 async def root():
     """Root endpoint."""
@@ -142,9 +155,10 @@ async def root():
             "waf_security": WAF_SECURITY_AVAILABLE,
             "enhanced_kg": ENHANCED_KG_AVAILABLE,
             "event_timeline": EVENT_TIMELINE_AVAILABLE,
-            "quicksight": QUICKSIGHT_AVAILABLE
-        }
+            "quicksight": QUICKSIGHT_AVAILABLE,
+        },
     }
+
 
 @app.get("/health")
 async def health_check():
@@ -157,9 +171,11 @@ async def health_check():
             "api": "operational",
             "rate_limiting": "operational" if RATE_LIMITING_AVAILABLE else "disabled",
             "rbac": "operational" if RBAC_AVAILABLE else "disabled",
-            "api_key_management": "operational" if API_KEY_MANAGEMENT_AVAILABLE else "disabled",
+            "api_key_management": (
+                "operational" if API_KEY_MANAGEMENT_AVAILABLE else "disabled"
+            ),
             "waf_security": "operational" if WAF_SECURITY_AVAILABLE else "disabled",
             "database": "unknown",  # Would check actual DB connection
-            "cache": "unknown"      # Would check Redis connection
-        }
+            "cache": "unknown",  # Would check Redis connection
+        },
     }

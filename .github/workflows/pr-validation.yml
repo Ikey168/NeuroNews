@@ -105,10 +105,19 @@ jobs:
 
       - name: Validate YAML syntax
         run: |
-          # Basic YAML syntax validation
+          # Basic YAML syntax validation with multi-document support
           find k8s/ -name "*.yaml" -o -name "*.yml" | while read file; do
             echo "Validating YAML syntax: $file"
-            python3 -c "import yaml; yaml.safe_load(open('$file'))" || exit 1
+            python3 -c "
+import yaml
+with open('$file', 'r') as f:
+    try:
+        list(yaml.safe_load_all(f))
+        print('✅ Valid YAML: $file')
+    except yaml.YAMLError as e:
+        print('❌ Invalid YAML: $file - ' + str(e))
+        exit(1)
+" || exit 1
           done
 
       - name: Kubectl client-side validation

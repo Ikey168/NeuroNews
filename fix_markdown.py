@@ -44,5 +44,15 @@ def fix_markdown_file(filepath):
     print(f"Fixed markdown issues in {filepath}")
 
 if __name__ == "__main__":
-    fix_markdown_file("src/scraper/README.md")
-    fix_markdown_file("STREAMLIT_DASHBOARD_README.md")
+    import glob
+    
+    # Fix all README files
+    readme_files = glob.glob("**/*README*.md", recursive=True)
+    readme_files.extend(glob.glob("*.md"))
+    readme_files.extend(glob.glob(".github/**/*.md", recursive=True))
+    
+    for file in readme_files:
+        try:
+            fix_markdown_file(file)
+        except Exception as e:
+            print(f"Warning: Could not fix {file}: {e}")

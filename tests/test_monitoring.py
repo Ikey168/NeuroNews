@@ -12,7 +12,7 @@ import time
 from unittest.mock import Mock, patch, AsyncMock, MagicMock
 from pathlib import Path
 import boto3
-from moto import mock_dynamodb, mock_cloudwatch, mock_sns
+from moto import mock_aws
 
 import sys
 sys.path.append('/workspaces/NeuroNews/src')
@@ -26,7 +26,7 @@ from scraper.enhanced_retry_manager import EnhancedRetryManager, RetryConfig, Re
 class TestCloudWatchLogger:
     """Test CloudWatch logging functionality."""
     
-    @mock_cloudwatch
+    @mock_aws
     def test_cloudwatch_logger_initialization(self):
         """Test CloudWatch logger initializes correctly."""
         logger = CloudWatchLogger(region_name='us-east-1')
@@ -34,7 +34,7 @@ class TestCloudWatchLogger:
         assert logger.region_name == 'us-east-1'
     
     @pytest.mark.asyncio
-    @mock_cloudwatch
+    @mock_aws
     async def test_log_scraping_attempt(self):
         """Test logging scraping attempts."""
         logger = CloudWatchLogger(region_name='us-east-1')
@@ -56,7 +56,7 @@ class TestCloudWatchLogger:
             mock_metrics.assert_called_once()
     
     @pytest.mark.asyncio
-    @mock_cloudwatch
+    @mock_aws
     async def test_batch_metrics_sending(self):
         """Test batch metrics functionality."""
         logger = CloudWatchLogger(region_name='us-east-1')
@@ -89,7 +89,7 @@ class TestCloudWatchLogger:
 class TestDynamoDBFailureManager:
     """Test DynamoDB failure management functionality."""
     
-    @mock_dynamodb
+    @mock_aws
     def test_dynamodb_manager_initialization(self):
         """Test DynamoDB manager initializes correctly."""
         manager = DynamoDBFailureManager(
@@ -100,7 +100,7 @@ class TestDynamoDBFailureManager:
         assert manager.region_name == 'us-east-1'
     
     @pytest.mark.asyncio
-    @mock_dynamodb
+    @mock_aws
     async def test_record_failure(self):
         """Test recording failure attempts."""
         manager = DynamoDBFailureManager(
@@ -127,7 +127,7 @@ class TestDynamoDBFailureManager:
             mock_put.assert_called_once()
     
     @pytest.mark.asyncio
-    @mock_dynamodb
+    @mock_aws
     async def test_get_urls_ready_for_retry(self):
         """Test getting URLs ready for retry."""
         manager = DynamoDBFailureManager(
@@ -161,7 +161,7 @@ class TestDynamoDBFailureManager:
 class TestSNSAlertManager:
     """Test SNS alerting functionality."""
     
-    @mock_sns
+    @mock_aws
     def test_sns_manager_initialization(self):
         """Test SNS manager initializes correctly."""
         manager = SNSAlertManager(
@@ -172,7 +172,7 @@ class TestSNSAlertManager:
         assert manager.region_name == 'us-east-1'
     
     @pytest.mark.asyncio
-    @mock_sns
+    @mock_aws
     async def test_send_alert(self):
         """Test sending alerts."""
         manager = SNSAlertManager(
@@ -197,7 +197,7 @@ class TestSNSAlertManager:
             mock_publish.assert_called_once()
     
     @pytest.mark.asyncio
-    @mock_sns
+    @mock_aws
     async def test_rate_limiting(self):
         """Test alert rate limiting."""
         manager = SNSAlertManager(
@@ -317,9 +317,9 @@ class TestIntegration:
     """Integration tests for monitoring and error handling system."""
     
     @pytest.mark.asyncio
-    @mock_cloudwatch
-    @mock_dynamodb
-    @mock_sns
+    @mock_aws
+    @mock_aws
+    @mock_aws
     async def test_full_monitoring_workflow(self):
         """Test complete monitoring workflow."""
         # Initialize all components

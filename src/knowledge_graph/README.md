@@ -5,43 +5,65 @@ This component provides functionality for building and managing a knowledge grap
 ## Components
 
 ### 1. GraphBuilder Class
+
 The main class for interacting with the Neptune graph database. Located in `graph_builder.py`.
 
 #### Key Features:
+
 - Entity creation (People, Organizations, Events, Articles)
+
 - Relationship management
+
 - Property validation and cleaning
+
 - Batch operations
+
 - Error handling
+
 - Connection management
 
 ### 2. Schema
+
 The graph schema is defined in `deployment/terraform/scripts/neptune_schema.gremlin` and includes:
 
 #### Vertex Labels:
+
 - `Person`: Individuals mentioned in news articles
+
 - `Organization`: Companies, institutions, and other organizations
+
 - `Event`: News events, conferences, announcements
+
 - `Article`: News articles that mention entities
 
 #### Key Relationships:
+
 - `WORKS_FOR`: Person → Organization
+
 - `PARTICIPATED_IN`: Person → Event
+
 - `HOSTED`: Organization → Event
+
 - `MENTIONS_PERSON`: Article → Person
+
 - `MENTIONS_ORG`: Article → Organization
+
 - `COVERS_EVENT`: Article → Event
 
 ## Usage
 
 ### Basic Usage
+
 ```python
+
 from knowledge_graph.graph_builder import GraphBuilder
 
 # Initialize the graph builder
+
 graph = GraphBuilder(neptune_endpoint="your-neptune-endpoint")
 
 # Add entities
+
 person_id = graph.add_person({
     "name": "John Doe",
     "title": "CEO",
@@ -55,16 +77,20 @@ org_id = graph.add_organization({
 })
 
 # Create relationships
+
 graph.add_relationship(
     person_id,
     org_id,
     "WORKS_FOR",
     {"role": "CEO", "startDate": "2020-01-01"}
 )
-```
+
+```text
 
 ### Batch Operations
+
 ```python
+
 entities = [
     {
         "type": "Person",
@@ -86,53 +112,75 @@ relationships = [
 ]
 
 entity_ids, rel_ids = graph.batch_insert(entities, relationships)
-```
+
+```text
 
 ### Example Queries
 
 1. Find all articles mentioning a person:
+
 ```python
+
 articles = graph.g.V().hasLabel('Person').has('name', 'John Doe')\
     .in_('MENTIONS_PERSON')\
     .values('headline').toList()
-```
+
+```text
 
 2. Get organization's key events:
+
 ```python
+
 events = graph.g.V().hasLabel('Organization').has('orgName', 'TechCorp')\
     .out('HOSTED')\
     .valueMap().toList()
-```
+
+```text
 
 3. Find connections between organizations:
+
 ```python
+
 connections = graph.g.V().hasLabel('Organization')\
     .out('PARTNERS_WITH')\
     .path().by('orgName').toList()
-```
+
+```text
 
 ## Testing
 
 Run the tests using pytest:
+
 ```bash
+
 pytest tests/knowledge_graph/test_graph_builder.py
-```
+
+```text
 
 ## Example Script
 
 See `examples/build_news_graph.py` for a complete example of building a knowledge graph from news data, including:
+
 - Creating entities and relationships
+
 - Property handling
+
 - Query examples
+
 - Error handling
 
 ## Error Handling
 
 The GraphBuilder includes comprehensive error handling for:
+
 - Connection issues
+
 - Invalid property types
+
 - Missing required properties
+
 - Duplicate entities
+
 - Failed operations
 
 All errors are logged with appropriate context for debugging.
@@ -140,54 +188,80 @@ All errors are logged with appropriate context for debugging.
 ## Best Practices
 
 1. Always use the `with` statement or try-finally to ensure proper connection closure:
+
 ```python
+
 with GraphBuilder(endpoint) as graph:
     graph.add_person(...)
-```
+
+```text
 
 2. Use batch operations for better performance when inserting multiple entities:
+
 ```python
+
 graph.batch_insert(entities, relationships)
-```
+
+```text
 
 3. Clean up properties before insertion:
+
 ```python
+
 props = graph._clean_properties(raw_properties)
-```
+
+```text
 
 4. Use the get_or_create methods to prevent duplicates:
+
 ```python
+
 person_id = graph.get_or_create_person("John Doe", additional_props)
-```
+
+```text
 
 ## Performance Considerations
 
 - Use batch operations for bulk inserts
+
 - Index important properties for faster queries
+
 - Clean and validate properties before insertion
+
 - Use appropriate edge labels for efficient traversals
+
 - Consider using Neptune's bulk loader for large datasets
 
 ## Dependencies
 
 - gremlin-python
+
 - boto3
+
 - python-dateutil
+
 - logging
 
 ## Configuration
 
 Configure the Neptune endpoint through environment variables:
+
 ```bash
+
 export NEPTUNE_ENDPOINT="your-cluster-endpoint"
-```
+
+```text
 
 ## Integration
 
 The knowledge graph builder integrates with:
+
 - AWS Neptune database
+
 - News article processing pipeline
+
 - Entity extraction system
+
 - Sentiment analysis
 
 ## Query Examples
@@ -195,14 +269,19 @@ The knowledge graph builder integrates with:
 ### Gremlin Queries
 
 1. Find organizations mentioned positively in articles:
+
 ```python
+
 g.V().hasLabel('Article')\
     .outE('MENTIONS_ORG').has('sentiment', P.gt(0.5))\
     .inV().valueMap(True).toList()
-```
+
+```text
 
 2. Get organization collaboration network:
+
 ```python
+
 g.V().hasLabel('Organization')\
     .outE('PARTNERS_WITH')\
     .project('org1', 'org2', 'partnership_type')\
@@ -210,10 +289,13 @@ g.V().hasLabel('Organization')\
     .by(__.outV().values('orgName'))\
     .by('partnership_type')\
     .toList()
-```
+
+```text
 
 3. Find people participating in the same events:
+
 ```python
+
 g.V().hasLabel('Person')\
     .as_('person1')\
     .out('PARTICIPATED_IN').as_('event')\
@@ -224,12 +306,15 @@ g.V().hasLabel('Person')\
     .by(__.values('name'))\
     .by(__.select('event').values('eventName'))\
     .toList()
-```
+
+```text
 
 ### SPARQL Queries
 
 1. Find organization relationships and events:
+
 ```sparql
+
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX news: <http://neuronews.org/ontology/>
 
@@ -242,10 +327,13 @@ WHERE {
         news:eventName ?eventName .
     FILTER(?relationship IN (news:HOSTED, news:SPONSORED))
 }
-```
+
+```text
 
 2. Analyze sentiment patterns:
+
 ```sparql
+
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX news: <http://neuronews.org/ontology/>
 
@@ -263,7 +351,9 @@ WHERE {
 }
 GROUP BY ?org
 HAVING (?positiveCount + ?negativeCount > 0)
+
 ORDER BY DESC(?positiveCount)
-```
+
+```text
 
 See `examples/graph_queries.py` for more query examples and patterns.

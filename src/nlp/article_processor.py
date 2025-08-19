@@ -3,26 +3,31 @@ Article processing pipeline that analyzes sentiment and stores results in Redshi
 """
 
 import logging
-from typing import List, Dict, Optional
+from datetime import datetime
+from typing import Dict, List, Optional
+
 import psycopg2
 from psycopg2.extras import execute_batch
-from datetime import datetime
+
 from .sentiment_analysis import create_analyzer
 
 logger = logging.getLogger(__name__)
 
+
 class ArticleProcessor:
     """Processes articles for sentiment analysis and stores results in Redshift."""
 
-    def __init__(self, 
-                 redshift_host: str,
-                 redshift_port: int,
-                 redshift_database: str,
-                 redshift_user: str,
-                 redshift_password: str,
-                 sentiment_provider: str = "aws",
-                 batch_size: int = 25,
-                 **sentiment_kwargs):
+    def __init__(
+        self,
+        redshift_host: str,
+        redshift_port: int,
+        redshift_database: str,
+        redshift_user: str,
+        redshift_password: str,
+        sentiment_provider: str = "aws",
+        batch_size: int = 25,
+        **sentiment_kwargs,
+    ):
         """
         Initialize the article processor.
 
@@ -42,13 +47,15 @@ class ArticleProcessor:
             "port": redshift_port,
             "database": redshift_database,
             "user": redshift_user,
-            "password": redshift_password
+            "password": redshift_password,
         }
-        
+
         # Initialize sentiment analyzer
         try:
             self.analyzer = create_analyzer(sentiment_provider, **sentiment_kwargs)
-            logger.info(f"Initialized sentiment analyzer with provider: {sentiment_provider}")
+            logger.info(
+                f"Initialized sentiment analyzer with provider: {sentiment_provider}"
+            )
         except Exception as e:
             logger.error(f"Failed to initialize sentiment analyzer: {str(e)}")
             raise
@@ -73,7 +80,7 @@ class ArticleProcessor:
             publish_date DATE
         );
         """
-        
+
         try:
             with psycopg2.connect(**self.conn_params) as conn:
                 with conn.cursor() as cur:
@@ -101,13 +108,15 @@ class ArticleProcessor:
             sentiment_scores = EXCLUDED.sentiment_scores,
             processed_at = CURRENT_TIMESTAMP;
         """
-        
+
         try:
             with psycopg2.connect(**self.conn_params) as conn:
                 with conn.cursor() as cur:
                     execute_batch(cur, insert_sql, results, page_size=self.batch_size)
                     conn.commit()
-                    logger.info(f"Successfully stored {len(results)} results in Redshift")
+                    logger.info(
+                        f"Successfully stored {len(results)} results in Redshift"
+                    )
         except Exception as e:
             logger.error(f"Failed to store results in Redshift: {str(e)}")
             raise
@@ -130,13 +139,14 @@ class ArticleProcessor:
         """
         try:
             # Extract content for analysis
-            texts = [f"{article.get('title', '')}. {article.get('content', '')}"
-                    for article in articles]
+            texts = [
+                f"{article.get('title', '')}. {article.get('content', '')}"
+                for article in articles
+            ]
 
             # Perform batch sentiment analysis
             sentiment_results = self.analyzer.batch_analyze(
-                texts,
-                batch_size=self.batch_size
+                texts, batch_size=self.batch_size
             )
 
             # Combine article data with sentiment results
@@ -152,7 +162,7 @@ class ArticleProcessor:
                     "sentiment_scores": sentiment.get("all_scores", {}),
                     "provider": sentiment["provider"],
                     "source_domain": article.get("source_domain"),
-                    "publish_date": article.get("publish_date")
+                    "publish_date": article.get("publish_date"),
                 }
                 processed_results.append(result)
 
@@ -165,6 +175,7 @@ class ArticleProcessor:
             logger.error(f"Error processing articles: {str(e)}")
             raise
 
+
 # Example usage
 if __name__ == "__main__":
     # Example configuration
@@ -175,7 +186,7 @@ if __name__ == "__main__":
         "redshift_user": "admin",
         "redshift_password": "your-password",
         "sentiment_provider": "aws",
-        "region_name": "us-west-2"  # for AWS Comprehend
+        "region_name": "us-west-2",  # for AWS Comprehend
     }
 
     # Initialize processor
@@ -189,7 +200,7 @@ if __name__ == "__main__":
             "title": "Company XYZ Reports Strong Growth",
             "content": "Company XYZ announced record profits...",
             "source_domain": "example.com",
-            "publish_date": "2025-04-06"
+            "publish_date": "2025-04-06",
         }
     ]
 

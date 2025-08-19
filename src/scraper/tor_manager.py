@@ -4,14 +4,17 @@ Handles Tor proxy setup, identity rotation, and health checks.
 """
 
 import asyncio
-import aiohttp
-import subprocess
 import logging
+import subprocess
 from typing import Optional
+
+import aiohttp
+
 
 class TorManager:
     """Manages Tor proxy and identity rotation."""
-    def __init__(self, tor_proxy_url: str = 'socks5://127.0.0.1:9050'):
+
+    def __init__(self, tor_proxy_url: str = "socks5://127.0.0.1:9050"):
         self.tor_proxy_url = tor_proxy_url
         self.logger = logging.getLogger(__name__)
 
@@ -20,9 +23,13 @@ class TorManager:
         try:
             # This assumes Tor is running and control port is available
             proc = await asyncio.create_subprocess_exec(
-                'torify', 'curl', '--socks5', '127.0.0.1:9050', 'https://check.torproject.org/',
+                "torify",
+                "curl",
+                "--socks5",
+                "127.0.0.1:9050",
+                "https://check.torproject.org/",
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                stderr=asyncio.subprocess.PIPE,
             )
             stdout, stderr = await proc.communicate()
             if proc.returncode == 0:
