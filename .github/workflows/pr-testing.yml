@@ -278,7 +278,7 @@ jobs:
           exit-code: '0'  # Don't fail on vulnerabilities in PR
 
       - name: Run Semgrep security scan
-        uses: returntocorp/semgrep-action@v1
+        uses: semgrep/semgrep-action@v1
         with:
           config: >-
             p/security-audit

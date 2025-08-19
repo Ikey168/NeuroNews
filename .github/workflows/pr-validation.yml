@@ -385,13 +385,12 @@ jobs:
           fi
 
       - name: Validate markdown files
-        uses: DavidAnson/markdownlint-action@v1
+        uses: DavidAnson/markdownlint-cli2-action@v13
         with:
-          files: '**/*.md'
-          config: '.markdownlint.json'
+          globs: '**/*.md'
 
       - name: Check for broken links
-        uses: lycheeverse/lychee-action@v1
+        uses: lycheeverse/lychee-action@v1.8.0
         with:
           args: --verbose --no-progress '**/*.md'
 
