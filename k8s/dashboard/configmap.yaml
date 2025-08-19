@@ -74,22 +74,22 @@ metadata:
     description: "Sensitive configuration for NeuroNews Dashboard"
 type: Opaque
 data:
-  # Database password (base64 encoded)
-  DB_PASSWORD: bmV1cm9uZXdzX3Bhc3N3b3Jk  # neuronews_password
+  # Replace with actual base64 encoded credentials during deployment
+  DB_PASSWORD: REPLACE_WITH_ACTUAL_DB_PASSWORD_B64
   
   # Redis password (if required)
-  REDIS_PASSWORD: ""
+  REDIS_PASSWORD: REPLACE_WITH_ACTUAL_REDIS_PASSWORD_B64
   
   # API Keys for external services
-  NEWS_API_KEY: ""
-  OPENAI_API_KEY: ""
+  NEWS_API_KEY: REPLACE_WITH_ACTUAL_NEWS_API_KEY_B64
+  OPENAI_API_KEY: REPLACE_WITH_ACTUAL_OPENAI_API_KEY_B64
   
   # Session secret for authentication
-  SESSION_SECRET: bmV1cm9uZXdzX3Nlc3Npb25fc2VjcmV0  # neuronews_session_secret
+  SESSION_SECRET: REPLACE_WITH_ACTUAL_SESSION_SECRET_B64
   
   # Monitoring credentials
-  METRICS_USERNAME: YWRtaW4=  # admin
-  METRICS_PASSWORD: cGFzc3dvcmQ=  # password
+  METRICS_USERNAME: REPLACE_WITH_ACTUAL_METRICS_USERNAME_B64
+  METRICS_PASSWORD: REPLACE_WITH_ACTUAL_METRICS_PASSWORD_B64
 
 ---
 apiVersion: v1

@@ -4,7 +4,7 @@ metadata:
   name: neuronews-nlp-config
   namespace: neuronews-staging
 data:
-  DATABASE_URL: "postgresql://neuronews:password@postgres-service:5432/neuronews_staging"
+  DATABASE_URL: "postgresql://neuronews:${POSTGRES_PASSWORD}@postgres-service:5432/neuronews_staging"
   REDIS_URL: "redis://redis-service:6379/1"  # Different DB for NLP
   ENVIRONMENT: "staging"
   LOG_LEVEL: "DEBUG"

@@ -12,7 +12,8 @@ metadata:
   name: neuronews-api-config
   namespace: neuronews-staging
 data:
-  DATABASE_URL: "postgresql://neuronews:password@postgres-service:5432/neuronews_staging"
+  # Use environment variables or secrets for sensitive data in actual deployment
+  DATABASE_URL: "postgresql://neuronews:${POSTGRES_PASSWORD}@postgres-service:5432/neuronews_staging"
   REDIS_URL: "redis://redis-service:6379/0"
   ENVIRONMENT: "staging"
   LOG_LEVEL: "DEBUG"

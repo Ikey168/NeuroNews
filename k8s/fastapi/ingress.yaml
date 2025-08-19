@@ -118,7 +118,7 @@ metadata:
   namespace: neuronews
 type: kubernetes.io/tls
 data:
-  # Base64 encoded TLS certificate and private key
-  # These should be replaced with actual certificate data
-  tls.crt: LS0tLS1CRUdJTi... # Certificate data here
-  tls.key: LS0tLS1CRUdJTi... # Private key data here
+  # Replace with actual base64 encoded TLS certificate and private key during deployment
+  # Use: kubectl create secret tls neuronews-tls --cert=path/to/tls.crt --key=path/to/tls.key
+  tls.crt: REPLACE_WITH_ACTUAL_TLS_CERT_B64
+  tls.key: REPLACE_WITH_ACTUAL_TLS_KEY_B64

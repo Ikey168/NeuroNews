@@ -136,13 +136,12 @@ metadata:
     component: scraper
 type: Opaque
 data:
-  # Base64 encoded scraper-specific secrets
-  # Replace with actual encoded values
-  captcha-api-key: WU9VUl9DQVBURE1BSV9BUElfS0VZ         # YOUR_CAPTCHA_API_KEY
-  proxy-username: WU9VUl9QUk9YWV9VU0VSTkFNRQ==           # YOUR_PROXY_USERNAME
-  proxy-password: WU9VUl9QUk9YWV9QQVNTV09SRA==           # YOUR_PROXY_PASSWORD
-  monitoring-token: WU9VUl9NT05JVE9SSU5HX1RPS0VO         # YOUR_MONITORING_TOKEN
-  webhook-secret: WU9VUl9XRUJIT09LX1NFQ1JFVA==           # YOUR_WEBHOOK_SECRET
+  # Replace with actual base64 encoded scraper-specific secrets during deployment
+  captcha-api-key: REPLACE_WITH_ACTUAL_CAPTCHA_API_KEY_B64
+  proxy-username: REPLACE_WITH_ACTUAL_PROXY_USERNAME_B64
+  proxy-password: REPLACE_WITH_ACTUAL_PROXY_PASSWORD_B64
+  monitoring-token: REPLACE_WITH_ACTUAL_MONITORING_TOKEN_B64
+  webhook-secret: REPLACE_WITH_ACTUAL_WEBHOOK_SECRET_B64
 
 ---
 apiVersion: v1

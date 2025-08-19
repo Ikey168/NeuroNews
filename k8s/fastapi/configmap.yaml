@@ -63,13 +63,12 @@ metadata:
     component: database
 type: Opaque
 data:
-  # Base64 encoded database credentials
-  # Replace with actual encoded values
-  host: cG9zdGdyZXMtc2VydmljZQ==  # postgres-service
-  port: NTQzMg==                   # 5432
-  database: bmV1cm9uZXdz             # neuronews
-  username: bmV1cm9uZXdz             # neuronews
-  password: c2VjdXJlX3Bhc3N3b3Jk     # secure_password
+  # Replace with actual base64 encoded database credentials during deployment
+  host: REPLACE_WITH_ACTUAL_DB_HOST_B64
+  port: REPLACE_WITH_ACTUAL_DB_PORT_B64
+  database: REPLACE_WITH_ACTUAL_DB_NAME_B64
+  username: REPLACE_WITH_ACTUAL_DB_USERNAME_B64
+  password: REPLACE_WITH_ACTUAL_DB_PASSWORD_B64
 
 ---
 apiVersion: v1
@@ -82,9 +81,8 @@ metadata:
     component: auth
 type: Opaque
 data:
-  # Base64 encoded JWT secret key
-  # Replace with actual encoded secret
-  secret-key: eW91cl9qd3Rfc2VjcmV0X2tleV9oZXJl  # your_jwt_secret_key_here
+  # Replace with actual base64 encoded JWT secret key during deployment
+  secret-key: REPLACE_WITH_ACTUAL_JWT_SECRET_B64
 
 ---
 apiVersion: v1
@@ -97,7 +95,6 @@ metadata:
     component: aws
 type: Opaque
 data:
-  # Base64 encoded AWS credentials
-  # Replace with actual encoded credentials
-  access-key-id: WU9VUl9BQ0NFU1NfS0VZX0lE         # YOUR_ACCESS_KEY_ID
-  secret-access-key: WU9VUl9TRUNSRVRfQUNDRVNTX0tFWQ==  # YOUR_SECRET_ACCESS_KEY
+  # Replace with actual base64 encoded AWS credentials during deployment
+  access-key-id: REPLACE_WITH_ACTUAL_AWS_ACCESS_KEY_ID_B64
+  secret-access-key: REPLACE_WITH_ACTUAL_AWS_SECRET_ACCESS_KEY_B64
