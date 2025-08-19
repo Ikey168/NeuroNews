@@ -1,0 +1,162 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neuronews-nlp-processor
+  namespace: neuronews
+  labels:
+    app: neuronews-nlp-processor
+    component: nlp-processor
+    environment: production
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: neuronews-nlp-processor
+  template:
+    metadata:
+      labels:
+        app: neuronews-nlp-processor
+        component: nlp-processor
+        environment: production
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: neuronews-nlp-processor
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: neuronews-nlp-processor
+        image: ghcr.io/ikey168/neuronews/nlp-processor:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: metrics
+          protocol: TCP
+        env:
+        - name: ENVIRONMENT
+          value: "production"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: BATCH_SIZE
+          value: "100"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-db-secrets
+              key: database-url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-redis-secrets
+              key: redis-url
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-api-keys
+              key: openai-api-key
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 2000m
+            memory: 2Gi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: cache
+          mountPath: /app/cache
+        - name: model-cache
+          mountPath: /app/models
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: cache
+        emptyDir: {}
+      - name: model-cache
+        emptyDir:
+          sizeLimit: 5Gi
+      nodeSelector:
+        kubernetes.io/os: linux
+      tolerations:
+      - key: node.kubernetes.io/not-ready
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 300
+      - key: node.kubernetes.io/unreachable
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 300
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - neuronews-nlp-processor
+              topologyKey: kubernetes.io/hostname
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: neuronews-nlp-processor
+  namespace: neuronews
+  labels:
+    app: neuronews-nlp-processor
+    component: nlp-processor
+    environment: production
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: metrics
+  selector:
+    app: neuronews-nlp-processor
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: neuronews-nlp-processor
+  namespace: neuronews
+  labels:
+    app: neuronews-nlp-processor
+    component: nlp-processor
+    environment: production
+automountServiceAccountToken: false
