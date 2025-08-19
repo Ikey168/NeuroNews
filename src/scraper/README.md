@@ -18,7 +18,9 @@ This enhanced scraper collects news articles from 10+ major news sources with cu
 ## Features
 
 ### 🔍 Custom Parsers
+
 Each news source has a specialized spider with custom HTML parsing logic tailored to their specific website structure:
+
 - Source-specific CSS selectors
 - Date format parsing
 - Author extraction
@@ -26,13 +28,17 @@ Each news source has a specialized spider with custom HTML parsing logic tailore
 - Content quality assessment
 
 ### 📊 Rich Metadata Extraction
+
 Each article includes comprehensive metadata:
+
 - **Basic**: Title, URL, content, publication date, source, author, category
 - **Enhanced**: Scraped timestamp, content length, word count, reading time, language
 - **Quality**: Validation score, content quality rating, duplicate check status
 
 ### ✅ Data Validation
+
 Comprehensive validation pipeline ensures data quality:
+
 - Required field completeness
 - URL format validation
 - Date format verification
@@ -41,7 +47,9 @@ Comprehensive validation pipeline ensures data quality:
 - Overall accuracy scoring
 
 ### 📁 Organized Storage
+
 Articles are stored in multiple formats:
+
 - **Combined**: All articles in `data/all_articles.json`
 - **Source-specific**: Individual files in `data/sources/[source]_articles.json`
 - **S3 Integration**: Optional cloud storage with AWS S3
@@ -51,11 +59,13 @@ Articles are stored in multiple formats:
 ### Command Line Interface
 
 #### Run All Sources
+
 ```bash
 python -m src.scraper.run --multi-source
 ```
 
 #### Run Specific Source
+
 ```bash
 python -m src.scraper.run --spider cnn
 python -m src.scraper.run --spider bbc
@@ -63,26 +73,31 @@ python -m src.scraper.run --spider techcrunch
 ```
 
 #### Run Multiple Sources
+
 ```bash
 python -m src.scraper.run --multi-source --include cnn bbc reuters
 ```
 
 #### Exclude Sources
+
 ```bash
 python -m src.scraper.run --multi-source --exclude techcrunch arstechnica
 ```
 
 #### With Data Validation
+
 ```bash
 python -m src.scraper.run --multi-source --validate
 ```
 
 #### Generate Reports
+
 ```bash
 python -m src.scraper.run --report
 ```
 
 #### List Available Sources
+
 ```bash
 python -m src.scraper.run --list-sources
 ```
@@ -113,6 +128,7 @@ python -m src.scraper.data_validator
 ## Configuration
 
 ### Sources Configuration
+
 Edit `config/settings.json` to modify the list of sources:
 
 ```json
