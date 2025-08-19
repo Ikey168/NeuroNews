@@ -1,0 +1,58 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: neuronews-config
+  namespace: neuronews
+  labels:
+    app: neuronews
+    component: config
+data:
+  # Database configuration
+  database_host: "postgres-service"
+  database_port: "5432"
+  database_name: "neuronews"
+  
+  # Redis configuration
+  redis_url: "redis://redis-service:6379"
+  redis_host: "redis-service"
+  redis_port: "6379"
+  
+  # API configuration
+  api_host: "0.0.0.0"
+  api_port: "8000"
+  api_workers: "4"
+  
+  # Scraper configuration
+  scraper_interval: "3600"
+  scraper_batch_size: "100"
+  scraper_max_retries: "3"
+  
+  # NLP configuration
+  nlp_model_path: "/app/models"
+  nlp_batch_size: "32"
+  nlp_max_length: "512"
+  
+  # Monitoring configuration
+  metrics_enabled: "true"
+  logging_level: "INFO"
+  
+  # Feature flags
+  enable_sentiment_analysis: "true"
+  enable_entity_extraction: "true"
+  enable_topic_modeling: "true"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: neuronews-env-config
+  namespace: neuronews
+  labels:
+    app: neuronews
+    component: environment
+data:
+  environment: "production"
+  debug: "false"
+  timezone: "UTC"
+  cors_origins: "*"
+  max_content_length: "16777216"
+  session_timeout: "3600"

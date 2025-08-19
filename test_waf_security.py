@@ -4,47 +4,19 @@ AWS WAF Security Test and Demo Script for Issue #65.
 
 Tests all four requirements:
 1. Deploy AWS WAF (Web Application Firewall) for API protection
-2. Block SQL injection attack    def test_rate_limiting_integration(self) -> bool:
-        """Test rate limiting integration."""
-        try:
-            from src.api.security.waf_middleware import WAFSecurityMiddleware
-            from fastapi import FastAPI
-            
-            # Create a test app and middleware
-            app = FastAPI()
-            middleware = WAFSecurityMiddleware(app)
-            
-            # Test rate limiting check method exists and works
-            test_ip = "192.168.1.100"
-            has_rate_limiting = hasattr(middleware, '_check_rate_limiting')
-            
-            if has_rate_limiting:
-                # Try to call rate limiting check
-                try:
-                    result = middleware._check_rate_limiting(test_ip)
-                    rate_limited = isinstance(result, dict)
-                except Exception:
-                    rate_limited = True  # Method exists but may need proper setup
-            else:
-                rate_limited = False
-            
-            logger.info(f"✅ Rate limiting integration - method available: {has_rate_limiting}, functional: {rate_limited}")
-            return has_rate_limiting
-            
-        except Exception as e:
-            logger.error(f"❌ Rate limiting integration test failed: {e}")
-            return Falsesite scripting (XSS) attacks
-4. Enable geofencing (limit access by country)
-5. Monitor real-time attack attempts
+2. Block SQL injection attacks
+3. Rate limiting integration
+4. Monitor security metrics
 """
 
 import asyncio
+import sys
 import json
 import time
-import requests
 from datetime import datetime
-from typing import Dict, List, Any
+from typing import Dict, Any, List, Optional
 import logging
+import requests
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
