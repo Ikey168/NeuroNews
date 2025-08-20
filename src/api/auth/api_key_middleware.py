@@ -150,8 +150,6 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
             if not api_key.startswith("nn_"):
                 return None
 
-            key_prefix = api_key[:8]
-
             # Since we don't have a prefix index in this demo, we'll implement
             # a simplified validation approach
             # In production, you'd have a separate table or index for efficient

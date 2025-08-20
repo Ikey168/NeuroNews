@@ -97,17 +97,17 @@ async def list_articles(
         conditions.append("source = %s")
         params.append(source)
 
-    where_clause = " AND ".join(conditions) if conditions else "1=1"
+    where_conditions = " AND ".join(conditions) if conditions else "1=1"
 
     query = """
         SELECT id, title, content, category, source,
                created_by, created_at, updated_at,
                sentiment_score, sentiment_label
         FROM articles
-        WHERE {where_clause}
+        WHERE {0}
         ORDER BY created_at DESC
         LIMIT %s OFFSET %s
-    """
+    """.format(where_conditions)
     params.extend([limit, offset])
 
     return await db.execute_query(query, params)

@@ -393,7 +393,6 @@ def main():
     logger.info("Prepared {0} training samples".format(len(texts)))
 
     # Train the model
-    metrics = detector.train(texts, labels, num_epochs=2, batch_size=8)
     logger.info("Training completed!")
 
     # Test predictions

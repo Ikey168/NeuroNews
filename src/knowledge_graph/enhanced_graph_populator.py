@@ -508,7 +508,6 @@ class EnhancedKnowledgeGraphPopulator:
         """Find existing entity in the knowledge graph by normalized form."""
         try:
             # Query Neptune for existing entity
-            query = """
             g.V().hasLabel('{self._get_neptune_label(entity.label)}')
                  .has('normalized_form', '{entity.normalized_form}')
                  .id()

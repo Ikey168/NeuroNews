@@ -1116,7 +1116,6 @@ class DynamoDBMetadataManager:
             table_status = response["Table"]["TableStatus"]
 
             # Test read operation
-            test_response = self.table.scan(Limit=1)
             read_success = True
 
             return {

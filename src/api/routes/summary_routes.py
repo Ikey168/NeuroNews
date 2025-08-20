@@ -163,7 +163,6 @@ async def generate_summary(
     try:
         # Check if summary already exists (unless force regenerate)
         if not request.force_regenerate:
-            from_cache = False
             existing = await db.get_summary_by_article_and_length(
                 request.article_id, request.length
             )

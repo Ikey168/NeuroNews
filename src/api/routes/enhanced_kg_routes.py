@@ -663,15 +663,15 @@ async def _query_timeline_events(
         )
 
         # Execute query using enhanced populator's graph builder
-        results = await populator.graph_builder._execute_traversal(
-            populator.graph_builder.g.V()
-            .hasLabel("Article")
-            .has("title", containing(topic))
-            .order()
-            .by("published_date", descending)
-            .limit(max_events)
-            .valueMap(True)
-        )
+        query = (
+            "g.V().hasLabel('Article')"
+            ".has('title', textContains('{0}'))"
+            ".order().by('published_date', desc)"
+            ".limit({1})"
+            ".valueMap(true)"
+        ).format(topic, max_events)
+
+        results = await populator.graph_builder._execute_traversal(query)
 
         # Convert results to TimelineEvent objects
         timeline_events = []
@@ -802,28 +802,31 @@ async def _get_entity_relationships(
     """Get relationships for a specific entity."""
     try:
         # Query outgoing relationships
-        out_results = await populator.graph_builder._execute_traversal(
-            populator.graph_builder.g.V()
-            .has("id", entity_id)
-            .outE()
-            .project("type", "target", "properties")
-            .by(T.label)
-            .by(inV().valueMap("normalized_form", "entity_type"))
-            .by(valueMap())
-            .limit(50)
-        )
+        # Query outgoing relationships
+        out_query = (
+            "g.V().has('id', '{0}')"
+            ".outE()"
+            ".project('type', 'target', 'properties')"
+            ".by(label)"
+            ".by(inV().valueMap('normalized_form', 'entity_type'))"
+            ".by(valueMap())"
+            ".limit(50)"
+        ).format(entity_id)
+
+        out_results = await populator.graph_builder._execute_traversal(out_query)
 
         # Query incoming relationships
-        in_results = await populator.graph_builder._execute_traversal(
-            populator.graph_builder.g.V()
-            .has("id", entity_id)
-            .inE()
-            .project("type", "source", "properties")
-            .by(T.label)
-            .by(outV().valueMap("normalized_form", "entity_type"))
-            .by(valueMap())
-            .limit(50)
-        )
+        in_query = (
+            "g.V().has('id', '{0}')"
+            ".inE()"
+            ".project('type', 'source', 'properties')"
+            ".by(label)"
+            ".by(outV().valueMap('normalized_form', 'entity_type'))"
+            ".by(valueMap())"
+            ".limit(50)"
+        ).format(entity_id)
+
+        in_results = await populator.graph_builder._execute_traversal(in_query)
 
         relationships = []
 

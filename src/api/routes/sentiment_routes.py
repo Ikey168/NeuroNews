@@ -93,7 +93,6 @@ async def get_sentiment_trends(
         # Add condition to only include articles with sentiment data
         conditions.append("sentiment_label IS NOT NULL")
 
-        where_clause = " AND ".join(conditions)
 
         # Determine date grouping based on group_by parameter
         if group_by == "week":

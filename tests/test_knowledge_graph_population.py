@@ -124,7 +124,6 @@ class TestKnowledgeGraphPopulator:
         content = "This is test content for the article."
         published_date = datetime.utcnow()
 
-        result = await populator._add_article_node(
             article_id, title, content, published_date
         )
 

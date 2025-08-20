@@ -345,7 +345,6 @@ class KeywordTopicDatabase:
             params.append("%{0}%".format(keyword_filter))
 
         # Base query
-        where_clause = " AND ".join(conditions) if conditions else "1=1"
 
         # Count query
         count_query = """

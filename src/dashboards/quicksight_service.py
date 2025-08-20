@@ -220,7 +220,6 @@ class QuickSightDashboardService:
 
             # Check if data source already exists
             try:
-                existing = self.quicksight_client.describe_data_source(
                     AwsAccountId=self.config.aws_account_id,
                     DataSourceId=self.config.data_source_id,
                 )

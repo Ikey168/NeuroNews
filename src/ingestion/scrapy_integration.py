@@ -161,7 +161,6 @@ class OptimizedScrapyPipeline:
         self.flush_count += 1
 
         # Submit to thread pool for async processing
-        future = self.thread_pool.submit(
             self._process_articles_batch, articles_to_process, spider
         )
 

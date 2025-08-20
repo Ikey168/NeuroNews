@@ -340,7 +340,10 @@ class TestIntegration:
     def test_end_to_end_workflow(self, detector):
         """Test complete workflow from text input to API response."""
         # Sample article
-        article_text = "Scientists at a major university have developed a new renewable energy technology."
+        article_text = (
+            "Scientists at a major university have developed a new renewable energy "
+            "technology."
+        )
 
         # This would be a full integration test in a real environment
         # For now, we test the workflow structure

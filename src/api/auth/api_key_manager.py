@@ -416,8 +416,6 @@ class APIKeyManager:
         if not api_key.startswith("nn_"):
             return None
 
-        key_prefix = api_key[:8]
-
         # In a production system, we'd need an index on key_prefix
         # For now, we'll implement a simple verification approach
         # This is not optimal but works for the demo

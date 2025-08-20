@@ -690,7 +690,6 @@ async def sentiment_trends_health_check(
     """
     try:
         # Test database connection
-        test_alerts = await analyzer.get_active_alerts(limit=1)
 
         # Get basic statistics
         with psycopg2.connect(**analyzer.conn_params) as conn:

@@ -81,7 +81,10 @@ except ImportError:
 
 app = FastAPI(
     title="NeuroNews API",
-    description="API for accessing news articles and knowledge graph with RBAC, rate limiting, API key management, and AWS WAF security",
+    description=(
+        "API for accessing news articles and knowledge graph with RBAC, "
+        "rate limiting, API key management, and AWS WAF security"
+    ),
     version="0.1.0",
 )
 

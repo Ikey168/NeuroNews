@@ -342,7 +342,6 @@ class SentimentPipeline:
         try:
             # Build query to get articles to reprocess
             if article_ids:
-                placeholders = ",".join(["%s"] * len(article_ids))
                 query = """
                 SELECT id, title, content, url, source, publish_date
                 FROM news_articles

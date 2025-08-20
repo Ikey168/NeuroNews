@@ -133,7 +133,6 @@ async def get_articles(
             conditions.append("category = %s")
             params.append(category)
 
-        where_clause = " AND ".join(conditions) if conditions else "1=1"
 
         query = """
             SELECT id, title, url, publish_date, source, category,

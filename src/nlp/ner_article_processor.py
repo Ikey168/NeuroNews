@@ -392,7 +392,6 @@ class NERArticleProcessor(ArticleProcessor):
                 conditions.append("ae.entity_type = %(entity_type)s")
                 params["entity_type"] = entity_type
 
-            where_clause = " AND ".join(conditions)
 
             search_sql = """
             SELECT

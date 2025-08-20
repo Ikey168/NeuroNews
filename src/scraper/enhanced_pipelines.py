@@ -331,7 +331,6 @@ class SourceCredibilityPipeline:
 
     def close_spider(self, spider):
         """Log credibility statistics when spider closes."""
-        total = sum(self.credibility_stats.values())
 
         spider.logger.info(
             """

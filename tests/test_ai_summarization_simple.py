@@ -161,7 +161,10 @@ class TestBasicFunctionality:
         """Test summary metrics calculation."""
         summarizer = AIArticleSummarizer()
 
-        original_text = "This is a longer original text with multiple sentences. It contains more words than the summary."
+        original_text = (
+            "This is a longer original text with multiple sentences. It contains more words "
+            "than the summary."
+        )
         summary_text = "This is a summary."
         processing_time = 2.5
 

@@ -128,7 +128,6 @@ class KnowledgeGraphPopulator:
             entities = await self._extract_entities(full_text)
 
             # Add article node
-            article_node = await self._add_article_node(
                 article_id, title, content, published_date
             )
 

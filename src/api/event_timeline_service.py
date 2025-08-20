@@ -370,12 +370,12 @@ class EventTimelineService:
             # Use enhanced graph populator if available
             if hasattr(self.graph_populator, "_execute_traversal"):
                 # Build Gremlin query for events
-                query = """
-                g.V().has('entity_type', 'ARTICLE')
-                     .has('title', containing('{topic}'))
-                     .has('published_date', between('{start_date.isoformat()}', '{end_date.isoformat()}'))
-                     .limit(500)
-                """
+                query = (
+                    "g.V().has('entity_type', 'ARTICLE')"
+                    ".has('title', containing('{topic}'))"
+                    ".has('published_date', between('{start_date.isoformat()}', '{end_date.isoformat()}'))"
+                    ".limit(500)"
+                )
 
                 results = await self.graph_populator._execute_traversal(query)
                 return self._process_graph_results(results, topic)
@@ -456,8 +456,9 @@ class EventTimelineService:
                         ' ',
                         '_').lower()}",
                 "title": "Sample Event {0} for {1}".format(i + 1, topic),
-                "content": "This is a sample event related to {0}. This demonstrates the event timeline functionality for Issue #38.".format(
-                    topic
+                "content": (
+                    "This is a sample event related to {0}. This demonstrates the event "
+                    "timeline functionality for Issue #38.".format(topic)
                 ),
                 "published_date": event_time.isoformat(),
                 "author": "Sample Author",
@@ -534,19 +535,26 @@ class EventTimelineService:
                     return True
 
             # Create event vertex in Neptune
-            title_escaped = event.title.replace("'", "\\'")
-            description_escaped = event.description.replace("'", "\\'")
             event_vertex_query = """
             g.addV('EVENT')
-             .property('event_id', '{event.event_id}')
-             .property('title', '{title_escaped}')
-             .property('description', '{description_escaped}')
-             .property('timestamp', '{event.timestamp.isoformat()}')
-             .property('topic', '{event.topic}')
-             .property('event_type', '{event.event_type}')
-             .property('confidence', {event.confidence})
-             .property('impact_score', {event.impact_score})
-            """
+             .property('event_id', '{0}')
+             .property('title', '{1}')
+             .property('description', '{2}')
+             .property('timestamp', '{3}')
+             .property('topic', '{4}')
+             .property('event_type', '{5}')
+             .property('confidence', {6})
+             .property('impact_score', {7})
+            """.format(
+                event.event_id,
+                event.title.replace("'", "\\'"),
+                event.description.replace("'", "\\'"),
+                event.timestamp.isoformat(),
+                event.topic,
+                event.event_type,
+                event.confidence,
+                event.impact_score
+            )
 
             if hasattr(self.graph_populator, "_execute_traversal"):
                 await self.graph_populator._execute_traversal(event_vertex_query)
@@ -676,7 +684,9 @@ class EventTimelineService:
                     "plugins": {
                         "title": {
                             "display": True,
-                            "text": f'Event Timeline: {sorted_events[0].topic if sorted_events else "No Events"}',
+                            "text": "Event Timeline: {0}".format(
+                                sorted_events[0].topic if sorted_events else "No Events"
+                            ),
                         },
                         "tooltip": {"mode": "index", "intersect": False},
                     },

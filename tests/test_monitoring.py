@@ -432,7 +432,6 @@ if __name__ == "__main__":
         # Test SNS alert manager
         print("\n3. Testing SNS Alert Manager...")
         try:
-            alert_manager = SNSAlertManager(
                 topic_arn="arn:aws:sns:us-east-1:123456789012:test-topic",
                 region_name="us-east-1",
             )
