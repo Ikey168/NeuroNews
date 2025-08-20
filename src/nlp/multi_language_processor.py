@@ -198,7 +198,9 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
         title = article_data.get("title", "")
         content = article_data.get("content", "")
 
-        logger.info("Processing article {0} with multi-language support".format(article_id))
+        logger.info(
+            "Processing article {0} with multi-language support".format(article_id)
+        )
 
         result = {
             "article_id": article_id,
@@ -228,7 +230,9 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
             result["detection_confidence"] = confidence
 
             logger.info(
-                "Detected language: {0} (confidence: {1:.2f})".format(detected_language, confidence)
+                "Detected language: {0} (confidence: {1:.2f})".format(
+                    detected_language, confidence
+                )
             )
 
             # Step 2: Translate if needed
@@ -365,12 +369,16 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
                 )
 
                 logger.info(
-                    "Translation completed with quality score: {0:.2f}".format(overall_quality)
+                    "Translation completed with quality score: {0:.2f}".format(
+                        overall_quality
+                    )
                 )
 
             else:
                 logger.warning(
-                    "Translation quality too low: {0:.2f} < {1}".format(overall_quality, self.quality_threshold)
+                    "Translation quality too low: {0:.2f} < {1}".format(
+                        overall_quality, self.quality_threshold
+                    )
                 )
 
         except Exception as e:
@@ -477,9 +485,11 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
     def _generate_article_id(self, article_data: Dict[str, Any]) -> str:
         """Generate a unique article ID based on article content."""
         content_hash = hashlib.md5(
-            f"{article_data.get('url', '')}{article_data.get('title', '')}".encode()
+            "{0}{1}".format(
+                article_data.get("url", ""), article_data.get("title", "")
+            ).encode()
         ).hexdigest()
-        return "article_{0}".format(content_hash[:100]])
+        return "article_{0}".format(content_hash[:100])
 
     def get_translation_statistics(self) -> Dict[str, Any]:
         """Get translation statistics from the database."""
@@ -563,12 +573,17 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
                 results.append(result)
 
                 if (i + 1) % 10 == 0:
-                    logger.info("Processed {0}/{1} articles".format(i + 1, len(articles)))
+                    logger.info(
+                        "Processed {0}/{1} articles".format(i + 1, len(articles))
+                    )
 
             except Exception as e:
                 logger.error("Error processing article {0}: {1}".format(i, e))
                 results.append(
-                    {"article_id": article.get("id", "unknown_{0}".format(i)), "error": str(e)}
+                    {
+                        "article_id": article.get("id", "unknown_{0}".format(i)),
+                        "error": str(e),
+                    }
                 )
 
         logger.info("Completed batch processing: {0} results".format(len(results)))

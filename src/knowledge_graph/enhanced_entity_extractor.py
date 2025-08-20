@@ -23,7 +23,9 @@ from typing import Any, Dict, List, Optional
 
 # Import optimized NLP components from Issue #35
 try:
-    from src.nlp.nlp_integration import IntegratedNLPProcessor
+    from src.nlp.nlp_int                )
+                print("    Confidence: {0:.2f}".format(rel.confidence))
+                print("    Context: {0}...".format(rel.context[:100]))ation import IntegratedNLPProcessor
     from src.nlp.optimized_nlp_pipeline import NLPConfig
 
     OPTIMIZED_NLP_AVAILABLE = True

@@ -1,6 +1,8 @@
 """
 Async News Scraper Runner
-Main entry point for running the high-performance async news scraper.
+Main entry point for running the high-performance async news                self.config['max_threads']} threads"
+        )
+        self.logger.info("🎯 Sources: {0}".format([s.name for s in sources]))raper.
 """
 
 from src.scraper.async_scraper_engine import (

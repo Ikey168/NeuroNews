@@ -300,9 +300,9 @@ class AdaptiveBatchProcessor:
             return
 
         logger.info(
-            "Adjusting batch size from {0} to {1} ".format(
-                self.current_batch_size, new_size)
-            "(performance score: {0:.3f})".format(recent_avg)
+            "Adjusting batch size from {0} to {1} (performance score: {2:.3f})".format(
+                self.current_batch_size, new_size, recent_avg
+            )
         )
         self.current_batch_size = new_size
 

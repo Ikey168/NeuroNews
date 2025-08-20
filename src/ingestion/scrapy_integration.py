@@ -167,8 +167,9 @@ class OptimizedScrapyPipeline:
         )
 
         spider.logger.debug(
-            "Flushed buffer with {0} articles ".format(len(articles_to_process))
-            "(flush #{0})".format(self.flush_count)
+            "Flushed buffer with {0} articles (flush #{1})".format(
+                len(articles_to_process), self.flush_count
+            )
         )
 
     def _flush_buffer_sync(self, spider: Spider):

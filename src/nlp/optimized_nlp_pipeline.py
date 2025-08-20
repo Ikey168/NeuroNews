@@ -26,7 +26,11 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any, Dict, List, Optional
 
-import psutil
+im            # Print results
+            print("Optimized NLP Pipeline Results:")
+            print("Processed: {0} articles".format(results['articles_processed']))
+            print("Processing time: {0:.2f}s".format(results['processing_time']))
+            print("Throughput: {0:.2f} articles/sec".format(results['throughput']))psutil
 
 # Optional imports with fallbacks
 try:

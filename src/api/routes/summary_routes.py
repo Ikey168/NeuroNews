@@ -171,7 +171,8 @@ async def generate_summary(
             if existing:
                 logger.info(
                     "Returning cached summary for article {0}".format(
-                        request.article_id)
+                        request.article_id
+                    )
                 )
                 return SummarizationResponse(
                     article_id=existing.article_id,
@@ -193,8 +194,8 @@ async def generate_summary(
         # Generate new summary
         logger.info(
             "Generating {0} summary for article {1}".format(
-                request.length.value, 
-                request.article_id)
+                request.length.value, request.article_id
+            )
         )
         summary = await summarizer.summarize_article(
             text=request.text, length=request.length, model=request.model
@@ -235,8 +236,7 @@ async def generate_summary(
         )
         raise HTTPException(
             status_code=500,
-            detail="Summarization failed: {0}".format(
-                str(e)),
+            detail="Summarization failed: {0}".format(str(e)),
         )
 
 
@@ -335,8 +335,8 @@ async def generate_batch_summaries(
                 failed += 1
                 logger.error(
                     "Failed to process article {0}: {1}".format(
-                        article_request.article_id, 
-                        str(e))
+                        article_request.article_id, str(e)
+                    )
                 )
                 return None
 
@@ -350,8 +350,9 @@ async def generate_batch_summaries(
     total_processing_time = time.time() - start_time
 
     logger.info(
-        "Batch processing completed: {0} successful, ".format(successful)
-        "{0} failed in {1}s".format(failed, total_processing_time)
+        "Batch processing completed: {0} successful, {1} failed in {2:.2f}s".format(
+            successful, failed, total_processing_time
+        )
     )
 
     return BatchSummarizationResponse(
@@ -412,8 +413,7 @@ async def get_article_summaries(
         raise
     except Exception as e:
         logger.error(
-            "Failed to get summaries for article {0}: {1}".format(article_id, 
-                str(e))
+            "Failed to get summaries for article {0}: {1}".format(article_id, str(e))
         )
         raise HTTPException(
             status_code=500, detail="Failed to retrieve summaries: {0}".format(str(e))
@@ -447,7 +447,8 @@ async def get_specific_summary(
             raise HTTPException(
                 status_code=HTTP_404_NOT_FOUND,
                 detail="No {0} summary found for article {1}".format(
-                    length.value, article_id),
+                    length.value, article_id
+                ),
             )
 
         return SummarizationResponse(
@@ -470,8 +471,8 @@ async def get_specific_summary(
     except Exception as e:
         logger.error(
             "Failed to get {0} summary for article {1}: {2}".format(
-                length.value, article_id, 
-                str(e))
+                length.value, article_id, str(e)
+            )
         )
         raise HTTPException(
             status_code=500, detail="Failed to retrieve summary: {0}".format(str(e))
@@ -506,7 +507,9 @@ async def delete_article_summaries(
             )
 
         return {
-            "message": "Deleted {0} summaries for article {1}".format(deleted_count, article_id),
+            "message": "Deleted {0} summaries for article {1}".format(
+                deleted_count, article_id
+            ),
             "deleted_count": deleted_count,
             "article_id": article_id,
         }
@@ -515,8 +518,7 @@ async def delete_article_summaries(
         raise
     except Exception as e:
         logger.error(
-            "Failed to delete summaries for article {0}: {1}".format(article_id, 
-                str(e))
+            "Failed to delete summaries for article {0}: {1}".format(article_id, str(e))
         )
         raise HTTPException(
             status_code=500, detail="Failed to delete summaries: {0}".format(str(e))
@@ -604,8 +606,7 @@ async def clear_caches(
         logger.error("Failed to clear caches: {0}".format(str(e)))
         raise HTTPException(
             status_code=500,
-            detail="Failed to clear caches: {0}".format(
-                str(e)),
+            detail="Failed to clear caches: {0}".format(str(e)),
         )
 
 
@@ -636,8 +637,7 @@ async def get_model_information(
         logger.error("Failed to get model information: {0}".format(str(e)))
         raise HTTPException(
             status_code=500,
-            detail="Failed to retrieve model information: {0}".format(
-                str(e)),
+            detail="Failed to retrieve model information: {0}".format(str(e)),
         )
 
 

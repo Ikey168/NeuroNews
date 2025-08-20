@@ -469,8 +469,9 @@ class SummaryDatabase:
 
         except Exception as e:
             logger.error(
-                "Failed to get summary for article {0} ".format(article_id)
-                "with length {0}: {1}".format(length.value, str(e))
+                "Failed to get summary for article {0} with length {1}: {2}".format(
+                    article_id, length.value, str(e)
+                )
             )
             raise
 

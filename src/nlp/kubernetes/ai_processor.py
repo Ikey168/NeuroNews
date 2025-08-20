@@ -447,7 +447,7 @@ class KubernetesAIProcessor:
                     "topic_weights": top_weights,
                     "topic_label": "Topic_{0}_{1}_{2}".format(topic_idx, 
                         top_words[0], 
-                        top_words[1]]),
+                        top_words[1]),
                     "model_type": "LDA",
                 }
                 topic_descriptions.append(topic_desc)

@@ -82,8 +82,7 @@ class EventClusterer:
             List of detected event clusters
         """
         logger.info(
-            "Starting event detection for {0} articles".format(
-                len(embeddings_data))
+            "Starting event detection for {0} articles".format(len(embeddings_data))
         )
         start_time = time.time()
 
@@ -91,7 +90,8 @@ class EventClusterer:
             if len(embeddings_data) < self.min_cluster_size:
                 logger.warning(
                     "Not enough articles ({0}) for clustering".format(
-                        len(embeddings_data))
+                        len(embeddings_data)
+                    )
                 )
                 return []
 
@@ -140,9 +140,7 @@ class EventClusterer:
             )
 
             logger.info(
-                "Detected {0} events in {1}s".format(
-                    len(events), 
-                    processing_time)
+                "Detected {0} events in {1}s".format(len(events), processing_time)
             )
             return events
 
@@ -192,10 +190,13 @@ class EventClusterer:
             best_k_idx = np.argmax(silhouette_scores)
             optimal_k = list(k_range)[best_k_idx]
 
-            logger.info("Silhouette scores: {0}".format(dict(zip(k_range, silhouette_scores))))
             logger.info(
-                "Best silhouette score: {0} for k={1}".format(
-                    max(silhouette_scores):.3f, optimal_k)
+                "Silhouette scores: {0}".format(dict(zip(k_range, silhouette_scores)))
+            )
+            logger.info(
+                "Best silhouette score: {0:.3f} for k={1}".format(
+                    max(silhouette_scores), optimal_k
+                )
             )
 
             return optimal_k
@@ -266,8 +267,7 @@ class EventClusterer:
 
             else:
                 raise ValueError(
-                    "Unknown clustering method: {0}".format(
-                        self.clustering_method)
+                    "Unknown clustering method: {0}".format(self.clustering_method)
                 )
 
             logger.info("Clustering metrics: {0}".format(metrics))

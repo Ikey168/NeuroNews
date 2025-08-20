@@ -201,8 +201,9 @@ class EnhancedRetryManager:
 
                 # Log retry attempt
                 self.logger.warning(
-                    "Retry attempt {0}/{1} for {2} ".format(attempt + 1, config.max_retries, url)
-                    "after {0}s delay. Reason: {1}".format(delay)
+                    "Retry attempt {0}/{1} for {2} after {3:.2f}s delay. Reason: {4}".format(
+                        attempt + 1, config.max_retries, url, delay, retry_reason.value
+                    )
                 )
 
                 # Record retry metrics

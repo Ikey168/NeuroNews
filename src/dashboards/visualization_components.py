@@ -278,9 +278,11 @@ class NetworkVisualization:
             # Node info
             node_info = node[1]
             node_text.append(
-                f"{node_info.get('label', node[0])}<br>"
-                f"Type: {node_info.get('type', 'unknown')}<br>"
-                "Connections: {0}".format(G.degree(node[0]]))
+                "{0}<br>Type: {1}<br>Connections: {2}".format(
+                    node_info.get("label", node[0]),
+                    node_info.get("type", "unknown"),
+                    G.degree(node[0]),
+                )
             )
 
             # Color by type

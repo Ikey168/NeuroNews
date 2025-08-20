@@ -160,7 +160,7 @@ class SNSAlertManager:
             self.logger.info(
                 "Sent alert: {0} (MessageId: {1})".format(
                     alert.title, response['MessageId']
-                ])
+                )
             )
             return True
 

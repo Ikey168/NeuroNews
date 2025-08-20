@@ -266,7 +266,7 @@ class RedshiftETLProcessor:
             for statement in statements:
                 if statement:
                     logger.debug(
-                        "Executing schema statement: {0}...".format(statement[:100]])
+                        "Executing schema statement: {0}...".format(statement[:100])
                     )
                     self._cursor.execute(statement)
 
@@ -388,7 +388,7 @@ class RedshiftETLProcessor:
                 logger.info(
                     "Processed batch {0}: {1} loaded, {2} failed".format(
                         batch_num, batch_result["loaded"], batch_result["failed"]
-                    ])
+                    )
                 )
 
             processing_time = (datetime.now() - start_time).total_seconds()
