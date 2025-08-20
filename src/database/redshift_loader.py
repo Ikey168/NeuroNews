@@ -380,14 +380,10 @@ class RedshiftETLProcessor:
                 skipped_count += batch_result["skipped"]
                 errors.extend(batch_result["errors"])
 
+                batch_num = i // self._batch_size + 1
                 logger.info(
-                    f"Processed batch {
-                        i //
-                        self._batch_size +
-                        1}: "
-                    f"{
-                        batch_result['loaded']} loaded, {
-                        batch_result['failed']} failed"
+                    f"Processed batch {batch_num}: "
+                    f"{batch_result['loaded']} loaded, {batch_result['failed']} failed"
                 )
 
             processing_time = (datetime.now() - start_time).total_seconds()

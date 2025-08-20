@@ -217,6 +217,5 @@ async def get_article(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Database error: {
-                str(e)}",
+            detail=f"Database error: {str(e)}",
         )
