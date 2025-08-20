@@ -463,10 +463,10 @@ class TestPerformanceBenchmarks(unittest.TestCase):
         self.assertLess(memory_increase, 200)
 
         print("\nMemory Efficiency Benchmark Results:")
-        print("Initial Memory: {0} MB".format(initial_memory:.1f))
-        print("Memory Increase: {0} MB".format(memory_increase:.1f))
+        print("Initial Memory: {:.1f} MB".format(initial_memory))
+        print("Memory Increase: {:.1f} MB".format(memory_increase))
         efficiency = len(self.large_dataset) / max(memory_increase, 1)
-        print("Memory Efficiency: {0} articles/MB".format(efficiency:.1f))
+        print("Memory Efficiency: {:.1f} articles/MB".format(efficiency))
 
     def test_concurrent_processing_scaling(self):
         """Test how concurrent processing scales with different settings."""
@@ -679,5 +679,5 @@ if __name__ == "__main__":
     print("Errors: {0}".format(len(result.errors)))
     success_count = result.testsRun - len(result.failures) - len(result.errors)
     success_rate = success_count / result.testsRun * 100
-    print("Success rate: {0}%".format(success_rate:.1f))
-    print(f"{'=' * 50}")
+    print("Success rate: {:.1f}%".format(success_rate))
+    print("=" * 50)

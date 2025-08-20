@@ -314,7 +314,11 @@ class TestKnowledgeGraphAPIRoutes:
         """Test batch population with too many articles."""
         # Create list with 101 articles (exceeds limit of 100)
         articles = [
-            {"id": "article_{0}".format(i), "title": "Title {0}".format(i), "content": "Content {0}".format(i)}
+            {
+                "id": "article_{0}".format(i),
+                "title": "Title {0}".format(i),
+                "content": "Content {0}".format(i),
+            }
             for i in range(101)
         ]
 

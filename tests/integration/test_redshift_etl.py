@@ -134,7 +134,9 @@ class TestRedshiftETLProcessor(unittest.TestCase):
                 "id": "article_{0}".format(i),
                 "url": "https://example.com/article-{0}".format(i),
                 "title": "Test Article {0}".format(i),
-                "content": "This is test article content {0} with sufficient length.".format(i),
+                "content": "This is test article content {0} with sufficient length.".format(
+                    i
+                ),
                 "source": "example.com",
                 "validation_score": 80.0 + i,
                 "content_quality": "high",

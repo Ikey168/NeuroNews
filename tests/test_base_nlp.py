@@ -57,9 +57,9 @@ def test_transformer_accuracy(
             pass
 
     accuracy = correct / total
-    print("Transformer Accuracy: {0}".format(accuracy:.2%))
+    print("Transformer Accuracy: {:.2%}".format(accuracy))
     # Adjusting threshold based on model and data complexity
-    assert accuracy >= 0.60, "Accuracy {0} below threshold of 60%".format(accuracy:.2%)
+    assert accuracy >= 0.60, "Accuracy {:.2%} below threshold of 60%".format(accuracy)
 
 
 def test_preprocessing(transformer_analyzer):  # Using new fixture

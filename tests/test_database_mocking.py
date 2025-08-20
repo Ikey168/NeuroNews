@@ -71,7 +71,9 @@ def main():
         success_count += 1
 
     print("\n" + "=" * 50)
-    print("📊 VALIDATION SUMMARY: {0}/{1} tests passed".format(success_count, total_tests))
+    print(
+        "📊 VALIDATION SUMMARY: {0}/{1} tests passed".format(success_count, total_tests)
+    )
 
     if success_count == total_tests:
         print("🎉 ALL TESTS PASSED - DATABASE MOCKING APPROACH VALIDATED!")

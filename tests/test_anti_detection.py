@@ -347,7 +347,9 @@ if __name__ == "__main__":
         # Test rotation
         for i in range(5):
             proxy = await proxy_manager.get_proxy()
-            print("Request {0}: Using proxy {1}:{2}".format(i + 1, proxy.host, proxy.port))
+            print(
+                "Request {0}: Using proxy {1}:{2}".format(i + 1, proxy.host, proxy.port)
+            )
 
         # Test user agent rotator
         ua_rotator = UserAgentRotator()

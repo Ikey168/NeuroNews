@@ -93,8 +93,8 @@ def test_pipelines():
         else:
             print(
                 "❌ Missing pipeline classes: {0}".format(
-                    set(pipeline_classes) -
-                    set(found_classes))
+                    set(pipeline_classes) - set(found_classes)
+                )
             )
             return False
 

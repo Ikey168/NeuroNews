@@ -274,7 +274,7 @@ class TestSentimentPipelinePerformance:
             assert processing_time < 60  # Should complete within 60 seconds
 
             # Log performance for monitoring
-            print("Batch size {0}: {1} seconds".format(batch_size, processing_time:.2f))
+            print("Batch size {}: {:.2f} seconds".format(batch_size, processing_time))
 
 
 # Integration test for demo script

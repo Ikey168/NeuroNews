@@ -38,7 +38,11 @@ def wait_for_service(host, port, timeout=30):
 
         time.sleep(1)
 
-    logger.error("❌ Service {0}:{1} did not become ready within {2}s".format(host, port, timeout))
+    logger.error(
+        "❌ Service {0}:{1} did not become ready within {2}s".format(
+            host, port, timeout
+        )
+    )
     return False
 
 

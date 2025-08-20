@@ -160,7 +160,9 @@ def test_event_timeline_date_filtering(
     end_date_str = "2024-01-31T23:59:59Z"
     with TestClient(app_for_test) as client:
         response = client.get(
-            "/graph/event_timeline?topic=AI&start_date={0}&end_date={1}".format(start_date_str, end_date_str)
+            "/graph/event_timeline?topic=AI&start_date={0}&end_date={1}".format(
+                start_date_str, end_date_str
+            )
         )
 
     assert response.status_code == 200, response.json()

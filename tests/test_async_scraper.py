@@ -510,7 +510,9 @@ class TestAsyncPipelines:
         has_enhancement = any(field in enhanced for field in enhanced_fields)
         assert (
             has_enhancement
-        ), "No enhancement fields found. Available fields: {0}".format(list(enhanced.keys()))
+        ), "No enhancement fields found. Available fields: {0}".format(
+            list(enhanced.keys())
+        )
 
     @pytest.mark.asyncio
     async def test_process_batch(self, pipeline_processor):
@@ -563,7 +565,9 @@ class TestAsyncPipelines:
         has_enhancement = any(field in enhanced for field in enhanced_fields)
         assert (
             has_enhancement
-        ), "No enhancement fields found. Available fields: {0}".format(list(enhanced.keys()))
+        ), "No enhancement fields found. Available fields: {0}".format(
+            list(enhanced.keys())
+        )
 
     @pytest.mark.asyncio
     async def test_process_batch(self, pipeline_processor):
@@ -571,7 +575,9 @@ class TestAsyncPipelines:
         articles = [
             {
                 "title": "Article {0}".format(i),
-                "content": "Content for article {0} with sufficient length for validation.".format(i),
+                "content": "Content for article {0} with sufficient length for validation.".format(
+                    i
+                ),
                 "url": "https://example.com/article{0}".format(i),
                 "source": "Test Source",
             }

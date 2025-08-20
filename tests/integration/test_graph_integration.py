@@ -364,8 +364,8 @@ async def test_complex_entity_scenario(mocked_graph: GraphBuilder):
 
     print(
         "✅ Complex scenario test completed: {0} vertices, {1} edges created".format(
-            len(vertex_ops), 
-            len(edge_ops))
+            len(vertex_ops), len(edge_ops)
+        )
     )
 
 

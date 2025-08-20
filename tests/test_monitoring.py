@@ -424,8 +424,7 @@ if __name__ == "__main__":
                 error_details="Connection timeout after 30s",
             )
             print(
-                "✅ DynamoDB failure recording test passed: {0}".format(
-                    failed_url.url)
+                "✅ DynamoDB failure recording test passed: {0}".format(failed_url.url)
             )
         except Exception as e:
             print("❌ DynamoDB failure recording test failed: {0}".format(e))
@@ -473,7 +472,9 @@ if __name__ == "__main__":
                 retry_config=RetryConfig(max_retries=3, base_delay=0.1),
             )
             print(
-                "✅ Retry manager test passed: {0} (after {1} attempts)".format(result, call_count)
+                "✅ Retry manager test passed: {0} (after {1} attempts)".format(
+                    result, call_count
+                )
             )
         except Exception as e:
             print("❌ Retry manager test failed: {0}".format(e))
