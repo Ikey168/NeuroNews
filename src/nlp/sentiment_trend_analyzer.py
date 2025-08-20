@@ -280,8 +280,9 @@ class SentimentTrendAnalyzer:
             for topic_name, topic_data in topics_data.items():
                 if len(topic_data) < self.config["min_articles_for_trend"]:
                     logger.warning(
-                        "Insufficient data for topic {0}: {1} articles".format(topic_name, 
-                            len(topic_data))
+                        "Insufficient data for topic {0}: {1} articles".format(
+                            topic_name, len(topic_data)
+                        )
                     )
                     continue
 
@@ -304,8 +305,7 @@ class SentimentTrendAnalyzer:
                 trend_summaries.append(trend_summary)
 
             logger.info(
-                "Completed trend analysis for {0} topics".format(
-                    len(trend_summaries))
+                "Completed trend analysis for {0} topics".format(len(trend_summaries))
             )
             return trend_summaries
 
@@ -714,7 +714,9 @@ class SentimentTrendAnalyzer:
                 alerts.append(alert)
 
         except Exception as e:
-            logger.error("Error detecting alerts for topic {0}: {1}".format(topic, str(e)))
+            logger.error(
+                "Error detecting alerts for topic {0}: {1}".format(topic, str(e))
+            )
 
         return alerts
 
@@ -749,8 +751,8 @@ class SentimentTrendAnalyzer:
         # Create description
         direction = "improved" if current_sentiment > previous_sentiment else "declined"
         description = (
-            f"Sentiment for '{topic}' has {direction} by {change_percentage:.1f}% "
-            "({0} → {1}) over {2}".format(previous_sentiment:.3f, current_sentiment)
+            f"Sentiment for '{topic}' has {direction} by {change_percentage}% "
+            "({0:.3f} → {1}) over {2}".format(previous_sentiment, current_sentiment)
         )
 
         # Calculate confidence based on change magnitude and affected articles
@@ -898,8 +900,7 @@ class SentimentTrendAnalyzer:
 
         except Exception as e:
             logger.error(
-                "Error getting topic trend summary for {0}: {1}".format(topic, 
-                    str(e))
+                "Error getting topic trend summary for {0}: {1}".format(topic, str(e))
             )
             return None
 
@@ -991,8 +992,9 @@ class SentimentTrendAnalyzer:
                         await self._store_topic_summary(summary)
                 except Exception as e:
                     logger.error(
-                        "Error updating summary for topic {0}: {1}".format(topic, 
-                            str(e))
+                        "Error updating summary for topic {0}: {1}".format(
+                            topic, str(e)
+                        )
                     )
 
             logger.info("Updated summaries for {0} topics".format(len(topics)))

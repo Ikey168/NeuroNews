@@ -237,8 +237,7 @@ class MemoryMonitor:
 
                     gc.collect()
                     logger.warning(
-                        "High memory usage detected: {0}MB, triggered GC".format(
-                            self.current_usage:.1f)
+                        "High memory usage detected: {0:.1f}MB, triggered GC".format(self.current_usage)
                     )
 
                 time.sleep(self.check_interval)
@@ -303,8 +302,7 @@ class AdaptiveBatchProcessor:
         logger.info(
             "Adjusting batch size from {0} to {1} ".format(
                 self.current_batch_size, new_size)
-            "(performance score: {0})".format(
-                recent_avg:.3f)
+            "(performance score: {0:.3f})".format(recent_avg)
         )
         self.current_batch_size = new_size
 

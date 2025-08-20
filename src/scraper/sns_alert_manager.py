@@ -160,7 +160,7 @@ class SNSAlertManager:
             self.logger.info(
                 "Sent alert: {0} (MessageId: {1})".format(
                     alert.title, response['MessageId']
-                )
+                ])
             )
             return True
 
@@ -319,8 +319,7 @@ class SNSAlertManager:
             alert_type=AlertType.IP_BLOCKING,
             severity=AlertSeverity.ERROR,
             title="IP Blocking Detected",
-            message="Multiple IPs blocked for {0} in the last {1} hours.\nBlocked IPs: {2}{3}".format(
-                url, time_period, ', '.join(blocked_ips[:5]), '...' if len(blocked_ips) > 5 else ''
+            message="Multiple IPs blocked for {0} in the last {1} hours.\nBlocked IPs: {2}{3}".format(url, time_period, ', '.join(blocked_ips[:5]]), '...' if len(blocked_ips) > 5 else ''
             ),
             timestamp=time.time(),
             metadata={
@@ -347,9 +346,7 @@ class SNSAlertManager:
             alert_type=AlertType.PERFORMANCE_DEGRADATION,
             severity=AlertSeverity.WARNING,
             title="Performance Degradation Detected",
-            message="Average response time ({0}ms) exceeds threshold ({1}ms) ".format(
-                avg_response_time:.0f, 
-                threshold:.0f)
+            message="Average response time ({0:.0f}ms) exceeds threshold ({1:.0f}ms) ".format(avg_response_time, threshold)
             "over the last {0} hours.".format(time_period),
             timestamp=time.time(),
             metadata={

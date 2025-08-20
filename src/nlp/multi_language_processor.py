@@ -228,8 +228,7 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
             result["detection_confidence"] = confidence
 
             logger.info(
-                "Detected language: {0} (confidence: {1})".format(detected_language, 
-                    confidence:.2f)
+                "Detected language: {0} (confidence: {1:.2f})".format(detected_language, confidence)
             )
 
             # Step 2: Translate if needed
@@ -366,15 +365,12 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
                 )
 
                 logger.info(
-                    "Translation completed with quality score: {0}".format(
-                        overall_quality:.2f)
+                    "Translation completed with quality score: {0:.2f}".format(overall_quality)
                 )
 
             else:
                 logger.warning(
-                    "Translation quality too low: {0} < {1}".format(
-                        overall_quality:.2f, 
-                        self.quality_threshold)
+                    "Translation quality too low: {0:.2f} < {1}".format(overall_quality, self.quality_threshold)
                 )
 
         except Exception as e:
@@ -483,7 +479,7 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
         content_hash = hashlib.md5(
             f"{article_data.get('url', '')}{article_data.get('title', '')}".encode()
         ).hexdigest()
-        return "article_{0}".format(content_hash[)
+        return "article_{0}".format(content_hash[:100]])
 
     def get_translation_statistics(self) -> Dict[str, Any]:
         """Get translation statistics from the database."""

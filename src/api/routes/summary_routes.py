@@ -231,9 +231,7 @@ async def generate_summary(
     except Exception as e:
         processing_time = time.time() - start_time
         logger.error(
-            "Summarization failed after {0}s: {1}".format(
-                processing_time:.2f, 
-                str(e))
+            "Summarization failed after {0:.2f}s: {1}".format(processing_time, str(e))
         )
         raise HTTPException(
             status_code=500,

@@ -280,7 +280,7 @@ async def create_dashboard_layout(
                 status_code=400,
                 detail="Invalid layout type: {0}. Supported types: {1}".format(
                     layout_type, [t.value for t in DashboardType]
-                ),
+                ]),
             )
 
         # Create dashboard layout

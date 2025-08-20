@@ -257,8 +257,7 @@ class SummaryDatabase:
             self._cache_set(cache_key, record)
 
             logger.info(
-                "Summary stored with ID {0} in {1}s".format(summary_id, 
-                    query_time:.2f)
+                "Summary stored with ID {0} in {1:.2f}s".format(summary_id, query_time)
             )
             return summary_id
 

@@ -407,7 +407,7 @@ def main():
     logger.info("\\nTesting predictions:")
     for i, article in enumerate(test_articles):
         result = detector.predict_trustworthiness(article)
-        logger.info("\\nArticle {0}: {1}...".format(i + 1, article[))
+        logger.info("\\nArticle {0}: {1}...".format(i + 1, article[:100]]))
         logger.info(f"Trustworthiness: {result['trustworthiness_score']}%")
         logger.info(
             f"Classification: {

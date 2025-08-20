@@ -215,8 +215,7 @@ class ArticleEmbedder:
             self.stats["total_processing_time"] += processing_time
 
             logger.debug(
-                "Generated embedding for article {0} in {1}s".format(article_id, 
-                    processing_time:.2f)
+                "Generated embedding for article {0} in {1:.2f}s".format(article_id, processing_time)
             )
 
             return result
@@ -316,7 +315,7 @@ class ArticleEmbedder:
             self.stats["total_processing_time"] += total_time
 
             logger.info(
-                "Generated {0} embeddings in {1}s ".format(len(results), total_time:.2f)
+                "Generated {0} embeddings in {1}s ".format(len(results), total_time)
                 "({0}s per article)".format(avg_time_per_article)
             )
 

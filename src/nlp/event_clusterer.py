@@ -142,7 +142,7 @@ class EventClusterer:
             logger.info(
                 "Detected {0} events in {1}s".format(
                     len(events), 
-                    processing_time:.2f)
+                    processing_time)
             )
             return events
 

@@ -204,7 +204,7 @@ class OptimizedScrapyPipeline:
 
                 spider.logger.info(
                     "Batch processed: {0}/{1} articles ".format(processed_count, len(articles))
-                    "in {0}s ({1} articles/sec)".format(processing_time:.2f, throughput)
+                    "in {0:.2f}s ({1} articles/sec)".format(processing_time, throughput)
                 )
 
                 # Update spider stats if available
@@ -442,8 +442,8 @@ class AdaptiveRateLimitPipeline:
                 spider.download_delay = self.current_delay
 
             spider.logger.info(
-                "Adaptive rate limit adjusted: {0}s -> {1}s ".format(old_delay:.2f, self.current_delay)
-                "(avg response: {0}s, error rate: {1})".format(avg_response_time:.2f, current_error_rate)
+                "Adaptive rate limit adjusted: {0:.2f}s -> {1}s ".format(old_delay, self.current_delay)
+                "(avg response: {0:.2f}s, error rate: {1})".format(avg_response_time, current_error_rate)
             )
 
 

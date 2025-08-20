@@ -114,7 +114,7 @@ class EventTimelineService:
             "default": {
                 "primary_color": "#1f77b4",
                 "secondary_color": "#ff7f0e",
-                "background_color": "#ffff",
+                "background_color": "#fff",
                 "text_color": "#333333",
             },
             "dark": {

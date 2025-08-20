@@ -241,7 +241,7 @@ class OptimizedGraphAPI:
 
                 logger.debug(
                     f"Query '{query_description}' completed in {
-                        query_time:.3f}s, {
+                        query_time}s, {
                         len(results)} results"
                 )
                 return results

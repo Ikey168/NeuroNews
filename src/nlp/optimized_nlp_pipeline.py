@@ -312,7 +312,7 @@ class MemoryManager:
 
         if usage_ratio > self.config.gc_threshold:
             logger.warning(
-                "High memory usage: {0}MB ({1})".format(current_usage:.1f, usage_ratio)
+                "High memory usage: {0:.1f}MB ({1})".format(current_usage, usage_ratio)
             )
             self.memory_stats["memory_warnings"] += 1
 
@@ -549,8 +549,7 @@ class OptimizedNLPPipeline:
 
                 batch_time = time.time() - batch_start_time
                 logger.debug(
-                    "Batch {0} completed in {1}s".format(batch_id, 
-                        batch_time:.2f)
+                    "Batch {0} completed in {1:.2f}s".format(batch_id, batch_time)
                 )
 
                 return results
@@ -892,10 +891,10 @@ if __name__ == "__main__":
 
             # Print results
             print("Optimized NLP Pipeline Results:")
-            print(f"Processed: {results['articles_processed']} articles")
-            print(f"Processing time: {results['processing_time']:.2f}s")
-            print(f"Throughput: {results['throughput']:.2f} articles/sec")
-            print(f"Cache hit rate: {results['cache_stats']['hit_rate']:.2%}")
+            print("Processed: {0} articles".format(results['articles_processed']]))
+            print("Processing time: {0:.2f}s".format(results['processing_time']]))
+            print("Throughput: {0:.2f} articles/sec".format(results['throughput']]))
+            print("Cache hit rate: {0:.2%}".format(results['cache_stats']['hit_rate']]))
             print(
                 f"Memory usage: {
                     results['memory_stats']['current_usage_mb']:.1f}MB"

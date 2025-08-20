@@ -90,7 +90,7 @@ class AsyncScraperRunner:
                 self.config['max_concurrent']} concurrent, {
                 self.config['max_threads']} threads"
         )
-        self.logger.info("🎯 Sources: {0}".format([s.name for s in sources]))
+        self.logger.info("🎯 Sources: {0}".format([s.name for s in sources]]))
 
         start_time = time.time()
 
@@ -130,7 +130,7 @@ class AsyncScraperRunner:
             self.logger.info(
                 "📈 Rate: {0} articles/second".format(
                     len(articles) /
-                    duration:.2f)
+                    duration)
             )
 
             return articles
@@ -213,7 +213,7 @@ class AsyncScraperRunner:
         print("\n🏆 Quality Distribution:")
         for quality, count in quality_counts.items():
             percentage = (count / len(articles)) * 100 if articles else 0
-            print("  {0}: {1} ({2}%)".format(quality.title(), count, percentage:.1f))
+            print("  {0}: {1} ({2}%)".format(quality.title(), count, percentage))
 
         print("=" * 60)
 

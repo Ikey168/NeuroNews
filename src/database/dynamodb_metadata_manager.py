@@ -354,8 +354,7 @@ class DynamoDBMetadataManager:
 
             self.table = table
             self.logger.info(
-                "Created DynamoDB table with indexes: {0}".format(
-                    self.table_name)
+                "Created DynamoDB table with indexes: {0}".format(self.table_name)
             )
 
         except Exception as e:
@@ -385,9 +384,9 @@ class DynamoDBMetadataManager:
 
             execution_time = (time.time() - start_time) * 1000
             self.logger.debug(
-                "Indexed article metadata: {0} ({1}ms)".format(
-                    metadata.article_id, 
-                    execution_time:.2f)
+                "Indexed article metadata: {0} ({1:.2f}ms)".format(
+                    metadata.article_id, execution_time
+                )
             )
 
             return metadata
@@ -438,7 +437,9 @@ class DynamoDBMetadataManager:
             }
 
             self.logger.info(
-                "Batch indexed {0}/{1} articles ({2}ms)".format(indexed_count, len(articles), execution_time:.2f)
+                "Batch indexed {0}/{1} articles ({2}ms)".format(
+                    indexed_count, len(articles), execution_time
+                )
             )
             return result
 
@@ -550,7 +551,9 @@ class DynamoDBMetadataManager:
                 return ArticleMetadataIndex.from_dynamodb_item(response["Item"])
             return None
         except Exception as e:
-            self.logger.error("Failed to get article by ID {0}: {1}".format(article_id, e))
+            self.logger.error(
+                "Failed to get article by ID {0}: {1}".format(article_id, e)
+            )
             raise
 
     async def get_articles_by_source(
@@ -605,7 +608,9 @@ class DynamoDBMetadataManager:
             )
 
         except Exception as e:
-            self.logger.error("Failed to query articles by source {0}: {1}".format(source, e))
+            self.logger.error(
+                "Failed to query articles by source {0}: {1}".format(source, e)
+            )
             raise
 
     async def get_articles_by_date_range(
@@ -1086,7 +1091,9 @@ class DynamoDBMetadataManager:
             return True
 
         except Exception as e:
-            self.logger.error("Failed to update article metadata {0}: {1}".format(article_id, e))
+            self.logger.error(
+                "Failed to update article metadata {0}: {1}".format(article_id, e)
+            )
             return False
 
     async def delete_article_metadata(self, article_id: str) -> bool:
@@ -1096,7 +1103,9 @@ class DynamoDBMetadataManager:
             self.logger.debug("Deleted metadata for article: {0}".format(article_id))
             return True
         except Exception as e:
-            self.logger.error("Failed to delete article metadata {0}: {1}".format(article_id, e))
+            self.logger.error(
+                "Failed to delete article metadata {0}: {1}".format(article_id, e)
+            )
             return False
 
     async def health_check(self) -> Dict[str, Any]:

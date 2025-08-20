@@ -159,8 +159,7 @@ class AIArticleSummarizer:
         }
 
         logger.info(
-            "AIArticleSummarizer initialized with device: {0}".format(
-                self.device)
+            "AIArticleSummarizer initialized with device: {0}".format(self.device)
         )
 
     def _load_model(self, model_type: SummarizationModel) -> Tuple:
@@ -210,7 +209,9 @@ class AIArticleSummarizer:
             return model, tokenizer
 
         except Exception as e:
-            logger.error("Failed to load model {0}: {1}".format(model_type.value, str(e)))
+            logger.error(
+                "Failed to load model {0}: {1}".format(model_type.value, str(e))
+            )
             raise
 
     def _preprocess_text(self, text: str) -> str:
@@ -361,8 +362,7 @@ class AIArticleSummarizer:
                 f"Summary generated: {
                     length.value} ({
                     metrics['word_count']} words, "
-                "{0}s)".format(
-                    processing_time:.2f)
+                "{0:.2f}s)".format(processing_time)
             )
 
             return summary
@@ -370,9 +370,9 @@ class AIArticleSummarizer:
         except Exception as e:
             processing_time = time.time() - start_time
             logger.error(
-                "Summarization failed after {0}s: {1}".format(
-                    processing_time:.2f, 
-                    str(e))
+                "Summarization failed after {0:.2f}s: {1}".format(
+                    processing_time, str(e)
+                )
             )
             raise
 
@@ -486,9 +486,9 @@ async def demo_summarization():
         print("\n{0} SUMMARY:".format(length.value.upper()))
         print("Text: {0}".format(summary.text))
         print(
-            "Words: {0}, Compression: {1}".format(
-                summary.word_count, 
-                summary.compression_ratio:.2%)
+            "Words: {0}, Compression: {1:.2%}".format(
+                summary.word_count, summary.compression_ratio
+            )
         )
         print("Processing time: {0}s".format(summary.processing_time))
 

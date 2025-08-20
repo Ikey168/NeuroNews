@@ -311,8 +311,7 @@ class LanguageDetector:
             }
 
         logger.info(
-            "Detected language: {0} (confidence: {1})".format(best_language, 
-                confidence:.2f)
+            "Detected language: {0} (confidence: {1:.2f})".format(best_language, confidence)
         )
         return {
             "language": best_language,
@@ -474,7 +473,7 @@ class AWSTranslateService:
             }
 
         # Check cache first
-        cache_key = "{0}:{1}:{2}".format(source_language, target_language, hash(text[))
+        cache_key = "{0}:{1}:{2}".format(source_language, target_language, hash(text[:100]]))
         if cache_key in self._translation_cache:
             logger.info("Using cached translation")
             return self._translation_cache[cache_key]
@@ -678,14 +677,12 @@ class TranslationQualityChecker:
             min_ratio, max_ratio = expected_ratios[lang_pair]
             if length_ratio < min_ratio:
                 issues.append(
-                    "Translation too short (ratio: {0})".format(
-                        length_ratio:.2f)
+                    "Translation too short (ratio: {0:.2f})".format(length_ratio)
                 )
                 recommendations.append("Check for truncated translation")
             elif length_ratio > max_ratio:
                 issues.append(
-                    "Translation too long (ratio: {0})".format(
-                        length_ratio:.2f)
+                    "Translation too long (ratio: {0:.2f})".format(length_ratio)
                 )
                 recommendations.append("Check for repeated or expanded content")
 

@@ -356,14 +356,17 @@ class KubernetesSentimentProcessor:
                     redshift_records
                 )
                 logger.info(
-                    "Successfully stored {0} sentiment results in Redshift".format(success_count)
+                    "Successfully stored {0} sentiment results in Redshift".format(
+                        success_count
+                    )
                 )
 
         except Exception as e:
             logger.error("Failed to store results in Redshift: {0}".format(e))
             # Save results to file as backup
             backup_file = os.path.join(
-                self.output_dir, "sentiment_results_backup_{0}.json".format(int(time.time()))
+                self.output_dir,
+                "sentiment_results_backup_{0}.json".format(int(time.time())),
             )
             with open(backup_file, "w") as f:
                 json.dump(results, f, indent=2, default=str)
@@ -418,7 +421,8 @@ class KubernetesSentimentProcessor:
                 self.postgres_conn.commit()
                 logger.info(
                     "Updated processing status for {0} articles".format(
-                        len(article_ids))
+                        len(article_ids)
+                    )
                 )
 
         except Exception as e:

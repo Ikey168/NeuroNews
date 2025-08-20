@@ -84,7 +84,9 @@ class OptimizedSentimentAnalyzer:
                 self.legacy_analyzer = SentimentAnalyzer()
                 logger.info("Legacy sentiment analyzer available as fallback")
             except Exception as e:
-                logger.warning("Legacy sentiment analyzer failed to initialize: {0}".format(e))
+                logger.warning(
+                    "Legacy sentiment analyzer failed to initialize: {0}".format(e)
+                )
 
     async def analyze_batch(
         self, articles: List[Dict[str, Any]]
@@ -195,7 +197,9 @@ class OptimizedArticleEmbedder:
                 )
                 logger.info("Legacy article embedder available as fallback")
             except Exception as e:
-                logger.warning("Legacy article embedder failed to initialize: {0}".format(e))
+                logger.warning(
+                    "Legacy article embedder failed to initialize: {0}".format(e)
+                )
 
     async def generate_embeddings_batch(
         self, articles: List[Dict[str, Any]]
@@ -297,7 +301,9 @@ class OptimizedEventClusterer:
                 self.legacy_clusterer = EventClusterer()
                 logger.info("Legacy event clusterer available")
             except Exception as e:
-                logger.warning("Legacy event clusterer failed to initialize: {0}".format(e))
+                logger.warning(
+                    "Legacy event clusterer failed to initialize: {0}".format(e)
+                )
 
     async def cluster_articles_async(
         self, articles: List[Dict[str, Any]], embeddings: List[np.ndarray] = None
@@ -435,7 +441,8 @@ class IntegratedNLPProcessor:
 
         logger.info(
             "Starting comprehensive NLP processing for {0} articles".format(
-                len(articles))
+                len(articles)
+            )
         )
         logger.info("Operations: {0}".format(operations))
 
@@ -489,13 +496,10 @@ class IntegratedNLPProcessor:
             }
 
             logger.info(
-                "Comprehensive processing completed in {0}s".format(
-                    total_time:.2f)
+                "Comprehensive processing completed in {0:.2f}s".format(total_time)
             )
             logger.info(
-                "Throughput: {0} articles/sec".format(
-                    len(articles) /
-                    total_time:.2f)
+                "Throughput: {0} articles/sec".format(len(articles) / total_time)
             )
 
             return results

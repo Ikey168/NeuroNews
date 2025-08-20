@@ -896,7 +896,7 @@ if __name__ == "__main__":
                     "  • {0} --[{1}]--> {2}".format(rel.source_entity.text, rel.relation_type, rel.target_entity.text)
                 )
                 print("    Confidence: {0}".format(rel.confidence))
-                print("    Context: {0}...".format(rel.context[))
+                print("    Context: {0}...".format(rel.context[:100]]))
 
             # Get statistics
             stats = extractor.get_extraction_statistics()

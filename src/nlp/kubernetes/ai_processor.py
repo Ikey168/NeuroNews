@@ -447,7 +447,7 @@ class KubernetesAIProcessor:
                     "topic_weights": top_weights,
                     "topic_label": "Topic_{0}_{1}_{2}".format(topic_idx, 
                         top_words[0], 
-                        top_words[1]),
+                        top_words[1]]),
                     "model_type": "LDA",
                 }
                 topic_descriptions.append(topic_desc)
@@ -528,7 +528,7 @@ class KubernetesAIProcessor:
                             "topic_label": (
                                 "Topic_{0}_{1}_{2}".format(topic_idx, 
                                     top_words[0], 
-                                    top_words[1])
+                                    top_words[1]])
                                 if top_words
                                 else "Topic_{0}".format(topic_idx)
                             ),
@@ -653,9 +653,7 @@ class KubernetesAIProcessor:
             self.stats["batches_processed"] += 1
 
             logger.info(
-                "Processed batch in {0}s, assigned topics to {1} articles".format(
-                    batch_processing_time:.2f, 
-                    len(results))
+                "Processed batch in {0:.2f}s, assigned topics to {1} articles".format(batch_processing_time, len(results))
             )
             return results
 

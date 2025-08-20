@@ -756,7 +756,7 @@ class DataValidationPipeline:
             if has_critical_issues or overall_score < 50:
                 logger.info(
                     f"Article failed validation (score: {
-                        overall_score:.1f}): {
+                        overall_score}): {
                         cleaned_article.get(
                             'url', 'Unknown URL')}"
                 )

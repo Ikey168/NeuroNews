@@ -328,7 +328,9 @@ class WAFSecurityMiddleware(BaseHTTPMiddleware):
             query_string = str(request.url.query)
 
             # Check request headers
-            headers_content = " ".join("{0}:{1}".format(k, v) for k, v in request.headers.items())
+            headers_content = " ".join(
+                "{0}:{1}".format(k, v) for k, v in request.headers.items()
+            )
 
             # Check request body if present
             body_content = ""
@@ -340,7 +342,9 @@ class WAFSecurityMiddleware(BaseHTTPMiddleware):
                     body_content = ""
 
             # Combine all content to check
-            content_to_check = "{0} {1} {2}".format(query_string, headers_content, body_content)
+            content_to_check = "{0} {1} {2}".format(
+                query_string, headers_content, body_content
+            )
 
             # Check against XSS patterns
             for pattern in self.xss_patterns:
@@ -414,8 +418,9 @@ class WAFSecurityMiddleware(BaseHTTPMiddleware):
 
         # Log to application logger
         logger.warning(
-            "SECURITY EVENT: {0} from {1} - ".format(threat_type.value, source_ip)
-            "Path: {0} - Action: {1}".format(request_path, action_taken.value)
+            "SECURITY EVENT: {0} from {1} - Path: {2} - Action: {3}".format(
+                threat_type.value, source_ip, request_path, action_taken.value
+            )
         )
 
         # In production, you might also send to CloudWatch, SNS, etc.

@@ -72,7 +72,7 @@ class ArticleRecord:
         content_hash = hashlib.md5(
             "{0}{1}".format(self.url, self.title).encode()
         ).hexdigest()
-        return "article_{0}".format(content_hash[)
+        return "article_{0}".format(content_hash[:16])
 
     @classmethod
     def from_validated_article(cls, validated_data: Dict[str, Any]) -> "ArticleRecord":
@@ -266,7 +266,7 @@ class RedshiftETLProcessor:
             for statement in statements:
                 if statement:
                     logger.debug(
-                        "Executing schema statement: {0}...".format(statement[)
+                        "Executing schema statement: {0}...".format(statement[:100]])
                     )
                     self._cursor.execute(statement)
 
@@ -388,7 +388,7 @@ class RedshiftETLProcessor:
                 logger.info(
                     "Processed batch {0}: {1} loaded, {2} failed".format(
                         batch_num, batch_result["loaded"], batch_result["failed"]
-                    )
+                    ])
                 )
 
             processing_time = (datetime.now() - start_time).total_seconds()
@@ -411,7 +411,7 @@ class RedshiftETLProcessor:
             logger.info(
                 "Batch load completed: {0}/{1} articles loaded ({2:.1f}% success rate)".format(
                     loaded_count, total_articles, stats["success_rate"]
-                )
+                ])
             )
 
             return stats

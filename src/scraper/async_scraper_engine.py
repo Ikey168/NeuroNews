@@ -440,7 +440,7 @@ class AsyncNewsScraperEngine:
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 self.logger.error(
-                    "Error scraping {0}: {1}".format(sources[i].name, result)
+                    "Error scraping {0}: {1}".format(sources[i].name, result])
                 )
                 self.monitor.record_error(sources[i].name)
             else:
@@ -642,7 +642,7 @@ class AsyncNewsScraperEngine:
                 title=title.strip(),
                 url=url,
                 content=content.strip(),
-                author=author.strip() if author else "{0} Staf".format(source.name),
+                author=author.strip() if author else "{0} Sta".format(source.name),
                 published_date=date if date else datetime.now().isoformat(),
                 source=source.name,
                 scraped_date=datetime.now().isoformat(),
@@ -818,7 +818,7 @@ class AsyncNewsScraperEngine:
                     title=article_data["title"],
                     url=url,
                     content=article_data["content"],
-                    author=article_data["author"] or "{0} Staf".format(source.name),
+                    author=article_data["author"] or "{0} Sta".format(source.name),
                     published_date=article_data["date"] or datetime.now().isoformat(),
                     source=source.name,
                     scraped_date=datetime.now().isoformat(),

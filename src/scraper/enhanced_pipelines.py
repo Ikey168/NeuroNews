@@ -194,15 +194,15 @@ class QualityFilterPipeline:
             self.filtered_count += 1
             spider.logger.info(
                 f"Article filtered - low score ({
-                    validation_score:.1f}): {
+                    validation_score}): {
                     item.get(
                         'url',
                         'Unknown URL')}"
             )
             raise DropItem(
-                "Article validation score ({0}) below threshold ({1})".format(
-                    validation_score:.1f, 
-                    self.min_score)
+                "Article validation score ({0:.1f}) below threshold ({1})".format(
+                    validation_score, self.min_score
+                )
             )
 
         # Check content length
@@ -213,8 +213,9 @@ class QualityFilterPipeline:
                 f"Article filtered - short content ({content_length}): {item.get('url', 'Unknown URL')}"
             )
             raise DropItem(
-                "Article content length ({0}) below threshold ({1})".format(content_length, 
-                    self.min_content_length)
+                "Article content length ({0}) below threshold ({1})".format(
+                    content_length, self.min_content_length
+                )
             )
 
         # Check for critical validation flags
@@ -233,7 +234,9 @@ class QualityFilterPipeline:
                 spider.logger.warning(
                     f"Article filtered - critical issue ({issue}): {item.get('url', 'Unknown URL')}"
                 )
-                raise DropItem("Article has critical validation issue: {0}".format(issue))
+                raise DropItem(
+                    "Article has critical validation issue: {0}".format(issue)
+                )
 
         return item
 
@@ -241,7 +244,8 @@ class QualityFilterPipeline:
         """Log filtering statistics when spider closes."""
         spider.logger.info(
             "Quality filter removed {0} low-quality articles".format(
-                self.filtered_count)
+                self.filtered_count
+            )
         )
         spider.crawler.stats.set_value("quality_filtered_count", self.filtered_count)
 

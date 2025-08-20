@@ -59,7 +59,9 @@ try:
                     logger.info("Downloading NLTK data: {0}".format(name))
                     nltk.download(name, quiet=True)
                 except Exception as e:
-                    logger.warning("Failed to download NLTK data {0}: {1}".format(name, e))
+                    logger.warning(
+                        "Failed to download NLTK data {0}: {1}".format(name, e)
+                    )
 
     # Try to ensure NLTK data is available
     try:
@@ -278,7 +280,9 @@ class TextPreprocessor:
             ]  # Filter very short sentences
         except Exception as e:
             logger.warning(
-                "NLTK sentence tokenization failed: {0}. Using simple sentence splitting.".format(e)
+                "NLTK sentence tokenization failed: {0}. Using simple sentence splitting.".format(
+                    e
+                )
             )
             # Simple fallback: split on sentence-ending punctuation
             sentences = re.split(r"[.!?]+", cleaned_text)
@@ -333,7 +337,9 @@ class TextPreprocessor:
             return unique_keywords[:max_keywords]
 
         except Exception as e:
-            logger.warning("NLTK processing failed: {0}. Using simple word filtering.".format(e))
+            logger.warning(
+                "NLTK processing failed: {0}. Using simple word filtering.".format(e)
+            )
             # Simple fallback: extract words based on length and stop words
             words = re.findall(r"\b[a-zA-Z]{3,}\b", cleaned_text.lower())
             keywords = []
@@ -1023,7 +1029,9 @@ def create_keyword_extractor(
             pass
 
         logger.info(
-            "Dependencies check: sklearn={0}, nltk={1}, spacy={2}".format(sklearn_available, nltk_available, spacy_available)
+            "Dependencies check: sklearn={0}, nltk={1}, spacy={2}".format(
+                sklearn_available, nltk_available, spacy_available
+            )
         )
 
         # If ML dependencies are available, use the full extractor
@@ -1034,7 +1042,9 @@ def create_keyword_extractor(
                     with open(config_path, "r") as f:
                         config = json.load(f)
                 except Exception as e:
-                    logger.error("Error loading config from {0}: {1}".format(config_path, e))
+                    logger.error(
+                        "Error loading config from {0}: {1}".format(config_path, e)
+                    )
             return KeywordTopicExtractor(config)
         else:
             # Fall back to simple extractor
@@ -1047,7 +1057,9 @@ def create_keyword_extractor(
                     with open(config_path, "r") as f:
                         config = json.load(f)
                 except Exception as e:
-                    logger.error("Error loading config from {0}: {1}".format(config_path, e))
+                    logger.error(
+                        "Error loading config from {0}: {1}".format(config_path, e)
+                    )
             return SimpleKeywordExtractor(config)
 
     except Exception as e:
@@ -1084,7 +1096,7 @@ if __name__ == "__main__":
     # Display results
     for result in results:
         print("\nArticle: {0}".format(result.title))
-        print("Keywords: {0}".format([k.keyword for k in result.keywords[))
+        print("Keywords: {0}".format([k.keyword for k in result.keywords[:100]]))
         if result.dominant_topic:
             print("Dominant Topic: {0}".format(result.dominant_topic.topic_name))
         print("Processing Time: {0}s".format(result.processing_time))

@@ -224,8 +224,7 @@ class KubernetesNERProcessor:
                     articles.append(article)
 
                 logger.info(
-                    "Fetched {0} articles for NER processing".format(
-                        len(articles))
+                    "Fetched {0} articles for NER processing".format(len(articles))
                 )
                 return articles
 
@@ -250,8 +249,7 @@ class KubernetesNERProcessor:
 
         try:
             logger.info(
-                "Processing batch of {0} articles for NER".format(
-                    len(articles))
+                "Processing batch of {0} articles for NER".format(len(articles))
             )
 
             for article in articles:
@@ -307,9 +305,9 @@ class KubernetesNERProcessor:
             self.stats["batches_processed"] += 1
 
             logger.info(
-                "Processed batch in {0}s, extracted {1} entities".format(
-                    batch_processing_time:.2f, 
-                    len(results))
+                "Processed batch in {0:.2f}s, extracted {1} entities".format(
+                    batch_processing_time, len(results)
+                )
             )
             return results
 
@@ -339,14 +337,17 @@ class KubernetesNERProcessor:
                 # Insert results
                 success_count = await processor.batch_insert_entity_results(results)
                 logger.info(
-                    "Successfully stored {0} entity results in Redshift".format(success_count)
+                    "Successfully stored {0} entity results in Redshift".format(
+                        success_count
+                    )
                 )
 
         except Exception as e:
             logger.error("Failed to store results in Redshift: {0}".format(e))
             # Save results to file as backup
             backup_file = os.path.join(
-                self.output_dir, "entity_results_backup_{0}.json".format(int(time.time()))
+                self.output_dir,
+                "entity_results_backup_{0}.json".format(int(time.time())),
             )
             with open(backup_file, "w") as f:
                 json.dump(results, f, indent=2, default=str)
@@ -407,7 +408,8 @@ class KubernetesNERProcessor:
                 self.postgres_conn.commit()
                 logger.info(
                     "Updated NER processing status for {0} articles".format(
-                        len(article_ids))
+                        len(article_ids)
+                    )
                 )
 
         except Exception as e:

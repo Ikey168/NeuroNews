@@ -106,8 +106,7 @@ class DynamoDBMetadataPipeline:
     async def spider_opened(self, spider):
         """Initialize when spider opens."""
         self.logger.info(
-            "DynamoDB metadata pipeline opened for spider: {0}".format(
-                spider.name)
+            "DynamoDB metadata pipeline opened for spider: {0}".format(spider.name)
         )
         self.stats["start_time"] = time.time()
 
@@ -124,8 +123,7 @@ class DynamoDBMetadataPipeline:
         total_time = end_time - (self.stats["start_time"] or end_time)
 
         self.logger.info(
-            "DynamoDB metadata pipeline closed for spider: {0}".format(
-                spider.name)
+            "DynamoDB metadata pipeline closed for spider: {0}".format(spider.name)
         )
         self.logger.info("Indexing statistics:")
         self.logger.info(f"  - Indexed articles: {self.stats['indexed_articles']}")
@@ -167,9 +165,9 @@ class DynamoDBMetadataPipeline:
             self.stats["total_processing_time"] += processing_time
 
             self.logger.debug(
-                "Indexed metadata for article: {0} ({1}s)".format(
-                    metadata.article_id, 
-                    processing_time:.3f)
+                "Indexed metadata for article: {0} ({1:.3f}s)".format(
+                    metadata.article_id, processing_time
+                )
             )
 
             return item
@@ -251,8 +249,7 @@ class S3MetadataSync:
                 s3_metadata, self.dynamodb_manager
             )
             self.logger.debug(
-                "Synced S3 metadata for article: {0}".format(
-                    metadata.article_id)
+                "Synced S3 metadata for article: {0}".format(metadata.article_id)
             )
             return metadata
         except Exception as e:
@@ -322,9 +319,9 @@ class S3MetadataSync:
         }
 
         self.logger.info(
-            "S3 metadata sync: {0}/{1} articles ({2}ms)".format(synced_count, 
-                len(s3_metadata_list), 
-                sync_time:.2f)
+            "S3 metadata sync: {0}/{1} articles ({2}ms)".format(
+                synced_count, len(s3_metadata_list), sync_time
+            )
         )
         return result
 
@@ -429,9 +426,9 @@ class RedshiftMetadataSync:
         }
 
         self.logger.info(
-            "Redshift metadata sync: {0}/{1} updates ({2}ms)".format(updated_count, 
-                len(redshift_records), 
-                sync_time:.2f)
+            "Redshift metadata sync: {0}/{1} updates ({2}ms)".format(
+                updated_count, len(redshift_records), sync_time
+            )
         )
         return result
 
