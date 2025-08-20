@@ -176,7 +176,9 @@ class SummaryDatabase:
             )
 
         except Exception as e:
-            logger.error("Failed to create table {0}: {1}".format(self.table_name, str(e)))
+            logger.error(
+                "Failed to create table {0}: {1}".format(self.table_name, str(e))
+            )
             raise
 
     async def store_summary(
@@ -330,8 +332,7 @@ class SummaryDatabase:
 
         except Exception as e:
             logger.error(
-                "Failed to get summary by hash {0}: {1}".format(content_hash, 
-                    str(e))
+                "Failed to get summary by hash {0}: {1}".format(content_hash, str(e))
             )
             raise
 
@@ -396,8 +397,9 @@ class SummaryDatabase:
 
         except Exception as e:
             logger.error(
-                "Failed to get summaries for article {0}: {1}".format(article_id, 
-                    str(e))
+                "Failed to get summaries for article {0}: {1}".format(
+                    article_id, str(e)
+                )
             )
             raise
 
@@ -514,15 +516,17 @@ class SummaryDatabase:
                     del self._cache_timestamps[key]
 
             logger.info(
-                "Deleted {0} summaries for article {1} ".format(deleted_count, article_id)
-                "in {0}s".format(query_time)
+                "Deleted {0} summaries for article {1} in {2:.2f}s".format(
+                    deleted_count, article_id, query_time
+                )
             )
             return deleted_count
 
         except Exception as e:
             logger.error(
-                "Failed to delete summaries for article {0}: {1}".format(article_id, 
-                    str(e))
+                "Failed to delete summaries for article {0}: {1}".format(
+                    article_id, str(e)
+                )
             )
             raise
 

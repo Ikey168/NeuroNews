@@ -270,8 +270,7 @@ class KubernetesAIProcessor:
                     articles.append(article)
 
                 logger.info(
-                    "Fetched {0} articles for topic modeling".format(
-                        len(articles))
+                    "Fetched {0} articles for topic modeling".format(len(articles))
                 )
                 return articles
 
@@ -382,8 +381,7 @@ class KubernetesAIProcessor:
         """
         try:
             logger.info(
-                "Performing topic modeling using {0}".format(
-                    self.topic_model_type)
+                "Performing topic modeling using {0}".format(self.topic_model_type)
             )
 
             if self.topic_model_type.upper() == "LDA":
@@ -445,17 +443,16 @@ class KubernetesAIProcessor:
                     "topic_id": topic_idx,
                     "topic_words": top_words,
                     "topic_weights": top_weights,
-                    "topic_label": "Topic_{0}_{1}_{2}".format(topic_idx, 
-                        top_words[0], 
-                        top_words[1]),
+                    "topic_label": "Topic_{0}_{1}_{2}".format(
+                        topic_idx, top_words[0], top_words[1]
+                    ),
                     "model_type": "LDA",
                 }
                 topic_descriptions.append(topic_desc)
 
             self.stats["topics_extracted"] = len(topic_descriptions)
             logger.info(
-                "Extracted {0} topics using LDA".format(
-                    len(topic_descriptions))
+                "Extracted {0} topics using LDA".format(len(topic_descriptions))
             )
 
             return topic_assignments, topic_descriptions
@@ -526,9 +523,9 @@ class KubernetesAIProcessor:
                             "topic_words": top_words,
                             "topic_weights": top_weights,
                             "topic_label": (
-                                "Topic_{0}_{1}_{2}".format(topic_idx, 
-                                    top_words[0], 
-                                    top_words[1]])
+                                "Topic_{0}_{1}_{2}".format(
+                                    topic_idx, top_words[0], top_words[1]
+                                )
                                 if top_words
                                 else "Topic_{0}".format(topic_idx)
                             ),
@@ -539,7 +536,9 @@ class KubernetesAIProcessor:
 
                     except Exception as e:
                         logger.warning(
-                            "Failed to generate description for topic {0}: {1}".format(topic_idx, e)
+                            "Failed to generate description for topic {0}: {1}".format(
+                                topic_idx, e
+                            )
                         )
                         topic_desc = {
                             "topic_id": topic_idx,
@@ -553,8 +552,7 @@ class KubernetesAIProcessor:
 
             self.stats["topics_extracted"] = len(topic_descriptions)
             logger.info(
-                "Extracted {0} topics using UMAP+KMeans".format(
-                    len(topic_descriptions))
+                "Extracted {0} topics using UMAP+KMeans".format(len(topic_descriptions))
             )
 
             return topic_assignments, topic_descriptions
@@ -581,7 +579,8 @@ class KubernetesAIProcessor:
         try:
             logger.info(
                 "Processing batch of {0} articles for topic modeling".format(
-                    len(articles))
+                    len(articles)
+                )
             )
 
             # Preprocess texts
@@ -653,7 +652,9 @@ class KubernetesAIProcessor:
             self.stats["batches_processed"] += 1
 
             logger.info(
-                "Processed batch in {0:.2f}s, assigned topics to {1} articles".format(batch_processing_time, len(results))
+                "Processed batch in {0:.2f}s, assigned topics to {1} articles".format(
+                    batch_processing_time, len(results)
+                )
             )
             return results
 
@@ -674,8 +675,7 @@ class KubernetesAIProcessor:
                 return
 
             logger.info(
-                "Storing {0} topic modeling results in Redshift".format(
-                    len(results))
+                "Storing {0} topic modeling results in Redshift".format(len(results))
             )
 
             # Store in Redshift
@@ -686,14 +686,17 @@ class KubernetesAIProcessor:
                 # Insert results
                 success_count = await processor.batch_insert_topic_results(results)
                 logger.info(
-                    "Successfully stored {0} topic results in Redshift".format(success_count)
+                    "Successfully stored {0} topic results in Redshift".format(
+                        success_count
+                    )
                 )
 
         except Exception as e:
             logger.error("Failed to store results in Redshift: {0}".format(e))
             # Save results to file as backup
             backup_file = os.path.join(
-                self.output_dir, "topic_results_backup_{0}.json".format(int(time.time()))
+                self.output_dir,
+                "topic_results_backup_{0}.json".format(int(time.time())),
             )
             with open(backup_file, "w") as f:
                 json.dump(results, f, indent=2, default=str)
@@ -756,7 +759,8 @@ class KubernetesAIProcessor:
                 self.postgres_conn.commit()
                 logger.info(
                     "Updated topic processing status for {0} articles".format(
-                        len(article_ids))
+                        len(article_ids)
+                    )
                 )
 
         except Exception as e:
@@ -844,8 +848,7 @@ class KubernetesAIProcessor:
             # For topic modeling, process all articles together for better
             # topic coherence
             logger.info(
-                "Processing {0} articles for topic modeling".format(
-                    len(articles))
+                "Processing {0} articles for topic modeling".format(len(articles))
             )
 
             # Process all articles in one large batch (with memory management)

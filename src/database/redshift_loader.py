@@ -411,7 +411,7 @@ class RedshiftETLProcessor:
             logger.info(
                 "Batch load completed: {0}/{1} articles loaded ({2:.1f}% success rate)".format(
                     loaded_count, total_articles, stats["success_rate"]
-                ])
+                )
             )
 
             return stats

@@ -264,8 +264,9 @@ class SNSAlertManager:
             alert_type=AlertType.HIGH_FAILURE_RATE,
             severity=severity,
             title="High Failure Rate Detected: {0:.1f}%".format(failure_rate),
-            message="Scraper failure rate is {0:.1f}% over the last {1} hours.\n".format(failure_rate, time_period)
-            "Failed: {0}/{1} attempts".format(failed_count, total_count),
+            message="Scraper failure rate is {0:.1f}% over the last {1} hours.\nFailed: {2}/{3} attempts".format(
+                failure_rate, time_period, failed_count, total_count
+            ),
             timestamp=time.time(),
             metadata={
                 "failure_rate": failure_rate,
@@ -292,8 +293,9 @@ class SNSAlertManager:
             alert_type=AlertType.CAPTCHA_BLOCKING,
             severity=AlertSeverity.WARNING,
             title="Frequent CAPTCHA Encounters",
-            message="Encountered {0} CAPTCHAs for {1} in the last {2} hours.\n".format(captcha_count, url, time_period)
-            "This may indicate detection by anti-bot systems.",
+            message="Encountered {0} CAPTCHAs for {1} in the last {2} hours.\nThis may indicate detection by anti-bot systems.".format(
+                captcha_count, url, time_period
+            ),
             timestamp=time.time(),
             metadata={
                 "url": url,

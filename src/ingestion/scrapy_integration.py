@@ -204,8 +204,9 @@ class OptimizedScrapyPipeline:
                 throughput = processed_count / max(processing_time, 0.001)
 
                 spider.logger.info(
-                    "Batch processed: {0}/{1} articles ".format(processed_count, len(articles))
-                    "in {0:.2f}s ({1} articles/sec)".format(processing_time, throughput)
+                    "Batch processed: {0}/{1} articles in {2:.2f}s ({3:.1f} articles/sec)".format(
+                        processed_count, len(articles), processing_time, throughput
+                    )
                 )
 
                 # Update spider stats if available
@@ -358,8 +359,9 @@ class HighThroughputValidationPipeline:
         if self.items_validated > 0:
             pass_rate = (self.items_passed / self.items_validated) * 100
             spider.logger.info(
-                "Fast validation stats: {0}/{1} passed ".format(self.items_passed, self.items_validated)
-                "({0}% pass rate), {1} cache hits".format(pass_rate)
+                "Fast validation stats: {0}/{1} passed ({2:.1f}% pass rate), {3} cache hits".format(
+                    self.items_passed, self.items_validated, pass_rate, self.cache_hits
+                )
             )
 
 

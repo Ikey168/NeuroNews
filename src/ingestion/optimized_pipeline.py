@@ -430,9 +430,9 @@ class OptimizedIngestionPipeline:
                 )
 
             logger.info(
-                "Pipeline processing completed: {0} articles ".format(len(processed_articles))
-                "processed in {0}s ".format(total_time)
-                "({0} articles/sec)".format(self.metrics.throughput_articles_per_second)
+                "Pipeline processing completed: {0} articles processed in {1:.2f}s ({2:.2f} articles/sec)".format(
+                    len(processed_articles), total_time, self.metrics.throughput_articles_per_second
+                )
             )
 
             return {
@@ -539,8 +539,9 @@ class OptimizedIngestionPipeline:
                 self.batch_processor.adjust_batch_size(batch_time, success_rate)
 
                 logger.debug(
-                    "Batch {0} completed: {1}/{2} ".format(batch_id, len(processed_articles), len(batch))
-                    "articles processed in {0}s".format(batch_time)
+                    "Batch {0} completed: {1}/{2} articles processed in {3:.2f}s".format(
+                        batch_id, len(processed_articles), len(batch), batch_time
+                    )
                 )
 
                 return processed_articles

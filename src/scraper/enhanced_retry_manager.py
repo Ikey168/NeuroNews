@@ -304,7 +304,9 @@ class EnhancedRetryManager:
             await self.failure_manager.mark_success(url)
 
         self.logger.info(
-            "Successfully scraped {0} after {1} retries in {2}ms".format(url, retry_count, duration_ms)
+            "Successfully scraped {0} after {1} retries in {2}ms".format(
+                url, retry_count, duration_ms
+            )
         )
 
     async def _record_retry_attempt(
@@ -376,7 +378,9 @@ class EnhancedRetryManager:
             )
 
         self.logger.error(
-            "Final failure for {0} after {1} retries: {2}".format(url, retry_count, error)
+            "Final failure for {0} after {1} retries: {2}".format(
+                url, retry_count, error
+            )
         )
 
     async def _record_permanent_failure(
@@ -497,8 +501,9 @@ class EnhancedRetryManager:
                     # This would be called by the main scraper to retry the URL
                     # For now, just log that it's ready for retry
                     self.logger.info(
-                        "URL ready for retry: {0} ".format(failed_url.url)
-                        "(attempt {0})".format(failed_url.retry_count + 1)
+                        "URL ready for retry: {0} (attempt {1})".format(
+                            failed_url.url, failed_url.retry_count + 1
+                        )
                     )
                     processed_urls.append(failed_url.url)
 

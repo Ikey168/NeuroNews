@@ -26,11 +26,19 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any, Dict, List, Optional
 
-im            # Print results
-            print("Optimized NLP Pipeline Results:")
-            print("Processed: {0} articles".format(results['articles_processed']))
-            print("Processing time: {0:.2f}s".format(results['processing_time']))
-            print("Throughput: {0:.2f} articles/sec".format(results['throughput']))psutil
+import time
+from typing import Dict, List, Any, Optional, Tuple
+from datetime import datetime, timedelta
+import logging
+import gc
+import psutil
+import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass
+from enum import Enum
+
+# Core NLP imports
+import psutil
 
 # Optional imports with fallbacks
 try:
