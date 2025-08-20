@@ -541,7 +541,7 @@ class TestSentimentTrendAnalyzer:
     ):
         """Test full historical trend analysis workflow."""
         with patch.object(trend_analyzer, "_fetch_sentiment_data") as mock_fetch:
-            with patch.object(trend_analyzer, "_store_trend_data") as mock_store:
+            with patch.object(trend_analyzer, "_store_trend_data"):
                 mock_fetch.return_value = sample_sentiment_data
 
                 start_date = datetime.now(timezone.utc) - timedelta(days=7)
@@ -579,7 +579,7 @@ class TestSentimentTrendAnalyzer:
                 item["sentiment_label"] = "positive"
 
         with patch.object(trend_analyzer, "_fetch_sentiment_data") as mock_fetch:
-            with patch.object(trend_analyzer, "_store_alerts") as mock_store:
+            with patch.object(trend_analyzer, "_store_alerts"):
                 mock_fetch.return_value = alert_data
 
                 alerts = await trend_analyzer.generate_sentiment_alerts(
@@ -680,7 +680,7 @@ class TestUtilityFunctions:
             mock_instance.get_topic_trend_summary = AsyncMock(return_value=None)
             MockAnalyzer.return_value = mock_instance
 
-            result = await analyze_sentiment_trends_for_topic(
+            _ = await analyze_sentiment_trends_for_topic(
                 "technology", redshift_config, days=30
             )
 

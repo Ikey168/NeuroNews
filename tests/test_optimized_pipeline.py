@@ -434,14 +434,8 @@ class TestPerformanceBenchmarks(unittest.TestCase):
         )  # Complete within 20 seconds
 
         print(f"\nThroughput Benchmark Results:")
-        print(
-            f"Processing Time: {
-                benchmark_results['processing_time']:.2f} seconds"
-        )
-        print(
-            f"Throughput: {
-                benchmark_results['throughput']:.1f} articles/second"
-        )
+        print(f"Processing Time: {benchmark_results['processing_time']:.2f} seconds")
+        print(f"Throughput: {benchmark_results['throughput']:.1f} articles/second")
         print(f"Articles Processed: {benchmark_results['articles_processed']}")
 
     def test_memory_efficiency_benchmark(self):
