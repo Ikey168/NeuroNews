@@ -68,14 +68,20 @@ class TestLanguageDetector:
 
     def test_french_detection(self):
         """Test French language detection."""
-        french_text = "Ceci est un article de presse sur la technologie et l'innovation dans le monde moderne."
+        french_text = (
+            "Ceci est un article de presse sur la technologie et l'innovation "
+            "dans le monde moderne."
+        )
         result = self.detector.detect_language(french_text)
         assert result["language"] == "fr"
         assert result["confidence"] > 0.1  # More realistic threshold
 
     def test_german_detection(self):
         """Test German language detection."""
-        german_text = "Dies ist ein Nachrichtenartikel über Technologie und Innovation in der modernen Welt."
+        german_text = (
+            "Dies ist ein Nachrichtenartikel über Technologie und Innovation "
+            "in der modernen Welt."
+        )
         result = self.detector.detect_language(german_text)
         assert result["language"] == "de"
         assert result["confidence"] > 0.1  # More realistic threshold
@@ -107,7 +113,10 @@ class TestLanguageDetector:
 
     def test_mixed_language_text(self):
         """Test handling of mixed language content."""
-        mixed_text = "Hello world and welcome to this news article. Bonjour le monde and technology updates. Hola mundo."
+        mixed_text = (
+            "Hello world and welcome to this news article. Bonjour le monde "
+            "and technology updates. Hola mundo."
+        )
         result = self.detector.detect_language(mixed_text)
         # Should detect the most prominent language or unknown for mixed
         # content
@@ -187,7 +196,10 @@ class TestTranslationQualityChecker:
     def test_good_quality_translation(self):
         """Test assessment of good quality translation."""
         original = "This is a technology news article about artificial intelligence."
-        translated = "Este es un artículo de noticias de tecnología sobre inteligencia artificial."
+        translated = (
+            "Este es un artículo de noticias de tecnología sobre inteligencia "
+            "artificial."
+        )
 
         quality = self.checker.assess_translation_quality(
             original, translated, "en", "es"
@@ -198,7 +210,10 @@ class TestTranslationQualityChecker:
 
     def test_poor_quality_translation(self):
         """Test assessment of poor quality translation."""
-        original = "This is a long technology news article about artificial intelligence and machine learning."
+        original = (
+            "This is a long technology news article about artificial intelligence "
+            "and machine learning."
+        )
         translated = "Bad"  # Very short translation
 
         quality = self.checker.assess_translation_quality(
@@ -382,7 +397,7 @@ class TestMultiLanguagePipeline:
         assert pipeline.target_language == "en"
         assert pipeline.quality_threshold == 0.7
 
-    def test_pipeline_initialization(self):
+    def test_pipeline_initialization_with_patch(self):
         """Test pipeline initialization with patched sentiment analyzer."""
         with patch("psycopg2.connect"), patch(
             "src.nlp.sentiment_analysis.SentimentAnalyzer"
@@ -410,7 +425,8 @@ class TestMultiLanguagePipeline:
                 "This is a comprehensive technology news article about machine learning"
             )
             item["content"] = (
-                "This is a comprehensive technology news article about machine learning and artificial intelligence developments."
+                "This is a comprehensive technology news article about machine learning "
+                "and artificial intelligence developments."
             )
             item["url"] = "https://example.com/news"
 
@@ -456,7 +472,9 @@ class TestMultiLanguagePipeline:
             item = NewsItem()
             item["title"] = "Test Article"
             item["content"] = (
-                "Test content for disabled pipeline. This content needs to be long enough to pass validation requirements. It should be more than 100 characters to avoid the minimum content length restriction."
+                "Test content for disabled pipeline. This content needs to be long "
+                "enough to pass validation requirements. It should be more than 100 "
+                "characters to avoid the minimum content length restriction."
             )
             item["url"] = "https://example.com/test"
 
@@ -548,7 +566,10 @@ class TestIntegrationWorkflow:
         article = {
             "id": "test_integration",
             "title": "Avances en Inteligencia Artificial",
-            "content": "Este artículo discute los últimos avances en inteligencia artificial y aprendizaje automático.",
+            "content": (
+                "Este artículo discute los últimos avances en inteligencia artificial "
+                "y aprendizaje automático."
+            ),
             "url": "https://example.com/ai-news",
         }
 
