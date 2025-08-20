@@ -94,8 +94,7 @@ async def get_articles_by_topic(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Database error: {
-                str(e)}",
+            detail=f"Database error: {str(e)}",
         )
 
 
