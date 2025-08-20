@@ -237,7 +237,9 @@ class MemoryMonitor:
 
                     gc.collect()
                     logger.warning(
-                        "High memory usage detected: {0:.1f}MB, triggered GC".format(self.current_usage)
+                        "High memory usage detected: {0:.1f}MB, triggered GC".format(
+                            self.current_usage
+                        )
                     )
 
                 time.sleep(self.check_interval)
@@ -355,7 +357,8 @@ class OptimizedIngestionPipeline:
 
         logger.info(
             "Optimized ingestion pipeline initialized with config: {0}".format(
-                self.config)
+                self.config
+            )
         )
 
     async def process_articles_async(
@@ -382,7 +385,8 @@ class OptimizedIngestionPipeline:
         try:
             logger.info(
                 "Starting optimized ingestion pipeline for {0} articles".format(
-                    len(articles))
+                    len(articles)
+                )
             )
 
             # Process articles in optimized batches
@@ -394,8 +398,7 @@ class OptimizedIngestionPipeline:
             # Create batches for processing
             batches = self._create_adaptive_batches(articles)
             logger.info(
-                "Created {0} adaptive batches for processing".format(
-                    len(batches))
+                "Created {0} adaptive batches for processing".format(len(batches))
             )
 
             # Process batches concurrently
@@ -431,7 +434,9 @@ class OptimizedIngestionPipeline:
 
             logger.info(
                 "Pipeline processing completed: {0} articles processed in {1:.2f}s ({2:.2f} articles/sec)".format(
-                    len(processed_articles), total_time, self.metrics.throughput_articles_per_second
+                    len(processed_articles),
+                    total_time,
+                    self.metrics.throughput_articles_per_second,
                 )
             )
 
@@ -505,8 +510,9 @@ class OptimizedIngestionPipeline:
 
             try:
                 logger.debug(
-                    "Processing batch {0} with {1} articles".format(batch_id, 
-                        len(batch))
+                    "Processing batch {0} with {1} articles".format(
+                        batch_id, len(batch)
+                    )
                 )
 
                 # Process articles in the batch concurrently
@@ -526,7 +532,9 @@ class OptimizedIngestionPipeline:
                         processed_articles.append(result)
                     elif isinstance(result, Exception):
                         logger.warning(
-                            "Article processing failed in batch {0}: {1}".format(batch_id, result)
+                            "Article processing failed in batch {0}: {1}".format(
+                                batch_id, result
+                            )
                         )
 
                 # Store processed articles if storage backends are provided

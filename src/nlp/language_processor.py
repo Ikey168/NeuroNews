@@ -257,7 +257,8 @@ class LanguageDetector:
         if not text or len(text.strip()) < min_length:
             logger.warning(
                 "Text too short for reliable language detection: {0} chars".format(
-                    len(text))
+                    len(text)
+                )
             )
             return {
                 "language": "unknown",
@@ -311,7 +312,9 @@ class LanguageDetector:
             }
 
         logger.info(
-            "Detected language: {0} (confidence: {1:.2f})".format(best_language, confidence)
+            "Detected language: {0} (confidence: {1:.2f})".format(
+                best_language, confidence
+            )
         )
         return {
             "language": best_language,
@@ -473,7 +476,9 @@ class AWSTranslateService:
             }
 
         # Check cache first
-        cache_key = "{0}:{1}:{2}".format(source_language, target_language, hash(text[:100]]))
+        cache_key = "{0}:{1}:{2}".format(
+            source_language, target_language, hash(text[:100])
+        )
         if cache_key in self._translation_cache:
             logger.info("Using cached translation")
             return self._translation_cache[cache_key]
@@ -481,7 +486,9 @@ class AWSTranslateService:
         # Truncate text if too long
         if len(text) > max_length:
             logger.warning(
-                "Text truncated from {0} to {1} characters".format(len(text), max_length)
+                "Text truncated from {0} to {1} characters".format(
+                    len(text), max_length
+                )
             )
             text = text[:max_length]
 
@@ -504,7 +511,9 @@ class AWSTranslateService:
             self._translation_cache[cache_key] = result
 
             logger.info(
-                "Successfully translated text from {0} to {1}".format(source_language, target_language)
+                "Successfully translated text from {0} to {1}".format(
+                    source_language, target_language
+                )
             )
             return result
 

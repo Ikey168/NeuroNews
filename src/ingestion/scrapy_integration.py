@@ -62,8 +62,7 @@ class OptimizedScrapyPipeline:
         )
 
         logger.info(
-            "OptimizedScrapyPipeline initialized with config: {0}".format(
-                self.config)
+            "OptimizedScrapyPipeline initialized with config: {0}".format(self.config)
         )
 
     def open_spider(self, spider: Spider):
@@ -86,8 +85,8 @@ class OptimizedScrapyPipeline:
             )
 
             # Save performance report
-            report_path = (
-                "data/optimization_report_{0}_{1}.json".format(spider.name, int(time.time()))
+            report_path = "data/optimization_report_{0}_{1}.json".format(
+                spider.name, int(time.time())
             )
             asyncio.run(self.ingestion_pipeline.save_performance_report(report_path))
 
@@ -445,8 +444,9 @@ class AdaptiveRateLimitPipeline:
                 spider.download_delay = self.current_delay
 
             spider.logger.info(
-                "Adaptive rate limit adjusted: {0:.2f}s -> {1}s ".format(old_delay, self.current_delay)
-                "(avg response: {0:.2f}s, error rate: {1})".format(avg_response_time, current_error_rate)
+                "Adaptive rate limit adjusted: {0:.2f}s -> {1:.2f}s (avg response: {2:.2f}s, error rate: {3:.1%})".format(
+                    old_delay, self.current_delay, avg_response_time, current_error_rate
+                )
             )
 
 
@@ -542,8 +542,7 @@ class OptimizedStoragePipeline:
             self.batches_written += 1
 
             spider.logger.debug(
-                "Storage batch written: {0} items".format(
-                    len(items_to_store))
+                "Storage batch written: {0} items".format(len(items_to_store))
             )
 
         except Exception as e:
@@ -568,8 +567,10 @@ class OptimizedStoragePipeline:
             self._flush_storage_buffer(spider)
 
         spider.logger.info(
-            "Optimized storage stats: {0} items stored ".format(self.items_stored)
-            "in {0} batches, {1} errors".format(self.batches_written, self.storage_errors)
+            "Optimized storage stats: {0} items stored "
+            "in {1} batches, {2} errors".format(
+                self.items_stored, self.batches_written, self.storage_errors
+            )
         )
 
 

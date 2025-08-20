@@ -129,7 +129,9 @@ class SNSAlertManager:
 
         try:
             # Prepare SNS message
-            subject = "[{0}] NeuroNews Scraper Alert: {1}".format(alert.severity.value, alert.title)
+            subject = "[{0}] NeuroNews Scraper Alert: {1}".format(
+                alert.severity.value, alert.title
+            )
             message = alert.to_sns_message()
 
             # Add message attributes for filtering
@@ -159,7 +161,7 @@ class SNSAlertManager:
 
             self.logger.info(
                 "Sent alert: {0} (MessageId: {1})".format(
-                    alert.title, response['MessageId']
+                    alert.title, response["MessageId"]
                 )
             )
             return True
@@ -199,7 +201,9 @@ class SNSAlertManager:
 
         # Send without rate limiting
         try:
-            subject = "[{0}] NeuroNews Scraper Alert: {1}".format(alert.severity.value, alert.title)
+            subject = "[{0}] NeuroNews Scraper Alert: {1}".format(
+                alert.severity.value, alert.title
+            )
             message = alert.to_sns_message()
 
             self.sns.publish(TopicArn=self.topic_arn, Subject=subject, Message=message)
@@ -234,7 +238,9 @@ class SNSAlertManager:
             alert_type=AlertType.SCRAPER_FAILURE,
             severity=severity,
             title="Scraper Failure - {0} Attempts".format(retry_count + 1),
-            message="Failed to scrape URL: {0}\nReason: {1}\nRetry Count: {2}".format(url, failure_reason, retry_count),
+            message="Failed to scrape URL: {0}\nReason: {1}\nRetry Count: {2}".format(
+                url, failure_reason, retry_count
+            ),
             timestamp=time.time(),
             metadata={
                 "url": url,
@@ -321,7 +327,11 @@ class SNSAlertManager:
             alert_type=AlertType.IP_BLOCKING,
             severity=AlertSeverity.ERROR,
             title="IP Blocking Detected",
-            message="Multiple IPs blocked for {0} in the last {1} hours.\nBlocked IPs: {2}{3}".format(url, time_period, ', '.join(blocked_ips[:5]]), '...' if len(blocked_ips) > 5 else ''
+            message="Multiple IPs blocked for {0} in the last {1} hours.\nBlocked IPs: {2}{3}".format(
+                url,
+                time_period,
+                ", ".join(blocked_ips[:5]),
+                "..." if len(blocked_ips) > 5 else "",
             ),
             timestamp=time.time(),
             metadata={
@@ -348,8 +358,10 @@ class SNSAlertManager:
             alert_type=AlertType.PERFORMANCE_DEGRADATION,
             severity=AlertSeverity.WARNING,
             title="Performance Degradation Detected",
-            message="Average response time ({0:.0f}ms) exceeds threshold ({1:.0f}ms) ".format(avg_response_time, threshold)
-            "over the last {0} hours.".format(time_period),
+            message="Average response time ({0:.0f}ms) exceeds threshold ({1:.0f}ms) "
+            "over the last {2} hours.".format(
+                avg_response_time, threshold, time_period
+            ),
             timestamp=time.time(),
             metadata={
                 "avg_response_time_ms": avg_response_time,
@@ -375,7 +387,9 @@ class SNSAlertManager:
             alert_type=AlertType.SYSTEM_ERROR,
             severity=AlertSeverity.ERROR,
             title="System Error in {0}".format(component),
-            message="Error Type: {0}\nMessage: {1}\nComponent: {2}".format(error_type, error_message, component),
+            message="Error Type: {0}\nMessage: {1}\nComponent: {2}".format(
+                error_type, error_message, component
+            ),
             timestamp=time.time(),
             metadata={
                 "error_type": error_type,

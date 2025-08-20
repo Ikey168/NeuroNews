@@ -440,7 +440,7 @@ class AsyncNewsScraperEngine:
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 self.logger.error(
-                    "Error scraping {0}: {1}".format(sources[i].name, result])
+                    "Error scraping {0}: {1}".format(sources[i].name, str(result))
                 )
                 self.monitor.record_error(sources[i].name)
             else:

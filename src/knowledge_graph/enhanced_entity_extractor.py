@@ -23,9 +23,7 @@ from typing import Any, Dict, List, Optional
 
 # Import optimized NLP components from Issue #35
 try:
-    from src.nlp.nlp_int                )
-                print("    Confidence: {0:.2f}".format(rel.confidence))
-                print("    Context: {0}...".format(rel.context[:100]))ation import IntegratedNLPProcessor
+    from src.nlp.nlp_integration import IntegratedNLPProcessor
     from src.nlp.optimized_nlp_pipeline import NLPConfig
 
     OPTIMIZED_NLP_AVAILABLE = True
@@ -377,12 +375,15 @@ class AdvancedEntityExtractor:
 
             logger.info(
                 "Extracted {0} entities from article {1}".format(
-                    len(deduplicated_entities), article_id)
+                    len(deduplicated_entities), article_id
+                )
             )
             return deduplicated_entities
 
         except Exception as e:
-            logger.error("Error extracting entities from article {0}: {1}".format(article_id, e))
+            logger.error(
+                "Error extracting entities from article {0}: {1}".format(article_id, e)
+            )
             return []
 
     async def extract_relationships(
@@ -434,13 +435,16 @@ class AdvancedEntityExtractor:
 
             logger.info(
                 "Extracted {0} relationships for article {1}".format(
-                    len(filtered_relationships), article_id)
+                    len(filtered_relationships), article_id
+                )
             )
             return filtered_relationships
 
         except Exception as e:
             logger.error(
-                "Error extracting relationships for article {0}: {1}".format(article_id, e)
+                "Error extracting relationships for article {0}: {1}".format(
+                    article_id, e
+                )
             )
             return []
 
@@ -880,7 +884,9 @@ if __name__ == "__main__":
             print("🔍 Extracted Entities:")
             for entity in entities:
                 print(
-                    "  • {0} ({1}) - Confidence: {2}".format(entity.text, entity.label, entity.confidence)
+                    "  • {0} ({1}) - Confidence: {2}".format(
+                        entity.text, entity.label, entity.confidence
+                    )
                 )
                 if entity.properties:
                     print("    Properties: {0}".format(entity.properties))
@@ -895,10 +901,14 @@ if __name__ == "__main__":
             print("\n🔗 Extracted Relationships:")
             for rel in relationships:
                 print(
-                    "  • {0} --[{1}]--> {2}".format(rel.source_entity.text, rel.relation_type, rel.target_entity.text)
+                    "  • {0} --[{1}]--> {2}".format(
+                        rel.source_entity.text,
+                        rel.relation_type,
+                        rel.target_entity.text,
+                    )
                 )
                 print("    Confidence: {0}".format(rel.confidence))
-                print("    Context: {0}...".format(rel.context[:100]]))
+                print("    Context: {0}...".format(rel.context[:100]))
 
             # Get statistics
             stats = extractor.get_extraction_statistics()

@@ -1,6 +1,8 @@
 """
 Async News Scraper Runner
-Main entry point for running the high-performance async news                  self.config['max_threads']} threads"
+Main entry point for running the high-performance async news                    self.config['max_threads']} threads"
+        )
+        self.logger.info("🎯 Sources: {0}".format([s.name for s in sources]))           self.config['max_threads']} threads"
         )
         self.logger.info("🎯 Sources: {0}".format([s.name for s in sources]))           self.config['max_threads']} threads"
         )
@@ -94,7 +96,7 @@ class AsyncScraperRunner:
                 self.config['max_concurrent']} concurrent, {
                 self.config['max_threads']} threads"
         )
-        self.logger.info("🎯 Sources: {0}".format([s.name for s in sources])))
+        self.logger.info("🎯 Sources: {0}".format([s.name for s in sources]))
 
         start_time = time.time()
 
@@ -132,9 +134,7 @@ class AsyncScraperRunner:
             self.logger.info("⏱️  Duration: {0} seconds".format(duration))
             self.logger.info("📰 Articles: {0}".format(len(articles)))
             self.logger.info(
-                "📈 Rate: {0} articles/second".format(
-                    len(articles) /
-                    duration)
+                "📈 Rate: {0} articles/second".format(len(articles) / duration)
             )
 
             return articles

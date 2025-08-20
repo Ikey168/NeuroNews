@@ -126,7 +126,9 @@ class CacheManager:
                 self.redis_client.ping()
                 logger.info("Redis cache connection established")
             except Exception as e:
-                logger.warning("Redis connection failed: {0}. Using local cache only.".format(e))
+                logger.warning(
+                    "Redis connection failed: {0}. Using local cache only.".format(e)
+                )
                 self.redis_client = None
 
     def _generate_cache_key(self, text: str, model_name: str, operation: str) -> str:
@@ -414,7 +416,8 @@ class OptimizedNLPPipeline:
 
         logger.info(
             "Processing {0} articles with operations: {1}".format(
-                len(articles), operations)
+                len(articles), operations
+            )
         )
         start_time = time.time()
 
@@ -528,8 +531,9 @@ class OptimizedNLPPipeline:
 
             try:
                 logger.debug(
-                    "Processing batch {0} with {1} articles".format(batch_id, 
-                        len(batch))
+                    "Processing batch {0} with {1} articles".format(
+                        batch_id, len(batch)
+                    )
                 )
 
                 # Check memory pressure
@@ -588,7 +592,9 @@ class OptimizedNLPPipeline:
                 return await self._process_summary_batch(batch)
             else:
                 logger.warning("Unknown operation: {0}".format(operation))
-                return [{"error": "Unknown operation: {0}".format(operation)} for _ in batch]
+                return [
+                    {"error": "Unknown operation: {0}".format(operation)} for _ in batch
+                ]
 
         except Exception as e:
             logger.error("Error processing {0} operation: {1}".format(operation, e))
@@ -786,16 +792,14 @@ class OptimizedNLPPipeline:
                     self.current_batch_size + 4, self.config.max_batch_size
                 )
                 logger.debug(
-                    "Increased batch size to {0}".format(
-                        self.current_batch_size)
+                    "Increased batch size to {0}".format(self.current_batch_size)
                 )
 
             # If performance is poor, decrease batch size
             elif avg_throughput < 20 and self.current_batch_size > 8:
                 self.current_batch_size = max(self.current_batch_size - 4, 8)
                 logger.debug(
-                    "Decreased batch size to {0}".format(
-                        self.current_batch_size)
+                    "Decreased batch size to {0}".format(self.current_batch_size)
                 )
 
     def get_performance_stats(self) -> Dict[str, Any]:
@@ -903,13 +907,14 @@ if __name__ == "__main__":
 
             # Print results
             print("Optimized NLP Pipeline Results:")
-            print("Processed: {0} articles".format(results['articles_processed']]))
-            print("Processing time: {0:.2f}s".format(results['processing_time']]))
-            print("Throughput: {0:.2f} articles/sec".format(results['throughput']]))
-            print("Cache hit rate: {0:.2%}".format(results['cache_stats']['hit_rate']]))
+            print("Processed: {0} articles".format(results["articles_processed"]))
+            print("Processing time: {0:.2f}s".format(results["processing_time"]))
+            print("Throughput: {0:.2f} articles/sec".format(results["throughput"]))
+            print("Cache hit rate: {0:.2%}".format(results["cache_stats"]["hit_rate"]))
             print(
-                f"Memory usage: {
-                    results['memory_stats']['current_usage_mb']:.1f}MB"
+                "Memory usage: {0:.1f}MB".format(
+                    results["memory_stats"]["current_usage_mb"]
+                )
             )
 
         finally:
