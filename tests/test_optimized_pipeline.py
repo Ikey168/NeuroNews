@@ -339,7 +339,7 @@ class TestScrapyIntegration(unittest.TestCase):
 
     def test_optimized_storage_pipeline(self):
         """Test OptimizedStoragePipeline."""
-        with tempfile.TemporaryDirectory() as temp_dir:
+        with tempfile.TemporaryDirectory():
             # Create pipeline with temporary storage
             pipeline = OptimizedStoragePipeline()
 
@@ -433,7 +433,7 @@ class TestPerformanceBenchmarks(unittest.TestCase):
             benchmark_results["processing_time"], 20
         )  # Complete within 20 seconds
 
-        print(f"\nThroughput Benchmark Results:")
+        print("\nThroughput Benchmark Results:")
         print(f"Processing Time: {benchmark_results['processing_time']:.2f} seconds")
         print(f"Throughput: {benchmark_results['throughput']:.1f} articles/second")
         print(f"Articles Processed: {benchmark_results['articles_processed']}")
@@ -462,13 +462,11 @@ class TestPerformanceBenchmarks(unittest.TestCase):
         # Memory increase should be reasonable
         self.assertLess(memory_increase, 200)
 
-        print(f"\nMemory Efficiency Benchmark Results:")
+        print("\nMemory Efficiency Benchmark Results:")
         print(f"Initial Memory: {initial_memory:.1f} MB")
         print(f"Memory Increase: {memory_increase:.1f} MB")
-        print(
-            f"Memory Efficiency: {len(self.large_dataset) /
-                                    max(memory_increase, 1):.1f} articles/MB"
-        )
+        efficiency = len(self.large_dataset) / max(memory_increase, 1)
+        print(f"Memory Efficiency: {efficiency:.1f} articles/MB")
 
     def test_concurrent_processing_scaling(self):
         """Test how concurrent processing scales with different settings."""
@@ -501,7 +499,7 @@ class TestPerformanceBenchmarks(unittest.TestCase):
             result = asyncio.run(test_concurrency(level))
             results.append(result)
 
-        print(f"\nConcurrency Scaling Benchmark:")
+        print("\nConcurrency Scaling Benchmark:")
         for result in results:
             print(
                 f"Concurrency {result['concurrency']:2d}: "
@@ -675,11 +673,11 @@ if __name__ == "__main__":
 
     # Print summary
     print(f"\n{'=' * 50}")
-    print(f"Test Summary:")
+    print("Test Summary:")
     print(f"Tests run: {result.testsRun}")
     print(f"Failures: {len(result.failures)}")
     print(f"Errors: {len(result.errors)}")
-    print(
-        f"Success rate: {((result.testsRun - len(result.failures) - len(result.errors)) / result.testsRun * 100):.1f}%"
-    )
+    success_count = result.testsRun - len(result.failures) - len(result.errors)
+    success_rate = success_count / result.testsRun * 100
+    print(f"Success rate: {success_rate:.1f}%")
     print(f"{'=' * 50}")

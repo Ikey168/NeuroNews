@@ -1,9 +1,12 @@
 import pytest
 
-from src.nlp.sentiment_analysis import (  # Changed from BaseSentimentAnalyzer; VaderSentimentAnalyzer, # Commented out as it's not defined
+from src.nlp.sentiment_analysis import (
     SentimentAnalyzer,
     create_analyzer,
 )
+
+# Changed from BaseSentimentAnalyzer; VaderSentimentAnalyzer
+# Commented out as it's not defined
 
 # Commenting out TestBaseSentimentAnalyzer as it's for a non-existent class
 # and its methods (e.g., preprocess_text) are not in SentimentAnalyzer
@@ -31,19 +34,22 @@ from src.nlp.sentiment_analysis import (  # Changed from BaseSentimentAnalyzer; 
 #             self.analyzer.preprocess_text(123)
 
 # Commenting out TestVaderSentimentAnalyzer as it's for a non-existent class
-# and its methods (e.g., analyze_sentiment) are different from SentimentAnalyzer's analyze method
+# and its methods (e.g., analyze_sentiment) are different from
+# SentimentAnalyzer's analyze method
 # class TestVaderSentimentAnalyzer:
 #     def setup_method(self):
 #         # self.analyzer = VaderSentimentAnalyzer() # This class doesn't exist
-#         self.analyzer = SentimentAnalyzer() # Using the actual class for now, though tests might fail
+#         # Using the actual class for now, though tests might fail
+#         self.analyzer = SentimentAnalyzer()
 #
 #     def test_analyze_positive_sentiment(self):
 #         text = "This is excellent! I love it."
-#         result = self.analyzer.analyze(text) # Changed from analyze_sentiment
+#         result = self.analyzer.analyze(text)  # Changed from analyze_sentiment
 #
-#         assert result["label"] == "POSITIVE" # Adjusted expected label
+#         assert result["label"] == "POSITIVE"  # Adjusted expected label
 #         assert result["score"] > 0
-#         # assert result["provider"] == "vader" # Provider info not available in current SentimentAnalyzer
+#         # Provider info not available in current SentimentAnalyzer
+#         # assert result["provider"] == "vader"
 #         assert result["text"] == text
 #
 #     def test_analyze_negative_sentiment(self):
@@ -111,8 +117,8 @@ class TestAnalyzerFactory:
 
     def test_create_specific_analyzer(self):
         # Example with a different model if available and configured
-        # For now, just test creating the default one again or a known Hugging
-        # Face model
+        # For now, just test creating the default one again or a known
+        # Hugging Face model
         analyzer = create_analyzer("distilbert-base-uncased-finetuned-sst-2-english")
         assert isinstance(analyzer, SentimentAnalyzer)
 
