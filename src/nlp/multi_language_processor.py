@@ -181,7 +181,7 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
                     logger.info("Translation tables created successfully")
 
         except Exception as e:
-            logger.error(f"Error creating translation tables: {e}")
+            logger.error("Error creating translation tables: {0}".format(e))
             raise
 
     def process_article(self, article_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -198,7 +198,7 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
         title = article_data.get("title", "")
         content = article_data.get("content", "")
 
-        logger.info(f"Processing article {article_id} with multi-language support")
+        logger.info("Processing article {0} with multi-language support".format(article_id))
 
         result = {
             "article_id": article_id,
@@ -210,7 +210,7 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
 
         try:
             # Step 1: Detect language
-            text_to_analyze = f"{title} {content}".strip()
+            text_to_analyze = "{0} {1}".format(title, content).strip()
             detected_language, confidence = self.language_detector.detect_language(
                 text_to_analyze
             )
@@ -228,8 +228,8 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
             result["detection_confidence"] = confidence
 
             logger.info(
-                f"Detected language: {detected_language} (confidence: {
-                    confidence:.2f})"
+                "Detected language: {0} (confidence: {1})".format(detected_language, 
+                    confidence:.2f)
             )
 
             # Step 2: Translate if needed
@@ -268,10 +268,10 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
             sentiment_result = super().process_article([processed_article])
             result["sentiment_analysis"] = sentiment_result
 
-            logger.info(f"Successfully processed article {article_id}")
+            logger.info("Successfully processed article {0}".format(article_id))
 
         except Exception as e:
-            error_msg = f"Error processing article {article_id}: {str(e)}"
+            error_msg = "Error processing article {0}: {1}".format(article_id, str(e))
             logger.error(error_msg)
             result["errors"].append(error_msg)
 
@@ -366,19 +366,19 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
                 )
 
                 logger.info(
-                    f"Translation completed with quality score: {
-                        overall_quality:.2f}"
+                    "Translation completed with quality score: {0}".format(
+                        overall_quality:.2f)
                 )
 
             else:
                 logger.warning(
-                    f"Translation quality too low: {
-                        overall_quality:.2f} < {
-                        self.quality_threshold}"
+                    "Translation quality too low: {0} < {1}".format(
+                        overall_quality:.2f, 
+                        self.quality_threshold)
                 )
 
         except Exception as e:
-            logger.error(f"Error translating article {article_id}: {e}")
+            logger.error("Error translating article {0}: {1}".format(article_id, e))
             result["translation_error"] = str(e)
 
         return result
@@ -419,7 +419,7 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
                     conn.commit()
 
         except Exception as e:
-            logger.error(f"Error storing language detection: {e}")
+            logger.error("Error storing language detection: {0}".format(e))
 
     def _store_translation(
         self,
@@ -476,14 +476,14 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
                     conn.commit()
 
         except Exception as e:
-            logger.error(f"Error storing translation: {e}")
+            logger.error("Error storing translation: {0}".format(e))
 
     def _generate_article_id(self, article_data: Dict[str, Any]) -> str:
         """Generate a unique article ID based on article content."""
         content_hash = hashlib.md5(
             f"{article_data.get('url', '')}{article_data.get('title', '')}".encode()
         ).hexdigest()
-        return f"article_{content_hash[:12]}"
+        return "article_{0}".format(content_hash[)
 
     def get_translation_statistics(self) -> Dict[str, Any]:
         """Get translation statistics from the database."""
@@ -544,7 +544,7 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
                     }
 
         except Exception as e:
-            logger.error(f"Error getting translation statistics: {e}")
+            logger.error("Error getting translation statistics: {0}".format(e))
             return {}
 
     def process_batch(self, articles: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -559,7 +559,7 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
         """
         results = []
 
-        logger.info(f"Processing batch of {len(articles)} articles")
+        logger.info("Processing batch of {0} articles".format(len(articles)))
 
         for i, article in enumerate(articles):
             try:
@@ -567,15 +567,15 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
                 results.append(result)
 
                 if (i + 1) % 10 == 0:
-                    logger.info(f"Processed {i + 1}/{len(articles)} articles")
+                    logger.info("Processed {0}/{1} articles".format(i + 1, len(articles)))
 
             except Exception as e:
-                logger.error(f"Error processing article {i}: {e}")
+                logger.error("Error processing article {0}: {1}".format(i, e))
                 results.append(
-                    {"article_id": article.get("id", f"unknown_{i}"), "error": str(e)}
+                    {"article_id": article.get("id", "unknown_{0}".format(i)), "error": str(e)}
                 )
 
-        logger.info(f"Completed batch processing: {len(results)} results")
+        logger.info("Completed batch processing: {0} results".format(len(results)))
         return results
 
     def create_language_detection_table(self) -> bool:
@@ -606,7 +606,7 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
                 logger.info("Language detection table created successfully")
                 return True
         except Exception as e:
-            logger.error(f"Error creating language detection table: {e}")
+            logger.error("Error creating language detection table: {0}".format(e))
             return False
 
     def create_translation_table(self) -> bool:
@@ -643,7 +643,7 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
                 logger.info("Translation table created successfully")
                 return True
         except Exception as e:
-            logger.error(f"Error creating translation table: {e}")
+            logger.error("Error creating translation table: {0}".format(e))
             return False
 
     def store_language_detection(self, detection_data: Dict[str, Any]) -> bool:
@@ -680,7 +680,7 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
                 )
                 return True
         except Exception as e:
-            logger.error(f"Error storing language detection: {e}")
+            logger.error("Error storing language detection: {0}".format(e))
             return False
 
     def store_translation(self, translation_data: Dict[str, Any]) -> bool:
@@ -724,5 +724,5 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
                 )
                 return True
         except Exception as e:
-            logger.error(f"Error storing translation: {e}")
+            logger.error("Error storing translation: {0}".format(e))
             return False

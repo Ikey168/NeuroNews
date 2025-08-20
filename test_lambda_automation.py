@@ -51,7 +51,7 @@ def test_lambda_function():
 
         logger.info("✅ Successfully imported Lambda function")
     except ImportError as e:
-        logger.error(f"❌ Failed to import Lambda function: {e}")
+        logger.error("❌ Failed to import Lambda function: {0}".format(e))
         return False
 
     # Test configuration extraction
@@ -70,7 +70,7 @@ def test_lambda_function():
         logger.info(f"   S3 bucket: {config['s3_bucket']}")
         logger.info(f"   CloudWatch namespace: {config['cloudwatch_namespace']}")
     except Exception as e:
-        logger.error(f"❌ Configuration extraction failed: {e}")
+        logger.error("❌ Configuration extraction failed: {0}".format(e))
         return False
 
     # Test Lambda handler with mock environment
@@ -177,7 +177,7 @@ def test_lambda_function():
             all_tests_passed = False
 
     except Exception as e:
-        logger.error(f"❌ Error handling test failed: {e}")
+        logger.error("❌ Error handling test failed: {0}".format(e))
         all_tests_passed = False
 
     # Summary
@@ -206,16 +206,16 @@ def validate_terraform_config():
     logger.info("\n🔧 Validating Terraform configuration...")
 
     terraform_files = [
-        "/workspaces/NeuroNews/deployment/terraform/lambda.tf",
-        "/workspaces/NeuroNews/deployment/terraform/variables.tf",
-        "/workspaces/NeuroNews/deployment/terraform/cloudwatch.tf",
+        "/workspaces/NeuroNews/deployment/terraform/lambda.t",
+        "/workspaces/NeuroNews/deployment/terraform/variables.t",
+        "/workspaces/NeuroNews/deployment/terraform/cloudwatch.t",
     ]
 
     for file_path in terraform_files:
         if os.path.exists(file_path):
             logger.info(f"✅ Found: {os.path.basename(file_path)}")
         else:
-            logger.error(f"❌ Missing: {os.path.basename(file_path)}")
+            logger.error("❌ Missing: {0}".format(os.path.basename(file_path)))
             return False
 
     logger.info("✅ All Terraform configuration files found")
@@ -235,9 +235,9 @@ def validate_deployment_files():
 
     for file_path in deployment_files:
         if os.path.exists(file_path):
-            logger.info(f"✅ Found: {os.path.basename(file_path)}")
+            logger.info("✅ Found: {0}".format(os.path.basename(file_path)))
         else:
-            logger.error(f"❌ Missing: {os.path.basename(file_path)}")
+            logger.error("❌ Missing: {0}".format(os.path.basename(file_path)))
             return False
 
     logger.info("✅ All deployment files found")

@@ -94,7 +94,7 @@ class TestProxyRotationManager:
         # Record successful request
         await proxy_manager.record_request(proxy, success=True, response_time=0.5)
 
-        key = f"{proxy.host}:{proxy.port}"
+        key = "{0}:{1}".format(proxy.host, proxy.port)
         stats = proxy_manager.proxy_stats[key]
         assert stats.total_requests == 1
         assert stats.successful_requests == 1
@@ -342,12 +342,12 @@ if __name__ == "__main__":
 
         # Test proxy manager
         proxy_manager = ProxyRotationManager(config_path=config_path)
-        print(f"Loaded {len(proxy_manager.proxies)} proxies")
+        print("Loaded {0} proxies".format(len(proxy_manager.proxies)))
 
         # Test rotation
         for i in range(5):
             proxy = await proxy_manager.get_proxy()
-            print(f"Request {i + 1}: Using proxy {proxy.host}:{proxy.port}")
+            print("Request {0}: Using proxy {1}:{2}".format(i + 1, proxy.host, proxy.port))
 
         # Test user agent rotator
         ua_rotator = UserAgentRotator()
@@ -362,7 +362,7 @@ if __name__ == "__main__":
 
         test_html = '<div class="g-recaptcha" data-sitekey="test123"></div>'
         detected = await captcha_solver.detect_captcha(test_html)
-        print(f"CAPTCHA detected: {detected}")
+        print("CAPTCHA detected: {0}".format(detected))
 
         print("\nAll tests completed successfully!")
 

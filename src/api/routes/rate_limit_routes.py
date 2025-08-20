@@ -154,7 +154,7 @@ async def get_api_limits(
         )
 
     except Exception as e:
-        logger.error(f"Error getting API limits for user {user_id}: {e}")
+        logger.error("Error getting API limits for user {0}: {1}".format(user_id, e))
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -204,7 +204,7 @@ async def get_suspicious_activity(
         ]
 
     except Exception as e:
-        logger.error(f"Error getting suspicious activity: {e}")
+        logger.error("Error getting suspicious activity: {0}".format(e))
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -244,7 +244,7 @@ async def get_usage_statistics(current_user: dict = Depends(require_auth)):
         )
 
     except Exception as e:
-        logger.error(f"Error getting usage statistics: {e}")
+        logger.error("Error getting usage statistics: {0}".format(e))
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -307,7 +307,7 @@ async def get_tier_info(current_user: dict = Depends(require_auth)):
         )
 
     except Exception as e:
-        logger.error(f"Error getting tier info: {e}")
+        logger.error("Error getting tier info: {0}".format(e))
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -344,10 +344,12 @@ async def reset_user_limits(
                 current_user.get('user_id')}"
         )
 
-        return {"message": f"Rate limits reset successfully for user {user_id}"}
+        return {
+            "message": "Rate limits reset successfully for user {0}".format(user_id)
+        }
 
     except Exception as e:
-        logger.error(f"Error resetting limits for user {user_id}: {e}")
+        logger.error("Error resetting limits for user {0}: {1}".format(user_id, e))
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -409,10 +411,10 @@ async def _reset_user_limits_redis(user_id: str):
     now = time.time()
 
     keys_to_delete = [
-        f"rate_limit:{user_id}:minute:{int(now // 60)}",
-        f"rate_limit:{user_id}:hour:{int(now // 3600)}",
-        f"rate_limit:{user_id}:day:{int(now // 86400)}",
-        f"concurrent:{user_id}",
+        "rate_limit:{0}:minute:{1}".format(user_id, int(now // 60)),
+        "rate_limit:{0}:hour:{1}".format(user_id, int(now // 3600)),
+        "rate_limit:{0}:day:{1}".format(user_id, int(now // 86400)),
+        "concurrent:{0}".format(user_id),
     ]
 
     for key in keys_to_delete:

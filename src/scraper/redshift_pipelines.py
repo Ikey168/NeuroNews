@@ -99,8 +99,7 @@ class RedshiftStoragePipeline:
             # Connect to Redshift
             self.etl_processor.connect()
             spider.logger.info(
-                f"Connected to Redshift cluster: {
-                    self.redshift_host}"
+                "Connected to Redshift cluster: {0}".format(self.redshift_host)
             )
 
             # Initialize schema if needed
@@ -109,11 +108,13 @@ class RedshiftStoragePipeline:
                 spider.logger.info("Redshift schema initialized")
             except Exception as e:
                 spider.logger.warning(
-                    f"Schema initialization failed (may already exist): {e}"
+                    "Schema initialization failed (may already exist): {0}".format(e)
                 )
 
         except Exception as e:
-            spider.logger.error(f"Failed to initialize Redshift connection: {e}")
+            spider.logger.error(
+                "Failed to initialize Redshift connection: {0}".format(e)
+            )
             spider.logger.error("Articles will not be stored in Redshift")
             self.etl_processor = None
 
@@ -164,11 +165,11 @@ class RedshiftStoragePipeline:
 
         except Exception as e:
             self.stats["failed_count"] += 1
-            spider.logger.error(f"Failed to queue article for Redshift: {e}")
+            spider.logger.error("Failed to queue article for Redshift: {0}".format(e))
 
             # Optionally drop item on storage failure
             if spider.settings.getbool("REDSHIFT_DROP_ON_ERROR", False):
-                raise DropItem(f"Redshift storage failed: {e}")
+                raise DropItem("Redshift storage failed: {0}".format(e))
 
             return item
 
@@ -181,7 +182,7 @@ class RedshiftStoragePipeline:
 
             # Log final statistics
             spider.logger.info(
-                f"""
+                """
 === Redshift Storage Pipeline Statistics ===
 Processed: {self.stats['processed_count']} articles
 Stored: {self.stats['stored_count']} articles
@@ -209,7 +210,7 @@ Success Rate: {(self.stats['stored_count'] / max(1, self.stats['processed_count'
             )
 
         except Exception as e:
-            spider.logger.error(f"Error during Redshift pipeline cleanup: {e}")
+            spider.logger.error("Error during Redshift pipeline cleanup: {0}".format(e))
 
         finally:
             # Close Redshift connection
@@ -218,7 +219,9 @@ Success Rate: {(self.stats['stored_count'] / max(1, self.stats['processed_count'
                     self.etl_processor.close()
                     spider.logger.info("Redshift connection closed")
                 except Exception as e:
-                    spider.logger.error(f"Error closing Redshift connection: {e}")
+                    spider.logger.error(
+                        "Error closing Redshift connection: {0}".format(e)
+                    )
 
     def _process_batch(self, spider: Spider, final: bool = False):
         """Process the current batch of articles."""
@@ -227,7 +230,9 @@ Success Rate: {(self.stats['stored_count'] / max(1, self.stats['processed_count'
 
         try:
             batch_size = len(self.batch_articles)
-            spider.logger.info(f"Processing Redshift batch: {batch_size} articles")
+            spider.logger.info(
+                "Processing Redshift batch: {0} articles".format(batch_size)
+            )
 
             # Load batch into Redshift
             load_stats = self.etl_processor.batch_load_articles(
@@ -247,13 +252,13 @@ Success Rate: {(self.stats['stored_count'] / max(1, self.stats['processed_count'
             # Log errors if any
             if load_stats.get("errors"):
                 for error in load_stats["errors"][:3]:  # Log first 3 errors
-                    spider.logger.error(f"Batch processing error: {error}")
+                    spider.logger.error("Batch processing error: {0}".format(error))
 
             # Clear batch
             self.batch_articles.clear()
 
         except Exception as e:
-            spider.logger.error(f"Failed to process Redshift batch: {e}")
+            spider.logger.error("Failed to process Redshift batch: {0}".format(e))
             self.stats["failed_count"] += len(self.batch_articles)
             self.batch_articles.clear()
 
@@ -340,7 +345,9 @@ class RedshiftAnalyticsPipeline:
             self.etl_processor.connect()
             spider.logger.info("Redshift analytics pipeline initialized")
         except Exception as e:
-            spider.logger.error(f"Failed to initialize analytics pipeline: {e}")
+            spider.logger.error(
+                "Failed to initialize analytics pipeline: {0}".format(e)
+            )
             self.etl_processor = None
 
     def process_item(self, item: Dict[str, Any], spider: Spider) -> Dict[str, Any]:
@@ -358,7 +365,7 @@ class RedshiftAnalyticsPipeline:
                 self._process_analytics_batch(spider)
 
         except Exception as e:
-            spider.logger.error(f"Analytics processing failed: {e}")
+            spider.logger.error("Analytics processing failed: {0}".format(e))
 
         return item
 
@@ -406,11 +413,13 @@ class RedshiftAnalyticsPipeline:
             # Insert analytics records (implementation depends on analytics
             # table schema)
             spider.logger.info(
-                f"Processing analytics batch: {len(self.analytics_batch)} records"
+                "Processing analytics batch: {0} records".format(
+                    len(self.analytics_batch)
+                )
             )
             # Implementation would insert into analytics table
             self.analytics_batch.clear()
 
         except Exception as e:
-            spider.logger.error(f"Analytics batch processing failed: {e}")
+            spider.logger.error("Analytics batch processing failed: {0}".format(e))
             self.analytics_batch.clear()

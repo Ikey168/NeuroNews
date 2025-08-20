@@ -137,7 +137,7 @@ async def get_quicksight_service() -> QuickSightDashboardService:
             _quicksight_service = QuickSightDashboardService()
             logger.info("QuickSight service initialized")
         except Exception as e:
-            logger.error(f"Failed to initialize QuickSight service: {e}")
+            logger.error("Failed to initialize QuickSight service: {0}".format(e))
             raise HTTPException(
                 status_code=503, detail="QuickSight service not available"
             )
@@ -194,11 +194,10 @@ async def setup_quicksight_resources(
         return QuickSightSetupResponse(**result)
 
     except Exception as e:
-        logger.error(f"Failed to set up QuickSight resources: {e}")
+        logger.error("Failed to set up QuickSight resources: {0}".format(e))
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to set up QuickSight resources: {
-                str(e)}",
+            detail="Failed to set up QuickSight resources: {0}".format(str(e)),
         )
 
 
@@ -240,9 +239,9 @@ async def list_dashboards(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to list dashboards: {e}")
+        logger.error("Failed to list dashboards: {0}".format(e))
         raise HTTPException(
-            status_code=500, detail=f"Failed to list dashboards: {str(e)}"
+            status_code=500, detail="Failed to list dashboards: {0}".format(str(e))
         )
 
 
@@ -271,7 +270,7 @@ async def create_dashboard_layout(
 ):
     """Create specific dashboard layout."""
     try:
-        logger.info(f"API request to create dashboard layout: {layout_type}")
+        logger.info("API request to create dashboard layout: {0}".format(layout_type))
 
         # Validate layout type
         try:
@@ -279,9 +278,9 @@ async def create_dashboard_layout(
         except ValueError:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid layout type: {layout_type}. Supported types: {
-                    [
-                        t.value for t in DashboardType]}",
+                detail="Invalid layout type: {0}. Supported types: {1}".format(
+                    layout_type, [t.value for t in DashboardType]
+                ),
             )
 
         # Create dashboard layout
@@ -293,7 +292,7 @@ async def create_dashboard_layout(
                 detail=result.get("error", "Failed to create dashboard layout"),
             )
 
-        logger.info(f"Successfully created {layout_type} dashboard layout")
+        logger.info("Successfully created {0} dashboard layout".format(layout_type))
         return DashboardLayoutResponse(
             success=True,
             dashboard_id=result["dashboard_id"],
@@ -303,11 +302,12 @@ async def create_dashboard_layout(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to create dashboard layout {layout_type}: {e}")
+        logger.error(
+            "Failed to create dashboard layout {0}: {1}".format(layout_type, e)
+        )
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to create dashboard layout: {
-                str(e)}",
+            detail="Failed to create dashboard layout: {0}".format(str(e)),
         )
 
 
@@ -340,7 +340,9 @@ async def setup_real_time_updates(
         if refresh_frequency not in valid_frequencies:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid refresh frequency: {refresh_frequency}. Supported: {valid_frequencies}",
+                detail="Invalid refresh frequency: {0}. Supported: {1}".format(
+                    refresh_frequency, valid_frequencies
+                ),
             )
 
         # Set up real-time updates
@@ -358,9 +360,10 @@ async def setup_real_time_updates(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to set up real-time updates: {e}")
+        logger.error("Failed to set up real-time updates: {0}".format(e))
         raise HTTPException(
-            status_code=500, detail=f"Failed to set up real-time updates: {str(e)}"
+            status_code=500,
+            detail="Failed to set up real-time updates: {0}".format(str(e)),
         )
 
 
@@ -396,9 +399,9 @@ async def validate_quicksight_setup(
         return ValidationResponse(**result)
 
     except Exception as e:
-        logger.error(f"Failed to validate setup: {e}")
+        logger.error("Failed to validate setup: {0}".format(e))
         raise HTTPException(
-            status_code=500, detail=f"Failed to validate setup: {str(e)}"
+            status_code=500, detail="Failed to validate setup: {0}".format(str(e))
         )
 
 
@@ -419,7 +422,7 @@ async def health_check():
             "description": "AWS QuickSight Dashboard for News Insights",
         }
     except Exception as e:
-        logger.error(f"Health check failed: {e}")
+        logger.error("Health check failed: {0}".format(e))
         raise HTTPException(status_code=503, detail="Service unhealthy")
 
 
@@ -435,13 +438,13 @@ async def get_dashboard_info(
 ):
     """Get information about a specific dashboard."""
     try:
-        logger.info(f"API request to get dashboard info: {dashboard_id}")
+        logger.info("API request to get dashboard info: {0}".format(dashboard_id))
 
         result = await service.get_dashboard_info(dashboard_id)
 
         if not result["success"]:
             raise HTTPException(
-                status_code=404, detail=f"Dashboard not found: {dashboard_id}"
+                status_code=404, detail="Dashboard not found: {0}".format(dashboard_id)
             )
 
         return result
@@ -449,7 +452,9 @@ async def get_dashboard_info(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get dashboard info for {dashboard_id}: {e}")
+        logger.error(
+            "Failed to get dashboard info for {0}: {1}".format(dashboard_id, e)
+        )
         raise HTTPException(
-            status_code=500, detail=f"Failed to get dashboard info: {str(e)}"
+            status_code=500, detail="Failed to get dashboard info: {0}".format(str(e))
         )

@@ -284,7 +284,7 @@ def test_analyzer_logic():
 
                 sample_data.append(
                     {
-                        "id": f"article_{len(sample_data) + 1}",
+                        "id": "article_{0}".format(len(sample_data) + 1),
                         "topic": topic,
                         "publish_date": current_date,
                         "sentiment_score": sentiment_score,
@@ -347,12 +347,12 @@ def test_configuration_loading():
             ]
             for section in required_sections:
                 if section == "alert_configuration":
-                    assert section in main_config, f"Missing config section: {section}"
+                    assert section in main_config, "Missing config section: {0}".format(section)
                     assert (
                         "thresholds" in main_config[section]
                     ), "Missing alert thresholds"
                 elif section == "analysis_settings":
-                    assert section in main_config, f"Missing config section: {section}"
+                    assert section in main_config, "Missing config section: {0}".format(section)
                     assert "default_time_granularity" in main_config[section]
                 elif section == "performance_settings":
                     # This section might not exist in all configs
@@ -363,7 +363,7 @@ def test_configuration_loading():
             # Handle flat structure for backwards compatibility
             required_sections = ["analysis_settings", "alert_thresholds"]
             for section in required_sections:
-                assert section in config, f"Missing config section: {section}"
+                assert section in config, "Missing config section: {0}".format(section)
 
         print("   ✅ Configuration file validation successful")
     else:
@@ -394,11 +394,11 @@ def test_api_routes():
         for expected_route in expected_routes:
             # Check if the route exists (may have slight variations)
             route_found = any(expected_route in route for route in routes)
-            assert route_found, f"Missing API route: {expected_route}"
+            assert route_found, "Missing API route: {0}".format(expected_route)
 
         print("   ✅ API routes definition successful")
     except ImportError as e:
-        print(f"   ⚠️  API routes import failed: {e}")
+        print("   ⚠️  API routes import failed: {0}".format(e))
 
 
 def test_utility_functions():
@@ -413,7 +413,7 @@ def test_utility_functions():
 
         print("   ✅ Utility function imports successful")
     except ImportError as e:
-        print(f"   ❌ Utility function import failed: {e}")
+        print("   ❌ Utility function import failed: {0}".format(e))
 
 
 def validate_file_structure():
@@ -433,9 +433,9 @@ def validate_file_structure():
     for file_path in required_files:
         full_path = base_path / file_path
         if full_path.exists():
-            print(f"   ✅ {file_path}")
+            print("   ✅ {0}".format(file_path))
         else:
-            print(f"   ❌ {file_path} - MISSING")
+            print("   ❌ {0} - MISSING".format(file_path))
 
 
 def main():
@@ -463,7 +463,7 @@ def main():
         print("\n🎉 Historical Sentiment Trend Analysis implementation is ready!")
 
     except Exception as e:
-        print(f"\n❌ Validation failed: {e}")
+        print("\n❌ Validation failed: {0}".format(e))
         import traceback
 
         traceback.print_exc()

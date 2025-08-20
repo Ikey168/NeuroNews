@@ -28,7 +28,7 @@ try:
     from database.redshift_loader import RedshiftETLProcessor
     from nlp.ner_processor import NERProcessor
 except ImportError as e:
-    print(f"Import error: {e}")
+    print("Import error: {0}".format(e))
     print("Please ensure you're running from the project root directory")
     sys.exit(1)
 
@@ -102,14 +102,14 @@ class KubernetesNERProcessor:
             "confidence_threshold": self.confidence_threshold,
         }
 
-        logger.info(f"Initialized KubernetesNERProcessor:")
-        logger.info(f"  Job Type: {self.job_type}")
-        logger.info(f"  Batch Size: {self.batch_size}")
-        logger.info(f"  Max Workers: {self.max_workers}")
-        logger.info(f"  GPU Enabled: {self.use_gpu}")
-        logger.info(f"  Model: {self.model_name}")
-        logger.info(f"  Confidence Threshold: {self.confidence_threshold}")
-        logger.info(f"  Output Dir: {self.output_dir}")
+        logger.info("Initialized KubernetesNERProcessor:")
+        logger.info("  Job Type: {0}".format(self.job_type))
+        logger.info("  Batch Size: {0}".format(self.batch_size))
+        logger.info("  Max Workers: {0}".format(self.max_workers))
+        logger.info("  GPU Enabled: {0}".format(self.use_gpu))
+        logger.info("  Model: {0}".format(self.model_name))
+        logger.info("  Confidence Threshold: {0}".format(self.confidence_threshold))
+        logger.info("  Output Dir: {0}".format(self.output_dir))
 
     async def initialize(self):
         """Initialize all components and connections."""
@@ -122,7 +122,7 @@ class KubernetesNERProcessor:
 
             # Initialize NER processor with GPU support
             device = "cuda" if self.use_gpu else "cpu"
-            logger.info(f"Using device: {device}")
+            logger.info("Using device: {0}".format(device))
 
             self.ner_processor = NERProcessor(
                 model_name=self.model_name,
@@ -157,7 +157,7 @@ class KubernetesNERProcessor:
             logger.info("All components initialized successfully")
 
         except Exception as e:
-            logger.error(f"Failed to initialize components: {e}")
+            logger.error("Failed to initialize components: {0}".format(e))
             raise
 
     async def fetch_articles_to_process(
@@ -224,13 +224,13 @@ class KubernetesNERProcessor:
                     articles.append(article)
 
                 logger.info(
-                    f"Fetched {
-                        len(articles)} articles for NER processing"
+                    "Fetched {0} articles for NER processing".format(
+                        len(articles))
                 )
                 return articles
 
         except Exception as e:
-            logger.error(f"Failed to fetch articles: {e}")
+            logger.error("Failed to fetch articles: {0}".format(e))
             return []
 
     def process_article_batch(
@@ -250,8 +250,8 @@ class KubernetesNERProcessor:
 
         try:
             logger.info(
-                f"Processing batch of {
-                    len(articles)} articles for NER"
+                "Processing batch of {0} articles for NER".format(
+                    len(articles))
             )
 
             for article in articles:
@@ -307,14 +307,14 @@ class KubernetesNERProcessor:
             self.stats["batches_processed"] += 1
 
             logger.info(
-                f"Processed batch in {
-                    batch_processing_time:.2f}s, extracted {
-                    len(results)} entities"
+                "Processed batch in {0}s, extracted {1} entities".format(
+                    batch_processing_time:.2f, 
+                    len(results))
             )
             return results
 
         except Exception as e:
-            logger.error(f"Failed to process batch: {e}")
+            logger.error("Failed to process batch: {0}".format(e))
             self.stats["articles_failed"] += len(articles)
             return []
 
@@ -329,7 +329,7 @@ class KubernetesNERProcessor:
             if not results:
                 return
 
-            logger.info(f"Storing {len(results)} entity results in Redshift")
+            logger.info("Storing {0} entity results in Redshift".format(len(results)))
 
             # Store in Redshift
             with self.redshift_processor as processor:
@@ -339,18 +339,18 @@ class KubernetesNERProcessor:
                 # Insert results
                 success_count = await processor.batch_insert_entity_results(results)
                 logger.info(
-                    f"Successfully stored {success_count} entity results in Redshift"
+                    "Successfully stored {0} entity results in Redshift".format(success_count)
                 )
 
         except Exception as e:
-            logger.error(f"Failed to store results in Redshift: {e}")
+            logger.error("Failed to store results in Redshift: {0}".format(e))
             # Save results to file as backup
             backup_file = os.path.join(
-                self.output_dir, f"entity_results_backup_{int(time.time())}.json"
+                self.output_dir, "entity_results_backup_{0}.json".format(int(time.time()))
             )
             with open(backup_file, "w") as f:
                 json.dump(results, f, indent=2, default=str)
-            logger.info(f"Results saved to backup file: {backup_file}")
+            logger.info("Results saved to backup file: {0}".format(backup_file))
 
     async def create_entity_results_table(self, processor):
         """Create entity results table in Redshift if it doesn't exist."""
@@ -383,7 +383,7 @@ class KubernetesNERProcessor:
             logger.info("Entity results table ensured in Redshift")
 
         except Exception as e:
-            logger.error(f"Failed to create entity results table: {e}")
+            logger.error("Failed to create entity results table: {0}".format(e))
             raise
 
     async def update_postgres_processing_status(self, article_ids: List[str]):
@@ -406,12 +406,12 @@ class KubernetesNERProcessor:
 
                 self.postgres_conn.commit()
                 logger.info(
-                    f"Updated NER processing status for {
-                        len(article_ids)} articles"
+                    "Updated NER processing status for {0} articles".format(
+                        len(article_ids))
                 )
 
         except Exception as e:
-            logger.error(f"Failed to update NER processing status: {e}")
+            logger.error("Failed to update NER processing status: {0}".format(e))
             self.postgres_conn.rollback()
 
     def save_processing_stats(self):
@@ -436,13 +436,13 @@ class KubernetesNERProcessor:
                 )
 
             stats_file = os.path.join(
-                self.output_dir, f"ner_job_stats_{int(time.time())}.json"
+                self.output_dir, "ner_job_stats_{0}.json".format(int(time.time()))
             )
             with open(stats_file, "w") as f:
                 json.dump(self.stats, f, indent=2, default=str)
 
-            logger.info(f"Processing statistics saved to {stats_file}")
-            logger.info(f"NER Job Summary:")
+            logger.info("Processing statistics saved to {0}".format(stats_file))
+            logger.info("NER Job Summary:")
             logger.info(
                 f"  Articles Processed: {
                     self.stats['articles_processed']}"
@@ -472,7 +472,7 @@ class KubernetesNERProcessor:
                 )
 
         except Exception as e:
-            logger.error(f"Failed to save processing statistics: {e}")
+            logger.error("Failed to save processing statistics: {0}".format(e))
 
     async def run_processing_job(self, max_articles: int = None):
         """
@@ -529,12 +529,12 @@ class KubernetesNERProcessor:
                             await self.update_postgres_processing_status(article_ids)
 
                     except Exception as e:
-                        logger.error(f"Batch processing failed: {e}")
+                        logger.error("Batch processing failed: {0}".format(e))
 
             # Save final statistics
             self.save_processing_stats()
 
-            logger.info(f"Entity extraction job completed successfully")
+            logger.info("Entity extraction job completed successfully")
             logger.info(
                 f"Processed {
                     self.stats['articles_processed']} articles"
@@ -545,7 +545,7 @@ class KubernetesNERProcessor:
             )
 
         except Exception as e:
-            logger.error(f"Entity extraction job failed: {e}")
+            logger.error("Entity extraction job failed: {0}".format(e))
             raise
 
         finally:
@@ -613,7 +613,7 @@ async def main():
         logger.info("Entity extraction job completed successfully")
         sys.exit(0)
     except Exception as e:
-        logger.error(f"Entity extraction job failed: {e}")
+        logger.error("Entity extraction job failed: {0}".format(e))
         sys.exit(1)
 
 

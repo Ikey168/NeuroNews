@@ -186,20 +186,20 @@ class KeywordTopicDemo:
                 extraction_summary["total_topics"] += len(result.topics)
 
                 # Display sample result
-                logger.info(f"\n📄 Article: {result.title[:60]}...")
+                logger.info("\n📄 Article: {0}...".format(result.title[:60]))
                 logger.info(
-                    f"   Keywords ({len(result.keywords)}): {[kw.keyword for kw in result.keywords[:5]]}"
+                    "   Keywords ({0}): {1}".format(len(result.keywords), [kw.keyword for kw in result.keywords[:5]])
                 )
 
                 if result.dominant_topic:
                     logger.info(
-                        f"   Dominant Topic: {result.dominant_topic.topic_name}"
+                        "   Dominant Topic: {0}".format(result.dominant_topic.topic_name)
                     )
                     logger.info(
-                        f"   Topic Probability: {result.dominant_topic.probability:.3f}"
+                        "   Topic Probability: {0}".format(result.dominant_topic.probability:.3f)
                     )
 
-                logger.info(f"   Processing Time: {result.processing_time:.2f}s")
+                logger.info("   Processing Time: {0}s".format(result.processing_time:.2f))
 
                 # Store sample for summary
                 extraction_summary["sample_results"].append(
@@ -321,7 +321,7 @@ class KeywordTopicDemo:
         quality_metrics["topic_coverage"] = len(all_topics)
 
         # Display quality metrics
-        logger.info(f"📊 Quality Metrics:")
+        logger.info("📊 Quality Metrics:")
         logger.info(
             f"   Articles with Keywords: {quality_metrics['articles_with_keywords']}/{total_articles}"
         )
@@ -367,7 +367,7 @@ class KeywordTopicDemo:
             # Final summary
             logger.info("\n✅ DEMO COMPLETED SUCCESSFULLY")
             logger.info("=" * 60)
-            logger.info(f"📊 Summary:")
+            logger.info("📊 Summary:")
             logger.info(
                 f"   Total Articles Processed: {extraction_results['total_articles']}"
             )
@@ -397,12 +397,12 @@ class KeywordTopicDemo:
             with open("keyword_topic_demo_results.json", "w") as f:
                 json.dump(demo_results, f, indent=2, default=str)
 
-            logger.info(f"📁 Results saved to: keyword_topic_demo_results.json")
+            logger.info("📁 Results saved to: keyword_topic_demo_results.json")
 
             return demo_results
 
         except Exception as e:
-            logger.error(f"❌ Demo failed: {e}")
+            logger.error("❌ Demo failed: {0}".format(e))
             raise
 
 

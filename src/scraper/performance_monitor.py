@@ -83,7 +83,7 @@ class PerformanceDashboard:
                 self._update_metrics_history()
                 time.sleep(self.update_interval)
             except Exception as e:
-                self.logger.error(f"Monitoring error: {e}")
+                self.logger.error("Monitoring error: {0}".format(e))
 
     def _collect_system_metrics(self):
         """Collect system performance metrics."""
@@ -119,7 +119,7 @@ class PerformanceDashboard:
                 )
 
         except Exception as e:
-            self.logger.debug(f"System metrics collection error: {e}")
+            self.logger.debug("System metrics collection error: {0}".format(e))
 
     def _update_metrics_history(self):
         """Update metrics history."""
@@ -454,12 +454,12 @@ class PerformanceDashboard:
         print(f"🧵 Threads: {metrics['counters']['active_threads']}")
 
         # System metrics
-        print(f"\n🖥️  System Resources:")
+        print("\n🖥️  System Resources:")
         print(f"   CPU: {metrics['system']['avg_cpu']:.1f}%")
         print(f"   Memory: {metrics['system']['avg_memory']:.1f} MB")
 
         # Source breakdown
-        print(f"\n📋 Source Performance:")
+        print("\n📋 Source Performance:")
         for source, stats in metrics["sources"].items():
             print(
                 f"   {source}: {

@@ -138,7 +138,9 @@ class AdvancedSuspiciousActivityDetector:
                 if activity:
                     suspicious_activities.append(activity)
             except Exception as e:
-                logger.error(f"Error in pattern detector {pattern_type}: {e}")
+                logger.error(
+                    "Error in pattern detector {0}: {1}".format(pattern_type, e)
+                )
 
         # Store alerts
         for activity in suspicious_activities:
@@ -717,13 +719,14 @@ class AdvancedSuspiciousActivityDetector:
 
         if activity.alert_level in [AlertLevel.HIGH, AlertLevel.CRITICAL]:
             logger.warning(
-                f"Suspicious activity detected: {activity.pattern_type.value}",
+                "Suspicious activity detected: {0}".format(activity.pattern_type.value),
                 extra=log_data,
             )
         else:
             logger.info(
-                f"Potential suspicious activity: {
-                    activity.pattern_type.value}",
+                "Potential suspicious activity: {0}".format(
+                    activity.pattern_type.value
+                ),
                 extra=log_data,
             )
 

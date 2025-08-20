@@ -29,7 +29,7 @@ try:
         create_performance_optimized_pipeline,
     )
 except ImportError as e:
-    print(f"Warning: Could not import optimized_pipeline: {e}")
+    print("Warning: Could not import optimized_pipeline: {0}".format(e))
 
     # Create mock classes for testing
     class OptimizedIngestionPipeline:
@@ -54,7 +54,7 @@ try:
         configure_optimized_settings,
     )
 except ImportError as e:
-    print(f"Warning: Could not import scrapy_integration: {e}")
+    print("Warning: Could not import scrapy_integration: {0}".format(e))
 
     # Create mock classes for testing
     class OptimizedScrapyPipeline:
@@ -83,12 +83,12 @@ class TestOptimizedIngestionPipeline(unittest.TestCase):
         # Sample test data
         self.sample_articles = [
             {
-                "title": f"Test Article {i}",
-                "url": f"https://example.com/article/{i}",
-                "content": f"This is test content for article {i}. " * 20,
+                "title": "Test Article {0}".format(i),
+                "url": "https://example.com/article/{0}".format(i),
+                "content": "This is test content for article {0}. ".format(i) * 20,
                 "source": "test_source",
                 "published_date": "2024-01-01",
-                "author": f"Author {i}",
+                "author": "Author {0}".format(i),
                 "category": "test",
             }
             for i in range(50)
@@ -287,7 +287,7 @@ class TestScrapyIntegration(unittest.TestCase):
         # Process items
         for i in range(10):
             item = self.mock_item.copy()
-            item["url"] = f"https://example.com/test/{i}"
+            item["url"] = "https://example.com/test/{0}".format(i)
             processed_item = pipeline.process_item(item, self.spider_mock)
 
             self.assertIn("optimization_processed", processed_item)
@@ -328,7 +328,7 @@ class TestScrapyIntegration(unittest.TestCase):
         # Process items with different response times
         for i, response_time in enumerate([0.1, 0.2, 0.3, 2.0, 3.0]):
             item = self.mock_item.copy()
-            item["url"] = f"https://example.com/test/{i}"
+            item["url"] = "https://example.com/test/{0}".format(i)
             item["response_time"] = response_time
 
             processed_item = pipeline.process_item(item, self.spider_mock)
@@ -346,7 +346,7 @@ class TestScrapyIntegration(unittest.TestCase):
             # Process multiple items
             for i in range(25):  # Less than buffer size to test buffering
                 item = self.mock_item.copy()
-                item["url"] = f"https://example.com/test/{i}"
+                item["url"] = "https://example.com/test/{0}".format(i)
 
                 processed_item = pipeline.process_item(item, self.spider_mock)
 
@@ -388,13 +388,13 @@ class TestPerformanceBenchmarks(unittest.TestCase):
         # Generate large dataset for benchmarking
         self.large_dataset = [
             {
-                "title": f"Benchmark Article {i}",
-                "url": f"https://benchmark.com/article/{i}",
-                "content": f"Benchmark content for article {i}. " * 50,
+                "title": "Benchmark Article {0}".format(i),
+                "url": "https://benchmark.com/article/{0}".format(i),
+                "content": "Benchmark content for article {0}. ".format(i) * 50,
                 "source": "benchmark_source",
                 "published_date": "2024-01-01",
-                "author": f"Benchmark Author {i % 10}",
-                "category": f"category_{i % 5}",
+                "author": "Benchmark Author {0}".format(i % 10),
+                "category": "category_{0}".format(i % 5),
             }
             for i in range(500)
         ]
@@ -463,10 +463,10 @@ class TestPerformanceBenchmarks(unittest.TestCase):
         self.assertLess(memory_increase, 200)
 
         print("\nMemory Efficiency Benchmark Results:")
-        print(f"Initial Memory: {initial_memory:.1f} MB")
-        print(f"Memory Increase: {memory_increase:.1f} MB")
+        print("Initial Memory: {0} MB".format(initial_memory:.1f))
+        print("Memory Increase: {0} MB".format(memory_increase:.1f))
         efficiency = len(self.large_dataset) / max(memory_increase, 1)
-        print(f"Memory Efficiency: {efficiency:.1f} articles/MB")
+        print("Memory Efficiency: {0} articles/MB".format(efficiency:.1f))
 
     def test_concurrent_processing_scaling(self):
         """Test how concurrent processing scales with different settings."""
@@ -674,10 +674,10 @@ if __name__ == "__main__":
     # Print summary
     print(f"\n{'=' * 50}")
     print("Test Summary:")
-    print(f"Tests run: {result.testsRun}")
-    print(f"Failures: {len(result.failures)}")
-    print(f"Errors: {len(result.errors)}")
+    print("Tests run: {0}".format(result.testsRun))
+    print("Failures: {0}".format(len(result.failures)))
+    print("Errors: {0}".format(len(result.errors)))
     success_count = result.testsRun - len(result.failures) - len(result.errors)
     success_rate = success_count / result.testsRun * 100
-    print(f"Success rate: {success_rate:.1f}%")
+    print("Success rate: {0}%".format(success_rate:.1f))
     print(f"{'=' * 50}")

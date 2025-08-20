@@ -69,7 +69,7 @@ async def get_articles_by_topic(
         """
 
         # Create pattern for LIKE query
-        topic_pattern = f"%{topic}%"
+        topic_pattern = "%{}%".format(topic)
         results = await db.execute_query(query, [topic_pattern, topic_pattern, limit])
 
         articles = []
@@ -94,7 +94,7 @@ async def get_articles_by_topic(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Database error: {str(e)}",
+            detail="Database error: {0}".format(str(e)),
         )
 
 
@@ -135,7 +135,7 @@ async def get_articles(
 
         where_clause = " AND ".join(conditions) if conditions else "1=1"
 
-        query = f"""
+        query = """
             SELECT id, title, url, publish_date, source, category,
                    sentiment_score, sentiment_label
             FROM news_articles
@@ -167,7 +167,7 @@ async def get_articles(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Database error: {str(e)}",
+            detail="Database error: {0}".format(str(e)),
         )
 
 
@@ -194,7 +194,7 @@ async def get_article(
 
         if not results:
             raise HTTPException(
-                status_code=404, detail=f"Article {article_id} not found"
+                status_code=404, detail="Article {0} not found".format(article_id)
             )
 
         row = results[0]
@@ -217,5 +217,5 @@ async def get_article(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Database error: {str(e)}",
+            detail="Database error: {0}".format(str(e)),
         )

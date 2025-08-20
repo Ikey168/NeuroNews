@@ -163,7 +163,9 @@ async def get_breaking_news(
     """
     try:
         logger.info(
-            f"Getting breaking news: category={category}, hours_back={hours_back}, limit={limit}"
+            "Getting breaking news: category={0}, hours_back={1}, limit={2}".format(
+                category, hours_back, limit
+            )
         )
 
         events = await clusterer.get_breaking_news(
@@ -196,13 +198,13 @@ async def get_breaking_news(
                 )
             )
 
-        logger.info(f"Returned {len(response_events)} breaking news events")
+        logger.info("Returned {0} breaking news events".format(len(response_events)))
         return response_events
 
     except Exception as e:
-        logger.error(f"Error getting breaking news: {e}")
+        logger.error("Error getting breaking news: {0}".format(e))
         raise HTTPException(
-            status_code=500, detail=f"Error retrieving breaking news: {str(e)}"
+            status_code=500, detail="Error retrieving breaking news: {0}".format(str(e))
         )
 
 
@@ -233,7 +235,9 @@ async def get_event_clusters(
     """
     try:
         logger.info(
-            f"Getting event clusters: category={category}, event_type={event_type}"
+            "Getting event clusters: category={0}, event_type={1}".format(
+                category, event_type
+            )
         )
 
         conn_params = get_redshift_connection_params()
@@ -322,15 +326,14 @@ async def get_event_clusters(
                 )
             )
 
-        logger.info(f"Returned {len(clusters)} event clusters")
+        logger.info("Returned {0} event clusters".format(len(clusters)))
         return clusters
 
     except Exception as e:
-        logger.error(f"Error getting event clusters: {e}")
+        logger.error("Error getting event clusters: {0}".format(e))
         raise HTTPException(
             status_code=500,
-            detail=f"Error retrieving event clusters: {
-                str(e)}",
+            detail="Error retrieving event clusters: {0}".format(str(e)),
         )
 
 
@@ -354,7 +357,7 @@ async def get_articles_in_cluster(
     - `limit`: Maximum number of articles to return (1-200)
     """
     try:
-        logger.info(f"Getting articles for cluster: {cluster_id}")
+        logger.info("Getting articles for cluster: {0}".format(cluster_id))
 
         conn_params = get_redshift_connection_params()
 
@@ -384,7 +387,7 @@ async def get_articles_in_cluster(
         if not rows:
             raise HTTPException(
                 status_code=404,
-                detail=f"Cluster {cluster_id} not found or has no articles",
+                detail="Cluster {0} not found or has no articles".format(cluster_id),
             )
 
         # Convert to response model
@@ -405,17 +408,18 @@ async def get_articles_in_cluster(
             )
 
         logger.info(
-            f"Returned {
-                len(articles)} articles for cluster {cluster_id}"
+            "Returned {0} articles for cluster {1}".format(len(articles), cluster_id)
         )
         return articles
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting articles for cluster {cluster_id}: {e}")
+        logger.error(
+            "Error getting articles for cluster {0}: {1}".format(cluster_id, e)
+        )
         raise HTTPException(
-            status_code=500, detail=f"Error retrieving articles: {str(e)}"
+            status_code=500, detail="Error retrieving articles: {0}".format(str(e))
         )
 
 
@@ -444,7 +448,7 @@ async def trigger_event_detection(
     ```
     """
     try:
-        logger.info(f"Triggering event detection: {request}")
+        logger.info("Triggering event detection: {0}".format(request))
 
         # Update clusterer settings
         clusterer.min_cluster_size = request.min_cluster_size
@@ -460,10 +464,10 @@ async def trigger_event_detection(
         if not embeddings_data:
             raise HTTPException(
                 status_code=404,
-                detail=f"No articles found for clustering with the specified criteria",
+                detail="No articles found for clustering with the specified criteria",
             )
 
-        logger.info(f"Found {len(embeddings_data)} articles with embeddings")
+        logger.info("Found {0} articles with embeddings".format(len(embeddings_data)))
 
         # Detect events
         await clusterer.detect_events(embeddings_data, request.category)
@@ -482,15 +486,15 @@ async def trigger_event_detection(
             clustering_method=request.clustering_method,
         )
 
-        logger.info(f"Event detection completed: {response}")
+        logger.info("Event detection completed: {0}".format(response))
         return response
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error in event detection: {e}")
+        logger.error("Error in event detection: {0}".format(e))
         raise HTTPException(
-            status_code=500, detail=f"Error in event detection: {str(e)}"
+            status_code=500, detail="Error in event detection: {0}".format(str(e))
         )
 
 
@@ -537,15 +541,14 @@ async def get_trending_categories():
                 }
             )
 
-        logger.info(f"Returned trending data for {len(categories)} categories")
+        logger.info("Returned trending data for {0} categories".format(len(categories)))
         return categories
 
     except Exception as e:
-        logger.error(f"Error getting trending categories: {e}")
+        logger.error("Error getting trending categories: {0}".format(e))
         raise HTTPException(
             status_code=500,
-            detail=f"Error retrieving trending categories: {
-                str(e)}",
+            detail="Error retrieving trending categories: {0}".format(str(e)),
         )
 
 
@@ -651,9 +654,9 @@ async def get_event_detection_stats():
         return stats
 
     except Exception as e:
-        logger.error(f"Error getting event detection stats: {e}")
+        logger.error("Error getting event detection stats: {0}".format(e))
         raise HTTPException(
-            status_code=500, detail=f"Error retrieving statistics: {str(e)}"
+            status_code=500, detail="Error retrieving statistics: {0}".format(str(e))
         )
 
 

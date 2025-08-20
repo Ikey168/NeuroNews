@@ -237,14 +237,14 @@ class MemoryMonitor:
 
                     gc.collect()
                     logger.warning(
-                        f"High memory usage detected: {
-                            self.current_usage:.1f}MB, triggered GC"
+                        "High memory usage detected: {0}MB, triggered GC".format(
+                            self.current_usage:.1f)
                     )
 
                 time.sleep(self.check_interval)
 
             except Exception as e:
-                logger.error(f"Memory monitoring error: {e}")
+                logger.error("Memory monitoring error: {0}".format(e))
                 time.sleep(self.check_interval)
 
     def is_memory_available(self, required_mb: float = 0) -> bool:
@@ -301,10 +301,10 @@ class AdaptiveBatchProcessor:
             return
 
         logger.info(
-            f"Adjusting batch size from {
-                self.current_batch_size} to {new_size} "
-            f"(performance score: {
-                recent_avg:.3f})"
+            "Adjusting batch size from {0} to {1} ".format(
+                self.current_batch_size, new_size)
+            "(performance score: {0})".format(
+                recent_avg:.3f)
         )
         self.current_batch_size = new_size
 
@@ -356,8 +356,8 @@ class OptimizedIngestionPipeline:
         self._stop_requested = False
 
         logger.info(
-            f"Optimized ingestion pipeline initialized with config: {
-                self.config}"
+            "Optimized ingestion pipeline initialized with config: {0}".format(
+                self.config)
         )
 
     async def process_articles_async(
@@ -383,8 +383,8 @@ class OptimizedIngestionPipeline:
 
         try:
             logger.info(
-                f"Starting optimized ingestion pipeline for {
-                    len(articles)} articles"
+                "Starting optimized ingestion pipeline for {0} articles".format(
+                    len(articles))
             )
 
             # Process articles in optimized batches
@@ -396,8 +396,8 @@ class OptimizedIngestionPipeline:
             # Create batches for processing
             batches = self._create_adaptive_batches(articles)
             logger.info(
-                f"Created {
-                    len(batches)} adaptive batches for processing"
+                "Created {0} adaptive batches for processing".format(
+                    len(batches))
             )
 
             # Process batches concurrently
@@ -416,7 +416,7 @@ class OptimizedIngestionPipeline:
                 if isinstance(result, list):
                     processed_articles.extend(result)
                 elif isinstance(result, Exception):
-                    logger.error(f"Batch processing error: {result}")
+                    logger.error("Batch processing error: {0}".format(result))
                     self.metrics.errors_by_type["batch_error"] = (
                         self.metrics.errors_by_type.get("batch_error", 0) + 1
                     )
@@ -432,9 +432,9 @@ class OptimizedIngestionPipeline:
                 )
 
             logger.info(
-                f"Pipeline processing completed: {len(processed_articles)} articles "
-                f"processed in {total_time:.2f}s "
-                f"({self.metrics.throughput_articles_per_second:.2f} articles/sec)"
+                "Pipeline processing completed: {0} articles ".format(len(processed_articles))
+                "processed in {0}s ".format(total_time)
+                "({0} articles/sec)".format(self.metrics.throughput_articles_per_second)
             )
 
             return {
@@ -507,8 +507,8 @@ class OptimizedIngestionPipeline:
 
             try:
                 logger.debug(
-                    f"Processing batch {batch_id} with {
-                        len(batch)} articles"
+                    "Processing batch {0} with {1} articles".format(batch_id, 
+                        len(batch))
                 )
 
                 # Process articles in the batch concurrently
@@ -528,7 +528,7 @@ class OptimizedIngestionPipeline:
                         processed_articles.append(result)
                     elif isinstance(result, Exception):
                         logger.warning(
-                            f"Article processing failed in batch {batch_id}: {result}"
+                            "Article processing failed in batch {0}: {1}".format(batch_id, result)
                         )
 
                 # Store processed articles if storage backends are provided
@@ -541,14 +541,14 @@ class OptimizedIngestionPipeline:
                 self.batch_processor.adjust_batch_size(batch_time, success_rate)
 
                 logger.debug(
-                    f"Batch {batch_id} completed: {len(processed_articles)}/{len(batch)} "
-                    f"articles processed in {batch_time:.2f}s"
+                    "Batch {0} completed: {1}/{2} ".format(batch_id, len(processed_articles), len(batch))
+                    "articles processed in {0}s".format(batch_time)
                 )
 
                 return processed_articles
 
             except Exception as e:
-                logger.error(f"Critical error in batch {batch_id}: {e}")
+                logger.error("Critical error in batch {0}: {1}".format(batch_id, e))
                 self.metrics.errors_by_type["batch_critical"] = (
                     self.metrics.errors_by_type.get("batch_critical", 0) + 1
                 )
@@ -708,7 +708,7 @@ class OptimizedIngestionPipeline:
             # Log storage results
             for i, result in enumerate(results):
                 if isinstance(result, Exception):
-                    logger.error(f"Storage backend {i} failed: {result}")
+                    logger.error("Storage backend {0} failed: {1}".format(i, result))
                     self.metrics.errors_by_type["storage_failed"] = (
                         self.metrics.errors_by_type.get("storage_failed", 0) + 1
                     )
@@ -717,7 +717,7 @@ class OptimizedIngestionPipeline:
             self.metrics.storage_time += storage_time
 
         except Exception as e:
-            logger.error(f"Batch storage failed: {e}")
+            logger.error("Batch storage failed: {0}".format(e))
             self.metrics.errors_by_type["storage_critical"] = (
                 self.metrics.errors_by_type.get("storage_critical", 0) + 1
             )
@@ -734,7 +734,7 @@ class OptimizedIngestionPipeline:
                 loop = asyncio.get_event_loop()
                 return await loop.run_in_executor(self.thread_pool, backend, articles)
         except Exception as e:
-            logger.error(f"Storage backend execution failed: {e}")
+            logger.error("Storage backend execution failed: {0}".format(e))
             raise
 
     def get_performance_stats(self) -> Dict[str, Any]:
@@ -775,7 +775,7 @@ class OptimizedIngestionPipeline:
         async with aiofiles.open(output_path, "w") as f:
             await f.write(json.dumps(report, indent=2))
 
-        logger.info(f"Performance report saved to: {output_path}")
+        logger.info("Performance report saved to: {0}".format(output_path))
 
     def cleanup(self):
         """Clean up resources and stop background processes."""
@@ -862,9 +862,9 @@ if __name__ == "__main__":
         # Sample articles for testing
         sample_articles = [
             {
-                "title": f"Test Article {i}",
-                "url": f"https://example.com/article-{i}",
-                "content": f"This is the content of test article {i}. " * 20,
+                "title": "Test Article {0}".format(i),
+                "url": "https://example.com/article-{0}".format(i),
+                "content": "This is the content of test article {0}. ".format(i) * 20,
                 "source": "example.com",
                 "published_date": datetime.now().isoformat(),
             }

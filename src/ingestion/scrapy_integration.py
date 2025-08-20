@@ -62,15 +62,15 @@ class OptimizedScrapyPipeline:
         )
 
         logger.info(
-            f"OptimizedScrapyPipeline initialized with config: {
-                self.config}"
+            "OptimizedScrapyPipeline initialized with config: {0}".format(
+                self.config)
         )
 
     def open_spider(self, spider: Spider):
         """Initialize the pipeline when spider opens."""
         self.ingestion_pipeline = OptimizedIngestionPipeline(self.config)
         self.last_flush_time = time.time()
-        logger.info(f"Optimized pipeline opened for spider: {spider.name}")
+        logger.info("Optimized pipeline opened for spider: {0}".format(spider.name))
 
     def close_spider(self, spider: Spider):
         """Clean up when spider closes."""
@@ -87,7 +87,7 @@ class OptimizedScrapyPipeline:
 
             # Save performance report
             report_path = (
-                f"data/optimization_report_{spider.name}_{int(time.time())}.json"
+                "data/optimization_report_{0}_{1}.json".format(spider.name, int(time.time()))
             )
             asyncio.run(self.ingestion_pipeline.save_performance_report(report_path))
 
@@ -97,7 +97,7 @@ class OptimizedScrapyPipeline:
         # Cleanup thread pool
         self.thread_pool.shutdown(wait=True)
 
-        logger.info(f"Optimized pipeline closed for spider: {spider.name}")
+        logger.info("Optimized pipeline closed for spider: {0}".format(spider.name))
 
     def process_item(self, item: NewsItem, spider: Spider) -> NewsItem:
         """Process item through the optimized pipeline."""
@@ -129,8 +129,8 @@ class OptimizedScrapyPipeline:
             return item
 
         except Exception as e:
-            spider.logger.error(f"Error in optimized pipeline: {e}")
-            raise DropItem(f"Optimization processing failed: {e}")
+            spider.logger.error("Error in optimized pipeline: {0}".format(e))
+            raise DropItem("Optimization processing failed: {0}".format(e))
 
     def _item_to_dict(self, item: NewsItem) -> Dict[str, Any]:
         """Convert Scrapy item to dictionary."""
@@ -167,8 +167,8 @@ class OptimizedScrapyPipeline:
         )
 
         spider.logger.debug(
-            f"Flushed buffer with {len(articles_to_process)} articles "
-            f"(flush #{self.flush_count})"
+            "Flushed buffer with {0} articles ".format(len(articles_to_process))
+            "(flush #{0})".format(self.flush_count)
         )
 
     def _flush_buffer_sync(self, spider: Spider):
@@ -182,7 +182,7 @@ class OptimizedScrapyPipeline:
         try:
             self._process_articles_batch(articles_to_process, spider)
         except Exception as e:
-            spider.logger.error(f"Error in synchronous buffer flush: {e}")
+            spider.logger.error("Error in synchronous buffer flush: {0}".format(e))
 
     def _process_articles_batch(self, articles: List[Dict[str, Any]], spider: Spider):
         """Process a batch of articles through the ingestion pipeline."""
@@ -203,8 +203,8 @@ class OptimizedScrapyPipeline:
                 throughput = processed_count / max(processing_time, 0.001)
 
                 spider.logger.info(
-                    f"Batch processed: {processed_count}/{len(articles)} articles "
-                    f"in {processing_time:.2f}s ({throughput:.1f} articles/sec)"
+                    "Batch processed: {0}/{1} articles ".format(processed_count, len(articles))
+                    "in {0}s ({1} articles/sec)".format(processing_time:.2f, throughput)
                 )
 
                 # Update spider stats if available
@@ -222,7 +222,7 @@ class OptimizedScrapyPipeline:
                 loop.close()
 
         except Exception as e:
-            spider.logger.error(f"Error processing article batch: {e}")
+            spider.logger.error("Error processing article batch: {0}".format(e))
 
 
 class HighThroughputValidationPipeline:
@@ -258,7 +258,7 @@ class HighThroughputValidationPipeline:
             url = item.get("url", "")
             if url in self.url_seen:
                 self.items_failed += 1
-                raise DropItem(f"Duplicate URL: {url}")
+                raise DropItem("Duplicate URL: {0}".format(url))
 
             # Fast validation checks
             validation_result = self._fast_validate_item(item)
@@ -294,8 +294,8 @@ class HighThroughputValidationPipeline:
         except Exception as e:
             self.items_failed += 1
             self.items_validated += 1
-            spider.logger.error(f"Fast validation error: {e}")
-            raise DropItem(f"Validation error: {e}")
+            spider.logger.error("Fast validation error: {0}".format(e))
+            raise DropItem("Validation error: {0}".format(e))
 
     def _fast_validate_item(self, item: NewsItem) -> Dict[str, Any]:
         """Perform fast validation checks on item."""
@@ -309,7 +309,7 @@ class HighThroughputValidationPipeline:
         if len(title) < self.min_title_length:
             return {
                 "is_valid": False,
-                "reason": f"Title too short: {len(title)}",
+                "reason": "Title too short: {0}".format(len(title)),
                 "score": 0,
             }
 
@@ -324,7 +324,7 @@ class HighThroughputValidationPipeline:
         if len(content) < self.min_content_length:
             return {
                 "is_valid": False,
-                "reason": f"Content too short: {len(content)}",
+                "reason": "Content too short: {0}".format(len(content)),
                 "score": 0,
             }
 
@@ -357,8 +357,8 @@ class HighThroughputValidationPipeline:
         if self.items_validated > 0:
             pass_rate = (self.items_passed / self.items_validated) * 100
             spider.logger.info(
-                f"Fast validation stats: {self.items_passed}/{self.items_validated} passed "
-                f"({pass_rate:.1f}% pass rate), {self.cache_hits} cache hits"
+                "Fast validation stats: {0}/{1} passed ".format(self.items_passed, self.items_validated)
+                "({0}% pass rate), {1} cache hits".format(pass_rate)
             )
 
 
@@ -442,8 +442,8 @@ class AdaptiveRateLimitPipeline:
                 spider.download_delay = self.current_delay
 
             spider.logger.info(
-                f"Adaptive rate limit adjusted: {old_delay:.2f}s -> {self.current_delay:.2f}s "
-                f"(avg response: {avg_response_time:.2f}s, error rate: {current_error_rate:.1%})"
+                "Adaptive rate limit adjusted: {0}s -> {1}s ".format(old_delay:.2f, self.current_delay)
+                "(avg response: {0}s, error rate: {1})".format(avg_response_time:.2f, current_error_rate)
             )
 
 
@@ -539,24 +539,24 @@ class OptimizedStoragePipeline:
             self.batches_written += 1
 
             spider.logger.debug(
-                f"Storage batch written: {
-                    len(items_to_store)} items"
+                "Storage batch written: {0} items".format(
+                    len(items_to_store))
             )
 
         except Exception as e:
             self.storage_errors += 1
-            spider.logger.error(f"Storage batch failed: {e}")
+            spider.logger.error("Storage batch failed: {0}".format(e))
 
     def _write_to_file(self, items: List[Dict[str, Any]], spider: Spider):
         """Write items to file (example storage backend)."""
-        output_path = f"data/optimized_articles_{spider.name}.jsonl"
+        output_path = "data/optimized_articles_{0}.jsonl".format(spider.name)
 
         try:
             with open(output_path, "a", encoding="utf-8") as f:
                 for item in items:
                     f.write(json.dumps(item, ensure_ascii=False) + "\n")
         except Exception as e:
-            logger.error(f"File write failed: {e}")
+            logger.error("File write failed: {0}".format(e))
             raise
 
     def close_spider(self, spider: Spider):
@@ -565,8 +565,8 @@ class OptimizedStoragePipeline:
             self._flush_storage_buffer(spider)
 
         spider.logger.info(
-            f"Optimized storage stats: {self.items_stored} items stored "
-            f"in {self.batches_written} batches, {self.storage_errors} errors"
+            "Optimized storage stats: {0} items stored ".format(self.items_stored)
+            "in {0} batches, {1} errors".format(self.batches_written, self.storage_errors)
         )
 
 
@@ -617,4 +617,4 @@ if __name__ == "__main__":
 
     for key, value in example_settings.items():
         if "OPTIMIZED" in key or "PIPELINE" in key:
-            print(f"{key}: {value}")
+            print("{0}: {1}".format(key, value))

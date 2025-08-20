@@ -25,11 +25,12 @@ class AWSComprehendSentimentAnalyzer:
         self.region_name = region_name
         try:
             self.client = boto3.client("comprehend", region_name=region_name, **kwargs)
-            logger.info(f"Initialized AWS Comprehend client in region {region_name}")
+            logger.info(
+                "Initialized AWS Comprehend client in region {0}".format(region_name)
+            )
         except Exception as e:
             logger.error(
-                f"Failed to initialize AWS Comprehend client: {
-                    str(e)}"
+                "Failed to initialize AWS Comprehend client: {0}".format(str(e))
             )
             raise
 
@@ -89,23 +90,25 @@ class AWSComprehendSentimentAnalyzer:
         except ClientError as e:
             error_code = e.response["Error"]["Code"]
             error_message = e.response["Error"]["Message"]
-            logger.error(f"AWS Comprehend API error {error_code}: {error_message}")
+            logger.error(
+                "AWS Comprehend API error {0}: {1}".format(error_code, error_message)
+            )
 
             return {
                 "label": "ERROR",
                 "score": 0.0,
                 "text": text,
-                "message": f"AWS Comprehend error: {error_message}",
+                "message": "AWS Comprehend error: {0}".format(error_message),
                 "provider": "aws_comprehend",
             }
 
         except Exception as e:
-            logger.error(f"Unexpected error in sentiment analysis: {str(e)}")
+            logger.error("Unexpected error in sentiment analysis: {0}".format(str(e)))
             return {
                 "label": "ERROR",
                 "score": 0.0,
                 "text": text,
-                "message": f"Analysis failed: {str(e)}",
+                "message": "Analysis failed: {0}".format(str(e)),
                 "provider": "aws_comprehend",
             }
 
@@ -203,7 +206,7 @@ class AWSComprehendSentimentAnalyzer:
                     }
 
         except Exception as e:
-            logger.error(f"Batch sentiment analysis failed: {str(e)}")
+            logger.error("Batch sentiment analysis failed: {0}".format(str(e)))
             # Fill remaining None results with errors
             for i in range(len(results)):
                 if results[i] is None:
@@ -211,7 +214,7 @@ class AWSComprehendSentimentAnalyzer:
                         "label": "ERROR",
                         "score": 0.0,
                         "text": texts[i],
-                        "message": f"Batch analysis failed: {str(e)}",
+                        "message": "Batch analysis failed: {0}".format(str(e)),
                         "provider": "aws_comprehend",
                     }
 

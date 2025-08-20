@@ -86,7 +86,9 @@ class ValidationPipeline:
             return item
         else:
             spider.logger.warning(
-                f"Item rejected due to low validation score: {validation_score}"
+                "Item rejected due to low validation score: {0}".format(
+                    validation_score
+                )
             )
             return None
 
@@ -168,7 +170,9 @@ class EnhancedJsonWriterPipeline:
         source = item.get("source", "unknown").lower().replace(" ", "_")
 
         if source not in self.source_files:
-            source_file_path = os.path.join(self.sources_dir, f"{source}_articles.json")
+            source_file_path = os.path.join(
+                self.sources_dir, "{0}_articles.json".format(source)
+            )
             self.source_files[source] = open(source_file_path, "w")
             self.source_files[source].write("[")
             self.source_first_items[source] = True

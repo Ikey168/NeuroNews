@@ -126,7 +126,7 @@ class WAFSecurityMiddleware(BaseHTTPMiddleware):
             return response
 
         except Exception as e:
-            logger.error(f"Error processing request: {e}")
+            logger.error("Error processing request: {0}".format(e))
             raise
 
     def _is_excluded_path(self, path: str) -> bool:
@@ -283,7 +283,7 @@ class WAFSecurityMiddleware(BaseHTTPMiddleware):
             return {"blocked": False, "country": "Allowed"}
 
         except Exception as e:
-            logger.warning(f"Error in geofencing check: {e}")
+            logger.warning("Error in geofencing check: {0}".format(e))
             return {"blocked": False, "error": str(e)}
 
     async def _check_sql_injection(self, request: Request) -> Dict[str, Any]:
@@ -302,7 +302,7 @@ class WAFSecurityMiddleware(BaseHTTPMiddleware):
                     body_content = ""
 
             # Combine all content to check
-            content_to_check = f"{query_string} {body_content}".lower()
+            content_to_check = "{0} {1}".format(query_string, body_content).lower()
 
             # Check against SQL injection patterns
             for pattern in self.sql_injection_patterns:
@@ -318,7 +318,7 @@ class WAFSecurityMiddleware(BaseHTTPMiddleware):
             return {"detected": False}
 
         except Exception as e:
-            logger.error(f"Error in SQL injection check: {e}")
+            logger.error("Error in SQL injection check: {0}".format(e))
             return {"detected": False, "error": str(e)}
 
     async def _check_xss_attacks(self, request: Request) -> Dict[str, Any]:
@@ -328,7 +328,7 @@ class WAFSecurityMiddleware(BaseHTTPMiddleware):
             query_string = str(request.url.query)
 
             # Check request headers
-            headers_content = " ".join(f"{k}:{v}" for k, v in request.headers.items())
+            headers_content = " ".join("{0}:{1}".format(k, v) for k, v in request.headers.items())
 
             # Check request body if present
             body_content = ""
@@ -340,7 +340,7 @@ class WAFSecurityMiddleware(BaseHTTPMiddleware):
                     body_content = ""
 
             # Combine all content to check
-            content_to_check = f"{query_string} {headers_content} {body_content}"
+            content_to_check = "{0} {1} {2}".format(query_string, headers_content, body_content)
 
             # Check against XSS patterns
             for pattern in self.xss_patterns:
@@ -355,7 +355,7 @@ class WAFSecurityMiddleware(BaseHTTPMiddleware):
             return {"detected": False}
 
         except Exception as e:
-            logger.error(f"Error in XSS check: {e}")
+            logger.error("Error in XSS check: {0}".format(e))
             return {"detected": False, "error": str(e)}
 
     def _check_bot_traffic(self, user_agent: str) -> Dict[str, Any]:
@@ -414,8 +414,8 @@ class WAFSecurityMiddleware(BaseHTTPMiddleware):
 
         # Log to application logger
         logger.warning(
-            f"SECURITY EVENT: {threat_type.value} from {source_ip} - "
-            f"Path: {request_path} - Action: {action_taken.value}"
+            "SECURITY EVENT: {0} from {1} - ".format(threat_type.value, source_ip)
+            "Path: {0} - Action: {1}".format(request_path, action_taken.value)
         )
 
         # In production, you might also send to CloudWatch, SNS, etc.
@@ -434,10 +434,10 @@ class WAFSecurityMiddleware(BaseHTTPMiddleware):
             }
 
             # Log alert (in production, send to external system)
-            logger.critical(f"SECURITY ALERT: {json.dumps(alert_data)}")
+            logger.critical("SECURITY ALERT: {0}".format(json.dumps(alert_data)))
 
         except Exception as e:
-            logger.error(f"Failed to send security alert: {e}")
+            logger.error("Failed to send security alert: {0}".format(e))
 
     async def _log_request_metrics(
         self, client_ip: str, path: str, processing_time: float, status_code: int
@@ -453,10 +453,10 @@ class WAFSecurityMiddleware(BaseHTTPMiddleware):
             }
 
             # In production, send to CloudWatch metrics
-            logger.debug(f"REQUEST METRICS: {json.dumps(metrics)}")
+            logger.debug("REQUEST METRICS: {0}".format(json.dumps(metrics)))
 
         except Exception as e:
-            logger.error(f"Failed to log request metrics: {e}")
+            logger.error("Failed to log request metrics: {0}".format(e))
 
     def _create_blocked_response(self, security_check: Dict[str, Any]) -> Response:
         """Create response for blocked requests."""
@@ -482,7 +482,7 @@ class WAFSecurityMiddleware(BaseHTTPMiddleware):
     def _add_security_headers(self, response: Response):
         """Add security headers to response."""
         security_headers = {
-            "X-Content-Type-Options": "nosniff",
+            "X-Content-Type-Options": "nosni",
             "X-Frame-Options": "DENY",
             "X-XSS-Protection": "1; mode=block",
             "Strict-Transport-Security": "max-age=31536000; includeSubDomains",

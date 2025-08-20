@@ -35,7 +35,7 @@ def main():
             article_data=article,
             metadata={"categories": ",".join(article["categories"])},
         )
-        print(f"Successfully uploaded article: {s3_key}")
+        print("Successfully uploaded article: {0}".format(s3_key))
 
         # Retrieve the article
         retrieved = storage.get_article(s3_key)
@@ -47,7 +47,7 @@ def main():
         # List recent articles from the same source
         print("\nRecent articles from example.com:")
         articles = storage.list_articles(
-            prefix=f"{storage.prefix}/example-com", max_items=5
+            prefix="{0}/example-com".format(storage.prefix), max_items=5
         )
         for article in articles:
             print(
@@ -56,7 +56,7 @@ def main():
             )
 
     except Exception as e:
-        print(f"Error: {e}")
+        print("Error: {0}".format(e))
 
 
 if __name__ == "__main__":

@@ -29,7 +29,7 @@ try:
     from database.redshift_loader import RedshiftETLProcessor
     from nlp.sentiment_analysis import SentimentAnalyzer
 except ImportError as e:
-    print(f"Import error: {e}")
+    print("Import error: {0}".format(e))
     print("Please ensure you're running from the project root directory")
     sys.exit(1)
 
@@ -98,13 +98,13 @@ class KubernetesSentimentProcessor:
             "model_name": self.model_name,
         }
 
-        logger.info(f"Initialized KubernetesSentimentProcessor:")
-        logger.info(f"  Job Type: {self.job_type}")
-        logger.info(f"  Batch Size: {self.batch_size}")
-        logger.info(f"  Max Workers: {self.max_workers}")
-        logger.info(f"  GPU Enabled: {self.use_gpu}")
-        logger.info(f"  Model: {self.model_name}")
-        logger.info(f"  Output Dir: {self.output_dir}")
+        logger.info("Initialized KubernetesSentimentProcessor:")
+        logger.info("  Job Type: {0}".format(self.job_type))
+        logger.info("  Batch Size: {0}".format(self.batch_size))
+        logger.info("  Max Workers: {0}".format(self.max_workers))
+        logger.info("  GPU Enabled: {0}".format(self.use_gpu))
+        logger.info("  Model: {0}".format(self.model_name))
+        logger.info("  Output Dir: {0}".format(self.output_dir))
 
     async def initialize(self):
         """Initialize all components and connections."""
@@ -113,7 +113,7 @@ class KubernetesSentimentProcessor:
 
             # Initialize sentiment analyzer with GPU support
             device = "cuda" if self.use_gpu else "cpu"
-            logger.info(f"Using device: {device}")
+            logger.info("Using device: {0}".format(device))
 
             # Set cache directory for models
             os.environ["TRANSFORMERS_CACHE"] = self.model_cache_dir
@@ -151,7 +151,7 @@ class KubernetesSentimentProcessor:
             logger.info("All components initialized successfully")
 
         except Exception as e:
-            logger.error(f"Failed to initialize components: {e}")
+            logger.error("Failed to initialize components: {0}".format(e))
             raise
 
     async def fetch_articles_to_process(
@@ -217,11 +217,11 @@ class KubernetesSentimentProcessor:
                     }
                     articles.append(article)
 
-                logger.info(f"Fetched {len(articles)} articles for processing")
+                logger.info("Fetched {0} articles for processing".format(len(articles)))
                 return articles
 
         except Exception as e:
-            logger.error(f"Failed to fetch articles: {e}")
+            logger.error("Failed to fetch articles: {0}".format(e))
             return []
 
     def process_article_batch(
@@ -240,7 +240,7 @@ class KubernetesSentimentProcessor:
         results = []
 
         try:
-            logger.info(f"Processing batch of {len(articles)} articles")
+            logger.info("Processing batch of {0} articles".format(len(articles)))
 
             # Prepare texts for batch processing
             texts = []
@@ -309,11 +309,11 @@ class KubernetesSentimentProcessor:
             self.stats["total_processing_time"] += batch_processing_time
             self.stats["batches_processed"] += 1
 
-            logger.info(f"Processed batch in {batch_processing_time:.2f}s")
+            logger.info("Processed batch in {0}s".format(batch_processing_time))
             return results
 
         except Exception as e:
-            logger.error(f"Failed to process batch: {e}")
+            logger.error("Failed to process batch: {0}".format(e))
             self.stats["articles_failed"] += len(articles)
             return []
 
@@ -328,7 +328,7 @@ class KubernetesSentimentProcessor:
             if not results:
                 return
 
-            logger.info(f"Storing {len(results)} results in Redshift")
+            logger.info("Storing {0} results in Redshift".format(len(results)))
 
             # Prepare data for Redshift
             redshift_records = []
@@ -356,18 +356,18 @@ class KubernetesSentimentProcessor:
                     redshift_records
                 )
                 logger.info(
-                    f"Successfully stored {success_count} sentiment results in Redshift"
+                    "Successfully stored {0} sentiment results in Redshift".format(success_count)
                 )
 
         except Exception as e:
-            logger.error(f"Failed to store results in Redshift: {e}")
+            logger.error("Failed to store results in Redshift: {0}".format(e))
             # Save results to file as backup
             backup_file = os.path.join(
-                self.output_dir, f"sentiment_results_backup_{int(time.time())}.json"
+                self.output_dir, "sentiment_results_backup_{0}.json".format(int(time.time()))
             )
             with open(backup_file, "w") as f:
                 json.dump(results, f, indent=2, default=str)
-            logger.info(f"Results saved to backup file: {backup_file}")
+            logger.info("Results saved to backup file: {0}".format(backup_file))
 
     async def create_sentiment_results_table(self, processor):
         """Create sentiment results table in Redshift if it doesn't exist."""
@@ -394,7 +394,7 @@ class KubernetesSentimentProcessor:
             logger.info("Sentiment results table ensured in Redshift")
 
         except Exception as e:
-            logger.error(f"Failed to create sentiment results table: {e}")
+            logger.error("Failed to create sentiment results table: {0}".format(e))
             raise
 
     async def update_postgres_processing_status(self, article_ids: List[str]):
@@ -417,12 +417,12 @@ class KubernetesSentimentProcessor:
 
                 self.postgres_conn.commit()
                 logger.info(
-                    f"Updated processing status for {
-                        len(article_ids)} articles"
+                    "Updated processing status for {0} articles".format(
+                        len(article_ids))
                 )
 
         except Exception as e:
-            logger.error(f"Failed to update processing status: {e}")
+            logger.error("Failed to update processing status: {0}".format(e))
             self.postgres_conn.rollback()
 
     def save_processing_stats(self):
@@ -444,13 +444,13 @@ class KubernetesSentimentProcessor:
                 )
 
             stats_file = os.path.join(
-                self.output_dir, f"sentiment_job_stats_{int(time.time())}.json"
+                self.output_dir, "sentiment_job_stats_{0}.json".format(int(time.time()))
             )
             with open(stats_file, "w") as f:
                 json.dump(self.stats, f, indent=2, default=str)
 
-            logger.info(f"Processing statistics saved to {stats_file}")
-            logger.info(f"Job Summary:")
+            logger.info("Processing statistics saved to {0}".format(stats_file))
+            logger.info("Job Summary:")
             logger.info(
                 f"  Articles Processed: {
                     self.stats['articles_processed']}"
@@ -473,7 +473,7 @@ class KubernetesSentimentProcessor:
                 )
 
         except Exception as e:
-            logger.error(f"Failed to save processing statistics: {e}")
+            logger.error("Failed to save processing statistics: {0}".format(e))
 
     async def run_processing_job(self, max_articles: int = None):
         """
@@ -528,16 +528,16 @@ class KubernetesSentimentProcessor:
                             await self.update_postgres_processing_status(article_ids)
 
                     except Exception as e:
-                        logger.error(f"Batch processing failed: {e}")
+                        logger.error("Batch processing failed: {0}".format(e))
 
             # Save final statistics
             self.save_processing_stats()
 
-            logger.info(f"Sentiment analysis job completed successfully")
-            logger.info(f"Processed {len(all_results)} articles total")
+            logger.info("Sentiment analysis job completed successfully")
+            logger.info("Processed {0} articles total".format(len(all_results)))
 
         except Exception as e:
-            logger.error(f"Sentiment analysis job failed: {e}")
+            logger.error("Sentiment analysis job failed: {0}".format(e))
             raise
 
         finally:
@@ -598,7 +598,7 @@ async def main():
         logger.info("Sentiment analysis job completed successfully")
         sys.exit(0)
     except Exception as e:
-        logger.error(f"Sentiment analysis job failed: {e}")
+        logger.error("Sentiment analysis job failed: {0}".format(e))
         sys.exit(1)
 
 

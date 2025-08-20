@@ -173,7 +173,7 @@ def test_verify_token(client):
 
     # Verify token
     response = client.get(
-        "/auth/verify", headers={"Authorization": f"Bearer {access_token}"}
+        "/auth/verify", headers={"Authorization": "Bearer {0}".format(access_token)}
     )
     assert response.status_code == 200
 
@@ -193,7 +193,7 @@ def test_verify_expired_token(client):
 
     # Try verifying
     response = client.get(
-        "/auth/verify", headers={"Authorization": f"Bearer {expired_token}"}
+        "/auth/verify", headers={"Authorization": "Bearer {0}".format(expired_token)}
     )
     assert response.status_code == 401
     assert "expired" in response.json()["detail"]
@@ -220,8 +220,8 @@ def test_role_based_access(client, test_db):
     user_token = user_response.json()["access_token"]
 
     # Test admin-only endpoint
-    admin_headers = {"Authorization": f"Bearer {admin_token}"}
-    user_headers = {"Authorization": f"Bearer {user_token}"}
+    admin_headers = {"Authorization": "Bearer {0}".format(admin_token)}
+    user_headers = {"Authorization": "Bearer {0}".format(user_token)}
 
     # Admin should have access
     response = client.post("/api/users", headers=admin_headers, json={})

@@ -68,8 +68,8 @@ class Issue36ValidationSuite:
             self._generate_validation_report()
 
         except Exception as e:
-            print(f"❌ Validation suite failed: {e}")
-            logger.error(f"Validation error: {e}", exc_info=True)
+            print("❌ Validation suite failed: {0}".format(e))
+            logger.error("Validation error: {0}".format(e), exc_info=True)
 
     async def _validate_component_availability(self):
         """Validate that all Issue #36 components are available."""
@@ -88,23 +88,23 @@ class Issue36ValidationSuite:
         for component_name, file_path in components.items():
             try:
                 if os.path.exists(file_path):
-                    print(f"✅ {component_name}: Available")
+                    print("✅ {0}: Available".format(component_name))
                     self.validation_results["component_availability"][
                         component_name
                     ] = True
                 else:
-                    print(f"❌ {component_name}: File not found")
+                    print("❌ {0}: File not found".format(component_name))
                     self.validation_results["component_availability"][
                         component_name
                     ] = False
             except Exception as e:
-                print(f"⚠️  {component_name}: Error checking - {e}")
+                print("⚠️  {0}: Error checking - {1}".format(component_name, e))
                 self.validation_results["component_availability"][
                     component_name
                 ] = False
 
         # Test imports
-        print(f"\n🔍 Testing component imports:")
+        print("\n🔍 Testing component imports:")
 
         import_tests = {
             "enhanced_entity_extractor": self._test_enhanced_extractor_import,
@@ -119,12 +119,12 @@ class Issue36ValidationSuite:
                     f"{'✅' if success else '❌'} {test_name}: {'Available' if success else 'Import failed'}"
                 )
                 self.validation_results["component_availability"][
-                    f"{test_name}_import"
+                    "{0}_import".format(test_name)
                 ] = success
             except Exception as e:
-                print(f"❌ {test_name}: Import error - {e}")
+                print("❌ {0}: Import error - {1}".format(test_name, e))
                 self.validation_results["component_availability"][
-                    f"{test_name}_import"
+                    "{0}_import".format(test_name)
                 ] = False
 
     async def _test_enhanced_extractor_import(self):
@@ -168,7 +168,7 @@ class Issue36ValidationSuite:
 
     async def _validate_integration(self):
         """Validate integration between new and existing components."""
-        print(f"\n🔗 2. INTEGRATION VALIDATION")
+        print("\n🔗 2. INTEGRATION VALIDATION")
         print("-" * 50)
 
         integration_tests = {
@@ -186,7 +186,7 @@ class Issue36ValidationSuite:
                 )
                 self.validation_results["integration_tests"][test_name] = success
             except Exception as e:
-                print(f"❌ {test_name}: Error - {e}")
+                print("❌ {0}: Error - {1}".format(test_name, e))
                 self.validation_results["integration_tests"][test_name] = False
 
     async def _test_extractor_populator_integration(self):
@@ -257,7 +257,7 @@ class Issue36ValidationSuite:
 
     async def _validate_issue_35_compatibility(self):
         """Validate compatibility with Issue #35 NLP optimizations."""
-        print(f"\n🔄 3. ISSUE #35 COMPATIBILITY VALIDATION")
+        print("\n🔄 3. ISSUE #35 COMPATIBILITY VALIDATION")
         print("-" * 50)
 
         compatibility_tests = {
@@ -275,7 +275,7 @@ class Issue36ValidationSuite:
                 )
                 self.validation_results["compatibility_tests"][test_name] = success
             except Exception as e:
-                print(f"❌ {test_name}: Error - {e}")
+                print("❌ {0}: Error - {1}".format(test_name, e))
                 self.validation_results["compatibility_tests"][test_name] = False
 
     async def _test_nlp_optimization_compatibility(self):
@@ -342,7 +342,7 @@ class Issue36ValidationSuite:
 
     async def _validate_performance(self):
         """Validate performance requirements."""
-        print(f"\n⚡ 4. PERFORMANCE VALIDATION")
+        print("\n⚡ 4. PERFORMANCE VALIDATION")
         print("-" * 50)
 
         performance_tests = {
@@ -360,7 +360,7 @@ class Issue36ValidationSuite:
                 )
                 self.validation_results["performance_tests"][test_name] = success
             except Exception as e:
-                print(f"❌ {test_name}: Error - {e}")
+                print("❌ {0}: Error - {1}".format(test_name, e))
                 self.validation_results["performance_tests"][test_name] = False
 
     async def _test_entity_extraction_performance(self):
@@ -420,7 +420,7 @@ class Issue36ValidationSuite:
 
     async def _validate_requirements_compliance(self):
         """Validate compliance with Issue #36 requirements."""
-        print(f"\n📋 5. REQUIREMENTS COMPLIANCE VALIDATION")
+        print("\n📋 5. REQUIREMENTS COMPLIANCE VALIDATION")
         print("-" * 50)
 
         requirements = {
@@ -521,7 +521,7 @@ class Issue36ValidationSuite:
 
     def _generate_validation_report(self):
         """Generate comprehensive validation report."""
-        print(f"\n📊 6. VALIDATION REPORT")
+        print("\n📊 6. VALIDATION REPORT")
         print("=" * 60)
 
         # Calculate overall scores
@@ -539,16 +539,16 @@ class Issue36ValidationSuite:
                 (category_passed / category_total * 100) if category_total > 0 else 0
             )
             print(f"\n{category.replace('_', ' ').title()}:")
-            print(f"  Score: {score:.1f}% ({category_passed}/{category_total})")
+            print("  Score: {0}% ({1}/{2})".format(score:.1f, category_passed, category_total))
 
             for test_name, result in tests.items():
                 status = "✅ PASS" if result else "❌ FAIL"
-                print(f"    {test_name}: {status}")
+                print("    {0}: {1}".format(test_name, status))
 
         # Overall validation score
         overall_score = (passed_tests / total_tests * 100) if total_tests > 0 else 0
         print(
-            f"\n🎯 OVERALL VALIDATION SCORE: {overall_score:.1f}% ({passed_tests}/{total_tests})"
+            "\n🎯 OVERALL VALIDATION SCORE: {0}% ({1}/{2})".format(overall_score:.1f, passed_tests, total_tests)
         )
 
         # Validation verdict
@@ -587,10 +587,10 @@ class Issue36ValidationSuite:
             with open("issue_36_validation_results.json", "w") as f:
                 json.dump(results_with_metadata, f, indent=2)
 
-            print(f"\n💾 Validation results saved to: issue_36_validation_results.json")
+            print("\n💾 Validation results saved to: issue_36_validation_results.json")
 
         except Exception as e:
-            print(f"⚠️  Could not save validation results: {e}")
+            print("⚠️  Could not save validation results: {0}".format(e))
 
 
 async def main():
@@ -609,5 +609,5 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n👋 Validation interrupted by user")
     except Exception as e:
-        print(f"\n❌ Validation failed with error: {e}")
-        logger.error(f"Validation error: {e}", exc_info=True)
+        print("\n❌ Validation failed with error: {0}".format(e))
+        logger.error("Validation error: {0}".format(e), exc_info=True)

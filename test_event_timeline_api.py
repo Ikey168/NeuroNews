@@ -668,7 +668,7 @@ class TestEventTimelineAPI:
             )
 
             assert response.status_code == 400
-            assert "Format must be one of" in response.json()["detail"]
+            assert "Format must be one o" in response.json()["detail"]
 
         finally:
             router.dependency_overrides.clear()
@@ -796,7 +796,7 @@ if __name__ == "__main__":
 
             # Test service creation
             service = EventTimelineService()
-            print(f"✅ EventTimelineService created")
+            print("✅ EventTimelineService created")
 
             # Test model creation
             event = HistoricalEvent(
@@ -808,10 +808,10 @@ if __name__ == "__main__":
                 event_type="test",
                 entities_involved=["Entity1"],
             )
-            print(f"✅ HistoricalEvent created: {event.title}")
+            print("✅ HistoricalEvent created: {0}".format(event.title))
 
             request = EventTrackingRequest(topic="Test Topic", max_events=50)
-            print(f"✅ EventTrackingRequest created: {request.topic}")
+            print("✅ EventTrackingRequest created: {0}".format(request.topic))
 
             print("\n🎯 Run full tests with: pytest test_event_timeline_api.py -v")
         else:
@@ -819,7 +819,7 @@ if __name__ == "__main__":
             print("   Install required dependencies and verify imports")
 
     except Exception as e:
-        print(f"❌ Test setup failed: {e}")
+        print("❌ Test setup failed: {0}".format(e))
 
     print("\n📋 Test Coverage:")
     print("  • Event timeline service functionality")

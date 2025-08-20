@@ -96,7 +96,7 @@ class TestTFIDFKeywordExtractor:
             for keyword in result_set:
                 assert isinstance(keyword, KeywordResult)
                 # Multiple documents should use tfidf method
-                assert keyword.method == "tfidf"
+                assert keyword.method == "tfid"
                 assert keyword.score > 0
 
     def test_extract_keywords_empty_input(self):

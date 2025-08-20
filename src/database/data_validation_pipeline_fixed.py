@@ -268,7 +268,7 @@ class DuplicateDetector:
             "at",
             "to",
             "for",
-            "of",
+            "o",
             "with",
             "by",
             "is",
@@ -791,7 +791,7 @@ class DataValidationPipeline:
             )
 
         except Exception as e:
-            logger.error(f"Error processing article: {str(e)}")
+            logger.error("Error processing article: {0}".format(str(e)))
             self.rejected_count += 1
             return None
 

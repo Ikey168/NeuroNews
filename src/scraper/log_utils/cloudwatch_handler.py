@@ -137,7 +137,7 @@ def configure_cloudwatch_logging(settings, spider_name):
 
     # Generate a log stream name
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    log_stream_name = f"{log_stream_prefix}-{spider_name}-{timestamp}"
+    log_stream_name = "{0}-{1}-{2}".format(log_stream_prefix, spider_name, timestamp)
 
     # Create and configure the handler
     handler = CloudWatchLoggingHandler(

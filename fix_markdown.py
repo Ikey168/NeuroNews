@@ -48,7 +48,7 @@ def fix_markdown_file(filepath):
     with open(filepath, "w", encoding="utf-8") as f:
         f.write(content)
 
-    print(f"Fixed markdown issues in {filepath}")
+    print("Fixed markdown issues in {0}".format(filepath))
 
 
 if __name__ == "__main__":
@@ -63,4 +63,4 @@ if __name__ == "__main__":
         try:
             fix_markdown_file(file)
         except Exception as e:
-            print(f"Warning: Could not fix {file}: {e}")
+            print("Warning: Could not fix {0}: {1}".format(file, e))

@@ -230,7 +230,7 @@ class SentimentTrendAnalyzer:
                     logger.info("Database schema initialized successfully")
 
         except Exception as e:
-            logger.error(f"Failed to initialize database schema: {str(e)}")
+            logger.error("Failed to initialize database schema: {0}".format(str(e)))
             raise
 
     async def analyze_historical_trends(
@@ -280,8 +280,8 @@ class SentimentTrendAnalyzer:
             for topic_name, topic_data in topics_data.items():
                 if len(topic_data) < self.config["min_articles_for_trend"]:
                     logger.warning(
-                        f"Insufficient data for topic {topic_name}: {
-                            len(topic_data)} articles"
+                        "Insufficient data for topic {0}: {1} articles".format(topic_name, 
+                            len(topic_data))
                     )
                     continue
 
@@ -304,13 +304,13 @@ class SentimentTrendAnalyzer:
                 trend_summaries.append(trend_summary)
 
             logger.info(
-                f"Completed trend analysis for {
-                    len(trend_summaries)} topics"
+                "Completed trend analysis for {0} topics".format(
+                    len(trend_summaries))
             )
             return trend_summaries
 
         except Exception as e:
-            logger.error(f"Error in analyze_historical_trends: {str(e)}")
+            logger.error("Error in analyze_historical_trends: {0}".format(str(e)))
             raise
 
     async def generate_sentiment_alerts(
@@ -363,11 +363,11 @@ class SentimentTrendAnalyzer:
             if alerts:
                 await self._store_alerts(alerts)
 
-            logger.info(f"Generated {len(alerts)} sentiment alerts")
+            logger.info("Generated {0} sentiment alerts".format(len(alerts)))
             return alerts
 
         except Exception as e:
-            logger.error(f"Error generating sentiment alerts: {str(e)}")
+            logger.error("Error generating sentiment alerts: {0}".format(str(e)))
             raise
 
     async def _fetch_sentiment_data(
@@ -430,7 +430,7 @@ class SentimentTrendAnalyzer:
                     return [dict(zip(columns, row)) for row in results]
 
         except Exception as e:
-            logger.error(f"Error fetching sentiment data: {str(e)}")
+            logger.error("Error fetching sentiment data: {0}".format(str(e)))
             return []
 
     def _group_data_by_topic(
@@ -501,7 +501,7 @@ class SentimentTrendAnalyzer:
                 else:  # Daily/weekly format YYYY-MM-DD
                     date = datetime.strptime(date_key, "%Y-%m-%d")
             except ValueError:
-                logger.warning(f"Failed to parse date: {date_key}")
+                logger.warning("Failed to parse date: {0}".format(date_key))
                 continue
 
             trend_point = SentimentTrendPoint(
@@ -656,7 +656,7 @@ class SentimentTrendAnalyzer:
                     previous_sentiment=previous_sentiment,
                     change_magnitude=change_magnitude,
                     change_percentage=change_percentage,
-                    time_window=f"{lookback_days}d",
+                    time_window="{0}d".format(lookback_days),
                     affected_articles=[item["id"] for item in current_period],
                 )
                 alerts.append(alert)
@@ -676,7 +676,7 @@ class SentimentTrendAnalyzer:
                         previous_sentiment=previous_sentiment,
                         change_magnitude=change_magnitude,
                         change_percentage=change_percentage,
-                        time_window=f"{lookback_days}d",
+                        time_window="{0}d".format(lookback_days),
                         affected_articles=[item["id"] for item in current_period],
                     )
                     alerts.append(alert)
@@ -708,13 +708,13 @@ class SentimentTrendAnalyzer:
                         volatility_increase / (previous_volatility + 0.001)
                     )
                     * 100,
-                    time_window=f"{lookback_days}d",
+                    time_window="{0}d".format(lookback_days),
                     affected_articles=[item["id"] for item in current_period],
                 )
                 alerts.append(alert)
 
         except Exception as e:
-            logger.error(f"Error detecting alerts for topic {topic}: {str(e)}")
+            logger.error("Error detecting alerts for topic {0}: {1}".format(topic, str(e)))
 
         return alerts
 
@@ -750,7 +750,7 @@ class SentimentTrendAnalyzer:
         direction = "improved" if current_sentiment > previous_sentiment else "declined"
         description = (
             f"Sentiment for '{topic}' has {direction} by {change_percentage:.1f}% "
-            f"({previous_sentiment:.3f} → {current_sentiment:.3f}) over {time_window}"
+            "({0} → {1}) over {2}".format(previous_sentiment:.3f, current_sentiment)
         )
 
         # Calculate confidence based on change magnitude and affected articles
@@ -824,10 +824,10 @@ class SentimentTrendAnalyzer:
                     )
 
                     conn.commit()
-                    logger.info(f"Stored {len(trend_data)} trend data points")
+                    logger.info("Stored {0} trend data points".format(len(trend_data)))
 
         except Exception as e:
-            logger.error(f"Error storing trend data: {str(e)}")
+            logger.error("Error storing trend data: {0}".format(str(e)))
             raise
 
     async def _store_alerts(self, alerts: List[TrendAlert]):
@@ -875,10 +875,10 @@ class SentimentTrendAnalyzer:
                     )
 
                     conn.commit()
-                    logger.info(f"Stored {len(alert_data)} sentiment alerts")
+                    logger.info("Stored {0} sentiment alerts".format(len(alert_data)))
 
         except Exception as e:
-            logger.error(f"Error storing alerts: {str(e)}")
+            logger.error("Error storing alerts: {0}".format(str(e)))
             raise
 
     async def get_topic_trend_summary(
@@ -898,8 +898,8 @@ class SentimentTrendAnalyzer:
 
         except Exception as e:
             logger.error(
-                f"Error getting topic trend summary for {topic}: {
-                    str(e)}"
+                "Error getting topic trend summary for {0}: {1}".format(topic, 
+                    str(e))
             )
             return None
 
@@ -927,7 +927,7 @@ class SentimentTrendAnalyzer:
 
                     params.append(limit)
 
-                    query = f"""
+                    query = """
                         SELECT alert_id, topic, alert_type, severity, current_sentiment,
                                previous_sentiment, change_magnitude, change_percentage, confidence,
                                time_window, triggered_at, description, affected_articles, alert_metadata
@@ -964,7 +964,7 @@ class SentimentTrendAnalyzer:
                     return alerts
 
         except Exception as e:
-            logger.error(f"Error getting active alerts: {str(e)}")
+            logger.error("Error getting active alerts: {0}".format(str(e)))
             return []
 
     async def update_topic_summaries(self):
@@ -991,14 +991,14 @@ class SentimentTrendAnalyzer:
                         await self._store_topic_summary(summary)
                 except Exception as e:
                     logger.error(
-                        f"Error updating summary for topic {topic}: {
-                            str(e)}"
+                        "Error updating summary for topic {0}: {1}".format(topic, 
+                            str(e))
                     )
 
-            logger.info(f"Updated summaries for {len(topics)} topics")
+            logger.info("Updated summaries for {0} topics".format(len(topics)))
 
         except Exception as e:
-            logger.error(f"Error updating topic summaries: {str(e)}")
+            logger.error("Error updating topic summaries: {0}".format(str(e)))
 
     async def _store_topic_summary(self, summary: TopicTrendSummary):
         """Store topic summary in database."""
@@ -1037,7 +1037,7 @@ class SentimentTrendAnalyzer:
                     conn.commit()
 
         except Exception as e:
-            logger.error(f"Error storing topic summary: {str(e)}")
+            logger.error("Error storing topic summary: {0}".format(str(e)))
 
 
 # Utility functions for integration with other systems

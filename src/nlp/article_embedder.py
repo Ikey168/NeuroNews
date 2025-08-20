@@ -71,15 +71,15 @@ class ArticleEmbedder:
         self.batch_size = batch_size
 
         # Initialize model
-        logger.info(f"Loading embedding model: {model_name}")
+        logger.info("Loading embedding model: {0}".format(model_name))
         start_time = time.time()
         self.model = SentenceTransformer(model_name)
         load_time = time.time() - start_time
-        logger.info(f"Model loaded in {load_time:.2f}s")
+        logger.info("Model loaded in {0}s".format(load_time))
 
         # Get model info
         self.embedding_dimension = self.model.get_sentence_embedding_dimension()
-        logger.info(f"Embedding dimension: {self.embedding_dimension}")
+        logger.info("Embedding dimension: {0}".format(self.embedding_dimension))
 
         # Initialize stopwords
         self.stop_words = set(stopwords.words("english"))
@@ -106,7 +106,7 @@ class ArticleEmbedder:
         """
         try:
             # Combine title and content
-            full_text = f"{title}. {text}" if title else text
+            full_text = "{0}. {1}".format(title, text) if title else text
 
             # Basic cleaning
             # Remove excessive whitespace
@@ -146,7 +146,7 @@ class ArticleEmbedder:
             return full_text
 
         except Exception as e:
-            logger.error(f"Error preprocessing text: {e}")
+            logger.error("Error preprocessing text: {0}".format(e))
             return text[:1000]  # Fallback to first 1000 chars
 
     def create_text_hash(self, text: str) -> str:
@@ -181,7 +181,7 @@ class ArticleEmbedder:
                 )
                 if existing_embedding:
                     self.stats["cache_hits"] += 1
-                    logger.debug(f"Using cached embedding for article {article_id}")
+                    logger.debug("Using cached embedding for article {0}".format(article_id))
                     return existing_embedding
 
             # Generate embedding
@@ -215,15 +215,15 @@ class ArticleEmbedder:
             self.stats["total_processing_time"] += processing_time
 
             logger.debug(
-                f"Generated embedding for article {article_id} in {
-                    processing_time:.2f}s"
+                "Generated embedding for article {0} in {1}s".format(article_id, 
+                    processing_time:.2f)
             )
 
             return result
 
         except Exception as e:
             self.stats["errors"] += 1
-            logger.error(f"Error generating embedding for article {article_id}: {e}")
+            logger.error("Error generating embedding for article {0}: {1}".format(article_id, e))
             raise
 
     async def generate_embeddings_batch(
@@ -238,7 +238,7 @@ class ArticleEmbedder:
         Returns:
             List of embedding results
         """
-        logger.info(f"Processing batch of {len(articles)} articles")
+        logger.info("Processing batch of {0} articles".format(len(articles)))
         start_time = time.time()
 
         try:
@@ -271,8 +271,8 @@ class ArticleEmbedder:
             texts_to_embed = [item["preprocessed_text"] for item in preprocessed_data]
 
             logger.info(
-                f"Generating embeddings for {
-                    len(texts_to_embed)} new articles"
+                "Generating embeddings for {0} new articles".format(
+                    len(texts_to_embed))
             )
             embedding_vectors = self.model.encode(
                 texts_to_embed,
@@ -316,15 +316,15 @@ class ArticleEmbedder:
             self.stats["total_processing_time"] += total_time
 
             logger.info(
-                f"Generated {len(results)} embeddings in {total_time:.2f}s "
-                f"({avg_time_per_article:.2f}s per article)"
+                "Generated {0} embeddings in {1}s ".format(len(results), total_time:.2f)
+                "({0}s per article)".format(avg_time_per_article)
             )
 
             return results
 
         except Exception as e:
             self.stats["errors"] += 1
-            logger.error(f"Error in batch embedding generation: {e}")
+            logger.error("Error in batch embedding generation: {0}".format(e))
             raise
 
     def _calculate_embedding_quality(
@@ -377,7 +377,7 @@ class ArticleEmbedder:
             return min(1.0, max(0.0, quality_score))
 
         except Exception as e:
-            logger.warning(f"Error calculating embedding quality: {e}")
+            logger.warning("Error calculating embedding quality: {0}".format(e))
             return 0.5  # Default medium quality
 
     async def _get_existing_embedding(
@@ -444,7 +444,7 @@ class ArticleEmbedder:
             return None
 
         except Exception as e:
-            logger.warning(f"Error checking existing embedding: {e}")
+            logger.warning("Error checking existing embedding: {0}".format(e))
             return None
 
     async def _filter_existing_embeddings(
@@ -486,14 +486,14 @@ class ArticleEmbedder:
                     self.stats["cache_hits"] += 1
 
             logger.info(
-                f"Filtered out {
+                "Filtered out {0} existing embeddings".format(
                     len(articles_data) -
-                    len(filtered_data)} existing embeddings"
+                    len(filtered_data))
             )
             return filtered_data
 
         except Exception as e:
-            logger.warning(f"Error filtering existing embeddings: {e}")
+            logger.warning("Error filtering existing embeddings: {0}".format(e))
             return articles_data  # Return all if error
 
     async def store_embeddings(self, embeddings: List[Dict[str, Any]]) -> int:
@@ -545,11 +545,11 @@ class ArticleEmbedder:
                     stored_count = cur.rowcount
                     conn.commit()
 
-                    logger.info(f"Stored {stored_count} embeddings in database")
+                    logger.info("Stored {0} embeddings in database".format(stored_count))
                     return stored_count
 
         except Exception as e:
-            logger.error(f"Error storing embeddings: {e}")
+            logger.error("Error storing embeddings: {0}".format(e))
             return 0
 
     async def get_embeddings_for_clustering(
@@ -642,13 +642,13 @@ class ArticleEmbedder:
                         )
 
                     logger.info(
-                        f"Retrieved {
-                            len(embeddings)} embeddings for clustering"
+                        "Retrieved {0} embeddings for clustering".format(
+                            len(embeddings))
                     )
                     return embeddings
 
         except Exception as e:
-            logger.error(f"Error retrieving embeddings: {e}")
+            logger.error("Error retrieving embeddings: {0}".format(e))
             return []
 
     def get_statistics(self) -> Dict[str, Any]:
@@ -696,7 +696,7 @@ class ArticleEmbedder:
                     logger.info("Article embeddings table ready")
 
         except Exception as e:
-            logger.error(f"Error creating embeddings table: {e}")
+            logger.error("Error creating embeddings table: {0}".format(e))
 
 
 # Helper functions for configuration
@@ -769,6 +769,6 @@ if __name__ == "__main__":
 
         # Print statistics
         stats = embedder.get_statistics()
-        print(f"\nStatistics: {stats}")
+        print("\nStatistics: {0}".format(stats))
 
     asyncio.run(test_embedder())

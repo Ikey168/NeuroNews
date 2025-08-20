@@ -80,7 +80,7 @@ def main():
     args = parser.parse_args()
 
     if args.scrape:
-        print(f"Running news scraper...")
+        print("Running news scraper...")
 
         # Load AWS configuration from file
         aws_config = load_aws_config(args.env)
@@ -92,7 +92,7 @@ def main():
 
         if aws_profile:
             os.environ["AWS_PROFILE"] = aws_profile
-            print(f"Using AWS profile: {aws_profile}")
+            print("Using AWS profile: {0}".format(aws_profile))
 
         # Override S3 settings from config if not provided as arguments
         s3_storage = args.s3
@@ -171,13 +171,15 @@ def main():
         if args.playwright:
             print("Using Playwright for JavaScript-heavy pages")
         if s3_storage:
-            print(f"Storing articles in S3 bucket: {s3_bucket}")
-            print(f"S3 prefix: {s3_prefix}")
+            print("Storing articles in S3 bucket: {0}".format(s3_bucket))
+            print("S3 prefix: {0}".format(s3_prefix))
         if cloudwatch_logging:
             print(
-                f"Logging to CloudWatch: {cloudwatch_log_group}/{cloudwatch_log_stream_prefix}-*"
+                "Logging to CloudWatch: {0}/{1}-*".format(
+                    cloudwatch_log_group, cloudwatch_log_stream_prefix
+                )
             )
-            print(f"Log level: {cloudwatch_log_level}")
+            print("Log level: {0}".format(cloudwatch_log_level))
 
         run_spider(
             output_file=args.output,
@@ -195,11 +197,11 @@ def main():
             aws_profile=aws_profile,
             env=args.env,
         )
-        print(f"Scraping completed. Data saved to {args.output}")
+        print("Scraping completed. Data saved to {0}".format(args.output))
         if s3_storage:
-            print(f"Articles also stored in S3 bucket: {s3_bucket}")
+            print("Articles also stored in S3 bucket: {0}".format(s3_bucket))
         if cloudwatch_logging:
-            print(f"Logs available in CloudWatch: {cloudwatch_log_group}")
+            print("Logs available in CloudWatch: {0}".format(cloudwatch_log_group))
     else:
         print("No action specified. Use --scrape to run the news scraper.")
 

@@ -115,14 +115,16 @@ class KnowledgeGraphPopulator:
         """
         try:
             logger.info(
-                f"Processing article {article_id} for knowledge graph population"
+                "Processing article {0} for knowledge graph population".format(
+                    article_id
+                )
             )
 
             # Ensure connection to Neptune
             await self.graph_builder.connect()
 
             # Extract entities from title and content
-            full_text = f"{title}. {content}"
+            full_text = "{0}. {1}".format(title, content)
             entities = await self._extract_entities(full_text)
 
             # Add article node
@@ -165,11 +167,13 @@ class KnowledgeGraphPopulator:
                 "processing_timestamp": datetime.utcnow().isoformat(),
             }
 
-            logger.info(f"Successfully processed article {article_id}: {stats}")
+            logger.info(
+                "Successfully processed article {0}: {1}".format(article_id, stats)
+            )
             return stats
 
         except Exception as e:
-            logger.error(f"Error processing article {article_id}: {str(e)}")
+            logger.error("Error processing article {0}: {1}".format(article_id, str(e)))
             raise
 
     async def _extract_entities(self, text: str) -> List[Entity]:
@@ -189,11 +193,11 @@ class KnowledgeGraphPopulator:
                 )
                 entities.append(entity)
 
-            logger.debug(f"Extracted {len(entities)} entities from text")
+            logger.debug("Extracted {0} entities from text".format(len(entities)))
             return entities
 
         except Exception as e:
-            logger.error(f"Error extracting entities: {str(e)}")
+            logger.error("Error extracting entities: {0}".format(str(e)))
             return []
 
     async def _add_article_node(
@@ -222,11 +226,13 @@ class KnowledgeGraphPopulator:
             properties["content_hash"] = content_hash
 
             result = await self.graph_builder.add_vertex("Article", properties)
-            logger.debug(f"Added article node: {article_id}")
+            logger.debug("Added article node: {0}".format(article_id))
             return result
 
         except Exception as e:
-            logger.error(f"Error adding article node {article_id}: {str(e)}")
+            logger.error(
+                "Error adding article node {0}: {1}".format(article_id, str(e))
+            )
             return None
 
     async def _add_entity_node(self, entity: Entity, article_id: str) -> Dict[str, Any]:
@@ -258,11 +264,15 @@ class KnowledgeGraphPopulator:
                 # Add new entity
                 result = await self.graph_builder.add_vertex(entity_type, properties)
 
-            logger.debug(f"Added/updated entity: {entity.text} ({entity.label})")
+            logger.debug(
+                "Added/updated entity: {0} ({1})".format(entity.text, entity.label)
+            )
             return result
 
         except Exception as e:
-            logger.error(f"Error adding entity node {entity.text}: {str(e)}")
+            logger.error(
+                "Error adding entity node {0}: {1}".format(entity.text, str(e))
+            )
             return None
 
     async def _link_entity_to_article(self, entity: Entity, article_id: str):
@@ -285,9 +295,9 @@ class KnowledgeGraphPopulator:
 
         except Exception as e:
             logger.error(
-                f"Error linking entity {
-                    entity.text} to article {article_id}: {
-                    str(e)}"
+                "Error linking entity {0} to article {1}: {2}".format(
+                    entity.text, article_id, str(e)
+                )
             )
             return None
 
@@ -340,11 +350,11 @@ class KnowledgeGraphPopulator:
                             )
                             relationships.append(relationship)
 
-            logger.debug(f"Extracted {len(relationships)} relationships")
+            logger.debug("Extracted {0} relationships".format(len(relationships)))
             return relationships
 
         except Exception as e:
-            logger.error(f"Error extracting relationships: {str(e)}")
+            logger.error("Error extracting relationships: {0}".format(str(e)))
             return []
 
     def _determine_relationship_type(self, label1: str, label2: str) -> Optional[str]:
@@ -406,12 +416,14 @@ class KnowledgeGraphPopulator:
             )
 
             logger.debug(
-                f"Added relationship: {relationship.source_entity} -> {relationship.target_entity}"
+                "Added relationship: {0} -> {1}".format(
+                    relationship.source_entity, relationship.target_entity
+                )
             )
             return result
 
         except Exception as e:
-            logger.error(f"Error adding relationship edge: {str(e)}")
+            logger.error("Error adding relationship edge: {0}".format(str(e)))
             return None
 
     async def _link_to_historical_data(
@@ -442,11 +454,11 @@ class KnowledgeGraphPopulator:
                         if link:
                             historical_links.append(link)
 
-            logger.debug(f"Created {len(historical_links)} historical links")
+            logger.debug("Created {0} historical links".format(len(historical_links)))
             return historical_links
 
         except Exception as e:
-            logger.error(f"Error linking to historical data: {str(e)}")
+            logger.error("Error linking to historical data: {0}".format(str(e)))
             return []
 
     async def _find_related_historical_events(
@@ -462,9 +474,9 @@ class KnowledgeGraphPopulator:
 
         except Exception as e:
             logger.error(
-                f"Error finding historical events for {
-                    entity.text}: {
-                    str(e)}"
+                "Error finding historical events for {0}: {1}".format(
+                    entity.text, str(e)
+                )
             )
             return []
 
@@ -478,7 +490,9 @@ class KnowledgeGraphPopulator:
             return query_result
 
         except Exception as e:
-            logger.error(f"Error finding policies for {entity.text}: {str(e)}")
+            logger.error(
+                "Error finding policies for {0}: {1}".format(entity.text, str(e))
+            )
             return []
 
     async def _create_historical_link(
@@ -509,13 +523,13 @@ class KnowledgeGraphPopulator:
             return result
 
         except Exception as e:
-            logger.error(f"Error creating historical link: {str(e)}")
+            logger.error("Error creating historical link: {0}".format(str(e)))
             return None
 
     def _generate_entity_id(self, normalized_form: str, entity_type: str) -> str:
         """Generate a unique ID for an entity."""
         # Create a hash-based ID for consistent entity identification
-        content = f"{entity_type}:{normalized_form}"
+        content = "{0}:{1}".format(entity_type, normalized_form)
         return hashlib.md5(content.encode()).hexdigest()
 
     def _get_entity_label(self, entity_text: str) -> str:
@@ -533,7 +547,7 @@ class KnowledgeGraphPopulator:
             return result[0] if result else None
 
         except Exception as e:
-            logger.error(f"Error finding entity {entity_id}: {str(e)}")
+            logger.error("Error finding entity {0}: {1}".format(entity_id, str(e)))
             return None
 
     async def _update_entity_mentions(
@@ -550,8 +564,7 @@ class KnowledgeGraphPopulator:
 
         except Exception as e:
             logger.error(
-                f"Error updating entity mentions {entity_id}: {
-                    str(e)}"
+                "Error updating entity mentions {0}: {1}".format(entity_id, str(e))
             )
             return None
 
@@ -570,7 +583,7 @@ class KnowledgeGraphPopulator:
             List of related entities with relationship information
         """
         try:
-            logger.info(f"Finding entities related to: {entity_name}")
+            logger.info("Finding entities related to: {0}".format(entity_name))
 
             # Normalize entity name
             normalized_name = entity_name.strip().lower()
@@ -578,7 +591,7 @@ class KnowledgeGraphPopulator:
             # Find the entity in the graph
             entity = await self._find_entity_by_name(normalized_name)
             if not entity:
-                logger.warning(f"Entity not found: {entity_name}")
+                logger.warning("Entity not found: {0}".format(entity_name))
                 return []
 
             entity_id = entity.get("id")
@@ -603,15 +616,17 @@ class KnowledgeGraphPopulator:
                 formatted_results.append(formatted_entity)
 
             logger.info(
-                f"Found {
-                    len(formatted_results)} related entities for {entity_name}"
+                "Found {0} related entities for {1}".format(
+                    len(formatted_results), entity_name
+                )
             )
             return formatted_results
 
         except Exception as e:
             logger.error(
-                f"Error getting related entities for {entity_name}: {
-                    str(e)}"
+                "Error getting related entities for {0}: {1}".format(
+                    entity_name, str(e)
+                )
             )
             return []
 
@@ -627,8 +642,7 @@ class KnowledgeGraphPopulator:
 
         except Exception as e:
             logger.error(
-                f"Error finding entity by name {normalized_name}: {
-                    str(e)}"
+                "Error finding entity by name {0}: {1}".format(normalized_name, str(e))
             )
             return None
 
@@ -646,8 +660,7 @@ class KnowledgeGraphPopulator:
         """
         try:
             logger.info(
-                f"Starting batch processing of {
-                    len(articles)} articles"
+                "Starting batch processing of {0} articles".format(len(articles))
             )
 
             total_entities = 0
@@ -696,11 +709,11 @@ class KnowledgeGraphPopulator:
                 "batch_completed_at": datetime.utcnow().isoformat(),
             }
 
-            logger.info(f"Batch processing completed: {batch_stats}")
+            logger.info("Batch processing completed: {0}".format(batch_stats))
             return batch_stats
 
         except Exception as e:
-            logger.error(f"Error in batch processing: {str(e)}")
+            logger.error("Error in batch processing: {0}".format(str(e)))
             raise
 
     async def close(self):
@@ -711,7 +724,7 @@ class KnowledgeGraphPopulator:
             logger.info("Knowledge graph connection closed")
 
         except Exception as e:
-            logger.error(f"Error closing knowledge graph connection: {str(e)}")
+            logger.error("Error closing knowledge graph connection: {0}".format(str(e)))
 
 
 # Utility functions for integration

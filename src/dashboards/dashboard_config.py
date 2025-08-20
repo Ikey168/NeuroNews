@@ -104,7 +104,7 @@ def get_api_url(endpoint: str) -> str:
     """Get full API URL for an endpoint."""
     base_url = API_CONFIG["base_url"]
     endpoint_path = API_CONFIG["endpoints"].get(endpoint, "")
-    return f"{base_url}{endpoint_path}"
+    return "{0}{1}".format(base_url, endpoint_path)
 
 
 # Environment-specific overrides

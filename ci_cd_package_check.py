@@ -49,14 +49,14 @@ def run_pip_upgrade():
             print("✅ Pip upgrade successful")
             return True
         else:
-            print(f"⚠️ Pip upgrade failed: {result.stderr}")
+            print("⚠️ Pip upgrade failed: {0}".format(result.stderr))
             return False
 
     except subprocess.TimeoutExpired:
         print("⚠️ Pip upgrade timed out (network issue)")
         return False
     except Exception as e:
-        print(f"⚠️ Pip upgrade error: {e}")
+        print("⚠️ Pip upgrade error: {0}".format(e))
         return False
 
 
@@ -68,7 +68,7 @@ def verify_environment():
     try:
         import pip
 
-        print(f"✅ pip: {pip.__version__}")
+        print("✅ pip: {0}".format(pip.__version__))
     except ImportError:
         print("❌ pip not available")
         return False
@@ -76,7 +76,7 @@ def verify_environment():
     # Check setuptools
     setuptools_version = get_package_version("setuptools")
     if setuptools_version:
-        print(f"✅ setuptools: {setuptools_version}")
+        print("✅ setuptools: {0}".format(setuptools_version))
     else:
         print("❌ setuptools not available")
         return False
@@ -88,7 +88,7 @@ def verify_environment():
             version = get_package_version(package)
             print(f"✅ {package}: {version or 'available'}")
         else:
-            print(f"❌ {package}: not available")
+            print("❌ {0}: not available".format(package))
             return False
 
     return True

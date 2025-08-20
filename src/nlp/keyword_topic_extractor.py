@@ -56,16 +56,16 @@ try:
                 nltk.data.find(path)
             except LookupError:
                 try:
-                    logger.info(f"Downloading NLTK data: {name}")
+                    logger.info("Downloading NLTK data: {0}".format(name))
                     nltk.download(name, quiet=True)
                 except Exception as e:
-                    logger.warning(f"Failed to download NLTK data {name}: {e}")
+                    logger.warning("Failed to download NLTK data {0}: {1}".format(name, e))
 
     # Try to ensure NLTK data is available
     try:
         ensure_nltk_data()
     except Exception as e:
-        logger.warning(f"NLTK data setup failed: {e}")
+        logger.warning("NLTK data setup failed: {0}".format(e))
 
     NLTK_AVAILABLE = True
     try:
@@ -73,11 +73,11 @@ try:
         stopwords.words("english")
         WordNetLemmatizer()
     except Exception as e:
-        logger.warning(f"NLTK not fully functional: {e}")
+        logger.warning("NLTK not fully functional: {0}".format(e))
         NLTK_AVAILABLE = False
 
 except ImportError as e:
-    logger.warning(f"NLTK not available: {e}")
+    logger.warning("NLTK not available: {0}".format(e))
     NLTK_AVAILABLE = False
 
     # Create dummy classes for when NLTK is not available
@@ -124,7 +124,7 @@ class KeywordResult:
 
     keyword: str
     score: float
-    method: str  # 'tfidf', 'lda', 'bert'
+    method: str  # 'tfid', 'lda', 'bert'
 
 
 @dataclass
@@ -164,7 +164,7 @@ class TextPreprocessor:
                 # Extended stopwords including news-specific terms
                 self.stop_words = set(stopwords.words("english"))
             except Exception as e:
-                logger.warning(f"NLTK initialization failed: {e}")
+                logger.warning("NLTK initialization failed: {0}".format(e))
                 self.lemmatizer = None
                 self.stop_words = set()
         else:
@@ -278,7 +278,7 @@ class TextPreprocessor:
             ]  # Filter very short sentences
         except Exception as e:
             logger.warning(
-                f"NLTK sentence tokenization failed: {e}. Using simple sentence splitting."
+                "NLTK sentence tokenization failed: {0}. Using simple sentence splitting.".format(e)
             )
             # Simple fallback: split on sentence-ending punctuation
             sentences = re.split(r"[.!?]+", cleaned_text)
@@ -333,7 +333,7 @@ class TextPreprocessor:
             return unique_keywords[:max_keywords]
 
         except Exception as e:
-            logger.warning(f"NLTK processing failed: {e}. Using simple word filtering.")
+            logger.warning("NLTK processing failed: {0}. Using simple word filtering.".format(e))
             # Simple fallback: extract words based on length and stop words
             words = re.findall(r"\b[a-zA-Z]{3,}\b", cleaned_text.lower())
             keywords = []
@@ -430,7 +430,7 @@ class TFIDFKeywordExtractor:
                             KeywordResult(
                                 keyword=feature_names[idx],
                                 score=float(doc_scores[idx]),
-                                method="tfidf",
+                                method="tfid",
                             )
                         )
 
@@ -459,7 +459,7 @@ class TFIDFKeywordExtractor:
                 ]
                 results.append(keywords)
             except Exception as e:
-                logger.error(f"Error in single doc extraction: {e}")
+                logger.error("Error in single doc extraction: {0}".format(e))
                 results.append([])
         return results
 
@@ -489,7 +489,7 @@ class TFIDFKeywordExtractor:
                 ]
                 results.append(keywords)
             except Exception as e:
-                logger.error(f"Error in fallback extraction: {e}")
+                logger.error("Error in fallback extraction: {0}".format(e))
                 results.append([])
         return results
 
@@ -573,7 +573,7 @@ class LDATopicModeler:
             }
 
         except Exception as e:
-            logger.error(f"Error in LDA topic modeling: {e}")
+            logger.error("Error in LDA topic modeling: {0}".format(e))
             return {"topics": [], "model_fitted": False}
 
     def predict_topics(self, texts: List[str]) -> List[List[TopicResult]]:
@@ -620,7 +620,7 @@ class LDATopicModeler:
             return results
 
         except Exception as e:
-            logger.error(f"Error in topic prediction: {e}")
+            logger.error("Error in topic prediction: {0}".format(e))
             return [[] for _ in texts]
 
 
@@ -664,7 +664,7 @@ class KeywordTopicExtractor:
             if article.get("content")
         ]
 
-        logger.info(f"Fitting topic model on {len(texts)} articles")
+        logger.info("Fitting topic model on {0} articles".format(len(texts)))
 
         # Fit LDA topic model
         topic_info = self.lda_modeler.fit_topics(texts)
@@ -679,7 +679,7 @@ class KeywordTopicExtractor:
         # Prepare text for analysis
         title = article.get("title", "")
         content = article.get("content", "")
-        full_text = f"{title} {content}".strip()
+        full_text = "{0} {1}".format(title, content).strip()
 
         if not full_text:
             logger.warning(
@@ -698,7 +698,7 @@ class KeywordTopicExtractor:
             if tfidf_results:
                 keywords = tfidf_results[0]
         except Exception as e:
-            logger.error(f"Error in TF-IDF keyword extraction: {e}")
+            logger.error("Error in TF-IDF keyword extraction: {0}".format(e))
             # Fallback to POS-based extraction for single articles
             try:
                 pos_keywords = self.tfidf_extractor.preprocessor.extract_keywords_pos(
@@ -709,7 +709,7 @@ class KeywordTopicExtractor:
                     for kw in pos_keywords
                 ]
             except Exception as e2:
-                logger.error(f"Error in fallback POS extraction: {e2}")
+                logger.error("Error in fallback POS extraction: {0}".format(e2))
 
         # Extract topics if model is fitted
         topics = []
@@ -721,7 +721,7 @@ class KeywordTopicExtractor:
                     topics = topic_results[0]
                     dominant_topic = topics[0] if topics else None
             except Exception as e:
-                logger.error(f"Error extracting topics: {e}")
+                logger.error("Error extracting topics: {0}".format(e))
 
         # Calculate processing time
         end_time = datetime.now()
@@ -763,7 +763,7 @@ class KeywordTopicExtractor:
         if not articles:
             return []
 
-        logger.info(f"Processing batch of {len(articles)} articles")
+        logger.info("Processing batch of {0} articles".format(len(articles)))
 
         # First fit the topic model if not already fitted
         if not self.topics_fitted:
@@ -783,7 +783,7 @@ class KeywordTopicExtractor:
                 )
                 results.append(self._empty_result(article, datetime.now()))
 
-        logger.info(f"Successfully processed {len(results)} articles")
+        logger.info("Successfully processed {0} articles".format(len(results)))
         return results
 
 
@@ -817,7 +817,7 @@ class SimpleKeywordExtractor:
                     "at",
                     "to",
                     "for",
-                    "of",
+                    "o",
                     "with",
                     "by",
                     "from",
@@ -918,7 +918,7 @@ class SimpleKeywordExtractor:
 
         title = article.get("title", "")
         content = article.get("content", "")
-        full_text = f"{title} {content}".strip()
+        full_text = "{0} {1}".format(title, content).strip()
 
         if not full_text:
             return self._empty_result(article, start_time)
@@ -1023,7 +1023,7 @@ def create_keyword_extractor(
             pass
 
         logger.info(
-            f"Dependencies check: sklearn={sklearn_available}, nltk={nltk_available}, spacy={spacy_available}"
+            "Dependencies check: sklearn={0}, nltk={1}, spacy={2}".format(sklearn_available, nltk_available, spacy_available)
         )
 
         # If ML dependencies are available, use the full extractor
@@ -1034,7 +1034,7 @@ def create_keyword_extractor(
                     with open(config_path, "r") as f:
                         config = json.load(f)
                 except Exception as e:
-                    logger.error(f"Error loading config from {config_path}: {e}")
+                    logger.error("Error loading config from {0}: {1}".format(config_path, e))
             return KeywordTopicExtractor(config)
         else:
             # Fall back to simple extractor
@@ -1047,11 +1047,11 @@ def create_keyword_extractor(
                     with open(config_path, "r") as f:
                         config = json.load(f)
                 except Exception as e:
-                    logger.error(f"Error loading config from {config_path}: {e}")
+                    logger.error("Error loading config from {0}: {1}".format(config_path, e))
             return SimpleKeywordExtractor(config)
 
     except Exception as e:
-        logger.error(f"Failed to create keyword extractor: {e}")
+        logger.error("Failed to create keyword extractor: {0}".format(e))
         # Fall back to simple extractor in case of any errors
         logger.warning("Falling back to simple keyword extractor due to error")
         return SimpleKeywordExtractor()
@@ -1083,8 +1083,8 @@ if __name__ == "__main__":
 
     # Display results
     for result in results:
-        print(f"\nArticle: {result.title}")
-        print(f"Keywords: {[k.keyword for k in result.keywords[:5]]}")
+        print("\nArticle: {0}".format(result.title))
+        print("Keywords: {0}".format([k.keyword for k in result.keywords[))
         if result.dominant_topic:
-            print(f"Dominant Topic: {result.dominant_topic.topic_name}")
-        print(f"Processing Time: {result.processing_time:.2f}s")
+            print("Dominant Topic: {0}".format(result.dominant_topic.topic_name))
+        print("Processing Time: {0}s".format(result.processing_time))

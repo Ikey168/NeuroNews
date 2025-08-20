@@ -32,7 +32,7 @@ def test_config_validation():
     # Check required sections
     required_sections = ["embedding", "clustering", "categories", "database"]
     for section in required_sections:
-        assert section in event_config, f"Missing config section: {section}"
+        assert section in event_config, "Missing config section: {0}".format(section)
 
     # Check embedding config
     embedding_config = event_config["embedding"]
@@ -66,13 +66,13 @@ def test_database_schema():
     ]
 
     for table in required_tables:
-        assert table in schema_content, f"Missing table: {table}"
+        assert table in schema_content, "Missing table: {0}".format(table)
 
     # Check for required views
     required_views = ["breaking_news_view", "trending_events_view"]
 
     for view in required_views:
-        assert view in schema_content, f"Missing view: {view}"
+        assert view in schema_content, "Missing view: {0}".format(view)
 
     print("✅ Database schema validation passed")
 
@@ -95,7 +95,7 @@ def test_api_endpoints():
     ]
 
     for endpoint in required_endpoints:
-        assert endpoint in api_content, f"Missing endpoint: {endpoint}"
+        assert endpoint in api_content, "Missing endpoint: {0}".format(endpoint)
 
     # Check for response models
     required_models = [
@@ -105,12 +105,12 @@ def test_api_endpoints():
     ]
 
     for model in required_models:
-        assert model in api_content, f"Missing response model: {model}"
+        assert model in api_content, "Missing response model: {0}".format(model)
 
     # Check for proper HTTP methods
     http_methods = ["@router.get", "@router.post"]
     for method in http_methods:
-        assert method in api_content, f"Missing HTTP method: {method}"
+        assert method in api_content, "Missing HTTP method: {0}".format(method)
 
     print("✅ API endpoints validation passed")
 
@@ -131,7 +131,7 @@ def test_core_implementation():
         "def preprocess_text",
         "SentenceTransformer",
         "def create_text_hash",
-        "async def",
+        "async de",
     ]
 
     for req in embedder_requirements:
@@ -154,7 +154,7 @@ def test_core_implementation():
     ]
 
     for req in clusterer_requirements:
-        assert req in clusterer_content, f"Missing in EventClusterer: {req}"
+        assert req in clusterer_content, "Missing in EventClusterer: {0}".format(req)
 
     print("✅ Core implementation validation passed")
 
@@ -195,7 +195,7 @@ def test_demo_results():
             "cluster_size",
         ]
         for field in required_fields:
-            assert field in event, f"Missing field in event: {field}"
+            assert field in event, "Missing field in event: {0}".format(field)
 
     print(
         f"✅ Demo results validation passed: {clustering['events_detected']} events detected"
@@ -224,17 +224,17 @@ def test_code_quality():
             )
             total_lines += lines
 
-    assert total_lines > 1000, f"Insufficient code: {total_lines} lines"
+    assert total_lines > 1000, "Insufficient code: {0} lines".format(total_lines)
 
     # Check for proper error handling
     for file_path in core_files:
         with open(file_path, "r") as f:
             content = f.read()
-            assert "try:" in content, f"No error handling in {file_path}"
-            assert "except" in content, f"No exception handling in {file_path}"
-            assert "logger" in content, f"No logging in {file_path}"
+            assert "try:" in content, "No error handling in {0}".format(file_path)
+            assert "except" in content, "No exception handling in {0}".format(file_path)
+            assert "logger" in content, "No logging in {0}".format(file_path)
 
-    print(f"✅ Code quality validation passed: {total_lines} lines of code")
+    print("✅ Code quality validation passed: {0} lines of code".format(total_lines))
 
 
 def test_documentation():
@@ -257,7 +257,7 @@ def test_documentation():
     ]
 
     for req in summary_requirements:
-        assert req in summary_content, f"Missing in summary: {req}"
+        assert req in summary_content, "Missing in summary: {0}".format(req)
 
     # Check that summary is substantial
     assert len(summary_content) > 5000, "Implementation summary too short"
@@ -311,15 +311,15 @@ def main():
     total = len(tests)
 
     for test_func in tests:
-        print(f"\n🧪 Running {test_func.__name__}...")
+        print("\n🧪 Running {0}...".format(test_func.__name__))
         try:
             test_func()
             passed += 1
         except Exception as e:
-            print(f"❌ {test_func.__name__} failed: {e}")
+            print("❌ {0} failed: {1}".format(test_func.__name__, e))
 
     print("\n" + "=" * 50)
-    print(f"📊 VALIDATION SUMMARY: {passed}/{total} tests passed")
+    print("📊 VALIDATION SUMMARY: {0}/{1} tests passed".format(passed, total))
 
     if passed == total:
         print("🎉 ALL SIMPLIFIED TESTS PASSED!")
@@ -331,7 +331,7 @@ def main():
         print("✅ Ready for deployment and further testing")
         return True
     else:
-        print(f"❌ {total - passed} tests failed")
+        print("❌ {0} tests failed".format(total - passed))
         return False
 
 

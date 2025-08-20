@@ -71,7 +71,7 @@ class ReutersSpider(scrapy.Spider):
             or response.css(".byline a::text").get()
             or response.css('meta[name="author"]::attr(content)').get()
         )
-        item["author"] = author.strip() if author else "Reuters Staff"
+        item["author"] = author.strip() if author else "Reuters Sta"
 
         # Extract category
         category = self._extract_category(response.url, response)

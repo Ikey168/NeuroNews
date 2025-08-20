@@ -74,8 +74,8 @@ class SimpleS3Demo:
         storage = S3ArticleStorage(self.s3_config)
 
         print("✅ S3 Storage initialized")
-        print(f"   Bucket: {self.s3_config.bucket_name}")
-        print(f"   Region: {self.s3_config.region}")
+        print("   Bucket: {0}".format(self.s3_config.bucket_name))
+        print("   Region: {0}".format(self.s3_config.region))
 
         # Test key generation
         print("\n📁 Testing S3 key generation:")
@@ -83,9 +83,9 @@ class SimpleS3Demo:
             raw_key = storage._generate_s3_key(article, ArticleType.RAW)
             processed_key = storage._generate_s3_key(article, ArticleType.PROCESSED)
 
-            print(f"   Article {i+1}:")
-            print(f"     Raw: {raw_key}")
-            print(f"     Processed: {processed_key}")
+            print("   Article {0}:".format(i+1))
+            print("     Raw: {0}".format(raw_key))
+            print("     Processed: {0}".format(processed_key))
 
         # Test content hashing
         print("\n🔐 Testing content integrity:")
@@ -94,8 +94,8 @@ class SimpleS3Demo:
             article_id = storage._generate_article_id(article)
 
             print(f"   Article {i+1}: {article['title'][:30]}...")
-            print(f"     ID: {article_id}")
-            print(f"     Hash: {content_hash[:16]}...")
+            print("     ID: {0}".format(article_id))
+            print("     Hash: {0}...".format(content_hash[:16]))
 
         return storage
 
@@ -104,7 +104,7 @@ class SimpleS3Demo:
         print("\n📦 DEMO: Article Ingestion Pipeline")
         print("=" * 50)
 
-        print(f"📥 Simulating ingestion of {len(self.sample_articles)} articles...")
+        print("📥 Simulating ingestion of {0} articles...".format(len(self.sample_articles)))
 
         try:
             # Simulate ingestion (will fail gracefully without AWS credentials)
@@ -122,7 +122,7 @@ class SimpleS3Demo:
                 )
 
         except Exception as e:
-            print(f"⚠️  Expected error without AWS credentials: {str(e)[:100]}...")
+            print("⚠️  Expected error without AWS credentials: {0}...".format(str(e)[:100]))
 
     async def demo_data_organization(self):
         """Demonstrate S3 data organization structure."""
@@ -157,8 +157,8 @@ class SimpleS3Demo:
             processed_key = storage._generate_s3_key(article, ArticleType.PROCESSED)
 
             print(f"   {article['title'][:40]}...")
-            print(f"     Raw: {raw_key}")
-            print(f"     Processed: {processed_key}")
+            print("     Raw: {0}".format(raw_key))
+            print("     Processed: {0}".format(processed_key))
             print()
 
     async def demo_article_processing(self):
@@ -179,19 +179,19 @@ class SimpleS3Demo:
 
         # 1. Content analysis
         word_count = len(article["content"].split())
-        print(f"   ✅ Content analysis: {word_count} words")
+        print("   ✅ Content analysis: {0} words".format(word_count))
 
         # 2. Sentiment analysis (simulated)
         sentiment_score = 0.75  # Simulated positive sentiment
-        print(f"   ✅ Sentiment analysis: {sentiment_score} (positive)")
+        print("   ✅ Sentiment analysis: {0} (positive)".format(sentiment_score))
 
         # 3. Entity extraction (simulated)
         entities = ["quantum computing", "scientists", "technology"]
-        print(f"   ✅ Entity extraction: {entities}")
+        print("   ✅ Entity extraction: {0}".format(entities))
 
         # 4. Topic classification (simulated)
         topics = ["technology", "science", "innovation"]
-        print(f"   ✅ Topic classification: {topics}")
+        print("   ✅ Topic classification: {0}".format(topics))
 
         # 5. Create processed article
         processed_article = {
@@ -210,8 +210,8 @@ class SimpleS3Demo:
             },
         }
 
-        print(f"\n✅ Article processing completed")
-        print(f"   Enhanced with {len(processed_article) - len(article)} new fields")
+        print("\n✅ Article processing completed")
+        print("   Enhanced with {0} new fields".format(len(processed_article) - len(article)))
 
         return processed_article
 
@@ -238,7 +238,7 @@ class SimpleS3Demo:
                 )
 
         except Exception as e:
-            print(f"⚠️  Expected error without AWS credentials: {str(e)[:100]}...")
+            print("⚠️  Expected error without AWS credentials: {0}...".format(str(e)[:100]))
 
     def demo_configuration(self):
         """Show configuration options."""
@@ -246,19 +246,19 @@ class SimpleS3Demo:
         print("=" * 50)
 
         print("📋 Current configuration:")
-        print(f"   🪣 Bucket Name: {self.s3_config.bucket_name}")
-        print(f"   🌍 AWS Region: {self.s3_config.region}")
-        print(f"   📁 Raw Prefix: {self.s3_config.raw_prefix}")
-        print(f"   ⚙️  Processed Prefix: {self.s3_config.processed_prefix}")
+        print("   🪣 Bucket Name: {0}".format(self.s3_config.bucket_name))
+        print("   🌍 AWS Region: {0}".format(self.s3_config.region))
+        print("   📁 Raw Prefix: {0}".format(self.s3_config.raw_prefix))
+        print("   ⚙️  Processed Prefix: {0}".format(self.s3_config.processed_prefix))
         print(
             f"   🔒 Encryption: {'Enabled' if self.s3_config.enable_encryption else 'Disabled'}"
         )
         print(
             f"   📝 Versioning: {'Enabled' if self.s3_config.enable_versioning else 'Disabled'}"
         )
-        print(f"   💾 Storage Class: {self.s3_config.storage_class}")
-        print(f"   📅 Lifecycle Days: {self.s3_config.lifecycle_days}")
-        print(f"   📏 Max File Size: {self.s3_config.max_file_size_mb} MB")
+        print("   💾 Storage Class: {0}".format(self.s3_config.storage_class))
+        print("   📅 Lifecycle Days: {0}".format(self.s3_config.lifecycle_days))
+        print("   📏 Max File Size: {0} MB".format(self.s3_config.max_file_size_mb))
 
         print("\n🔧 Configuration can be customized for:")
         print("   • Different AWS regions and storage classes")
@@ -354,7 +354,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n\n⏹️  Demo interrupted by user")
     except Exception as e:
-        print(f"\n\n❌ Demo error: {e}")
+        print("\n\n❌ Demo error: {0}".format(e))
         import traceback
 
         traceback.print_exc()

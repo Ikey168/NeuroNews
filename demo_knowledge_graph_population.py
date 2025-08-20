@@ -124,7 +124,7 @@ class KnowledgeGraphDemo:
             logger.info("Demo initialized successfully")
 
         except Exception as e:
-            logger.error(f"Failed to initialize demo: {str(e)}")
+            logger.error("Failed to initialize demo: {0}".format(str(e)))
             raise
 
     async def demonstrate_entity_extraction(self):
@@ -141,7 +141,7 @@ class KnowledgeGraphDemo:
             full_text = f"{article['title']}. {article['content']}"
             entities = await self.populator._extract_entities(full_text)
 
-            logger.info(f"Found {len(entities)} entities:")
+            logger.info("Found {0} entities:".format(len(entities)))
 
             # Group entities by type for better visualization
             entities_by_type = {}
@@ -151,10 +151,10 @@ class KnowledgeGraphDemo:
                 entities_by_type[entity.label].append(entity)
 
             for entity_type, type_entities in entities_by_type.items():
-                logger.info(f"\n  {entity_type}:")
+                logger.info("\n  {0}:".format(entity_type))
                 for entity in type_entities:
                     logger.info(
-                        f"    - {entity.text} (confidence: {entity.confidence:.2f})"
+                        "    - {0} (confidence: {1})".format(entity.text, entity.confidence:.2f)
                     )
 
     async def demonstrate_relationship_extraction(self):
@@ -172,16 +172,16 @@ class KnowledgeGraphDemo:
             entities, full_text, article["id"]
         )
 
-        logger.info(f"\nFound {len(relationships)} relationships:")
+        logger.info("\nFound {0} relationships:".format(len(relationships)))
         logger.info("-" * 40)
 
         for relationship in relationships:
             if relationship.confidence >= self.populator.min_confidence:
                 logger.info(
-                    f"  {relationship.source_entity} --[{relationship.relation_type}]--> {relationship.target_entity}"
+                    "  {0} --[{1}]--> {2}".format(relationship.source_entity, relationship.relation_type, relationship.target_entity)
                 )
-                logger.info(f"    Confidence: {relationship.confidence:.2f}")
-                logger.info(f"    Context: {relationship.context[:100]}...")
+                logger.info("    Confidence: {0}".format(relationship.confidence:.2f))
+                logger.info("    Context: {0}...".format(relationship.context[:100]))
                 logger.info("")
 
     async def demonstrate_article_population(self):
@@ -227,9 +227,9 @@ class KnowledgeGraphDemo:
                 total_stats["total_historical_links"] += stats["historical_links"]
 
             except Exception as e:
-                logger.error(f"  Error processing article: {str(e)}")
+                logger.error("  Error processing article: {0}".format(str(e)))
 
-        logger.info(f"\nFinal Statistics:")
+        logger.info("\nFinal Statistics:")
         logger.info(f"  Total articles processed: {total_stats['total_articles']}")
         logger.info(f"  Total entities added: {total_stats['total_entities']}")
         logger.info(
@@ -283,14 +283,14 @@ class KnowledgeGraphDemo:
         ]
 
         for entity_name in sample_queries:
-            logger.info(f"\nQuerying related entities for: {entity_name}")
+            logger.info("\nQuerying related entities for: {0}".format(entity_name))
             logger.info("-" * 40)
 
             # Simulate related entities (in real implementation, this would query Neptune)
             related_entities = self._simulate_related_entities(entity_name)
 
             if related_entities:
-                logger.info(f"Found {len(related_entities)} related entities:")
+                logger.info("Found {0} related entities:".format(len(related_entities)))
                 for entity in related_entities:
                     logger.info(
                         f"  - {entity['entity_name']} ({entity['entity_type']})"
@@ -374,7 +374,7 @@ class KnowledgeGraphDemo:
         logger.info("DEMONSTRATING BATCH PROCESSING")
         logger.info("=" * 60)
 
-        logger.info(f"Processing {len(self.sample_articles)} articles in batch...")
+        logger.info("Processing {0} articles in batch...".format(len(self.sample_articles)))
 
         # Simulate batch processing
         batch_stats = {
@@ -407,7 +407,7 @@ class KnowledgeGraphDemo:
             else 0
         )
 
-        logger.info(f"\nBatch Processing Results:")
+        logger.info("\nBatch Processing Results:")
         logger.info(f"  Success Rate: {batch_stats['success_rate']:.1%}")
         logger.info(f"  Articles Processed: {batch_stats['processed_articles']}")
         logger.info(f"  Articles Failed: {batch_stats['failed_articles']}")
@@ -452,7 +452,7 @@ class KnowledgeGraphDemo:
             logger.info("- FastAPI endpoints for API access")
 
         except Exception as e:
-            logger.error(f"Demo failed: {str(e)}")
+            logger.error("Demo failed: {0}".format(str(e)))
             raise
 
         finally:

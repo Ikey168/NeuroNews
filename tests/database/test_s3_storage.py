@@ -123,9 +123,9 @@ def test_get_article_success(s3_storage, s3_client):
 def test_list_articles_success(s3_storage):
     articles = [
         {
-            "id": f"test-{i}",
-            "title": f"Test Article {i}",
-            "content": f"Test content {i}",
+            "id": "test-{0}".format(i),
+            "title": "Test Article {0}".format(i),
+            "content": "Test content {0}".format(i),
             "source": "test-source",
             "published_date": "2025-01-01",
         }

@@ -25,7 +25,7 @@ def load_aws_config(env="dev"):
     Returns:
         dict: AWS configuration.
     """
-    config_path = Path(f"config/{env}_aws.json")
+    config_path = Path("config/{0}_aws.json".format(env))
     if not config_path.exists():
         return {}
 
@@ -33,7 +33,7 @@ def load_aws_config(env="dev"):
         try:
             return json.load(f)
         except json.JSONDecodeError:
-            print(f"Error: Could not parse {config_path} as JSON.")
+            print("Error: Could not parse {0} as JSON.".format(config_path))
             return {}
 
 
@@ -81,7 +81,7 @@ def run_spider(
 
     if aws_profile:
         os.environ["AWS_PROFILE"] = aws_profile
-        print(f"Using AWS profile: {aws_profile}")
+        print("Using AWS profile: {0}".format(aws_profile))
 
     settings = get_project_settings()
 
@@ -285,14 +285,14 @@ def main():
         runner = MultiSourceRunner()
         print("Available spiders:")
         for spider_name in runner.spiders.keys():
-            print(f"  - {spider_name}")
+            print("  - {0}".format(spider_name))
 
         settings = get_project_settings()
         print("\nConfigured news sources:")
         sources = settings.get("SCRAPING_SOURCES", [])
         if sources:
             for source in sources:
-                print(f"  - {source}")
+                print("  - {0}".format(source))
         else:
             # Try loading from config file directly
             try:
@@ -302,9 +302,9 @@ def main():
                     config = json.load(f)
                 sources = config.get("scraping", {}).get("sources", [])
                 for source in sources:
-                    print(f"  - {source}")
+                    print("  - {0}".format(source))
             except Exception as e:
-                print(f"  Could not load sources from config: {e}")
+                print("  Could not load sources from config: {0}".format(e))
         return
 
     if args.report:
@@ -322,11 +322,11 @@ def main():
         runner = MultiSourceRunner()
 
         if args.spider:
-            print(f"Running spider: {args.spider}")
+            print("Running spider: {0}".format(args.spider))
             try:
                 runner.run_spider(args.spider)
             except ValueError as e:
-                print(f"Error: {e}")
+                print("Error: {0}".format(e))
                 return
         else:
             print("Running all available spiders...")
@@ -351,7 +351,7 @@ def main():
 
     if aws_profile:
         os.environ["AWS_PROFILE"] = aws_profile
-        print(f"Using AWS profile: {aws_profile}")
+        print("Using AWS profile: {0}".format(aws_profile))
 
     # Override S3 settings from config if not provided as arguments
     s3_storage = args.s3
@@ -426,18 +426,20 @@ def main():
             "or specify it in the AWS configuration file."
         )
 
-    print(f"Starting NeuroNews scraper...")
+    print("Starting NeuroNews scraper...")
     if args.playwright:
         print("Using Playwright for JavaScript-heavy pages")
     if s3_storage:
-        print(f"Storing articles in S3 bucket: {s3_bucket}")
-        print(f"S3 prefix: {s3_prefix}")
+        print("Storing articles in S3 bucket: {0}".format(s3_bucket))
+        print("S3 prefix: {0}".format(s3_prefix))
     if cloudwatch_logging:
         print(
-            f"Logging to CloudWatch: {cloudwatch_log_group}/{cloudwatch_log_stream_prefix}-*"
+            "Logging to CloudWatch: {0}/{1}-*".format(
+                cloudwatch_log_group, cloudwatch_log_stream_prefix
+            )
         )
-        print(f"Log level: {cloudwatch_log_level}")
-    print(f"Output will be saved to: {args.output}")
+        print("Log level: {0}".format(cloudwatch_log_level))
+    print("Output will be saved to: {0}".format(args.output))
 
     run_spider(
         output_file=args.output,

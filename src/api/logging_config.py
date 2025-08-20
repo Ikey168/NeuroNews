@@ -61,7 +61,7 @@ class CloudWatchLogger(BaseHTTPMiddleware):
                 "method": request.method,
                 "path": request.url.path,
                 "status_code": status_code,
-                "duration": f"{duration:.3f}s",
+                "duration": "{0:.3f}s".format(duration),
             }
 
             if error:
@@ -87,7 +87,7 @@ class CloudWatchLogger(BaseHTTPMiddleware):
                 self.sequence_token = response.get("nextSequenceToken")
 
             except Exception as e:
-                logging.error(f"Failed to send logs to CloudWatch: {e}")
+                logging.error("Failed to send logs to CloudWatch: {0}".format(e))
 
         if error:
             raise

@@ -74,7 +74,7 @@ class ArsTechnicaSpider(scrapy.Spider):
             or response.css('.byline a[rel="author"]::text').get()
             or response.css('meta[name="author"]::attr(content)').get()
         )
-        item["author"] = author.strip() if author else "Ars Technica Staff"
+        item["author"] = author.strip() if author else "Ars Technica Sta"
 
         # Extract category
         category = self._extract_category(response.url, response)

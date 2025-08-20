@@ -36,50 +36,56 @@ class DashboardAPI:
         """Fetch articles by topic."""
         try:
             response = requests.get(
-                f"{self.base_url}/news/articles/topic/{topic}?limit={limit}"
+                "{0}/news/articles/topic/{1}?limit={2}".format(
+                    self.base_url, topic, limit
+                )
             )
             if response.status_code == 200:
                 return response.json()
             return []
         except Exception as e:
-            st.error(f"Error fetching articles: {e}")
+            st.error("Error fetching articles: {0}".format(e))
             return []
 
     def get_breaking_news(self, hours: int = 24, limit: int = 10) -> List[Dict]:
         """Fetch breaking news events."""
         try:
             response = requests.get(
-                f"{self.base_url}/api/v1/breaking-news?hours={hours}&limit={limit}"
+                "{0}/api/v1/breaking-news?hours={1}&limit={2}".format(
+                    self.base_url, hours, limit
+                )
             )
             if response.status_code == 200:
                 return response.json()
             return []
         except Exception as e:
-            st.error(f"Error fetching breaking news: {e}")
+            st.error("Error fetching breaking news: {0}".format(e))
             return []
 
     def get_entities(self, limit: int = 100) -> List[Dict]:
         """Fetch entities from knowledge graph."""
         try:
-            response = requests.get(f"{self.base_url}/graph/entities?limit={limit}")
+            response = requests.get(
+                "{0}/graph/entities?limit={1}".format(self.base_url, limit)
+            )
             if response.status_code == 200:
                 return response.json()
             return []
         except Exception as e:
-            st.error(f"Error fetching entities: {e}")
+            st.error("Error fetching entities: {0}".format(e))
             return []
 
     def get_entity_relationships(self, entity_id: str) -> Dict:
         """Fetch entity relationships."""
         try:
             response = requests.get(
-                f"{self.base_url}/graph/entity/{entity_id}/relationships"
+                "{0}/graph/entity/{1}/relationships".format(self.base_url, entity_id)
             )
             if response.status_code == 200:
                 return response.json()
             return {}
         except Exception as e:
-            st.error(f"Error fetching entity relationships: {e}")
+            st.error("Error fetching entity relationships: {0}".format(e))
             return {}
 
 
@@ -277,7 +283,7 @@ def main():
         # Fetch and display news trends
         if topic_input:
             articles = api.get_articles_by_topic(topic_input, article_limit)
-            st.write(f"Showing articles for topic: **{topic_input}**")
+            st.write("Showing articles for topic: **{0}**".format(topic_input))
         else:
             # For demo purposes, use a default topic
             articles = api.get_articles_by_topic("technology", article_limit)
@@ -288,7 +294,7 @@ def main():
             st.plotly_chart(trends_chart, use_container_width=True)
 
             # Display recent articles
-            st.write(f"**Recent Articles ({len(articles)} found):**")
+            st.write("**Recent Articles ({0} found):**".format(len(articles)))
             for i, article in enumerate(articles[:5]):  # Show first 5
                 with st.expander(f"📄 {article.get('title', 'No title')[:100]}..."):
                     st.write(f"**Source:** {article.get('source', 'Unknown')}")
@@ -317,14 +323,14 @@ def main():
             st.plotly_chart(network_chart, use_container_width=True)
 
             # Display entity statistics
-            st.write(f"**Entity Statistics:**")
+            st.write("**Entity Statistics:**")
             entity_types = {}
             for entity in entities:
                 entity_type = entity.get("type", "unknown")
                 entity_types[entity_type] = entity_types.get(entity_type, 0) + 1
 
             for entity_type, count in entity_types.items():
-                st.write(f"- {entity_type}: {count}")
+                st.write("- {0}: {1}".format(entity_type, count))
         else:
             st.warning("No entities found. The knowledge graph might be unavailable.")
 

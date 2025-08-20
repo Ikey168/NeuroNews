@@ -38,7 +38,7 @@ try:
 
     OPTIMIZED_AVAILABLE = True
 except ImportError as e:
-    logger.error(f"Optimized pipeline not available: {e}")
+    logger.error("Optimized pipeline not available: {0}".format(e))
     OPTIMIZED_AVAILABLE = False
 
 try:
@@ -48,7 +48,7 @@ try:
 
     INTEGRATION_AVAILABLE = True
 except ImportError as e:
-    logger.error(f"Integration components not available: {e}")
+    logger.error("Integration components not available: {0}".format(e))
     INTEGRATION_AVAILABLE = False
 
 
@@ -114,7 +114,7 @@ class OptimizedNLPDemo:
             },
         ]
 
-        logger.info(f"Created {len(articles)} sample articles for demonstration")
+        logger.info("Created {0} sample articles for demonstration".format(len(articles)))
         return articles
 
     async def demonstrate_basic_optimization(self):
@@ -133,7 +133,7 @@ class OptimizedNLPDemo:
                 max_threads=4, enable_cache=True, enable_gpu=False  # Use CPU for demo
             )
 
-            print(f"📊 Processing {len(self.sample_articles)} articles...")
+            print("📊 Processing {0} articles...".format(len(self.sample_articles)))
 
             # Process articles
             start_time = time.time()
@@ -143,7 +143,7 @@ class OptimizedNLPDemo:
             processing_time = time.time() - start_time
 
             # Display results
-            print(f"✅ Processing completed in {processing_time:.2f} seconds")
+            print("✅ Processing completed in {0} seconds".format(processing_time:.2f))
             print(f"📈 Throughput: {results['throughput']:.2f} articles/sec")
             print(f"🎯 Cache hit rate: {results['cache_stats']['hit_rate']:.1%}")
             print(
@@ -173,8 +173,8 @@ class OptimizedNLPDemo:
             await pipeline.cleanup()
 
         except Exception as e:
-            print(f"❌ Basic optimization demonstration failed: {e}")
-            logger.error(f"Basic optimization error: {e}", exc_info=True)
+            print("❌ Basic optimization demonstration failed: {0}".format(e))
+            logger.error("Basic optimization error: {0}".format(e), exc_info=True)
 
     async def demonstrate_caching_benefits(self):
         """Demonstrate caching performance benefits."""
@@ -208,9 +208,9 @@ class OptimizedNLPDemo:
 
             # Display cache benefits
             speedup = first_run_time / second_run_time if second_run_time > 0 else 1.0
-            print(f"🏃 First run time: {first_run_time:.2f}s")
-            print(f"🚀 Second run time: {second_run_time:.2f}s")
-            print(f"⚡ Speedup: {speedup:.1f}x faster")
+            print("🏃 First run time: {0}s".format(first_run_time:.2f))
+            print("🚀 Second run time: {0}s".format(second_run_time:.2f))
+            print("⚡ Speedup: {0}x faster".format(speedup:.1f))
             print(f"📊 Cache hit rate: {results2['cache_stats']['hit_rate']:.1%}")
 
             self.results["caching_benefits"] = {
@@ -223,8 +223,8 @@ class OptimizedNLPDemo:
             await pipeline.cleanup()
 
         except Exception as e:
-            print(f"❌ Caching demonstration failed: {e}")
-            logger.error(f"Caching error: {e}", exc_info=True)
+            print("❌ Caching demonstration failed: {0}".format(e))
+            logger.error("Caching error: {0}".format(e), exc_info=True)
 
     async def demonstrate_memory_optimization(self):
         """Demonstrate memory optimization features."""
@@ -244,7 +244,7 @@ class OptimizedNLPDemo:
 
             # Monitor memory during processing
             initial_memory = pipeline.memory_manager.get_memory_usage_mb()
-            print(f"💾 Initial memory usage: {initial_memory:.1f} MB")
+            print("💾 Initial memory usage: {0} MB".format(initial_memory:.1f))
 
             # Process articles
             results = await pipeline.process_articles_async(
@@ -255,7 +255,7 @@ class OptimizedNLPDemo:
             final_memory = pipeline.memory_manager.get_memory_usage_mb()
             memory_stats = pipeline.memory_manager.get_stats()
 
-            print(f"💾 Final memory usage: {final_memory:.1f} MB")
+            print("💾 Final memory usage: {0} MB".format(final_memory:.1f))
             print(f"📈 Peak memory usage: {memory_stats['peak_usage']:.1f} MB")
             print(f"🗑️ Garbage collections triggered: {memory_stats['gc_triggered']}")
             print(f"⚠️ Memory warnings: {memory_stats['memory_warnings']}")
@@ -270,8 +270,8 @@ class OptimizedNLPDemo:
             await pipeline.cleanup()
 
         except Exception as e:
-            print(f"❌ Memory optimization demonstration failed: {e}")
-            logger.error(f"Memory optimization error: {e}", exc_info=True)
+            print("❌ Memory optimization demonstration failed: {0}".format(e))
+            logger.error("Memory optimization error: {0}".format(e), exc_info=True)
 
     async def demonstrate_concurrent_processing(self):
         """Demonstrate concurrent processing capabilities."""
@@ -327,12 +327,12 @@ class OptimizedNLPDemo:
             )
 
             print(
-                f"🏃 Sequential processing: {sequential_time:.2f}s ({sequential_throughput:.2f} articles/sec)"
+                "🏃 Sequential processing: {0}s ({1} articles/sec)".format(sequential_time:.2f, sequential_throughput:.2f)
             )
             print(
-                f"🚀 Concurrent processing: {concurrent_time:.2f}s ({concurrent_throughput:.2f} articles/sec)"
+                "🚀 Concurrent processing: {0}s ({1} articles/sec)".format(concurrent_time:.2f, concurrent_throughput:.2f)
             )
-            print(f"⚡ Efficiency gain: {efficiency_gain:.1f}x")
+            print("⚡ Efficiency gain: {0}x".format(efficiency_gain:.1f))
 
             self.results["concurrent_processing"] = {
                 "sequential_time": sequential_time,
@@ -344,8 +344,8 @@ class OptimizedNLPDemo:
             await pipeline.cleanup()
 
         except Exception as e:
-            print(f"❌ Concurrent processing demonstration failed: {e}")
-            logger.error(f"Concurrent processing error: {e}", exc_info=True)
+            print("❌ Concurrent processing demonstration failed: {0}".format(e))
+            logger.error("Concurrent processing error: {0}".format(e), exc_info=True)
 
     async def demonstrate_integrated_processor(self):
         """Demonstrate integrated NLP processor capabilities."""
@@ -393,8 +393,8 @@ class OptimizedNLPDemo:
             await processor.cleanup()
 
         except Exception as e:
-            print(f"❌ Integrated processor demonstration failed: {e}")
-            logger.error(f"Integrated processor error: {e}", exc_info=True)
+            print("❌ Integrated processor demonstration failed: {0}".format(e))
+            logger.error("Integrated processor error: {0}".format(e), exc_info=True)
 
     def demonstrate_aws_sagemaker_readiness(self):
         """Demonstrate AWS SageMaker deployment readiness."""
@@ -420,15 +420,15 @@ class OptimizedNLPDemo:
             )
 
             print("☁️ SageMaker deployment configuration:")
-            print(f"  📦 Model name: {sagemaker_config.sagemaker_model_name}")
-            print(f"  🔌 Endpoint: {sagemaker_config.sagemaker_endpoint_name}")
-            print(f"  📊 Batch size: {sagemaker_config.batch_size}")
-            print(f"  🏃 Max threads: {sagemaker_config.max_worker_threads}")
+            print("  📦 Model name: {0}".format(sagemaker_config.sagemaker_model_name))
+            print("  🔌 Endpoint: {0}".format(sagemaker_config.sagemaker_endpoint_name))
+            print("  📊 Batch size: {0}".format(sagemaker_config.batch_size))
+            print("  🏃 Max threads: {0}".format(sagemaker_config.max_worker_threads))
             print(
-                f"  ⚡ Model quantization: {sagemaker_config.enable_model_quantization}"
+                "  ⚡ Model quantization: {0}".format(sagemaker_config.enable_model_quantization)
             )
             print(
-                f"  🔄 Batch transform: {sagemaker_config.enable_sagemaker_batch_transform}"
+                "  🔄 Batch transform: {0}".format(sagemaker_config.enable_sagemaker_batch_transform)
             )
 
             print("\n✅ Key SageMaker deployment features:")
@@ -448,8 +448,8 @@ class OptimizedNLPDemo:
             }
 
         except Exception as e:
-            print(f"❌ SageMaker readiness demonstration failed: {e}")
-            logger.error(f"SageMaker readiness error: {e}", exc_info=True)
+            print("❌ SageMaker readiness demonstration failed: {0}".format(e))
+            logger.error("SageMaker readiness error: {0}".format(e), exc_info=True)
 
     def print_summary_report(self):
         """Print a comprehensive summary report."""
@@ -464,7 +464,7 @@ class OptimizedNLPDemo:
         print(
             f"🕒 Demonstration completed at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         )
-        print(f"📊 Total demonstrations run: {len(self.results)}")
+        print("📊 Total demonstrations run: {0}".format(len(self.results)))
 
         for demo_name, results in self.results.items():
             print(f"\n🔸 {demo_name.replace('_', ' ').title()}:")
@@ -488,11 +488,11 @@ class OptimizedNLPDemo:
             cache_rate = basic_results.get("cache_hit_rate", 0)
 
             print("\n🎯 Key Performance Indicators:")
-            print(f"  • Overall throughput: {throughput:.2f} articles/sec")
-            print(f"  • Cache efficiency: {cache_rate:.1%}")
-            print(f"  • Memory optimization: ✅ Enabled")
-            print(f"  • Concurrent processing: ✅ Enabled")
-            print(f"  • SageMaker ready: ✅ Configured")
+            print("  • Overall throughput: {0} articles/sec".format(throughput:.2f))
+            print("  • Cache efficiency: {0}".format(cache_rate:.1%))
+            print("  • Memory optimization: ✅ Enabled")
+            print("  • Concurrent processing: ✅ Enabled")
+            print("  • SageMaker ready: ✅ Configured")
 
         print("\n✅ Issue #35 Objectives Achieved:")
         print("  1. ✅ Multi-threaded processing implemented")
@@ -520,10 +520,10 @@ class OptimizedNLPDemo:
             with open(filename, "w") as f:
                 json.dump(output_data, f, indent=2)
 
-            print(f"💾 Results saved to: {filename}")
+            print("💾 Results saved to: {0}".format(filename))
 
         except Exception as e:
-            print(f"❌ Failed to save results: {e}")
+            print("❌ Failed to save results: {0}".format(e))
 
 
 async def main():
@@ -549,14 +549,14 @@ async def main():
         # Save results
         demo.save_results_to_file()
 
-        print(f"\n🎉 Demonstration completed successfully!")
+        print("\n🎉 Demonstration completed successfully!")
         print("📋 See the summary report above for detailed results.")
 
     except KeyboardInterrupt:
         print("\n⚠️ Demonstration interrupted by user")
     except Exception as e:
-        print(f"\n❌ Demonstration failed: {e}")
-        logger.error(f"Demo error: {e}", exc_info=True)
+        print("\n❌ Demonstration failed: {0}".format(e))
+        logger.error("Demo error: {0}".format(e), exc_info=True)
 
     print("\n🔗 Integration with existing NeuroNews pipeline:")
     print("  • Drop-in replacement for existing NLP components")

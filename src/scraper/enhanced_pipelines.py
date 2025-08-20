@@ -111,7 +111,7 @@ class EnhancedValidationPipeline:
         # Log quality info
         quality = result.cleaned_data.get("content_quality", "unknown")
         spider.logger.debug(
-            f"Article validated - Quality: {quality}, Score: {result.score:.1f}"
+            "Article validated - Quality: {0}, Score: {1}".format(quality, result.score)
         )
 
         return item
@@ -121,7 +121,7 @@ class EnhancedValidationPipeline:
         stats = self.validation_pipeline.get_statistics()
 
         spider.logger.info(
-            f"""
+            """
 === Data Validation Pipeline Statistics ===
 Processed: {stats['processed_count']} articles
 Accepted: {stats['accepted_count']} articles ({stats['acceptance_rate']:.1f}%)
@@ -200,9 +200,9 @@ class QualityFilterPipeline:
                         'Unknown URL')}"
             )
             raise DropItem(
-                f"Article validation score ({
-                    validation_score:.1f}) below threshold ({
-                    self.min_score})"
+                "Article validation score ({0}) below threshold ({1})".format(
+                    validation_score:.1f, 
+                    self.min_score)
             )
 
         # Check content length
@@ -213,8 +213,8 @@ class QualityFilterPipeline:
                 f"Article filtered - short content ({content_length}): {item.get('url', 'Unknown URL')}"
             )
             raise DropItem(
-                f"Article content length ({content_length}) below threshold ({
-                    self.min_content_length})"
+                "Article content length ({0}) below threshold ({1})".format(content_length, 
+                    self.min_content_length)
             )
 
         # Check for critical validation flags
@@ -233,15 +233,15 @@ class QualityFilterPipeline:
                 spider.logger.warning(
                     f"Article filtered - critical issue ({issue}): {item.get('url', 'Unknown URL')}"
                 )
-                raise DropItem(f"Article has critical validation issue: {issue}")
+                raise DropItem("Article has critical validation issue: {0}".format(issue))
 
         return item
 
     def close_spider(self, spider):
         """Log filtering statistics when spider closes."""
         spider.logger.info(
-            f"Quality filter removed {
-                self.filtered_count} low-quality articles"
+            "Quality filter removed {0} low-quality articles".format(
+                self.filtered_count)
         )
         spider.crawler.stats.set_value("quality_filtered_count", self.filtered_count)
 
@@ -309,7 +309,7 @@ class SourceCredibilityPipeline:
         if credibility in ["questionable", "unreliable"]:
             validation_result = item.get("validation_result", {})
             warnings = validation_result.get("warnings", [])
-            warnings.append(f"source_credibility_{credibility}")
+            warnings.append("source_credibility_{0}".format(credibility))
             validation_result["warnings"] = warnings
             item["validation_result"] = validation_result
 
@@ -330,7 +330,7 @@ class SourceCredibilityPipeline:
         total = sum(self.credibility_stats.values())
 
         spider.logger.info(
-            f"""
+            """
 === Source Credibility Statistics ===
 Total articles: {total}
 Trusted: {self.credibility_stats['trusted']} ({self.credibility_stats['trusted'] / total * 100:.1f}%)
@@ -345,7 +345,7 @@ Blocked unreliable: {self.blocked_count}
 
         # Store stats in spider stats
         for level, count in self.credibility_stats.items():
-            spider.crawler.stats.set_value(f"credibility_{level}_count", count)
+            spider.crawler.stats.set_value("credibility_{0}_count".format(level), count)
         spider.crawler.stats.set_value("credibility_blocked_count", self.blocked_count)
 
 
@@ -395,7 +395,7 @@ class DuplicateFilterPipeline:
                     item.get(
                         'url', 'Unknown URL')}"
             )
-            raise DropItem(f"Duplicate article: {reason}")
+            raise DropItem("Duplicate article: {0}".format(reason))
 
         # Mark as unique
         item["duplicate_check"] = "unique"
@@ -404,7 +404,7 @@ class DuplicateFilterPipeline:
     def close_spider(self, spider):
         """Log duplicate detection statistics when spider closes."""
         spider.logger.info(
-            f"""
+            """
 === Duplicate Detection Statistics ===
 Total duplicates found: {self.duplicate_count}
 By URL: {self.duplicate_reasons.get('duplicate_url', 0)}
@@ -417,7 +417,7 @@ Similar titles: {self.duplicate_reasons.get('similar_title', 0)}
 
         spider.crawler.stats.set_value("duplicates_total_count", self.duplicate_count)
         for reason, count in self.duplicate_reasons.items():
-            spider.crawler.stats.set_value(f"duplicates_{reason}_count", count)
+            spider.crawler.stats.set_value("duplicates_{0}_count".format(reason), count)
 
 
 class ValidationReportPipeline:
@@ -493,7 +493,7 @@ class ValidationReportPipeline:
         with open(self.report_file, "w") as f:
             json.dump(report, f, indent=2, default=str)
 
-        spider.logger.info(f"Validation report saved to: {self.report_file}")
+        spider.logger.info("Validation report saved to: {0}".format(self.report_file))
 
     def _generate_report(self, spider) -> Dict[str, Any]:
         """Generate comprehensive validation report."""

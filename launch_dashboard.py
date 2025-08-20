@@ -42,15 +42,15 @@ def check_api_connection(api_url: str):
     try:
         import requests
 
-        response = requests.get(f"{api_url}/health", timeout=5)
+        response = requests.get("{0}/health".format(api_url), timeout=5)
         if response.status_code == 200:
-            print(f"✅ API is accessible at {api_url}")
+            print("✅ API is accessible at {0}".format(api_url))
             return True
         else:
-            print(f"⚠️  API returned status {response.status_code}")
+            print("⚠️  API returned status {0}".format(response.status_code))
             return False
     except requests.exceptions.RequestException as e:
-        print(f"❌ API is not accessible at {api_url}: {e}")
+        print("❌ API is not accessible at {0}: {1}".format(api_url, e))
         return False
 
 
@@ -66,7 +66,7 @@ def setup_environment():
     for key, default_value in env_vars.items():
         if key not in os.environ:
             os.environ[key] = default_value
-            print(f"📝 Set {key}={default_value}")
+            print("📝 Set {0}={1}".format(key, default_value))
 
 
 def main():
@@ -131,7 +131,7 @@ def main():
         "#262730",
     ]
 
-    print(f"\n🌐 Starting dashboard at http://{args.host}:{args.port}")
+    print("\n🌐 Starting dashboard at http://{0}:{1}".format(args.host, args.port))
     print("Press Ctrl+C to stop the dashboard")
     print("-" * 40)
 
@@ -140,7 +140,7 @@ def main():
     except KeyboardInterrupt:
         print("\n👋 Dashboard stopped by user")
     except subprocess.CalledProcessError as e:
-        print(f"❌ Error running dashboard: {e}")
+        print("❌ Error running dashboard: {0}".format(e))
         sys.exit(1)
     except FileNotFoundError:
         print("❌ Streamlit is not installed or not in PATH")

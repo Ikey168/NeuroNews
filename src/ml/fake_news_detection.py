@@ -59,7 +59,7 @@ class FakeNewsDetector:
         # Initialize the model
         self._initialize_model()
 
-        logger.info(f"FakeNewsDetector initialized with model: {model_name}")
+        logger.info("FakeNewsDetector initialized with model: {0}".format(model_name))
 
     def _load_config(self, config_path: Optional[str]) -> Dict[str, Any]:
         """Load configuration from file or use defaults."""
@@ -75,7 +75,9 @@ class FakeNewsDetector:
                     config = json.load(f)
                     return config.get("fake_news_detection", default_config)
             except Exception as e:
-                logger.warning(f"Could not load config from {config_path}: {e}")
+                logger.warning(
+                    "Could not load config from {0}: {1}".format(config_path, e)
+                )
 
         return default_config
 
@@ -93,7 +95,7 @@ class FakeNewsDetector:
             logger.info("Model initialized successfully with pipeline")
 
         except Exception as e:
-            logger.warning(f"Pipeline initialization failed: {e}")
+            logger.warning("Pipeline initialization failed: {0}".format(e))
 
             # Fallback to manual model loading
             try:
@@ -106,7 +108,7 @@ class FakeNewsDetector:
                 logger.info("Model initialized successfully with manual loading")
 
             except Exception as e2:
-                logger.error(f"Manual model loading also failed: {e2}")
+                logger.error("Manual model loading also failed: {0}".format(e2))
                 # Use a simple rule-based fallback
                 self.classifier = None
                 self.model = None
@@ -128,7 +130,7 @@ class FakeNewsDetector:
         """
         try:
             # Combine title and content
-            text = f"{title}. {content}"
+            text = "{0}. {1}".format(title, content)
 
             # Truncate if too long
             if len(text) > self.max_length * 4:  # Rough character estimate
@@ -157,7 +159,7 @@ class FakeNewsDetector:
             return result
 
         except Exception as e:
-            logger.error(f"Error in predict_veracity: {e}")
+            logger.error("Error in predict_veracity: {0}".format(e))
             return self._get_fallback_result()
 
     def _predict_with_transformer(self, text: str) -> Dict[str, Any]:
@@ -199,7 +201,7 @@ class FakeNewsDetector:
             }
 
         except Exception as e:
-            logger.error(f"Transformer prediction error: {e}")
+            logger.error("Transformer prediction error: {0}".format(e))
             return self._get_fallback_result()
 
     def _predict_with_rules(self, title: str, content: str) -> Dict[str, Any]:
@@ -275,7 +277,9 @@ class FakeNewsDetector:
             certainty = "low confidence"
 
         if is_real:
-            base_explanation = f"This article appears to be REAL with {certainty}"
+            base_explanation = "This article appears to be REAL with {0}".format(
+                certainty
+            )
 
             if "study" in content.lower() or "research" in content.lower():
                 base_explanation += ". Content references research or studies"
@@ -284,7 +288,9 @@ class FakeNewsDetector:
             else:
                 base_explanation += ". Content appears factual and credible"
         else:
-            base_explanation = f"This article appears to be FAKE with {certainty}"
+            base_explanation = "This article appears to be FAKE with {0}".format(
+                certainty
+            )
 
             if any(
                 word in (title + content).lower()

@@ -84,7 +84,7 @@ class OptimizedSentimentAnalyzer:
                 self.legacy_analyzer = SentimentAnalyzer()
                 logger.info("Legacy sentiment analyzer available as fallback")
             except Exception as e:
-                logger.warning(f"Legacy sentiment analyzer failed to initialize: {e}")
+                logger.warning("Legacy sentiment analyzer failed to initialize: {0}".format(e))
 
     async def analyze_batch(
         self, articles: List[Dict[str, Any]]
@@ -130,7 +130,7 @@ class OptimizedSentimentAnalyzer:
             return sentiment_results
 
         except Exception as e:
-            logger.error(f"Optimized sentiment analysis failed: {e}")
+            logger.error("Optimized sentiment analysis failed: {0}".format(e))
 
             # Fallback to legacy analyzer
             if self.legacy_analyzer:
@@ -195,7 +195,7 @@ class OptimizedArticleEmbedder:
                 )
                 logger.info("Legacy article embedder available as fallback")
             except Exception as e:
-                logger.warning(f"Legacy article embedder failed to initialize: {e}")
+                logger.warning("Legacy article embedder failed to initialize: {0}".format(e))
 
     async def generate_embeddings_batch(
         self, articles: List[Dict[str, Any]]
@@ -244,7 +244,7 @@ class OptimizedArticleEmbedder:
             return embedding_results
 
         except Exception as e:
-            logger.error(f"Optimized embedding generation failed: {e}")
+            logger.error("Optimized embedding generation failed: {0}".format(e))
 
             # Fallback to legacy embedder
             if self.legacy_embedder:
@@ -271,7 +271,7 @@ class OptimizedArticleEmbedder:
             return embedding_results
 
         except Exception as e:
-            logger.error(f"Legacy embedding generation failed: {e}")
+            logger.error("Legacy embedding generation failed: {0}".format(e))
 
             # Return error results
             return [
@@ -297,7 +297,7 @@ class OptimizedEventClusterer:
                 self.legacy_clusterer = EventClusterer()
                 logger.info("Legacy event clusterer available")
             except Exception as e:
-                logger.warning(f"Legacy event clusterer failed to initialize: {e}")
+                logger.warning("Legacy event clusterer failed to initialize: {0}".format(e))
 
     async def cluster_articles_async(
         self, articles: List[Dict[str, Any]], embeddings: List[np.ndarray] = None
@@ -343,7 +343,7 @@ class OptimizedEventClusterer:
             }
 
         except Exception as e:
-            logger.error(f"Optimized clustering failed: {e}")
+            logger.error("Optimized clustering failed: {0}".format(e))
             raise
 
     def _simple_clustering_fallback(
@@ -434,10 +434,10 @@ class IntegratedNLPProcessor:
         self.total_stats["sessions"] += 1
 
         logger.info(
-            f"Starting comprehensive NLP processing for {
-                len(articles)} articles"
+            "Starting comprehensive NLP processing for {0} articles".format(
+                len(articles))
         )
-        logger.info(f"Operations: {operations}")
+        logger.info("Operations: {0}".format(operations))
 
         try:
             results = {
@@ -489,20 +489,20 @@ class IntegratedNLPProcessor:
             }
 
             logger.info(
-                f"Comprehensive processing completed in {
-                    total_time:.2f}s"
+                "Comprehensive processing completed in {0}s".format(
+                    total_time:.2f)
             )
             logger.info(
-                f"Throughput: {
+                "Throughput: {0} articles/sec".format(
                     len(articles) /
-                    total_time:.2f} articles/sec"
+                    total_time:.2f)
             )
 
             return results
 
         except Exception as e:
             self.total_stats["errors"] += 1
-            logger.error(f"Comprehensive NLP processing failed: {e}")
+            logger.error("Comprehensive NLP processing failed: {0}".format(e))
             raise
 
     async def _process_clustering(
@@ -536,7 +536,7 @@ class IntegratedNLPProcessor:
             return clustering_results
 
         except Exception as e:
-            logger.error(f"Clustering processing failed: {e}")
+            logger.error("Clustering processing failed: {0}".format(e))
             return {"error": str(e), "clusters": [], "cluster_count": 0}
 
     async def analyze_sentiment_optimized(
@@ -639,9 +639,9 @@ if __name__ == "__main__":
         # Sample articles for testing
         sample_articles = [
             {
-                "id": f"article_{i}",
-                "title": f"Test Article {i}",
-                "content": f"This is a sample news article about technology and innovation. "
+                "id": "article_{0}".format(i),
+                "title": "Test Article {0}".format(i),
+                "content": "This is a sample news article about technology and innovation. "
                 * 20,
             }
             for i in range(10)

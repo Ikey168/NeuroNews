@@ -32,7 +32,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "../../.."))
 try:
     from database.redshift_loader import RedshiftETLProcessor
 except ImportError as e:
-    print(f"Import error: {e}")
+    print("Import error: {0}".format(e))
     print("Please ensure you're running from the project root directory")
     sys.exit(1)
 
@@ -122,15 +122,15 @@ class KubernetesAIProcessor:
             "num_topics": self.num_topics,
         }
 
-        logger.info(f"Initialized KubernetesAIProcessor:")
-        logger.info(f"  Job Type: {self.job_type}")
-        logger.info(f"  Batch Size: {self.batch_size}")
-        logger.info(f"  Max Workers: {self.max_workers}")
-        logger.info(f"  GPU Enabled: {self.use_gpu}")
-        logger.info(f"  Embedding Model: {self.embedding_model_name}")
-        logger.info(f"  Topic Model Type: {self.topic_model_type}")
-        logger.info(f"  Number of Topics: {self.num_topics}")
-        logger.info(f"  Output Dir: {self.output_dir}")
+        logger.info("Initialized KubernetesAIProcessor:")
+        logger.info("  Job Type: {0}".format(self.job_type))
+        logger.info("  Batch Size: {0}".format(self.batch_size))
+        logger.info("  Max Workers: {0}".format(self.max_workers))
+        logger.info("  GPU Enabled: {0}".format(self.use_gpu))
+        logger.info("  Embedding Model: {0}".format(self.embedding_model_name))
+        logger.info("  Topic Model Type: {0}".format(self.topic_model_type))
+        logger.info("  Number of Topics: {0}".format(self.num_topics))
+        logger.info("  Output Dir: {0}".format(self.output_dir))
 
     async def initialize(self):
         """Initialize all components and connections."""
@@ -143,7 +143,7 @@ class KubernetesAIProcessor:
 
             # Initialize embedding model with GPU support
             device = "cuda" if self.use_gpu else "cpu"
-            logger.info(f"Loading embedding model on device: {device}")
+            logger.info("Loading embedding model on device: {0}".format(device))
 
             self.embedding_model = SentenceTransformer(
                 self.embedding_model_name,
@@ -167,7 +167,7 @@ class KubernetesAIProcessor:
                 logger.info("Using UMAP+HDBSCAN for topic modeling")
                 self.topic_model = None  # Will be initialized during processing
 
-            logger.info(f"Topic model ({self.topic_model_type}) initialized")
+            logger.info("Topic model ({0}) initialized".format(self.topic_model_type))
 
             # Initialize Redshift connection
             redshift_config = {
@@ -194,7 +194,7 @@ class KubernetesAIProcessor:
             logger.info("All AI components initialized successfully")
 
         except Exception as e:
-            logger.error(f"Failed to initialize AI components: {e}")
+            logger.error("Failed to initialize AI components: {0}".format(e))
             raise
 
     async def fetch_articles_to_process(
@@ -270,13 +270,13 @@ class KubernetesAIProcessor:
                     articles.append(article)
 
                 logger.info(
-                    f"Fetched {
-                        len(articles)} articles for topic modeling"
+                    "Fetched {0} articles for topic modeling".format(
+                        len(articles))
                 )
                 return articles
 
         except Exception as e:
-            logger.error(f"Failed to fetch articles: {e}")
+            logger.error("Failed to fetch articles: {0}".format(e))
             return []
 
     def preprocess_texts(self, articles: List[Dict[str, Any]]) -> List[str]:
@@ -296,7 +296,7 @@ class KubernetesAIProcessor:
                 # Combine title and content
                 title = article.get("title", "")
                 content = article.get("content", "")
-                full_text = f"{title}. {content}"
+                full_text = "{0}. {1}".format(title, content)
 
                 # Basic preprocessing
                 # Remove excessive whitespace
@@ -340,7 +340,7 @@ class KubernetesAIProcessor:
             NumPy array of embeddings
         """
         try:
-            logger.info(f"Generating embeddings for {len(texts)} texts")
+            logger.info("Generating embeddings for {0} texts".format(len(texts)))
 
             # Filter out empty texts
             valid_texts = [text for text in texts if text.strip()]
@@ -359,12 +359,12 @@ class KubernetesAIProcessor:
             )
 
             self.stats["embeddings_generated"] += len(embeddings)
-            logger.info(f"Generated {len(embeddings)} embeddings")
+            logger.info("Generated {0} embeddings".format(len(embeddings)))
 
             return embeddings
 
         except Exception as e:
-            logger.error(f"Failed to generate embeddings: {e}")
+            logger.error("Failed to generate embeddings: {0}".format(e))
             return np.array([])
 
     def perform_topic_modeling(
@@ -382,8 +382,8 @@ class KubernetesAIProcessor:
         """
         try:
             logger.info(
-                f"Performing topic modeling using {
-                    self.topic_model_type}"
+                "Performing topic modeling using {0}".format(
+                    self.topic_model_type)
             )
 
             if self.topic_model_type.upper() == "LDA":
@@ -392,7 +392,7 @@ class KubernetesAIProcessor:
                 return self.perform_umap_topic_modeling(texts, embeddings)
 
         except Exception as e:
-            logger.error(f"Failed to perform topic modeling: {e}")
+            logger.error("Failed to perform topic modeling: {0}".format(e))
             return [], []
 
     def perform_lda_topic_modeling(
@@ -445,23 +445,23 @@ class KubernetesAIProcessor:
                     "topic_id": topic_idx,
                     "topic_words": top_words,
                     "topic_weights": top_weights,
-                    "topic_label": f"Topic_{topic_idx}_{
-                        top_words[0]}_{
-                        top_words[1]}",
+                    "topic_label": "Topic_{0}_{1}_{2}".format(topic_idx, 
+                        top_words[0], 
+                        top_words[1]),
                     "model_type": "LDA",
                 }
                 topic_descriptions.append(topic_desc)
 
             self.stats["topics_extracted"] = len(topic_descriptions)
             logger.info(
-                f"Extracted {
-                    len(topic_descriptions)} topics using LDA"
+                "Extracted {0} topics using LDA".format(
+                    len(topic_descriptions))
             )
 
             return topic_assignments, topic_descriptions
 
         except Exception as e:
-            logger.error(f"Failed to perform LDA topic modeling: {e}")
+            logger.error("Failed to perform LDA topic modeling: {0}".format(e))
             return [], []
 
     def perform_umap_topic_modeling(
@@ -526,11 +526,11 @@ class KubernetesAIProcessor:
                             "topic_words": top_words,
                             "topic_weights": top_weights,
                             "topic_label": (
-                                f"Topic_{topic_idx}_{
-                                    top_words[0]}_{
-                                    top_words[1]}"
+                                "Topic_{0}_{1}_{2}".format(topic_idx, 
+                                    top_words[0], 
+                                    top_words[1])
                                 if top_words
-                                else f"Topic_{topic_idx}"
+                                else "Topic_{0}".format(topic_idx)
                             ),
                             "model_type": "UMAP+KMeans",
                             "num_documents": len(topic_texts),
@@ -539,13 +539,13 @@ class KubernetesAIProcessor:
 
                     except Exception as e:
                         logger.warning(
-                            f"Failed to generate description for topic {topic_idx}: {e}"
+                            "Failed to generate description for topic {0}: {1}".format(topic_idx, e)
                         )
                         topic_desc = {
                             "topic_id": topic_idx,
                             "topic_words": [],
                             "topic_weights": [],
-                            "topic_label": f"Topic_{topic_idx}",
+                            "topic_label": "Topic_{0}".format(topic_idx),
                             "model_type": "UMAP+KMeans",
                             "num_documents": len(topic_texts),
                         }
@@ -553,14 +553,14 @@ class KubernetesAIProcessor:
 
             self.stats["topics_extracted"] = len(topic_descriptions)
             logger.info(
-                f"Extracted {
-                    len(topic_descriptions)} topics using UMAP+KMeans"
+                "Extracted {0} topics using UMAP+KMeans".format(
+                    len(topic_descriptions))
             )
 
             return topic_assignments, topic_descriptions
 
         except Exception as e:
-            logger.error(f"Failed to perform UMAP topic modeling: {e}")
+            logger.error("Failed to perform UMAP topic modeling: {0}".format(e))
             return [], []
 
     def process_article_batch(
@@ -580,8 +580,8 @@ class KubernetesAIProcessor:
 
         try:
             logger.info(
-                f"Processing batch of {
-                    len(articles)} articles for topic modeling"
+                "Processing batch of {0} articles for topic modeling".format(
+                    len(articles))
             )
 
             # Preprocess texts
@@ -615,7 +615,7 @@ class KubernetesAIProcessor:
 
                     if topic_desc is None:
                         logger.warning(
-                            f"No topic description found for topic {topic_id}"
+                            "No topic description found for topic {0}".format(topic_id)
                         )
                         continue
 
@@ -653,14 +653,14 @@ class KubernetesAIProcessor:
             self.stats["batches_processed"] += 1
 
             logger.info(
-                f"Processed batch in {
-                    batch_processing_time:.2f}s, assigned topics to {
-                    len(results)} articles"
+                "Processed batch in {0}s, assigned topics to {1} articles".format(
+                    batch_processing_time:.2f, 
+                    len(results))
             )
             return results
 
         except Exception as e:
-            logger.error(f"Failed to process batch: {e}")
+            logger.error("Failed to process batch: {0}".format(e))
             self.stats["articles_failed"] += len(articles)
             return []
 
@@ -676,8 +676,8 @@ class KubernetesAIProcessor:
                 return
 
             logger.info(
-                f"Storing {
-                    len(results)} topic modeling results in Redshift"
+                "Storing {0} topic modeling results in Redshift".format(
+                    len(results))
             )
 
             # Store in Redshift
@@ -688,18 +688,18 @@ class KubernetesAIProcessor:
                 # Insert results
                 success_count = await processor.batch_insert_topic_results(results)
                 logger.info(
-                    f"Successfully stored {success_count} topic results in Redshift"
+                    "Successfully stored {0} topic results in Redshift".format(success_count)
                 )
 
         except Exception as e:
-            logger.error(f"Failed to store results in Redshift: {e}")
+            logger.error("Failed to store results in Redshift: {0}".format(e))
             # Save results to file as backup
             backup_file = os.path.join(
-                self.output_dir, f"topic_results_backup_{int(time.time())}.json"
+                self.output_dir, "topic_results_backup_{0}.json".format(int(time.time()))
             )
             with open(backup_file, "w") as f:
                 json.dump(results, f, indent=2, default=str)
-            logger.info(f"Results saved to backup file: {backup_file}")
+            logger.info("Results saved to backup file: {0}".format(backup_file))
 
     async def create_topic_results_table(self, processor):
         """Create topic results table in Redshift if it doesn't exist."""
@@ -734,7 +734,7 @@ class KubernetesAIProcessor:
             logger.info("Topic results table ensured in Redshift")
 
         except Exception as e:
-            logger.error(f"Failed to create topic results table: {e}")
+            logger.error("Failed to create topic results table: {0}".format(e))
             raise
 
     async def update_postgres_processing_status(self, article_ids: List[str]):
@@ -757,12 +757,12 @@ class KubernetesAIProcessor:
 
                 self.postgres_conn.commit()
                 logger.info(
-                    f"Updated topic processing status for {
-                        len(article_ids)} articles"
+                    "Updated topic processing status for {0} articles".format(
+                        len(article_ids))
                 )
 
         except Exception as e:
-            logger.error(f"Failed to update topic processing status: {e}")
+            logger.error("Failed to update topic processing status: {0}".format(e))
             self.postgres_conn.rollback()
 
     def save_processing_stats(self):
@@ -784,13 +784,13 @@ class KubernetesAIProcessor:
                 )
 
             stats_file = os.path.join(
-                self.output_dir, f"topic_job_stats_{int(time.time())}.json"
+                self.output_dir, "topic_job_stats_{0}.json".format(int(time.time()))
             )
             with open(stats_file, "w") as f:
                 json.dump(self.stats, f, indent=2, default=str)
 
-            logger.info(f"Processing statistics saved to {stats_file}")
-            logger.info(f"AI Topic Modeling Job Summary:")
+            logger.info("Processing statistics saved to {0}".format(stats_file))
+            logger.info("AI Topic Modeling Job Summary:")
             logger.info(
                 f"  Articles Processed: {
                     self.stats['articles_processed']}"
@@ -821,7 +821,7 @@ class KubernetesAIProcessor:
                 )
 
         except Exception as e:
-            logger.error(f"Failed to save processing statistics: {e}")
+            logger.error("Failed to save processing statistics: {0}".format(e))
 
     async def run_processing_job(self, max_articles: int = None):
         """
@@ -846,8 +846,8 @@ class KubernetesAIProcessor:
             # For topic modeling, process all articles together for better
             # topic coherence
             logger.info(
-                f"Processing {
-                    len(articles)} articles for topic modeling"
+                "Processing {0} articles for topic modeling".format(
+                    len(articles))
             )
 
             # Process all articles in one large batch (with memory management)
@@ -864,7 +864,7 @@ class KubernetesAIProcessor:
             # Save final statistics
             self.save_processing_stats()
 
-            logger.info(f"AI topic modeling job completed successfully")
+            logger.info("AI topic modeling job completed successfully")
             logger.info(
                 f"Processed {
                     self.stats['articles_processed']} articles"
@@ -875,7 +875,7 @@ class KubernetesAIProcessor:
             )
 
         except Exception as e:
-            logger.error(f"AI topic modeling job failed: {e}")
+            logger.error("AI topic modeling job failed: {0}".format(e))
             raise
 
         finally:
@@ -953,7 +953,7 @@ async def main():
         logger.info("AI topic modeling job completed successfully")
         sys.exit(0)
     except Exception as e:
-        logger.error(f"AI topic modeling job failed: {e}")
+        logger.error("AI topic modeling job failed: {0}".format(e))
         sys.exit(1)
 
 

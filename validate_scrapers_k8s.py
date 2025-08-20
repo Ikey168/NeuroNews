@@ -33,14 +33,14 @@ def print_colored(message: str, color: str = "RESET") -> None:
 def run_kubectl(command: str) -> Dict[str, Any]:
     """Run kubectl command and return JSON output."""
     try:
-        full_command = f"kubectl {command}"
+        full_command = "kubectl {0}".format(command)
         result = subprocess.run(
             full_command.split(), capture_output=True, text=True, timeout=30
         )
 
         if result.returncode != 0:
-            print_colored(f"❌ Command failed: {full_command}", "RED")
-            print_colored(f"Error: {result.stderr}", "RED")
+            print_colored("❌ Command failed: {0}".format(full_command), "RED")
+            print_colored("Error: {0}".format(result.stderr), "RED")
             return {}
 
         if result.stdout.strip():
@@ -52,10 +52,10 @@ def run_kubectl(command: str) -> Dict[str, Any]:
         return {}
 
     except subprocess.TimeoutExpired:
-        print_colored(f"❌ Command timed out: {command}", "RED")
+        print_colored("❌ Command timed out: {0}".format(command), "RED")
         return {}
     except Exception as e:
-        print_colored(f"❌ Command error: {str(e)}", "RED")
+        print_colored("❌ Command error: {0}".format(str(e)), "RED")
         return {}
 
 
@@ -148,9 +148,9 @@ def check_configmaps() -> bool:
 
         for key in expected_keys:
             if key in data:
-                print_colored(f"✅ ConfigMap has {key}", "GREEN")
+                print_colored("✅ ConfigMap has {0}".format(key), "GREEN")
             else:
-                print_colored(f"⚠️  ConfigMap missing {key}", "YELLOW")
+                print_colored("⚠️  ConfigMap missing {0}".format(key), "YELLOW")
 
         return True
 
@@ -192,11 +192,11 @@ def check_cronjobs() -> Dict[str, Any]:
 
         if name in expected_cronjobs:
             print_colored(f"✅ CronJob '{name}' exists", "GREEN")
-            print_colored(f"   Schedule: {schedule}", "CYAN")
+            print_colored("   Schedule: {0}".format(schedule), "CYAN")
             if suspend:
-                print_colored(f"   ⚠️  Currently suspended", "YELLOW")
+                print_colored("   ⚠️  Currently suspended", "YELLOW")
             else:
-                print_colored(f"   ✅ Active", "GREEN")
+                print_colored("   ✅ Active", "GREEN")
         else:
             print_colored(f"⚠️  Unexpected CronJob '{name}'", "YELLOW")
 
@@ -348,7 +348,7 @@ def test_job_creation() -> bool:
     print_colored("🔍 Testing job creation capability...", "BLUE")
 
     # Try to create a test job
-    test_job_name = f"test-scraper-job-{int(time.time())}"
+    test_job_name = "test-scraper-job-{0}".format(int(time.time()))
 
     # Get a CronJob to use as template
     cronjobs_result = run_kubectl(
@@ -362,12 +362,12 @@ def test_job_creation() -> bool:
     cronjob = cronjobs_result["items"][0]
     cronjob_name = cronjob["metadata"]["name"]
 
-    print_colored(f"ℹ️  Attempting to create test job from {cronjob_name}", "CYAN")
+    print_colored("ℹ️  Attempting to create test job from {0}".format(cronjob_name), "CYAN")
 
     # Note: We'll just check if we have the permissions, not actually create the job
     # to avoid cluttering the cluster with test jobs
     auth_result = run_kubectl(
-        f"auth can-i create jobs --as=system:serviceaccount:neuronews:neuronews-scrapers -n neuronews"
+        "auth can-i create jobs --as=system:serviceaccount:neuronews:neuronews-scrapers -n neuronews"
     )
     if auth_result and auth_result.get("output", "").strip().lower() == "yes":
         print_colored("✅ Job creation permissions verified", "GREEN")
@@ -413,7 +413,7 @@ def generate_validation_report(results: Dict[str, Any]) -> None:
     for key, name in components.items():
         status = "✅ PASS" if results.get(key, False) else "❌ FAIL"
         color = "GREEN" if results.get(key, False) else "RED"
-        print_colored(f"{name:<30} {status}", color)
+        print_colored("{0} {1}".format(name:<30, status), color)
 
     print()
 
@@ -531,7 +531,7 @@ def main():
         print_colored("\n⚠️  Validation interrupted by user", "YELLOW")
         sys.exit(1)
     except Exception as e:
-        print_colored(f"\n❌ Validation failed with error: {str(e)}", "RED")
+        print_colored("\n❌ Validation failed with error: {0}".format(str(e)), "RED")
         sys.exit(1)
 
 

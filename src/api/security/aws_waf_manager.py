@@ -108,7 +108,7 @@ class AWSWAFManager:
                 self.logs_client = boto3.client("logs", region_name=self.region)
                 logger.info("AWS WAF clients initialized successfully")
             except (NoCredentialsError, Exception) as e:
-                logger.warning(f"Failed to initialize AWS clients: {e}")
+                logger.warning("Failed to initialize AWS clients: {0}".format(e))
                 self.wafv2_client = None
                 self.cloudwatch_client = None
                 self.logs_client = None
@@ -153,21 +153,21 @@ class AWSWAFManager:
 
             self.web_acl_arn = response["Summary"]["ARN"]
             logger.info(
-                f"Created Web ACL: {
-                    self.web_acl_name} with ARN: {
-                    self.web_acl_arn}"
+                "Created Web ACL: {0} with ARN: {1}".format(
+                    self.web_acl_name, self.web_acl_arn
+                )
             )
             return True
 
         except ClientError as e:
             if e.response["Error"]["Code"] == "WAFDuplicateItemException":
-                logger.info(f"Web ACL {self.web_acl_name} already exists")
+                logger.info("Web ACL {0} already exists".format(self.web_acl_name))
                 return self._get_existing_web_acl()
             else:
-                logger.error(f"Failed to create Web ACL: {e}")
+                logger.error("Failed to create Web ACL: {0}".format(e))
                 return False
         except Exception as e:
-            logger.error(f"Unexpected error creating Web ACL: {e}")
+            logger.error("Unexpected error creating Web ACL: {0}".format(e))
             return False
 
     def _get_waf_rules(self) -> List[Dict[str, Any]]:
@@ -340,14 +340,14 @@ class AWSWAFManager:
             for web_acl in response["WebACLs"]:
                 if web_acl["Name"] == self.web_acl_name:
                     self.web_acl_arn = web_acl["ARN"]
-                    logger.info(f"Found existing Web ACL: {self.web_acl_arn}")
+                    logger.info("Found existing Web ACL: {0}".format(self.web_acl_arn))
                     return True
 
-            logger.warning(f"Web ACL {self.web_acl_name} not found")
+            logger.warning("Web ACL {0} not found".format(self.web_acl_name))
             return False
 
         except Exception as e:
-            logger.error(f"Error finding existing Web ACL: {e}")
+            logger.error("Error finding existing Web ACL: {0}".format(e))
             return False
 
     def associate_with_api_gateway(self, api_gateway_arn: str = None) -> bool:
@@ -370,7 +370,7 @@ class AWSWAFManager:
                 WebACLArn=self.web_acl_arn, ResourceArn=target_arn
             )
 
-            logger.info(f"Associated Web ACL with API Gateway: {target_arn}")
+            logger.info("Associated Web ACL with API Gateway: {0}".format(target_arn))
             return True
 
         except ClientError as e:
@@ -378,10 +378,12 @@ class AWSWAFManager:
                 logger.info("Web ACL already associated with API Gateway")
                 return True
             else:
-                logger.error(f"Failed to associate Web ACL with API Gateway: {e}")
+                logger.error(
+                    "Failed to associate Web ACL with API Gateway: {0}".format(e)
+                )
                 return False
         except Exception as e:
-            logger.error(f"Unexpected error associating Web ACL: {e}")
+            logger.error("Unexpected error associating Web ACL: {0}".format(e))
             return False
 
     def get_security_metrics(self) -> Dict[str, Any]:
@@ -430,7 +432,9 @@ class AWSWAFManager:
                     }
 
                 except Exception as e:
-                    logger.warning(f"Failed to get metric {metric_name}: {e}")
+                    logger.warning(
+                        "Failed to get metric {0}: {1}".format(metric_name, e)
+                    )
                     metrics[metric_name] = {"blocked_requests": 0, "error": str(e)}
 
             return {
@@ -444,7 +448,7 @@ class AWSWAFManager:
             }
 
         except Exception as e:
-            logger.error(f"Error getting security metrics: {e}")
+            logger.error("Error getting security metrics: {0}".format(e))
             return {"error": str(e)}
 
     def get_blocked_requests(self, limit: int = 100) -> List[Dict[str, Any]]:
@@ -486,7 +490,7 @@ class AWSWAFManager:
             return blocked_requests
 
         except Exception as e:
-            logger.error(f"Error getting blocked requests: {e}")
+            logger.error("Error getting blocked requests: {0}".format(e))
             return []
 
     def create_security_dashboard(self) -> bool:
@@ -594,17 +598,17 @@ class AWSWAFManager:
                 ]
             }
 
-            dashboard_name = f"NeuroNews-WAF-Security-{self.region}"
+            dashboard_name = "NeuroNews-WAF-Security-{0}".format(self.region)
 
             self.cloudwatch_client.put_dashboard(
                 DashboardName=dashboard_name, DashboardBody=json.dumps(dashboard_body)
             )
 
-            logger.info(f"Created CloudWatch dashboard: {dashboard_name}")
+            logger.info("Created CloudWatch dashboard: {0}".format(dashboard_name))
             return True
 
         except Exception as e:
-            logger.error(f"Error creating security dashboard: {e}")
+            logger.error("Error creating security dashboard: {0}".format(e))
             return False
 
     def setup_logging(self) -> bool:
@@ -614,7 +618,7 @@ class AWSWAFManager:
             return False
 
         try:
-            log_group_name = f"/aws/wafv2/{self.web_acl_name}"
+            log_group_name = "/aws/wafv2/{0}".format(self.web_acl_name)
 
             # Create log group
             try:
@@ -622,10 +626,10 @@ class AWSWAFManager:
                     logGroupName=log_group_name,
                     tags={"Application": "NeuroNews", "Purpose": "WAFLogging"},
                 )
-                logger.info(f"Created CloudWatch log group: {log_group_name}")
+                logger.info("Created CloudWatch log group: {0}".format(log_group_name))
             except ClientError as e:
                 if e.response["Error"]["Code"] == "ResourceAlreadyExistsException":
-                    logger.info(f"Log group {log_group_name} already exists")
+                    logger.info("Log group {0} already exists".format(log_group_name))
                 else:
                     raise
 
@@ -635,9 +639,9 @@ class AWSWAFManager:
             )
 
             # Enable WAF logging
-            log_destination_arn = f"arn:aws:logs:{
-                self.region}:{
-                self._get_account_id()}:log-group:{log_group_name}"
+            log_destination_arn = "arn:aws:logs:{0}:{1}:log-group:{2}".format(
+                self.region, self._get_account_id(), log_group_name
+            )
 
             self.wafv2_client.put_logging_configuration(
                 LoggingConfiguration={
@@ -654,7 +658,7 @@ class AWSWAFManager:
             return True
 
         except Exception as e:
-            logger.error(f"Error setting up WAF logging: {e}")
+            logger.error("Error setting up WAF logging: {0}".format(e))
             return False
 
     def _get_account_id(self) -> str:

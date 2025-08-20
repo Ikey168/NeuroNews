@@ -40,11 +40,11 @@ def demo_language_detection():
         result = detector.detect_language(text)
         results[language] = result
 
-        print(f"\n{language}:")
+        print("\n{0}:".format(language))
         print(
             f"  Detected: {result['language']} (confidence: {result['confidence']:.2f})"
         )
-        print(f"  Text: {text[:60]}...")
+        print("  Text: {0}...".format(text[:60]))
 
     # Summary
     correct = sum(
@@ -53,7 +53,7 @@ def demo_language_detection():
     total = len(results)
     accuracy = correct / total * 100
 
-    print(f"\n📊 Detection Accuracy: {accuracy:.1f}% ({correct}/{total})")
+    print("\n📊 Detection Accuracy: {0}% ({1}/{2})".format(accuracy:.1f, correct, total))
     print("\nNote: This demo uses a simple pattern-based detector.")
     print("In production, you would use AWS Comprehend for better accuracy.")
 
@@ -151,7 +151,7 @@ def demo_configuration():
             return False
 
     except Exception as e:
-        print(f"❌ Error loading configuration: {e}")
+        print("❌ Error loading configuration: {0}".format(e))
         return False
 
 
@@ -205,7 +205,7 @@ def main():
             result = demo_func()
             results[name] = result
         except Exception as e:
-            print(f"❌ Error in {name}: {e}")
+            print("❌ Error in {0}: {1}".format(name, e))
             results[name] = False
 
     # Summary
@@ -218,9 +218,9 @@ def main():
 
     for name, success in results.items():
         status = "✅" if success else "❌"
-        print(f"  {status} {name}")
+        print("  {0} {1}".format(status, name))
 
-    print(f"\nDemo Success Rate: {successful}/{total} ({successful/total*100:.0f}%)")
+    print("\nDemo Success Rate: {0}/{1} ({2}%)".format(successful, total, successful/total*100:.0f))
 
     if successful == total:
         print("\n🎉 ALL DEMOS SUCCESSFUL!")
@@ -234,7 +234,7 @@ def main():
         print("   - Comprehensive configuration")
         print("   - Error handling and monitoring")
     else:
-        print(f"\n⚠️  {total - successful} demo(s) had issues")
+        print("\n⚠️  {0} demo(s) had issues".format(total - successful))
 
     return successful == total
 

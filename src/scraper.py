@@ -22,7 +22,7 @@ def load_aws_config(env="dev"):
     Returns:
         dict: AWS configuration.
     """
-    config_path = Path(f"config/{env}_aws.json")
+    config_path = Path("config/{0}_aws.json".format(env))
     if not config_path.exists():
         return {}
 
@@ -30,7 +30,7 @@ def load_aws_config(env="dev"):
         try:
             return json.load(f)
         except json.JSONDecodeError:
-            print(f"Error: Could not parse {config_path} as JSON.")
+            print("Error: Could not parse {0} as JSON.".format(config_path))
             return {}
 
 
@@ -81,7 +81,7 @@ def scrape_news(
 
     if aws_profile:
         os.environ["AWS_PROFILE"] = aws_profile
-        print(f"Using AWS profile: {aws_profile}")
+        print("Using AWS profile: {0}".format(aws_profile))
 
     # Override S3 settings from config if not provided as arguments
     if not s3_storage and aws_config.get("s3_storage", {}).get("enabled", False):
@@ -136,7 +136,9 @@ def scrape_news(
         )
     if cloudwatch_logging:
         print(
-            f"Logging to CloudWatch: {cloudwatch_log_group}/{cloudwatch_log_stream_prefix}-*"
+            "Logging to CloudWatch: {0}/{1}-*".format(
+                cloudwatch_log_group, cloudwatch_log_stream_prefix
+            )
         )
 
     # Run the spider and save results to the output file
@@ -162,8 +164,8 @@ def scrape_news(
                 articles = json.load(f)
                 return articles
             except json.JSONDecodeError:
-                print(f"Error: Could not parse {output_file} as JSON.")
+                print("Error: Could not parse {0} as JSON.".format(output_file))
                 return []
     else:
-        print(f"Error: Output file {output_file} not found.")
+        print("Error: Output file {0} not found.".format(output_file))
         return []

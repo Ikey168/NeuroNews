@@ -48,7 +48,7 @@ class NeuroNewsAPIClient:
 
     def _make_request(self, method: str, endpoint: str, **kwargs) -> requests.Response:
         """Make HTTP request with retry logic."""
-        url = f"{self.base_url}{endpoint}"
+        url = "{0}{1}".format(self.base_url, endpoint)
 
         for attempt in range(self.retry_attempts):
             try:
@@ -59,11 +59,12 @@ class NeuroNewsAPIClient:
                 return response
 
             except requests.exceptions.RequestException as e:
-                logger.warning(f"Request attempt {attempt + 1} failed: {e}")
+                logger.warning("Request attempt {0} failed: {1}".format(attempt + 1, e))
                 if attempt == self.retry_attempts - 1:
                     raise APIError(
-                        f"API request failed after {
-                            self.retry_attempts} attempts: {e}"
+                        "API request failed after {0} attempts: {1}".format(
+                            self.retry_attempts, e
+                        )
                     )
 
                 # Wait before retry
@@ -77,18 +78,18 @@ class NeuroNewsAPIClient:
     def get_articles_by_topic(_self, topic: str, limit: int = 50) -> List[Dict]:
         """Fetch articles by topic with caching."""
         try:
-            endpoint = f"/news/articles/topic/{topic}"
+            endpoint = "/news/articles/topic/{0}".format(topic)
             params = {"limit": min(limit, DATA_CONFIG["max_articles"])}
 
             response = _self._make_request("GET", endpoint, params=params)
             return response.json()
 
         except APIError as e:
-            logger.error(f"Error fetching articles by topic: {e}")
-            st.error(f"Failed to fetch articles: {e}")
+            logger.error("Error fetching articles by topic: {0}".format(e))
+            st.error("Failed to fetch articles: {0}".format(e))
             return []
         except Exception as e:
-            logger.error(f"Unexpected error fetching articles: {e}")
+            logger.error("Unexpected error fetching articles: {0}".format(e))
             st.error("An unexpected error occurred while fetching articles.")
             return []
 
@@ -103,11 +104,11 @@ class NeuroNewsAPIClient:
             return response.json()
 
         except APIError as e:
-            logger.error(f"Error fetching breaking news: {e}")
-            st.error(f"Failed to fetch breaking news: {e}")
+            logger.error("Error fetching breaking news: {0}".format(e))
+            st.error("Failed to fetch breaking news: {0}".format(e))
             return []
         except Exception as e:
-            logger.error(f"Unexpected error fetching breaking news: {e}")
+            logger.error("Unexpected error fetching breaking news: {0}".format(e))
             return []
 
     @st.cache_data(ttl=DATA_CONFIG["cache_ttl"])
@@ -121,27 +122,29 @@ class NeuroNewsAPIClient:
             return response.json()
 
         except APIError as e:
-            logger.error(f"Error fetching entities: {e}")
-            st.error(f"Failed to fetch entities: {e}")
+            logger.error("Error fetching entities: {0}".format(e))
+            st.error("Failed to fetch entities: {0}".format(e))
             return []
         except Exception as e:
-            logger.error(f"Unexpected error fetching entities: {e}")
+            logger.error("Unexpected error fetching entities: {0}".format(e))
             return []
 
     @st.cache_data(ttl=DATA_CONFIG["cache_ttl"])
     def get_entity_relationships(_self, entity_id: str) -> Dict:
         """Fetch entity relationships with caching."""
         try:
-            endpoint = f"/graph/entity/{entity_id}/relationships"
+            endpoint = "/graph/entity/{0}/relationships".format(entity_id)
 
             response = _self._make_request("GET", endpoint)
             return response.json()
 
         except APIError as e:
-            logger.error(f"Error fetching entity relationships: {e}")
+            logger.error("Error fetching entity relationships: {0}".format(e))
             return {}
         except Exception as e:
-            logger.error(f"Unexpected error fetching entity relationships: {e}")
+            logger.error(
+                "Unexpected error fetching entity relationships: {0}".format(e)
+            )
             return {}
 
     @st.cache_data(ttl=DATA_CONFIG["cache_ttl"])
@@ -155,10 +158,10 @@ class NeuroNewsAPIClient:
             return response.json()
 
         except APIError as e:
-            logger.error(f"Error fetching sentiment trends: {e}")
+            logger.error("Error fetching sentiment trends: {0}".format(e))
             return []
         except Exception as e:
-            logger.error(f"Unexpected error fetching sentiment trends: {e}")
+            logger.error("Unexpected error fetching sentiment trends: {0}".format(e))
             return []
 
     @st.cache_data(ttl=DATA_CONFIG["cache_ttl"])
@@ -172,26 +175,28 @@ class NeuroNewsAPIClient:
             return response.json()
 
         except APIError as e:
-            logger.error(f"Error fetching trending topics: {e}")
+            logger.error("Error fetching trending topics: {0}".format(e))
             return []
         except Exception as e:
-            logger.error(f"Unexpected error fetching trending topics: {e}")
+            logger.error("Unexpected error fetching trending topics: {0}".format(e))
             return []
 
     def get_articles_by_category(self, category: str, limit: int = 50) -> List[Dict]:
         """Fetch articles by category."""
         try:
-            endpoint = f"/news/articles/category/{category}"
+            endpoint = "/news/articles/category/{0}".format(category)
             params = {"limit": min(limit, DATA_CONFIG["max_articles"])}
 
             response = self._make_request("GET", endpoint, params=params)
             return response.json()
 
         except APIError as e:
-            logger.error(f"Error fetching articles by category: {e}")
+            logger.error("Error fetching articles by category: {0}".format(e))
             return []
         except Exception as e:
-            logger.error(f"Unexpected error fetching articles by category: {e}")
+            logger.error(
+                "Unexpected error fetching articles by category: {0}".format(e)
+            )
             return []
 
     def search_articles(self, query: str, limit: int = 50) -> List[Dict]:
@@ -204,10 +209,10 @@ class NeuroNewsAPIClient:
             return response.json()
 
         except APIError as e:
-            logger.error(f"Error searching articles: {e}")
+            logger.error("Error searching articles: {0}".format(e))
             return []
         except Exception as e:
-            logger.error(f"Unexpected error searching articles: {e}")
+            logger.error("Unexpected error searching articles: {0}".format(e))
             return []
 
     def get_event_clusters(
@@ -222,10 +227,10 @@ class NeuroNewsAPIClient:
             return response.json()
 
         except APIError as e:
-            logger.error(f"Error fetching event clusters: {e}")
+            logger.error("Error fetching event clusters: {0}".format(e))
             return []
         except Exception as e:
-            logger.error(f"Unexpected error fetching event clusters: {e}")
+            logger.error("Unexpected error fetching event clusters: {0}".format(e))
             return []
 
     def get_dashboard_summary(self) -> Dict[str, Any]:
@@ -237,10 +242,10 @@ class NeuroNewsAPIClient:
             return response.json()
 
         except APIError as e:
-            logger.error(f"Error fetching dashboard summary: {e}")
+            logger.error("Error fetching dashboard summary: {0}".format(e))
             return {}
         except Exception as e:
-            logger.error(f"Unexpected error fetching dashboard summary: {e}")
+            logger.error("Unexpected error fetching dashboard summary: {0}".format(e))
             return {}
 
     def health_check(self) -> bool:
@@ -270,8 +275,9 @@ class BatchAPIClient:
             async def fetch_relationship(entity_id: str) -> tuple:
                 async with semaphore:
                     try:
-                        url = f"{
-                            self.api_client.base_url}/graph/entity/{entity_id}/relationships"
+                        url = "{0}/graph/entity/{1}/relationships".format(
+                            self.api_client.base_url, entity_id
+                        )
                         async with session.get(
                             url, timeout=self.api_client.timeout
                         ) as response:
@@ -281,7 +287,9 @@ class BatchAPIClient:
                             return entity_id, {}
                     except Exception as e:
                         logger.error(
-                            f"Error fetching relationships for {entity_id}: {e}"
+                            "Error fetching relationships for {0}: {1}".format(
+                                entity_id, e
+                            )
                         )
                         return entity_id, {}
 
@@ -301,7 +309,7 @@ class BatchAPIClient:
                 self.fetch_multiple_entity_relationships(entity_ids)
             )
         except Exception as e:
-            logger.error(f"Error in batch relationship fetch: {e}")
+            logger.error("Error in batch relationship fetch: {0}".format(e))
             return {}
         finally:
             loop.close()

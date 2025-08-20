@@ -14,7 +14,7 @@ def test_preprocessing():
     title = "Test Article Title"
 
     # Simulate the preprocessing steps
-    full_text = f"{title}. {text}"
+    full_text = "{0}. {1}".format(title, text)
 
     # Remove URLs
     full_text = re.sub(

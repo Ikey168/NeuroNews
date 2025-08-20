@@ -139,7 +139,9 @@ class EnhancedKnowledgeGraphPopulator:
 
         try:
             logger.info(
-                f"Processing article {article_id} for enhanced knowledge graph population"
+                "Processing article {0} for enhanced knowledge graph population".format(
+                    article_id
+                )
             )
 
             # Ensure connection to Neptune
@@ -158,7 +160,7 @@ class EnhancedKnowledgeGraphPopulator:
             ][: self.max_entities_per_article]
 
             # Extract relationships
-            full_text = f"{title}. {content}"
+            full_text = "{0}. {1}".format(title, content)
             relationships = await self.entity_extractor.extract_relationships(
                 filtered_entities, full_text, article_id
             )
@@ -221,12 +223,14 @@ class EnhancedKnowledgeGraphPopulator:
                 "timestamp": datetime.utcnow().isoformat(),
             }
 
-            logger.info(f"Successfully processed article {article_id}: {result}")
+            logger.info(
+                "Successfully processed article {0}: {1}".format(article_id, result)
+            )
             return result
 
         except Exception as e:
             self.stats["processing_errors"] += 1
-            logger.error(f"Error processing article {article_id}: {str(e)}")
+            logger.error("Error processing article {0}: {1}".format(article_id, str(e)))
             raise
 
     async def populate_from_articles_batch(
@@ -264,12 +268,12 @@ class EnhancedKnowledgeGraphPopulator:
 
             for result in batch_results:
                 if isinstance(result, Exception):
-                    logger.error(f"Batch processing error: {result}")
+                    logger.error("Batch processing error: {0}".format(result))
                     self.stats["processing_errors"] += 1
                 else:
                     results.append(result)
 
-        logger.info(f"Processed {len(results)} articles in batch")
+        logger.info("Processed {0} articles in batch".format(len(results)))
         return results
 
     async def _add_article_vertex(
@@ -302,7 +306,7 @@ class EnhancedKnowledgeGraphPopulator:
         result = await self.graph_builder.add_vertex("Article", properties)
         vertex_id = result.get("id") if result else article_id
 
-        logger.debug(f"Added article vertex: {vertex_id}")
+        logger.debug("Added article vertex: {0}".format(vertex_id))
         return vertex_id
 
     async def _process_entities_batch(
@@ -341,7 +345,7 @@ class EnhancedKnowledgeGraphPopulator:
                     )
 
             except Exception as e:
-                logger.error(f"Error processing entity {entity.text}: {e}")
+                logger.error("Error processing entity {0}: {1}".format(entity.text, e))
                 continue
 
         return {
@@ -426,11 +430,15 @@ class EnhancedKnowledgeGraphPopulator:
             result = await self.graph_builder.add_vertex(neptune_label, properties)
             vertex_id = result.get("id") if result else entity.entity_id
 
-            logger.debug(f"Added entity vertex: {vertex_id} ({entity.text})")
+            logger.debug(
+                "Added entity vertex: {0} ({1})".format(vertex_id, entity.text)
+            )
             return vertex_id
 
         except Exception as e:
-            logger.error(f"Error adding entity vertex for {entity.text}: {e}")
+            logger.error(
+                "Error adding entity vertex for {0}: {1}".format(entity.text, e)
+            )
             return None
 
     async def _process_relationships_batch(
@@ -455,8 +463,9 @@ class EnhancedKnowledgeGraphPopulator:
                     continue
 
                 # Check if relationship already exists
-                relationship_key = f"{source_vertex_id}:{
-                    relationship.relation_type}:{target_vertex_id}"
+                relationship_key = "{0}:{1}:{2}".format(
+                    source_vertex_id, relationship.relation_type, target_vertex_id
+                )
                 if relationship_key in self.relationship_registry:
                     skipped_relationships.append(relationship.to_dict())
                     continue
@@ -489,7 +498,7 @@ class EnhancedKnowledgeGraphPopulator:
                     skipped_relationships.append(relationship.to_dict())
 
             except Exception as e:
-                logger.error(f"Error processing relationship: {e}")
+                logger.error("Error processing relationship: {0}".format(e))
                 skipped_relationships.append(relationship.to_dict())
                 continue
 
@@ -499,7 +508,7 @@ class EnhancedKnowledgeGraphPopulator:
         """Find existing entity in the knowledge graph by normalized form."""
         try:
             # Query Neptune for existing entity
-            query = f"""
+            query = """
             g.V().hasLabel('{self._get_neptune_label(entity.label)}')
                  .has('normalized_form', '{entity.normalized_form}')
                  .id()
@@ -515,7 +524,9 @@ class EnhancedKnowledgeGraphPopulator:
             return results[0] if results else None
 
         except Exception as e:
-            logger.debug(f"Error finding existing entity {entity.text}: {e}")
+            logger.debug(
+                "Error finding existing entity {0}: {1}".format(entity.text, e)
+            )
             return None
 
     async def _merge_entity_data(self, vertex_id: str, entity: EnhancedEntity):
@@ -546,7 +557,9 @@ class EnhancedKnowledgeGraphPopulator:
             await self._update_vertex_properties(vertex_id, update_properties)
 
         except Exception as e:
-            logger.error(f"Error merging entity data for vertex {vertex_id}: {e}")
+            logger.error(
+                "Error merging entity data for vertex {0}: {1}".format(vertex_id, e)
+            )
 
     async def _link_entity_to_article(
         self, entity: EnhancedEntity, article_vertex_id: str, entity_vertex_id: str
@@ -577,7 +590,9 @@ class EnhancedKnowledgeGraphPopulator:
             )
 
         except Exception as e:
-            logger.error(f"Error linking entity {entity.text} to article: {e}")
+            logger.error(
+                "Error linking entity {0} to article: {1}".format(entity.text, e)
+            )
 
     async def _link_to_historical_entities(
         self, entities: List[EnhancedEntity], article_id: str
@@ -618,8 +633,9 @@ class EnhancedKnowledgeGraphPopulator:
 
             except Exception as e:
                 logger.error(
-                    f"Error linking entity {
-                        entity.text} to historical data: {e}"
+                    "Error linking entity {0} to historical data: {1}".format(
+                        entity.text, e
+                    )
                 )
                 continue
 
@@ -643,8 +659,7 @@ class EnhancedKnowledgeGraphPopulator:
 
         except Exception as e:
             logger.debug(
-                f"Error finding similar entities for {
-                    entity.text}: {e}"
+                "Error finding similar entities for {0}: {1}".format(entity.text, e)
             )
             return []
 
@@ -707,7 +722,11 @@ class EnhancedKnowledgeGraphPopulator:
             }
 
         except Exception as e:
-            logger.error(f"Error querying entity relationships for {entity_name}: {e}")
+            logger.error(
+                "Error querying entity relationships for {0}: {1}".format(
+                    entity_name, e
+                )
+            )
             return {
                 "query_entity": entity_name,
                 "related_entities": [],
@@ -740,7 +759,7 @@ class EnhancedKnowledgeGraphPopulator:
             }
 
         except Exception as e:
-            logger.error(f"Error executing SPARQL query: {e}")
+            logger.error("Error executing SPARQL query: {0}".format(e))
             return {"query": sparql_query, "error": str(e)}
 
     def _get_neptune_label(self, entity_type: str) -> str:
@@ -768,7 +787,9 @@ class EnhancedKnowledgeGraphPopulator:
             await self.graph_builder._execute_traversal(update_traversal)
 
         except Exception as e:
-            logger.error(f"Error updating vertex properties for {vertex_id}: {e}")
+            logger.error(
+                "Error updating vertex properties for {0}: {1}".format(vertex_id, e)
+            )
 
     async def validate_graph_data(self) -> Dict[str, Any]:
         """Validate the integrity and quality of the knowledge graph data."""
@@ -829,7 +850,7 @@ class EnhancedKnowledgeGraphPopulator:
             return validation_results
 
         except Exception as e:
-            logger.error(f"Error validating graph data: {e}")
+            logger.error("Error validating graph data: {0}".format(e))
             return {"error": str(e), "validated_at": datetime.utcnow().isoformat()}
 
     def get_processing_statistics(self) -> Dict[str, Any]:
@@ -862,7 +883,7 @@ class EnhancedKnowledgeGraphPopulator:
                 await self.graph_builder.client.close()
             logger.info("EnhancedKnowledgeGraphPopulator closed successfully")
         except Exception as e:
-            logger.error(f"Error closing populator: {e}")
+            logger.error("Error closing populator: {0}".format(e))
 
 
 # Factory functions for easy usage
@@ -977,7 +998,7 @@ if __name__ == "__main__":
                 relationship_types=["PARTNERS_WITH", "WORKS_FOR"],
             )
 
-            print(f"\n🔍 Entity Relationship Query:")
+            print("\n🔍 Entity Relationship Query:")
             print(f"  • Query entity: {query_result['query_entity']}")
             print(
                 f"  • Related entities found: {
@@ -987,7 +1008,7 @@ if __name__ == "__main__":
             # Validate graph data
             validation = await populator.validate_graph_data()
 
-            print(f"\n✅ Graph Validation:")
+            print("\n✅ Graph Validation:")
             print(f"  • Entity counts: {validation['entity_counts']}")
             print(
                 f"  • Relationship counts: {
@@ -998,7 +1019,7 @@ if __name__ == "__main__":
             # Get processing statistics
             stats = populator.get_processing_statistics()
 
-            print(f"\n📈 Processing Statistics:")
+            print("\n📈 Processing Statistics:")
             print(f"  • Articles processed: {stats['articles_processed']}")
             print(f"  • Entities created: {stats['entities_created']}")
             print(
@@ -1020,7 +1041,7 @@ if __name__ == "__main__":
             print("\n🎉 Demo completed successfully!")
 
         except Exception as e:
-            print(f"❌ Demo failed: {e}")
+            print("❌ Demo failed: {0}".format(e))
 
     # Run the example
     asyncio.run(main())

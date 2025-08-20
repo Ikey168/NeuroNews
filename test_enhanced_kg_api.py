@@ -909,10 +909,10 @@ if __name__ == "__main__":
             query = EntityRelationshipQuery(
                 entity_name="Google", max_depth=2, max_results=50
             )
-            print(f"✅ EntityRelationshipQuery created: {query.entity_name}")
+            print("✅ EntityRelationshipQuery created: {0}".format(query.entity_name))
 
             timeline_query = EventTimelineQuery(topic="AI Regulations", max_events=50)
-            print(f"✅ EventTimelineQuery created: {timeline_query.topic}")
+            print("✅ EventTimelineQuery created: {0}".format(timeline_query.topic))
 
             print("\n🎯 Run full tests with: pytest test_enhanced_kg_api.py -v")
         else:
@@ -920,7 +920,7 @@ if __name__ == "__main__":
             print("   Install required dependencies and verify imports")
 
     except Exception as e:
-        print(f"❌ Test setup failed: {e}")
+        print("❌ Test setup failed: {0}".format(e))
 
     print("\n📋 Test Coverage:")
     print("  • Related entities endpoint with various parameters")

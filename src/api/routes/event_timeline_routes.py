@@ -111,14 +111,14 @@ class TimelineVisualizationRequest(BaseModel):
     def validate_theme(cls, v):
         valid_themes = ["default", "dark", "scientific"]
         if v not in valid_themes:
-            raise ValueError(f"Theme must be one of: {valid_themes}")
+            raise ValueError("Theme must be one of: {0}".format(valid_themes))
         return v
 
     @validator("chart_type")
     def validate_chart_type(cls, v):
         valid_types = ["timeline", "scatter", "bar", "line"]
         if v not in valid_types:
-            raise ValueError(f"Chart type must be one of: {valid_types}")
+            raise ValueError("Chart type must be one of: {0}".format(valid_types))
         return v
 
 
@@ -171,7 +171,7 @@ async def get_event_timeline_service() -> EventTimelineService:
             _event_timeline_service = EventTimelineService()
             logger.info("Event timeline service initialized")
         except Exception as e:
-            logger.error(f"Failed to initialize event timeline service: {e}")
+            logger.error("Failed to initialize event timeline service: {0}".format(e))
             raise HTTPException(
                 status_code=503, detail="Event timeline service not available"
             )
@@ -224,7 +224,7 @@ async def get_enhanced_event_timeline(
 ):
     """Get enhanced event timeline with visualization support."""
     try:
-        logger.info(f"API request for enhanced event timeline: {topic}")
+        logger.info("API request for enhanced event timeline: {0}".format(topic))
 
         # Parse date parameters
         parsed_start_date = None
@@ -235,7 +235,7 @@ async def get_enhanced_event_timeline(
                 parsed_start_date = datetime.fromisoformat(start_date)
             except ValueError:
                 raise HTTPException(
-                    status_code=400, detail=f"Invalid start_date format. Use YYYY-MM-DD"
+                    status_code=400, detail="Invalid start_date format. Use YYYY-MM-DD"
                 )
 
         if end_date:
@@ -243,7 +243,7 @@ async def get_enhanced_event_timeline(
                 parsed_end_date = datetime.fromisoformat(end_date)
             except ValueError:
                 raise HTTPException(
-                    status_code=400, detail=f"Invalid end_date format. Use YYYY-MM-DD"
+                    status_code=400, detail="Invalid end_date format. Use YYYY-MM-DD"
                 )
 
         # Validate date range
@@ -271,7 +271,7 @@ async def get_enhanced_event_timeline(
                 raise ValueError("Invalid response format from service")
 
         except Exception as service_error:
-            logger.error(f"Service error generating timeline: {service_error}")
+            logger.error("Service error generating timeline: {0}".format(service_error))
             # Create fallback response
             response_data = {
                 "topic": topic,
@@ -317,7 +317,9 @@ async def get_enhanced_event_timeline(
                         events.append(event)
                     except Exception as event_error:
                         logger.warning(
-                            f"Failed to create HistoricalEvent from data: {event_error}"
+                            "Failed to create HistoricalEvent from data: {0}".format(
+                                event_error
+                            )
                         )
                         continue
 
@@ -337,14 +339,16 @@ async def get_enhanced_event_timeline(
                     response_data["analytics"] = {}
 
             except Exception as analytics_error:
-                logger.error(f"Failed to generate analytics: {analytics_error}")
+                logger.error(
+                    "Failed to generate analytics: {0}".format(analytics_error)
+                )
                 response_data["analytics"] = {}
 
         # Add export options
         response_data["export_options"] = {
-            "json": f"/api/v1/event-timeline/{topic}/export?format=json",
-            "csv": f"/api/v1/event-timeline/{topic}/export?format=csv",
-            "html": f"/api/v1/event-timeline/{topic}/export?format=html",
+            "json": "/api/v1/event-timeline/{0}/export?format=json".format(topic),
+            "csv": "/api/v1/event-timeline/{0}/export?format=csv".format(topic),
+            "html": "/api/v1/event-timeline/{0}/export?format=html".format(topic),
         }
 
         # Update metadata
@@ -357,7 +361,7 @@ async def get_enhanced_event_timeline(
             }
         )
 
-        logger.info(f"Successfully generated enhanced timeline for {topic}")
+        logger.info("Successfully generated enhanced timeline for {0}".format(topic))
 
         # Ensure we have the required fields
         if "topic" not in response_data:
@@ -386,11 +390,10 @@ async def get_enhanced_event_timeline(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to generate enhanced event timeline: {e}")
+        logger.error("Failed to generate enhanced event timeline: {0}".format(e))
         raise HTTPException(
             status_code=500,
-            detail=f"Internal server error: {
-                str(e)}",
+            detail="Internal server error: {0}".format(str(e)),
         )
 
 
@@ -420,8 +423,7 @@ async def track_historical_events(
     """Track historical events and optionally store them in Neptune."""
     try:
         logger.info(
-            f"API request for tracking historical events: {
-                request.topic}"
+            "API request for tracking historical events: {0}".format(request.topic)
         )
         start_time = datetime.now()
 
@@ -453,22 +455,21 @@ async def track_historical_events(
             relationships_created=storage_result.get("relationships_created", 0),
             processing_time=processing_time,
             errors=storage_result.get("errors", []),
-            timeline_id=f"timeline_{request.topic}_{int(start_time.timestamp())}",
+            timeline_id="timeline_{0}_{1}".format(
+                request.topic, int(start_time.timestamp())
+            ),
         )
 
         logger.info(
-            f"Successfully tracked {
-                len(events)} events for {
-                request.topic}"
+            "Successfully tracked {0} events for {1}".format(len(events), request.topic)
         )
         return response
 
     except Exception as e:
-        logger.error(f"Failed to track historical events: {e}")
+        logger.error("Failed to track historical events: {0}".format(e))
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to track events: {
-                str(e)}",
+            detail="Failed to track events: {0}".format(str(e)),
         )
 
 
@@ -501,7 +502,7 @@ async def get_timeline_visualization(
 ):
     """Get visualization data for timeline events."""
     try:
-        logger.info(f"API request for timeline visualization: {topic}")
+        logger.info("API request for timeline visualization: {0}".format(topic))
 
         # Parse dates
         parsed_start_date = None
@@ -534,15 +535,14 @@ async def get_timeline_visualization(
             export_formats=["json", "png", "svg", "html"],
         )
 
-        logger.info(f"Successfully generated visualization for {topic}")
+        logger.info("Successfully generated visualization for {0}".format(topic))
         return response
 
     except Exception as e:
-        logger.error(f"Failed to generate visualization: {e}")
+        logger.error("Failed to generate visualization: {0}".format(e))
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to generate visualization: {
-                str(e)}",
+            detail="Failed to generate visualization: {0}".format(str(e)),
         )
 
 
@@ -569,7 +569,9 @@ async def export_timeline_data(
 ):
     """Export timeline data in specified format."""
     try:
-        logger.info(f"API request for timeline export: {topic} (format: {format})")
+        logger.info(
+            "API request for timeline export: {0} (format: {1})".format(topic, format)
+        )
 
         # Validate format
         if format not in ["json", "csv", "html"]:
@@ -664,11 +666,10 @@ async def export_timeline_data(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to export timeline data: {e}")
+        logger.error("Failed to export timeline data: {0}".format(e))
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to export data: {
-                str(e)}",
+            detail="Failed to export data: {0}".format(str(e)),
         )
 
 
@@ -726,9 +727,9 @@ async def get_timeline_analytics(
         return analytics
 
     except Exception as e:
-        logger.error(f"Failed to generate timeline analytics: {e}")
+        logger.error("Failed to generate timeline analytics: {0}".format(e))
         raise HTTPException(
-            status_code=500, detail=f"Failed to generate analytics: {str(e)}"
+            status_code=500, detail="Failed to generate analytics: {0}".format(str(e))
         )
 
 
@@ -761,7 +762,7 @@ async def health_check():
         }
 
     except Exception as e:
-        logger.error(f"Health check failed: {e}")
+        logger.error("Health check failed: {0}".format(e))
         return {
             "status": "unhealthy",
             "service": "event-timeline-api",
@@ -775,7 +776,7 @@ async def health_check():
 
 def _generate_html_timeline(topic: str, timeline_data: Dict[str, Any]) -> str:
     """Generate HTML timeline visualization."""
-    html_template = f"""
+    html_template = """
     <!DOCTYPE html>
     <html>
     <head>
@@ -809,7 +810,7 @@ def _generate_html_timeline(topic: str, timeline_data: Dict[str, Any]) -> str:
 
     # Add events
     for event in timeline_data.get("events", []):
-        html_template += f"""
+        html_template += """
             <div class="event">
                 <div class="event-title">{event.get('title', 'Unknown Event')}</div>
                 <div>{event.get('description', '')[:200]}...</div>
@@ -839,7 +840,7 @@ def _generate_html_timeline(topic: str, timeline_data: Dict[str, Any]) -> str:
                     datasets: [{
                         label: 'Events',
                         data: [1],
-                        borderColor: '#007bff',
+                        borderColor: '#007b',
                         backgroundColor: 'rgba(0, 123, 255, 0.1)'
                     }]
                 },

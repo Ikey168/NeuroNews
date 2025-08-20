@@ -129,7 +129,7 @@ class SNSAlertManager:
 
         try:
             # Prepare SNS message
-            subject = f"[{alert.severity.value}] NeuroNews Scraper Alert: {alert.title}"
+            subject = "[{0}] NeuroNews Scraper Alert: {1}".format(alert.severity.value, alert.title)
             message = alert.to_sns_message()
 
             # Add message attributes for filtering
@@ -158,14 +158,14 @@ class SNSAlertManager:
             self._cleanup_old_alerts()
 
             self.logger.info(
-                f"Sent alert: {
-                    alert.title} (MessageId: {
-                    response['MessageId']})"
+                "Sent alert: {0} (MessageId: {1})".format(
+                    alert.title, response['MessageId']
+                )
             )
             return True
 
         except Exception as e:
-            self.logger.error(f"Error sending alert: {e}")
+            self.logger.error("Error sending alert: {0}".format(e))
             return False
 
     def _is_within_rate_limit(self) -> bool:
@@ -199,12 +199,12 @@ class SNSAlertManager:
 
         # Send without rate limiting
         try:
-            subject = f"[{alert.severity.value}] NeuroNews Scraper Alert: {alert.title}"
+            subject = "[{0}] NeuroNews Scraper Alert: {1}".format(alert.severity.value, alert.title)
             message = alert.to_sns_message()
 
             self.sns.publish(TopicArn=self.topic_arn, Subject=subject, Message=message)
         except Exception as e:
-            self.logger.error(f"Error sending rate limit notification: {e}")
+            self.logger.error("Error sending rate limit notification: {0}".format(e))
 
     async def alert_scraper_failure(
         self,
@@ -233,8 +233,8 @@ class SNSAlertManager:
         alert = Alert(
             alert_type=AlertType.SCRAPER_FAILURE,
             severity=severity,
-            title=f"Scraper Failure - {retry_count + 1} Attempts",
-            message=f"Failed to scrape URL: {url}\nReason: {failure_reason}\nRetry Count: {retry_count}",
+            title="Scraper Failure - {0} Attempts".format(retry_count + 1),
+            message="Failed to scrape URL: {0}\nReason: {1}\nRetry Count: {2}".format(url, failure_reason, retry_count),
             timestamp=time.time(),
             metadata={
                 "url": url,
@@ -263,9 +263,9 @@ class SNSAlertManager:
         alert = Alert(
             alert_type=AlertType.HIGH_FAILURE_RATE,
             severity=severity,
-            title=f"High Failure Rate Detected: {failure_rate:.1f}%",
-            message=f"Scraper failure rate is {failure_rate:.1f}% over the last {time_period} hours.\n"
-            f"Failed: {failed_count}/{total_count} attempts",
+            title="High Failure Rate Detected: {0:.1f}%".format(failure_rate),
+            message="Scraper failure rate is {0:.1f}% over the last {1} hours.\n".format(failure_rate, time_period)
+            "Failed: {0}/{1} attempts".format(failed_count, total_count),
             timestamp=time.time(),
             metadata={
                 "failure_rate": failure_rate,
@@ -291,8 +291,8 @@ class SNSAlertManager:
         alert = Alert(
             alert_type=AlertType.CAPTCHA_BLOCKING,
             severity=AlertSeverity.WARNING,
-            title=f"Frequent CAPTCHA Encounters",
-            message=f"Encountered {captcha_count} CAPTCHAs for {url} in the last {time_period} hours.\n"
+            title="Frequent CAPTCHA Encounters",
+            message="Encountered {0} CAPTCHAs for {1} in the last {2} hours.\n".format(captcha_count, url, time_period)
             "This may indicate detection by anti-bot systems.",
             timestamp=time.time(),
             metadata={
@@ -318,9 +318,10 @@ class SNSAlertManager:
         alert = Alert(
             alert_type=AlertType.IP_BLOCKING,
             severity=AlertSeverity.ERROR,
-            title=f"IP Blocking Detected",
-            message=f"Multiple IPs blocked for {url} in the last {time_period} hours.\n"
-            f"Blocked IPs: {', '.join(blocked_ips[:5])}{'...' if len(blocked_ips) > 5 else ''}",
+            title="IP Blocking Detected",
+            message="Multiple IPs blocked for {0} in the last {1} hours.\nBlocked IPs: {2}{3}".format(
+                url, time_period, ', '.join(blocked_ips[:5]), '...' if len(blocked_ips) > 5 else ''
+            ),
             timestamp=time.time(),
             metadata={
                 "url": url,
@@ -345,11 +346,11 @@ class SNSAlertManager:
         alert = Alert(
             alert_type=AlertType.PERFORMANCE_DEGRADATION,
             severity=AlertSeverity.WARNING,
-            title=f"Performance Degradation Detected",
-            message=f"Average response time ({
-                avg_response_time:.0f}ms) exceeds threshold ({
-                threshold:.0f}ms) "
-            f"over the last {time_period} hours.",
+            title="Performance Degradation Detected",
+            message="Average response time ({0}ms) exceeds threshold ({1}ms) ".format(
+                avg_response_time:.0f, 
+                threshold:.0f)
+            "over the last {0} hours.".format(time_period),
             timestamp=time.time(),
             metadata={
                 "avg_response_time_ms": avg_response_time,
@@ -374,8 +375,8 @@ class SNSAlertManager:
         alert = Alert(
             alert_type=AlertType.SYSTEM_ERROR,
             severity=AlertSeverity.ERROR,
-            title=f"System Error in {component}",
-            message=f"Error Type: {error_type}\nMessage: {error_message}\nComponent: {component}",
+            title="System Error in {0}".format(component),
+            message="Error Type: {0}\nMessage: {1}\nComponent: {2}".format(error_type, error_message, component),
             timestamp=time.time(),
             metadata={
                 "error_type": error_type,
@@ -402,14 +403,14 @@ class SNSAlertManager:
     def set_failure_rate_threshold(self, threshold: float):
         """Set the failure rate threshold for alerts."""
         self.failure_rate_threshold = threshold
-        self.logger.info(f"Set failure rate threshold to {threshold}%")
+        self.logger.info("Set failure rate threshold to {0}%".format(threshold))
 
     def set_consecutive_failure_threshold(self, threshold: int):
         """Set the consecutive failure threshold for alerts."""
         self.consecutive_failure_threshold = threshold
-        self.logger.info(f"Set consecutive failure threshold to {threshold}")
+        self.logger.info("Set consecutive failure threshold to {0}".format(threshold))
 
     def set_response_time_threshold(self, threshold: float):
         """Set the response time threshold for alerts."""
         self.response_time_threshold = threshold
-        self.logger.info(f"Set response time threshold to {threshold}ms")
+        self.logger.info("Set response time threshold to {0}ms".format(threshold))

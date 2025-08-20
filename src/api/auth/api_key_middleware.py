@@ -75,8 +75,9 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
                 await api_key_manager.store.update_api_key_usage(key_details.key_id)
 
                 logger.info(
-                    f"API key authentication successful for user {
-                        key_details.user_id}"
+                    "API key authentication successful for user {0}".format(
+                        key_details.user_id
+                    )
                 )
 
                 response = await call_next(request)
@@ -90,8 +91,7 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
             else:
                 # Invalid API key
                 logger.warning(
-                    f"Invalid API key attempted from {
-                        request.client.host}"
+                    "Invalid API key attempted from {0}".format(request.client.host)
                 )
                 raise HTTPException(status_code=401, detail="Invalid API key")
 
@@ -169,7 +169,7 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
             return None
 
         except Exception as e:
-            logger.error(f"Error validating API key: {e}")
+            logger.error("Error validating API key: {0}".format(e))
             return None
 
 
@@ -193,7 +193,7 @@ class APIKeyMetricsMiddleware(BaseHTTPMiddleware):
             method = request.method
 
             # Track usage
-            endpoint = f"{method} {path}"
+            endpoint = "{0} {1}".format(method, path)
             if key_id not in self.api_key_usage:
                 self.api_key_usage[key_id] = {}
 

@@ -69,7 +69,7 @@ def get_detector() -> FakeNewsDetector:
     if _detector is None:
         model_name = os.getenv("FAKE_NEWS_MODEL", "roberta-base")
         _detector = FakeNewsDetector(model_name=model_name)
-        logger.info(f"Initialized fake news detector with {model_name}")
+        logger.info("Initialized fake news detector with {0}".format(model_name))
     return _detector
 
 
@@ -94,7 +94,7 @@ def store_veracity_result(
             redshift_conn = RedshiftConnection()
 
         # Create table if not exists
-        create_table_sql = f"""
+        create_table_sql = """
         CREATE TABLE IF NOT EXISTS {FakeNewsConfig.VERACITY_TABLE} (
             article_id VARCHAR(255) PRIMARY KEY,
             trustworthiness_score DECIMAL(5,2),
@@ -110,7 +110,7 @@ def store_veracity_result(
         redshift_conn.execute_query(create_table_sql)
 
         # Insert or update veracity result
-        insert_sql = f"""
+        insert_sql = """
         INSERT INTO {FakeNewsConfig.VERACITY_TABLE}
         (article_id, trustworthiness_score, classification, confidence,
          fake_probability, real_probability, model_used, analysis_timestamp)
@@ -139,11 +139,11 @@ def store_veracity_result(
         )
 
         redshift_conn.execute_query(insert_sql, values)
-        logger.info(f"Stored veracity result for article {article_id}")
+        logger.info("Stored veracity result for article {0}".format(article_id))
         return True
 
     except Exception as e:
-        logger.error(f"Error storing veracity result: {e}")
+        logger.error("Error storing veracity result: {0}".format(e))
         return False
 
 
@@ -166,7 +166,7 @@ async def get_news_veracity(
         if not force_recompute:
             try:
                 redshift_conn = RedshiftConnection()
-                query = f"""
+                query = """
                 SELECT trustworthiness_score, classification, confidence,
                        fake_probability, real_probability, model_used,
                        analysis_timestamp
@@ -190,11 +190,13 @@ async def get_news_veracity(
                         "cached": True,
                     }
                     logger.info(
-                        f"Retrieved cached veracity result for article {article_id}"
+                        "Retrieved cached veracity result for article {0}".format(
+                            article_id
+                        )
                     )
 
             except Exception as e:
-                logger.warning(f"Could not retrieve cached result: {e}")
+                logger.warning("Could not retrieve cached result: {0}".format(e))
 
         # If we have cached result and not forcing recompute, return it
         if cached_result and not force_recompute:
@@ -219,18 +221,19 @@ async def get_news_veracity(
 
                 if result:
                     content, title = result[0]
-                    text = f"{title}. {content}" if title else content
+                    text = "{0}. {1}".format(title, content) if title else content
                 else:
                     raise HTTPException(
                         status_code=404,
-                        detail=f"Article {article_id} not found and no text provided",
+                        detail="Article {0} not found and no text provided".format(
+                            article_id
+                        ),
                     )
 
             except Exception as e:
                 raise HTTPException(
                     status_code=500,
-                    detail=f"Could not retrieve article text: {
-                        str(e)}",
+                    detail="Could not retrieve article text: {0}".format(str(e)),
                 )
 
         # Perform veracity analysis
@@ -264,11 +267,10 @@ async def get_news_veracity(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error in news veracity analysis: {e}")
+        logger.error("Error in news veracity analysis: {0}".format(e))
         raise HTTPException(
             status_code=500,
-            detail=f"Internal server error: {
-                str(e)}",
+            detail="Internal server error: {0}".format(str(e)),
         )
 
 
@@ -313,8 +315,7 @@ async def batch_veracity_analysis(request: BatchVeracityRequest):
 
             except Exception as e:
                 logger.error(
-                    f"Error processing article {
-                        article.article_id}: {e}"
+                    "Error processing article {0}: {1}".format(article.article_id, e)
                 )
                 results.append(
                     {
@@ -329,11 +330,10 @@ async def batch_veracity_analysis(request: BatchVeracityRequest):
         )
 
     except Exception as e:
-        logger.error(f"Error in batch veracity analysis: {e}")
+        logger.error("Error in batch veracity analysis: {0}".format(e))
         raise HTTPException(
             status_code=500,
-            detail=f"Internal server error: {
-                str(e)}",
+            detail="Internal server error: {0}".format(str(e)),
         )
 
 
@@ -348,7 +348,7 @@ async def get_veracity_statistics(
         redshift_conn = RedshiftConnection()
 
         # Get overall statistics
-        stats_query = f"""
+        stats_query = """
         SELECT
             COUNT(*) as total_articles,
             AVG(trustworthiness_score) as avg_trustworthiness,
@@ -387,7 +387,7 @@ async def get_veracity_statistics(
             )
 
         # Get distribution by trust level
-        distribution_query = f"""
+        distribution_query = """
         SELECT
             CASE
                 WHEN trustworthiness_score >= {FakeNewsConfig.HIGH_CONFIDENCE_THRESHOLD} THEN 'high'
@@ -411,11 +411,10 @@ async def get_veracity_statistics(
         return StatisticsResponse(statistics=statistics, status="success")
 
     except Exception as e:
-        logger.error(f"Error getting veracity statistics: {e}")
+        logger.error("Error getting veracity statistics: {0}".format(e))
         raise HTTPException(
             status_code=500,
-            detail=f"Internal server error: {
-                str(e)}",
+            detail="Internal server error: {0}".format(str(e)),
         )
 
 
@@ -445,9 +444,8 @@ async def get_model_info():
         return ModelInfoResponse(model_info=model_info, status="success")
 
     except Exception as e:
-        logger.error(f"Error getting model info: {e}")
+        logger.error("Error getting model info: {0}".format(e))
         raise HTTPException(
             status_code=500,
-            detail=f"Internal server error: {
-                str(e)}",
+            detail="Internal server error: {0}".format(str(e)),
         )

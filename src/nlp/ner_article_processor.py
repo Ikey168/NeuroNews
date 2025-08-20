@@ -74,9 +74,11 @@ class NERArticleProcessor(ArticleProcessor):
                 self.ner_processor = create_ner_processor(
                     model_name=ner_model, confidence_threshold=ner_confidence_threshold
                 )
-                logger.info(f"Initialized NER processor with model: {ner_model}")
+                logger.info(
+                    "Initialized NER processor with model: {0}".format(ner_model)
+                )
             except Exception as e:
-                logger.error(f"Failed to initialize NER processor: {e}")
+                logger.error("Failed to initialize NER processor: {0}".format(e))
                 logger.warning("Continuing without NER capabilities")
                 self.ner_enabled = False
                 self.ner_processor = None
@@ -146,7 +148,7 @@ class NERArticleProcessor(ArticleProcessor):
                     conn.commit()
                     logger.info("Successfully initialized NER database tables")
         except Exception as e:
-            logger.error(f"Failed to initialize NER database: {e}")
+            logger.error("Failed to initialize NER database: {0}".format(e))
             # Don't raise - continue without NER tables
 
     def process_articles(self, articles: List[Dict]) -> List[Dict]:
@@ -161,9 +163,9 @@ class NERArticleProcessor(ArticleProcessor):
         """
         try:
             logger.info(
-                f"Processing {
-                    len(articles)} articles with NER enabled: {
-                    self.ner_enabled}"
+                "Processing {0} articles with NER enabled: {1}".format(
+                    len(articles), self.ner_enabled
+                )
             )
 
             # First, process with sentiment analysis (parent class)
@@ -220,14 +222,14 @@ class NERArticleProcessor(ArticleProcessor):
             self._update_articles_with_entities(enhanced_results)
 
             logger.info(
-                f"Successfully processed {
-                    len(articles)} articles with {
-                    len(entity_batch)} entities"
+                "Successfully processed {0} articles with {1} entities".format(
+                    len(articles), len(entity_batch)
+                )
             )
             return enhanced_results
 
         except Exception as e:
-            logger.error(f"Error in NER article processing: {e}")
+            logger.error("Error in NER article processing: {0}".format(e))
             # Fall back to sentiment-only processing
             if hasattr(super(), "process_articles"):
                 return super().process_articles(articles)
@@ -254,11 +256,10 @@ class NERArticleProcessor(ArticleProcessor):
                     execute_batch(cur, insert_sql, entities, page_size=self.batch_size)
                     conn.commit()
                     logger.info(
-                        f"Successfully stored {
-                            len(entities)} entities"
+                        "Successfully stored {0} entities".format(len(entities))
                     )
         except Exception as e:
-            logger.error(f"Failed to store entities: {e}")
+            logger.error("Failed to store entities: {0}".format(e))
             # Don't raise - continue processing
 
     def _update_articles_with_entities(self, results: List[Dict]):
@@ -301,11 +302,12 @@ class NERArticleProcessor(ArticleProcessor):
                     execute_batch(cur, update_sql, updates, page_size=self.batch_size)
                     conn.commit()
                     logger.info(
-                        f"Successfully updated {
-                            len(updates)} articles with entity data"
+                        "Successfully updated {0} articles with entity data".format(
+                            len(updates)
+                        )
                     )
         except Exception as e:
-            logger.error(f"Failed to update articles with entities: {e}")
+            logger.error("Failed to update articles with entities: {0}".format(e))
             # Don't raise - entity data is still stored in separate table
 
     def get_entity_statistics(self) -> Dict[str, Any]:
@@ -356,7 +358,7 @@ class NERArticleProcessor(ArticleProcessor):
                     }
 
         except Exception as e:
-            logger.error(f"Failed to get entity statistics: {e}")
+            logger.error("Failed to get entity statistics: {0}".format(e))
             return {}
 
     def search_entities(
@@ -384,7 +386,7 @@ class NERArticleProcessor(ArticleProcessor):
 
             if entity_text:
                 conditions.append("ae.entity_text ILIKE %(entity_text)s")
-                params["entity_text"] = f"%{entity_text}%"
+                params["entity_text"] = "%{0}%".format(entity_text)
 
             if entity_type:
                 conditions.append("ae.entity_type = %(entity_type)s")
@@ -392,7 +394,7 @@ class NERArticleProcessor(ArticleProcessor):
 
             where_clause = " AND ".join(conditions)
 
-            search_sql = f"""
+            search_sql = """
             SELECT
                 ae.entity_text,
                 ae.entity_type,
@@ -427,7 +429,7 @@ class NERArticleProcessor(ArticleProcessor):
                     ]
 
         except Exception as e:
-            logger.error(f"Failed to search entities: {e}")
+            logger.error("Failed to search entities: {0}".format(e))
             return []
 
 

@@ -69,7 +69,7 @@ async def get_related_entities_endpoint(
         HTTPException: If entity is not found or processing fails
     """
     try:
-        logger.info(f"API request for related entities: {entity_name}")
+        logger.info("API request for related entities: {0}".format(entity_name))
 
         # Validate input
         if not entity_name or len(entity_name.strip()) < 2:
@@ -109,20 +109,21 @@ async def get_related_entities_endpoint(
         }
 
         logger.info(
-            f"Successfully returned {
-                len(related_entities)} related entities for {entity_name}"
+            "Successfully returned {0} related entities for {1}".format(
+                len(related_entities), entity_name
+            )
         )
         return response
 
     except Exception as e:
         logger.error(
-            f"Error processing related entities request for {entity_name}: {
-                str(e)}"
+            "Error processing related entities request for {0}: {1}".format(
+                entity_name, str(e)
+            )
         )
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to retrieve related entities: {
-                str(e)}",
+            detail="Failed to retrieve related entities: {0}".format(str(e)),
         )
     finally:
         await populator.close()
@@ -152,13 +153,13 @@ async def get_entity_details(
         HTTPException: If entity is not found or processing fails
     """
     try:
-        logger.info(f"API request for entity details: {entity_id}")
+        logger.info("API request for entity details: {0}".format(entity_id))
 
         # Find entity in graph
         entity = await populator._find_entity(entity_id)
         if not entity:
             raise HTTPException(
-                status_code=404, detail=f"Entity with ID {entity_id} not found"
+                status_code=404, detail="Entity with ID {0} not found".format(entity_id)
             )
 
         response = {
@@ -183,17 +184,18 @@ async def get_entity_details(
             # graph_builder)
             response["source_articles"] = entity.get("source_articles", [])
 
-        logger.info(f"Successfully returned details for entity {entity_id}")
+        logger.info("Successfully returned details for entity {0}".format(entity_id))
         return response
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting entity details for {entity_id}: {str(e)}")
+        logger.error(
+            "Error getting entity details for {0}: {1}".format(entity_id, str(e))
+        )
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to retrieve entity details: {
-                str(e)}",
+            detail="Failed to retrieve entity details: {0}".format(str(e)),
         )
     finally:
         await populator.close()
@@ -229,7 +231,7 @@ async def populate_article_endpoint(
         for field in required_fields:
             if field not in article_data or not article_data[field]:
                 raise HTTPException(
-                    status_code=400, detail=f"Missing required field: {field}"
+                    status_code=400, detail="Missing required field: {0}".format(field)
                 )
 
         # Parse published date if provided
@@ -253,7 +255,7 @@ async def populate_article_endpoint(
             published_date=published_date,
         )
 
-        logger.info(f"Successfully populated article {article_data['id']}")
+        logger.info("Successfully populated article {0}".format(article_data["id"]))
         return {
             "status": "success",
             "processing_stats": stats,
@@ -269,7 +271,7 @@ async def populate_article_endpoint(
                 str(e)}"
         )
         raise HTTPException(
-            status_code=500, detail=f"Failed to populate article: {str(e)}"
+            status_code=500, detail="Failed to populate article: {0}".format(str(e))
         )
     finally:
         await populator.close()
@@ -294,8 +296,7 @@ async def batch_populate_articles_endpoint(
     """
     try:
         logger.info(
-            f"API request for batch population of {
-                len(articles)} articles"
+            "API request for batch population of {0} articles".format(len(articles))
         )
 
         if not articles:
@@ -312,7 +313,7 @@ async def batch_populate_articles_endpoint(
         # Process articles in batch
         batch_stats = await populator.batch_populate_articles(articles)
 
-        logger.info(f"Successfully completed batch processing")
+        logger.info("Successfully completed batch processing")
         return {
             "status": "success",
             "batch_stats": batch_stats,
@@ -322,9 +323,9 @@ async def batch_populate_articles_endpoint(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error in batch article population: {str(e)}")
+        logger.error("Error in batch article population: {0}".format(str(e)))
         raise HTTPException(
-            status_code=500, detail=f"Failed to process batch: {str(e)}"
+            status_code=500, detail="Failed to process batch: {0}".format(str(e))
         )
     finally:
         await populator.close()
@@ -362,9 +363,9 @@ async def get_knowledge_graph_stats(
         return stats
 
     except Exception as e:
-        logger.error(f"Error getting knowledge graph statistics: {str(e)}")
+        logger.error("Error getting knowledge graph statistics: {0}".format(str(e)))
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve statistics: {str(e)}"
+            status_code=500, detail="Failed to retrieve statistics: {0}".format(str(e))
         )
     finally:
         await populator.close()
@@ -391,7 +392,7 @@ async def search_entities(
         Dictionary containing search results
     """
     try:
-        logger.info(f"API request to search entities: {query}")
+        logger.info("API request to search entities: {0}".format(query))
 
         if len(query.strip()) < 2:
             raise HTTPException(
@@ -414,17 +415,20 @@ async def search_entities(
         }
 
         logger.info(
-            f"Successfully returned {
-                len(results)} search results for: {query}"
+            "Successfully returned {0} search results for: {1}".format(
+                len(results), query
+            )
         )
         return response
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error searching entities for query {query}: {str(e)}")
+        logger.error(
+            "Error searching entities for query {0}: {1}".format(query, str(e))
+        )
         raise HTTPException(
-            status_code=500, detail=f"Failed to search entities: {str(e)}"
+            status_code=500, detail="Failed to search entities: {0}".format(str(e))
         )
     finally:
         await populator.close()

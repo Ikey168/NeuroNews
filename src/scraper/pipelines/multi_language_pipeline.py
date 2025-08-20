@@ -109,12 +109,12 @@ class MultiLanguagePipeline:
                 quality_threshold=self.quality_threshold,
             )
 
-            logger.info(f"Multi-language processor initialized successfully")
-            logger.info(f"Translation enabled: {self.translation_enabled}")
-            logger.info(f"Target language: {self.target_language}")
+            logger.info("Multi-language processor initialized successfully")
+            logger.info("Translation enabled: {0}".format(self.translation_enabled))
+            logger.info("Target language: {0}".format(self.target_language))
 
         except Exception as e:
-            logger.error(f"Failed to initialize multi-language processor: {e}")
+            logger.error("Failed to initialize multi-language processor: {0}".format(e))
             raise
 
     def close_spider(self, spider):
@@ -122,7 +122,7 @@ class MultiLanguagePipeline:
         logger.info("Closing multi-language pipeline")
 
         # Log final statistics
-        logger.info(f"Pipeline statistics:")
+        logger.info("Pipeline statistics:")
         logger.info(f"  Items processed: {self.stats['items_processed']}")
         logger.info(f"  Items translated: {self.stats['items_translated']}")
         logger.info(f"  Items dropped: {self.stats['items_dropped']}")
@@ -139,9 +139,11 @@ class MultiLanguagePipeline:
         if self.processor:
             try:
                 detailed_stats = self.processor.get_translation_statistics()
-                logger.info(f"Detailed translation statistics: {detailed_stats}")
+                logger.info(
+                    "Detailed translation statistics: {0}".format(detailed_stats)
+                )
             except Exception as e:
-                logger.error(f"Error getting detailed statistics: {e}")
+                logger.error("Error getting detailed statistics: {0}".format(e))
 
     def process_item(self, item: NewsItem, spider) -> NewsItem:
         """
@@ -228,7 +230,7 @@ class MultiLanguagePipeline:
                         'url',
                         'unknown')}: {e}"
             )
-            raise DropItem(f"Processing failed: {str(e)}")
+            raise DropItem("Processing failed: {0}".format(str(e)))
 
     def _validate_item(self, item: NewsItem) -> bool:
         """
@@ -244,23 +246,23 @@ class MultiLanguagePipeline:
         required_fields = ["title", "content", "url"]
         for field in required_fields:
             if not item.get(field):
-                logger.warning(f"Missing required field: {field}")
+                logger.warning("Missing required field: {0}".format(field))
                 return False
 
         # Check content length
         content = item.get("content", "")
         if len(content.strip()) < self.min_content_length:
             logger.warning(
-                f"Content too short: {
-                    len(content)} < {
-                    self.min_content_length}"
+                "Content too short: {0} < {1}".format(
+                    len(content), self.min_content_length
+                )
             )
             return False
 
         # Check for valid URL
         url = item.get("url", "")
         if not url.startswith(("http://", "https://")):
-            logger.warning(f"Invalid URL: {url}")
+            logger.warning("Invalid URL: {0}".format(url))
             return False
 
         return True
@@ -350,12 +352,12 @@ class LanguageFilterPipeline:
         # Check if language is blocked
         if original_language in self.blocked_languages:
             self._record_filter_reason("blocked_language")
-            raise DropItem(f"Language {original_language} is blocked")
+            raise DropItem("Language {0} is blocked".format(original_language))
 
         # Check if language is allowed
         if self.allowed_languages and original_language not in self.allowed_languages:
             self._record_filter_reason("language_not_allowed")
-            raise DropItem(f"Language {original_language} not in allowed list")
+            raise DropItem("Language {0} not in allowed list".format(original_language))
 
         # Check translation requirement
         if self.require_translation and not translation_performed:

@@ -84,7 +84,7 @@ def test_database_operations():
         return True
 
     except Exception as e:
-        logger.error(f"❌ Database operations test failed: {e}")
+        logger.error("❌ Database operations test failed: {0}".format(e))
         return False
 
 
@@ -142,7 +142,7 @@ def test_redis_advanced():
         return True
 
     except Exception as e:
-        logger.error(f"❌ Redis advanced operations test failed: {e}")
+        logger.error("❌ Redis advanced operations test failed: {0}".format(e))
         return False
 
 
@@ -183,7 +183,7 @@ def test_service_integration():
             )
 
             # Insert data
-            cache_key = f"integration_test:{int(time.time())}"
+            cache_key = "integration_test:{0}".format(int(time.time()))
             test_data = {"integration": True, "timestamp": time.time()}
 
             cur.execute(
@@ -222,7 +222,7 @@ def test_service_integration():
         return True
 
     except Exception as e:
-        logger.error(f"❌ Service integration test failed: {e}")
+        logger.error("❌ Service integration test failed: {0}".format(e))
         return False
 
 
@@ -257,23 +257,23 @@ def run_comprehensive_tests():
 
     results = []
     for test_name, test_func in tests:
-        logger.info(f"Running {test_name}...")
+        logger.info("Running {0}...".format(test_name))
         try:
             result = test_func()
             results.append(result)
             if result:
-                logger.info(f"✅ {test_name} PASSED")
+                logger.info("✅ {0} PASSED".format(test_name))
             else:
-                logger.error(f"❌ {test_name} FAILED")
+                logger.error("❌ {0} FAILED".format(test_name))
         except Exception as e:
-            logger.error(f"❌ {test_name} FAILED: {e}")
+            logger.error("❌ {0} FAILED: {1}".format(test_name, e))
             results.append(False)
 
     passed = sum(results)
     total = len(results)
 
     logger.info(f"\n{'='*60}")
-    logger.info(f"🏆 COMPREHENSIVE TEST RESULTS: {passed}/{total} PASSED")
+    logger.info("🏆 COMPREHENSIVE TEST RESULTS: {0}/{1} PASSED".format(passed, total))
     logger.info(f"{'='*60}")
 
     if passed == total:
@@ -285,7 +285,7 @@ def run_comprehensive_tests():
         logger.info("   - Reproducible test environment")
         return True
     else:
-        logger.error(f"❌ {total - passed} tests failed")
+        logger.error("❌ {0} tests failed".format(total - passed))
         return False
 
 

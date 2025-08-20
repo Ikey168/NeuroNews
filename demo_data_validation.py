@@ -42,7 +42,7 @@ def load_config() -> SourceReputationConfig:
             reputation_thresholds=source_config["reputation_thresholds"],
         )
     except Exception as e:
-        print(f"Warning: Could not load config file: {e}")
+        print("Warning: Could not load config file: {0}".format(e))
         # Fallback to default config
         return SourceReputationConfig(
             trusted_domains=["reuters.com", "bbc.com", "npr.org"],
@@ -248,8 +248,8 @@ def demonstrate_individual_components():
     """
 
     cleaned = cleaner.clean_content(html_input)
-    print(f"Original: {html_input[:100]}...")
-    print(f"Cleaned:  {cleaned}")
+    print("Original: {0}...".format(html_input[:100]))
+    print("Cleaned:  {0}".format(cleaned))
 
     # Duplicate Detector Demo
     print("\n🔍 Duplicate Detector Demo:")
@@ -268,10 +268,10 @@ def demonstrate_individual_components():
     }
 
     is_dup1, reason1 = detector.is_duplicate(article1)
-    print(f"First article: Duplicate={is_dup1}, Reason={reason1}")
+    print("First article: Duplicate={0}, Reason={1}".format(is_dup1, reason1))
 
     is_dup2, reason2 = detector.is_duplicate(article2)
-    print(f"Second article: Duplicate={is_dup2}, Reason={reason2}")
+    print("Second article: Duplicate={0}, Reason={1}".format(is_dup2, reason2))
 
     # Source Reputation Analyzer Demo
     print("\n⭐ Source Reputation Analyzer Demo:")
@@ -287,11 +287,11 @@ def demonstrate_individual_components():
 
     for source in test_sources:
         # Create a test article for each source
-        test_article = {"source": source, "url": f"https://{source}/test"}
+        test_article = {"source": source, "url": "https://{0}/test".format(source)}
         result = analyzer.analyze_source(test_article)
         credibility = result["credibility_level"]
         score = result["reputation_score"]
-        print(f"{source:<20} -> {credibility:<12} (score: {score:.1f})")
+        print("{0} -> {1} (score: {2})".format(source:<20, credibility:<12, score:.1f))
 
     # Content Validator Demo
     print("\n📋 Content Validator Demo:")
@@ -319,10 +319,10 @@ def demonstrate_individual_components():
         flags = result.get("validation_flags", [])
         warnings = result.get("warnings", [])
 
-        print(f"Test Article {i}:")
-        print(f"  Quality: {quality}, Score: {score:.1f}")
-        print(f"  Flags: {flags}")
-        print(f"  Warnings: {warnings}")
+        print("Test Article {0}:".format(i))
+        print("  Quality: {0}, Score: {1}".format(quality, score:.1f))
+        print("  Flags: {0}".format(flags))
+        print("  Warnings: {0}".format(warnings))
 
 
 def demonstrate_full_pipeline():
@@ -346,7 +346,7 @@ def demonstrate_full_pipeline():
         result = pipeline.process_article(article)
 
         if result:
-            print(f"✅ ACCEPTED - Score: {result.score:.1f}")
+            print("✅ ACCEPTED - Score: {0}".format(result.score:.1f))
             print(
                 f"   Source Credibility: {result.cleaned_data.get('source_credibility')}"
             )
@@ -392,7 +392,7 @@ def demonstrate_full_pipeline():
         result = result_info["result"]
         if result:
             status = "✅ PASS"
-            score = f"{result.score:.1f}"
+            score = "{0}".format(result.score:.1f)
             quality = result.cleaned_data.get("content_quality", "N/A")
             credibility = result.cleaned_data.get("source_credibility", "N/A")
         else:
@@ -487,11 +487,11 @@ def main():
         # Show Scrapy integration
         demonstrate_scrapy_integration()
 
-        print(f"\n🎉 Demo completed successfully!")
-        print(f"The data validation pipeline is ready for production use.")
+        print("\n🎉 Demo completed successfully!")
+        print("The data validation pipeline is ready for production use.")
 
     except Exception as e:
-        print(f"\n❌ Demo failed with error: {e}")
+        print("\n❌ Demo failed with error: {0}".format(e))
         import traceback
 
         traceback.print_exc()

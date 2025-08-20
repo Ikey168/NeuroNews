@@ -42,7 +42,7 @@ class AsyncPipelineProcessor:
     ) -> List[Dict[str, Any]]:
         """Process articles through async pipeline."""
         self.logger.info(
-            f"🔄 Processing {len(articles)} articles through async pipeline"
+            "🔄 Processing {0} articles through async pipeline".format(len(articles))
         )
 
         # Create semaphore for controlled concurrency
@@ -67,8 +67,9 @@ class AsyncPipelineProcessor:
         self.processed_articles = valid_articles
 
         self.logger.info(
-            f"✅ Pipeline processing completed: {
-                len(valid_articles)} valid articles"
+            "✅ Pipeline processing completed: {0} valid articles".format(
+                len(valid_articles)
+            )
         )
         self.logger.info(
             f"📊 Validation: {
@@ -326,7 +327,7 @@ class AsyncPipelineProcessor:
                 return category
 
         # Check title and content
-        text_to_check = f"{title} {content}"
+        text_to_check = "{0} {1}".format(title, content)
         category_scores = {}
 
         for category, keywords in categories.items():
@@ -519,12 +520,14 @@ class AsyncPipelineProcessor:
             )
 
             self.logger.info(
-                f"✅ Uploaded {len(articles)} articles to s3://{bucket}/{key}"
+                "✅ Uploaded {0} articles to s3://{1}/{2}".format(
+                    len(articles), bucket, key
+                )
             )
             return True
 
         except Exception as e:
-            self.logger.error(f"❌ S3 upload failed: {e}")
+            self.logger.error("❌ S3 upload failed: {0}".format(e))
             return False
 
     def upload_to_s3_sync(self, data: str, bucket: str, key: str):

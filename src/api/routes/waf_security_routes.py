@@ -137,8 +137,7 @@ async def deploy_waf(admin_user: dict = Depends(require_admin)):
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to deploy WAF: {
-                str(e)}",
+            detail="Failed to deploy WAF: {0}".format(str(e)),
         )
 
 
@@ -177,7 +176,7 @@ async def associate_waf_with_gateway(
 
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to associate WAF: {str(e)}"
+            status_code=500, detail="Failed to associate WAF: {0}".format(str(e))
         )
 
 
@@ -209,7 +208,7 @@ async def get_security_metrics(admin_user: dict = Depends(require_admin)):
         raise
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to get security metrics: {str(e)}"
+            status_code=500, detail="Failed to get security metrics: {0}".format(str(e))
         )
 
 
@@ -246,7 +245,7 @@ async def get_blocked_requests(
 
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to get blocked requests: {str(e)}"
+            status_code=500, detail="Failed to get blocked requests: {0}".format(str(e))
         )
 
 
@@ -286,7 +285,7 @@ async def get_waf_status(_: dict = Depends(require_auth)):
 
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to get WAF status: {str(e)}"
+            status_code=500, detail="Failed to get WAF status: {0}".format(str(e))
         )
 
 
@@ -337,7 +336,8 @@ async def get_real_time_threats(
 
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to get real-time threats: {str(e)}"
+            status_code=500,
+            detail="Failed to get real-time threats: {0}".format(str(e)),
         )
 
 
@@ -381,7 +381,7 @@ async def configure_waf(
 
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to configure WAF: {str(e)}"
+            status_code=500, detail="Failed to configure WAF: {0}".format(str(e))
         )
 
 
@@ -452,8 +452,7 @@ async def get_sql_injection_attempts(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to get SQL injection attempts: {
-                str(e)}",
+            detail="Failed to get SQL injection attempts: {0}".format(str(e)),
         )
 
 
@@ -499,7 +498,7 @@ async def get_xss_attempts(
 
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to get XSS attempts: {str(e)}"
+            status_code=500, detail="Failed to get XSS attempts: {0}".format(str(e))
         )
 
 
@@ -544,8 +543,7 @@ async def get_geofencing_status(admin_user: dict = Depends(require_admin)):
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to get geofencing status: {
-                str(e)}",
+            detail="Failed to get geofencing status: {0}".format(str(e)),
         )
 
 

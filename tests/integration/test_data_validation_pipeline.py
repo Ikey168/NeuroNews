@@ -330,8 +330,8 @@ class TestDataValidationPipeline(unittest.TestCase):
         articles = []
         for i in range(50):
             article = self.valid_article.copy()
-            article["url"] = f"https://reuters.com/article-{i}"
-            article["title"] = f"Test Article {i}"
+            article["url"] = "https://reuters.com/article-{0}".format(i)
+            article["title"] = "Test Article {0}".format(i)
             articles.append(article)
 
         # Measure processing time

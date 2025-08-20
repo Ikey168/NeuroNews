@@ -106,8 +106,8 @@ class DynamoDBMetadataPipeline:
     async def spider_opened(self, spider):
         """Initialize when spider opens."""
         self.logger.info(
-            f"DynamoDB metadata pipeline opened for spider: {
-                spider.name}"
+            "DynamoDB metadata pipeline opened for spider: {0}".format(
+                spider.name)
         )
         self.stats["start_time"] = time.time()
 
@@ -115,7 +115,7 @@ class DynamoDBMetadataPipeline:
             self.manager = DynamoDBMetadataManager(self.config, self.aws_credentials)
             self.logger.info("DynamoDB metadata manager initialized successfully")
         except Exception as e:
-            self.logger.error(f"Failed to initialize DynamoDB manager: {e}")
+            self.logger.error("Failed to initialize DynamoDB manager: {0}".format(e))
             raise
 
     async def spider_closed(self, spider):
@@ -124,13 +124,13 @@ class DynamoDBMetadataPipeline:
         total_time = end_time - (self.stats["start_time"] or end_time)
 
         self.logger.info(
-            f"DynamoDB metadata pipeline closed for spider: {
-                spider.name}"
+            "DynamoDB metadata pipeline closed for spider: {0}".format(
+                spider.name)
         )
-        self.logger.info(f"Indexing statistics:")
+        self.logger.info("Indexing statistics:")
         self.logger.info(f"  - Indexed articles: {self.stats['indexed_articles']}")
         self.logger.info(f"  - Failed articles: {self.stats['failed_articles']}")
-        self.logger.info(f"  - Total time: {total_time:.2f}s")
+        self.logger.info("  - Total time: {0}s".format(total_time))
         self.logger.info(
             f"  - Average indexing time: {
                 self.stats['total_processing_time'] / max(
@@ -167,16 +167,16 @@ class DynamoDBMetadataPipeline:
             self.stats["total_processing_time"] += processing_time
 
             self.logger.debug(
-                f"Indexed metadata for article: {
-                    metadata.article_id} ({
-                    processing_time:.3f}s)"
+                "Indexed metadata for article: {0} ({1}s)".format(
+                    metadata.article_id, 
+                    processing_time:.3f)
             )
 
             return item
 
         except Exception as e:
             self.stats["failed_articles"] += 1
-            self.logger.error(f"Failed to index article metadata: {e}")
+            self.logger.error("Failed to index article metadata: {0}".format(e))
 
             # Don't drop item, just log error and continue
             return item
@@ -251,12 +251,12 @@ class S3MetadataSync:
                 s3_metadata, self.dynamodb_manager
             )
             self.logger.debug(
-                f"Synced S3 metadata for article: {
-                    metadata.article_id}"
+                "Synced S3 metadata for article: {0}".format(
+                    metadata.article_id)
             )
             return metadata
         except Exception as e:
-            self.logger.error(f"Failed to sync S3 metadata: {e}")
+            self.logger.error("Failed to sync S3 metadata: {0}".format(e))
             return None
 
     async def sync_multiple_s3_articles(
@@ -306,7 +306,7 @@ class S3MetadataSync:
             failed_items = batch_result["failed_articles"]
 
         except Exception as e:
-            self.logger.error(f"Batch S3 sync failed: {e}")
+            self.logger.error("Batch S3 sync failed: {0}".format(e))
             failed_count = len(s3_metadata_list)
             failed_items = [{"error": str(e)}]
 
@@ -322,9 +322,9 @@ class S3MetadataSync:
         }
 
         self.logger.info(
-            f"S3 metadata sync: {synced_count}/{
-                len(s3_metadata_list)} articles ({
-                sync_time:.2f}ms)"
+            "S3 metadata sync: {0}/{1} articles ({2}ms)".format(synced_count, 
+                len(s3_metadata_list), 
+                sync_time:.2f)
         )
         return result
 
@@ -374,7 +374,7 @@ class RedshiftMetadataSync:
                 )
             return success
         except Exception as e:
-            self.logger.error(f"Failed to sync Redshift metadata: {e}")
+            self.logger.error("Failed to sync Redshift metadata: {0}".format(e))
             return False
 
     async def sync_batch_redshift_loads(
@@ -429,9 +429,9 @@ class RedshiftMetadataSync:
         }
 
         self.logger.info(
-            f"Redshift metadata sync: {updated_count}/{
-                len(redshift_records)} updates ({
-                sync_time:.2f}ms)"
+            "Redshift metadata sync: {0}/{1} updates ({2}ms)".format(updated_count, 
+                len(redshift_records), 
+                sync_time:.2f)
         )
         return result
 
@@ -492,12 +492,12 @@ class DataValidationMetadataSync:
             )
             if success:
                 self.logger.debug(
-                    f"Updated validation metadata for article: {article_id}"
+                    "Updated validation metadata for article: {0}".format(article_id)
                 )
             return success
 
         except Exception as e:
-            self.logger.error(f"Failed to sync validation metadata: {e}")
+            self.logger.error("Failed to sync validation metadata: {0}".format(e))
             return False
 
 
@@ -537,7 +537,7 @@ class MetadataIntegrationOrchestrator:
         # Perform health check
         health = await self.dynamodb_manager.health_check()
         if health["status"] != "healthy":
-            raise RuntimeError(f"DynamoDB manager unhealthy: {health}")
+            raise RuntimeError("DynamoDB manager unhealthy: {0}".format(health))
 
         self.logger.info("Metadata integration orchestrator initialized successfully")
 
@@ -590,7 +590,7 @@ class MetadataIntegrationOrchestrator:
                 results["validation_synced"] = True
 
         except Exception as e:
-            error_msg = f"Processing failed: {e}"
+            error_msg = "Processing failed: {0}".format(e)
             results["errors"].append(error_msg)
             self.logger.error(error_msg)
 
@@ -620,7 +620,7 @@ class MetadataIntegrationOrchestrator:
             }
 
         except Exception as e:
-            self.logger.error(f"Failed to get integration statistics: {e}")
+            self.logger.error("Failed to get integration statistics: {0}".format(e))
             return {"error": str(e)}
 
 

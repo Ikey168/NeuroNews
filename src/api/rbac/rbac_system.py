@@ -173,7 +173,7 @@ class DynamoDBPermissionStore:
                 self.table = self.dynamodb.Table(self.table_name)
                 self._ensure_table_exists()
             except Exception as e:
-                logger.warning(f"Failed to initialize DynamoDB: {e}")
+                logger.warning("Failed to initialize DynamoDB: {0}".format(e))
                 self.dynamodb = None
                 self.table = None
         else:
@@ -187,13 +187,13 @@ class DynamoDBPermissionStore:
         try:
             # Check if table exists
             self.table.load()
-            logger.info(f"DynamoDB table {self.table_name} exists")
+            logger.info("DynamoDB table {0} exists".format(self.table_name))
         except ClientError as e:
             if e.response["Error"]["Code"] == "ResourceNotFoundException":
-                logger.info(f"Creating DynamoDB table {self.table_name}")
+                logger.info("Creating DynamoDB table {0}".format(self.table_name))
                 self._create_table()
             else:
-                logger.error(f"Error checking table: {e}")
+                logger.error("Error checking table: {0}".format(e))
 
     def _create_table(self):
         """Create the permissions table."""
@@ -217,10 +217,10 @@ class DynamoDBPermissionStore:
             # Wait for table to be created
             table.wait_until_exists()
             self.table = table
-            logger.info(f"Created DynamoDB table {self.table_name}")
+            logger.info("Created DynamoDB table {0}".format(self.table_name))
 
         except Exception as e:
-            logger.error(f"Failed to create table: {e}")
+            logger.error("Failed to create table: {0}".format(e))
 
     async def store_user_permissions(
         self,
@@ -245,11 +245,13 @@ class DynamoDBPermissionStore:
                 item["custom_permissions"] = custom_permissions
 
             self.table.put_item(Item=item)
-            logger.info(f"Stored permissions for user {user_id}")
+            logger.info("Stored permissions for user {0}".format(user_id))
             return True
 
         except Exception as e:
-            logger.error(f"Failed to store permissions for user {user_id}: {e}")
+            logger.error(
+                "Failed to store permissions for user {0}: {1}".format(user_id, e)
+            )
             return False
 
     async def get_user_permissions(self, user_id: str) -> Optional[Dict[str, Any]]:
@@ -264,7 +266,9 @@ class DynamoDBPermissionStore:
             return None
 
         except Exception as e:
-            logger.error(f"Failed to get permissions for user {user_id}: {e}")
+            logger.error(
+                "Failed to get permissions for user {0}: {1}".format(user_id, e)
+            )
             return None
 
     async def update_user_role(self, user_id: str, new_role: UserRole) -> bool:
@@ -282,11 +286,13 @@ class DynamoDBPermissionStore:
                     ":updated_at": datetime.now(timezone.utc).isoformat(),
                 },
             )
-            logger.info(f"Updated role for user {user_id} to {new_role.value}")
+            logger.info(
+                "Updated role for user {0} to {1}".format(user_id, new_role.value)
+            )
             return True
 
         except Exception as e:
-            logger.error(f"Failed to update role for user {user_id}: {e}")
+            logger.error("Failed to update role for user {0}: {1}".format(user_id, e))
             return False
 
     async def delete_user_permissions(self, user_id: str) -> bool:
@@ -296,11 +302,13 @@ class DynamoDBPermissionStore:
 
         try:
             self.table.delete_item(Key={"user_id": user_id})
-            logger.info(f"Deleted permissions for user {user_id}")
+            logger.info("Deleted permissions for user {0}".format(user_id))
             return True
 
         except Exception as e:
-            logger.error(f"Failed to delete permissions for user {user_id}: {e}")
+            logger.error(
+                "Failed to delete permissions for user {0}: {1}".format(user_id, e)
+            )
             return False
 
 
@@ -356,7 +364,7 @@ class RBACManager:
 
     def get_endpoint_permissions(self, method: str, path: str) -> Set[Permission]:
         """Get required permissions for an endpoint."""
-        endpoint_key = f"{method.upper()} {path}"
+        endpoint_key = "{0} {1}".format(method.upper(), path)
 
         # Check exact match first
         if endpoint_key in self._endpoint_permissions:

@@ -90,7 +90,7 @@ async def setup_test_database():
             except psycopg2.OperationalError:
                 if attempt == max_retries - 1:
                     raise
-                logger.info(f"Waiting for database... (attempt {attempt + 1})")
+                logger.info("Waiting for database... (attempt {0})".format(attempt + 1))
                 await asyncio.sleep(2)
 
         # Create tables if they don't exist (handled by init script)
@@ -105,7 +105,7 @@ async def setup_test_database():
                 """
                 )
                 tables = [row[0] for row in cur.fetchall()]
-                logger.info(f"Available tables: {tables}")
+                logger.info("Available tables: {0}".format(tables))
 
                 # Clear existing test data
                 test_tables = [
@@ -121,14 +121,16 @@ async def setup_test_database():
 
                 for table in test_tables:
                     if table in tables:
-                        cur.execute(f"TRUNCATE TABLE neuronews.{table} CASCADE")
-                        logger.info(f"Cleared table: {table}")
+                        cur.execute(
+                            "TRUNCATE TABLE neuronews.{0} CASCADE".format(table)
+                        )
+                        logger.info("Cleared table: {0}".format(table))
 
                 conn.commit()
                 logger.info("Test database setup complete!")
 
     except Exception as e:
-        logger.error(f"Failed to set up test database: {e}")
+        logger.error("Failed to set up test database: {0}".format(e))
         raise
 
 
@@ -159,7 +161,7 @@ async def cleanup_test_database():
                 logger.info("Test database cleanup complete!")
 
     except Exception as e:
-        logger.error(f"Failed to clean up test database: {e}")
+        logger.error("Failed to clean up test database: {0}".format(e))
 
 
 def create_test_articles(count: int = 10) -> list:
@@ -174,10 +176,10 @@ def create_test_articles(count: int = 10) -> list:
     """
     sample_articles = [
         {
-            "url": f"https://example.com/article-{i}",
-            "title": f"Test Article {i}",
-            "content": f"This is test content for article {i}. " * 20,
-            "author": f"Author {i}",
+            "url": "https://example.com/article-{0}".format(i),
+            "title": "Test Article {0}".format(i),
+            "content": "This is test content for article {0}. ".format(i) * 20,
+            "author": "Author {0}".format(i),
             "source": "test-source",
             "category": "technology" if i % 2 == 0 else "politics",
             "language": "en",
@@ -205,10 +207,10 @@ def create_test_articles(count: int = 10) -> list:
                     article_ids.append(str(article_id))
 
                 conn.commit()
-                logger.info(f"Created {len(article_ids)} test articles")
+                logger.info("Created {0} test articles".format(len(article_ids)))
 
     except Exception as e:
-        logger.error(f"Failed to create test articles: {e}")
+        logger.error("Failed to create test articles: {0}".format(e))
         raise
 
     return article_ids

@@ -113,7 +113,7 @@ class FakeNewsDetector:
             )
 
         self.model.to(self.device)
-        logger.info(f"Initialized {model_name} on {self.device}")
+        logger.info("Initialized {0} on {1}".format(model_name, self.device))
 
     def prepare_liar_dataset(
         self, data_path: str = None
@@ -166,10 +166,10 @@ class FakeNewsDetector:
                     "pants-fire": 0,
                 }
                 labels = [label_mapping.get(label, 0) for label in df["label"]]
-                logger.info(f"Loaded {len(texts)} samples from LIAR dataset")
+                logger.info("Loaded {0} samples from LIAR dataset".format(len(texts)))
             except Exception as e:
                 logger.warning(
-                    f"Could not load LIAR dataset: {e}. Using synthetic data."
+                    "Could not load LIAR dataset: {0}. Using synthetic data.".format(e)
                 )
 
         return texts, labels
@@ -214,7 +214,7 @@ class FakeNewsDetector:
             per_device_eval_batch_size=batch_size,
             warmup_steps=500,
             weight_decay=0.01,
-            logging_dir=f"{output_dir}/logs",
+            logging_dir="{0}/logs".format(output_dir),
             evaluation_strategy="epoch",
             save_strategy="epoch",
             load_best_model_at_end=True,
@@ -253,13 +253,13 @@ class FakeNewsDetector:
 
         # Evaluate the model
         eval_results = trainer.evaluate()
-        logger.info(f"Evaluation results: {eval_results}")
+        logger.info("Evaluation results: {0}".format(eval_results))
 
         # Save the model
         trainer.save_model()
         self.tokenizer.save_pretrained(output_dir)
 
-        logger.info(f"Model saved to {output_dir}")
+        logger.info("Model saved to {0}".format(output_dir))
         return eval_results
 
     def predict_trustworthiness(self, text: str) -> Dict[str, Any]:
@@ -390,7 +390,7 @@ def main():
 
     # Prepare training data
     texts, labels = detector.prepare_liar_dataset()
-    logger.info(f"Prepared {len(texts)} training samples")
+    logger.info("Prepared {0} training samples".format(len(texts)))
 
     # Train the model
     metrics = detector.train(texts, labels, num_epochs=2, batch_size=8)
@@ -407,7 +407,7 @@ def main():
     logger.info("\\nTesting predictions:")
     for i, article in enumerate(test_articles):
         result = detector.predict_trustworthiness(article)
-        logger.info(f"\\nArticle {i + 1}: {article[:100]}...")
+        logger.info("\\nArticle {0}: {1}...".format(i + 1, article[))
         logger.info(f"Trustworthiness: {result['trustworthiness_score']}%")
         logger.info(
             f"Classification: {
@@ -417,7 +417,7 @@ def main():
 
     # Evaluate on test set
     eval_results = detector.evaluate_on_dataset(texts[-4:], labels[-4:])
-    logger.info(f"\\nEvaluation results: {eval_results}")
+    logger.info("\\nEvaluation results: {0}".format(eval_results))
 
 
 if __name__ == "__main__":

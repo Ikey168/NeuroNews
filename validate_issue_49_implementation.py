@@ -36,9 +36,9 @@ def print_section_header(title: str):
 def print_test_result(test_name: str, success: bool, details: str = ""):
     """Print formatted test result."""
     status = "✅" if success else "❌"
-    print(f"{status} {test_name}")
+    print("{0} {1}".format(status, test_name))
     if details:
-        print(f"   {details}")
+        print("   {0}".format(details))
 
 
 def validate_imports() -> Dict[str, bool]:
@@ -58,7 +58,7 @@ def validate_imports() -> Dict[str, bool]:
         )
         results["quicksight_service"] = True
     except ImportError as e:
-        print_test_result("QuickSight service imports", False, f"Import error: {e}")
+        print_test_result("QuickSight service imports", False, "Import error: {0}".format(e))
         results["quicksight_service"] = False
 
     # Test API routes import
@@ -70,7 +70,7 @@ def validate_imports() -> Dict[str, bool]:
         )
         results["quicksight_routes"] = True
     except ImportError as e:
-        print_test_result("QuickSight routes imported", False, f"Import error: {e}")
+        print_test_result("QuickSight routes imported", False, "Import error: {0}".format(e))
         results["quicksight_routes"] = False
 
     # Test FastAPI integration
@@ -84,7 +84,7 @@ def validate_imports() -> Dict[str, bool]:
             print_test_result(
                 "FastAPI integration",
                 True,
-                f"Found {len(quicksight_routes)} dashboard routes",
+                "Found {0} dashboard routes".format(len(quicksight_routes)),
             )
             results["fastapi_integration"] = True
         else:
@@ -93,7 +93,7 @@ def validate_imports() -> Dict[str, bool]:
             )
             results["fastapi_integration"] = False
     except Exception as e:
-        print_test_result("FastAPI integration", False, f"Error: {e}")
+        print_test_result("FastAPI integration", False, "Error: {0}".format(e))
         results["fastapi_integration"] = False
 
     return results
@@ -122,11 +122,11 @@ def validate_service_functionality() -> Dict[str, bool]:
             print_test_result(
                 "QuickSight configuration",
                 True,
-                f"Config created for account {config.aws_account_id}",
+                "Config created for account {0}".format(config.aws_account_id),
             )
             results["configuration"] = True
         except Exception as e:
-            print_test_result("QuickSight configuration", False, f"Error: {e}")
+            print_test_result("QuickSight configuration", False, "Error: {0}".format(e))
             results["configuration"] = False
 
         # Test service initialization (without AWS credentials)
@@ -148,7 +148,7 @@ def validate_service_functionality() -> Dict[str, bool]:
                 )
                 results["service_init"] = True
         except Exception as e:
-            print_test_result("Service initialization", False, f"Error: {e}")
+            print_test_result("Service initialization", False, "Error: {0}".format(e))
             results["service_init"] = False
 
         # Test SQL query generation
@@ -193,7 +193,7 @@ def validate_service_functionality() -> Dict[str, bool]:
 
                 results["sql_generation"] = True
         except Exception as e:
-            print_test_result("SQL query generation", False, f"Error: {e}")
+            print_test_result("SQL query generation", False, "Error: {0}".format(e))
             results["sql_generation"] = False
 
         # Test dashboard type validation
@@ -208,16 +208,16 @@ def validate_service_functionality() -> Dict[str, bool]:
 
             for req_type in required_types:
                 if req_type not in dashboard_types:
-                    raise ValueError(f"Missing required dashboard type: {req_type}")
+                    raise ValueError("Missing required dashboard type: {0}".format(req_type))
 
             print_test_result(
                 "Dashboard types",
                 True,
-                f"All required types available: {required_types}",
+                "All required types available: {0}".format(required_types),
             )
             results["dashboard_types"] = True
         except Exception as e:
-            print_test_result("Dashboard types", False, f"Error: {e}")
+            print_test_result("Dashboard types", False, "Error: {0}".format(e))
             results["dashboard_types"] = False
 
         # Test dataset column definitions
@@ -238,20 +238,20 @@ def validate_service_functionality() -> Dict[str, bool]:
                 ]
                 for dataset_id in datasets:
                     columns = service._get_dataset_columns(dataset_id)
-                    assert len(columns) > 0, f"No columns defined for {dataset_id}"
+                    assert len(columns) > 0, "No columns defined for {0}".format(dataset_id)
 
                 print_test_result(
                     "Dataset columns",
                     True,
-                    f"Column definitions available for {len(datasets)} datasets",
+                    "Column definitions available for {0} datasets".format(len(datasets)),
                 )
                 results["dataset_columns"] = True
         except Exception as e:
-            print_test_result("Dataset columns", False, f"Error: {e}")
+            print_test_result("Dataset columns", False, "Error: {0}".format(e))
             results["dataset_columns"] = False
 
     except ImportError as e:
-        print_test_result("Service functionality tests", False, f"Import error: {e}")
+        print_test_result("Service functionality tests", False, "Import error: {0}".format(e))
         results["service_functionality"] = False
 
     return results
@@ -283,11 +283,11 @@ def validate_api_models() -> Dict[str, bool]:
             print_test_result(
                 "Setup request model",
                 True,
-                f"Account ID: {setup_request.aws_account_id}",
+                "Account ID: {0}".format(setup_request.aws_account_id),
             )
             results["setup_request"] = True
         except Exception as e:
-            print_test_result("Setup request model", False, f"Error: {e}")
+            print_test_result("Setup request model", False, "Error: {0}".format(e))
             results["setup_request"] = False
 
         # Test layout request model
@@ -299,11 +299,11 @@ def validate_api_models() -> Dict[str, bool]:
             print_test_result(
                 "Layout request model",
                 True,
-                f"Layout type: {layout_request.layout_type}",
+                "Layout type: {0}".format(layout_request.layout_type),
             )
             results["layout_request"] = True
         except Exception as e:
-            print_test_result("Layout request model", False, f"Error: {e}")
+            print_test_result("Layout request model", False, "Error: {0}".format(e))
             results["layout_request"] = False
 
         # Test response models
@@ -320,15 +320,15 @@ def validate_api_models() -> Dict[str, bool]:
             print_test_result(
                 "Response models",
                 True,
-                f"Setup response with {len(setup_response.datasets_created)} datasets",
+                "Setup response with {0} datasets".format(len(setup_response.datasets_created)),
             )
             results["response_models"] = True
         except Exception as e:
-            print_test_result("Response models", False, f"Error: {e}")
+            print_test_result("Response models", False, "Error: {0}".format(e))
             results["response_models"] = False
 
     except ImportError as e:
-        print_test_result("API models import", False, f"Import error: {e}")
+        print_test_result("API models import", False, "Import error: {0}".format(e))
         results["api_models"] = False
 
     return results
@@ -359,7 +359,7 @@ def validate_api_endpoints() -> Dict[str, bool]:
             )
             results["health_check"] = True
         except Exception as e:
-            print_test_result("Health check endpoint", False, f"Error: {e}")
+            print_test_result("Health check endpoint", False, "Error: {0}".format(e))
             results["health_check"] = False
 
         # Test endpoint routing
@@ -390,15 +390,15 @@ def validate_api_endpoints() -> Dict[str, bool]:
             print_test_result(
                 "Endpoint routing",
                 success,
-                f"Found {len(dashboard_routes)} dashboard routes",
+                "Found {0} dashboard routes".format(len(dashboard_routes)),
             )
             results["endpoint_routing"] = success
         except Exception as e:
-            print_test_result("Endpoint routing", False, f"Error: {e}")
+            print_test_result("Endpoint routing", False, "Error: {0}".format(e))
             results["endpoint_routing"] = False
 
     except ImportError as e:
-        print_test_result("API endpoint testing", False, f"Import error: {e}")
+        print_test_result("API endpoint testing", False, "Import error: {0}".format(e))
         results["api_endpoints"] = False
 
     return results
@@ -433,7 +433,7 @@ def validate_issue_49_requirements() -> Dict[str, bool]:
                 )
                 results["req1_quicksight_setup"] = True
         except Exception as e:
-            print_test_result("Requirement 1: QuickSight setup", False, f"Error: {e}")
+            print_test_result("Requirement 1: QuickSight setup", False, "Error: {0}".format(e))
             results["req1_quicksight_setup"] = False
 
         # Requirement 2: Create dashboard layout for trending topics, entity relationships, event timeline
@@ -464,11 +464,11 @@ def validate_issue_49_requirements() -> Dict[str, bool]:
                 print_test_result(
                     "Requirement 2: Dashboard layouts",
                     True,
-                    f"All 3 required layouts supported",
+                    "All 3 required layouts supported",
                 )
                 results["req2_dashboard_layouts"] = True
         except Exception as e:
-            print_test_result("Requirement 2: Dashboard layouts", False, f"Error: {e}")
+            print_test_result("Requirement 2: Dashboard layouts", False, "Error: {0}".format(e))
             results["req2_dashboard_layouts"] = False
 
         # Requirement 3: Enable filtering by date, entity, and sentiment
@@ -499,11 +499,11 @@ def validate_issue_49_requirements() -> Dict[str, bool]:
                 print_test_result(
                     "Requirement 3: Filtering",
                     success,
-                    f"Found filters: {filters_found}",
+                    "Found filters: {0}".format(filters_found),
                 )
                 results["req3_filtering"] = success
         except Exception as e:
-            print_test_result("Requirement 3: Filtering", False, f"Error: {e}")
+            print_test_result("Requirement 3: Filtering", False, "Error: {0}".format(e))
             results["req3_filtering"] = False
 
         # Requirement 4: Implement real-time updates from Redshift
@@ -540,12 +540,12 @@ def validate_issue_49_requirements() -> Dict[str, bool]:
                 )
                 results["req4_realtime_updates"] = success
         except Exception as e:
-            print_test_result("Requirement 4: Real-time updates", False, f"Error: {e}")
+            print_test_result("Requirement 4: Real-time updates", False, "Error: {0}".format(e))
             results["req4_realtime_updates"] = False
 
     except ImportError as e:
         print_test_result(
-            "Issue #49 requirements validation", False, f"Import error: {e}"
+            "Issue #49 requirements validation", False, "Import error: {0}".format(e)
         )
         results["requirements_validation"] = False
 
@@ -570,7 +570,7 @@ def validate_redshift_integration() -> Dict[str, bool]:
             )
             results["redshift_loader"] = True
         except ImportError as e:
-            print_test_result("Redshift loader available", False, f"Import error: {e}")
+            print_test_result("Redshift loader available", False, "Import error: {0}".format(e))
             results["redshift_loader"] = False
 
         # Check if QuickSight service references correct Redshift tables
@@ -607,7 +607,7 @@ def validate_redshift_integration() -> Dict[str, bool]:
                 )
                 results["table_references"] = success
         except Exception as e:
-            print_test_result("Redshift table references", False, f"Error: {e}")
+            print_test_result("Redshift table references", False, "Error: {0}".format(e))
             results["table_references"] = False
 
         # Check if required columns are referenced
@@ -644,15 +644,15 @@ def validate_redshift_integration() -> Dict[str, bool]:
                 print_test_result(
                     "Required columns",
                     success,
-                    f"Found {len(columns_found)}/{len(required_columns)} columns",
+                    "Found {0}/{1} columns".format(len(columns_found), len(required_columns)),
                 )
                 results["required_columns"] = success
         except Exception as e:
-            print_test_result("Required columns", False, f"Error: {e}")
+            print_test_result("Required columns", False, "Error: {0}".format(e))
             results["required_columns"] = False
 
     except Exception as e:
-        print_test_result("Redshift integration validation", False, f"Error: {e}")
+        print_test_result("Redshift integration validation", False, "Error: {0}".format(e))
         results["redshift_integration"] = False
 
     return results
@@ -736,15 +736,15 @@ async def main():
 
         if category_total > 0:
             status = "✅ PASS" if category_passed == category_total else "❌ FAIL"
-            print(f"{status} {category}")
+            print("{0} {1}".format(status, category))
             if category_passed < category_total:
                 failed_tests = [
                     key for key in test_keys if not all_results.get(key, False)
                 ]
-                print(f"   Failed: {failed_tests}")
+                print("   Failed: {0}".format(failed_tests))
 
     print(
-        f"\n📊 Overall Result: {passed_tests}/{total_tests} tests passed ({success_rate:.1f}%)"
+        "\n📊 Overall Result: {0}/{1} tests passed ({2}%)".format(passed_tests, total_tests, success_rate:.1f)
     )
 
     if success_rate >= 80:

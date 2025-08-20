@@ -33,12 +33,11 @@ class TorManager:
                 return True
             else:
                 self.logger.error(
-                    f"Tor identity rotation failed: {
-                        stderr.decode()}"
+                    "Tor identity rotation failed: {0}".format(stderr.decode())
                 )
                 return False
         except Exception as e:
-            self.logger.error(f"Tor rotation error: {e}")
+            self.logger.error("Tor rotation error: {0}".format(e))
             return False
 
     def get_proxy(self) -> str:

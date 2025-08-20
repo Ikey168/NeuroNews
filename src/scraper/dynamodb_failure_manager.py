@@ -70,8 +70,8 @@ class FailedUrl:
 class RetryStrategy(Enum):
     """Retry strategy types."""
 
-    EXPONENTIAL_BACKOFF = "exponential_backoff"
-    LINEAR_BACKOFF = "linear_backoff"
+    EXPONENTIAL_BACKOFF = "exponential_backo"
+    LINEAR_BACKOFF = "linear_backo"
     FIXED_INTERVAL = "fixed_interval"
 
 
@@ -115,12 +115,12 @@ class DynamoDBFailureManager:
         try:
             # Check if table exists
             self.dynamodb.describe_table(TableName=self.table_name)
-            self.logger.debug(f"DynamoDB table exists: {self.table_name}")
+            self.logger.debug("DynamoDB table exists: {0}".format(self.table_name))
         except self.dynamodb.exceptions.ResourceNotFoundException:
             # Create table
             self._create_table()
         except Exception as e:
-            self.logger.error(f"Error checking table existence: {e}")
+            self.logger.error("Error checking table existence: {0}".format(e))
 
     def _create_table(self):
         """Create DynamoDB table for failed URLs."""
@@ -149,10 +149,10 @@ class DynamoDBFailureManager:
             waiter = self.dynamodb.get_waiter("table_exists")
             waiter.wait(TableName=self.table_name)
 
-            self.logger.info(f"Created DynamoDB table: {self.table_name}")
+            self.logger.info("Created DynamoDB table: {0}".format(self.table_name))
 
         except Exception as e:
-            self.logger.error(f"Error creating DynamoDB table: {e}")
+            self.logger.error("Error creating DynamoDB table: {0}".format(e))
 
     async def record_failure(
         self,
@@ -226,13 +226,14 @@ class DynamoDBFailureManager:
             )
 
             self.logger.info(
-                f"Recorded failure for URL: {url} (attempt {
-                    failed_url.retry_count})"
+                "Recorded failure for URL: {0} (attempt {1})".format(
+                    url, failed_url.retry_count
+                )
             )
             return failed_url
 
         except Exception as e:
-            self.logger.error(f"Error recording failure: {e}")
+            self.logger.error("Error recording failure: {0}".format(e))
             # Return a basic failed URL object even if storage fails
             return FailedUrl(
                 url=url,
@@ -297,11 +298,11 @@ class DynamoDBFailureManager:
                 failed_url = FailedUrl.from_dynamodb_item(item)
                 failed_urls.append(failed_url)
 
-            self.logger.info(f"Found {len(failed_urls)} URLs ready for retry")
+            self.logger.info("Found {0} URLs ready for retry".format(len(failed_urls)))
             return failed_urls
 
         except Exception as e:
-            self.logger.error(f"Error getting URLs for retry: {e}")
+            self.logger.error("Error getting URLs for retry: {0}".format(e))
             return []
 
     async def mark_success(self, url: str):
@@ -315,10 +316,10 @@ class DynamoDBFailureManager:
             self.dynamodb.delete_item(
                 TableName=self.table_name, Key={"url": {"S": url}}
             )
-            self.logger.info(f"Removed successfully scraped URL: {url}")
+            self.logger.info("Removed successfully scraped URL: {0}".format(url))
 
         except Exception as e:
-            self.logger.error(f"Error marking success: {e}")
+            self.logger.error("Error marking success: {0}".format(e))
 
     async def mark_permanent_failure(self, url: str):
         """
@@ -337,10 +338,10 @@ class DynamoDBFailureManager:
                     ":zero": {"N": "0"},
                 },
             )
-            self.logger.info(f"Marked URL as permanent failure: {url}")
+            self.logger.info("Marked URL as permanent failure: {0}".format(url))
 
         except Exception as e:
-            self.logger.error(f"Error marking permanent failure: {e}")
+            self.logger.error("Error marking permanent failure: {0}".format(e))
 
     async def get_failure_statistics(self, hours: int = 24) -> Dict[str, Any]:
         """
@@ -399,7 +400,7 @@ class DynamoDBFailureManager:
             }
 
         except Exception as e:
-            self.logger.error(f"Error getting failure statistics: {e}")
+            self.logger.error("Error getting failure statistics: {0}".format(e))
             return {}
 
     async def cleanup_old_failures(self, days: int = 30):
@@ -428,10 +429,10 @@ class DynamoDBFailureManager:
                 )
                 deleted_count += 1
 
-            self.logger.info(f"Cleaned up {deleted_count} old failure records")
+            self.logger.info("Cleaned up {0} old failure records".format(deleted_count))
 
         except Exception as e:
-            self.logger.error(f"Error cleaning up old failures: {e}")
+            self.logger.error("Error cleaning up old failures: {0}".format(e))
 
     async def get_failed_url_details(self, url: str) -> Optional[FailedUrl]:
         """
@@ -454,5 +455,5 @@ class DynamoDBFailureManager:
                 return None
 
         except Exception as e:
-            self.logger.error(f"Error getting failed URL details: {e}")
+            self.logger.error("Error getting failed URL details: {0}".format(e))
             return None

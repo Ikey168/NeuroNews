@@ -30,7 +30,7 @@ try:
                                                    SourceReputationConfig)
     from database.redshift_loader import ArticleRecord, RedshiftETLProcessor
 except ImportError as e:
-    print(f"Import error: {e}")
+    print("Import error: {0}".format(e))
     print("Please ensure you're running from the project root directory")
     sys.exit(1)
 
@@ -183,7 +183,7 @@ def demonstrate_etl_pipeline(use_mock: bool = True, batch_size: int = 100):
     # Step 1: Create sample articles
     print("\n📰 Step 1: Creating sample articles for processing...")
     sample_articles = create_sample_articles()
-    print(f"Created {len(sample_articles)} sample articles")
+    print("Created {0} sample articles".format(len(sample_articles)))
 
     # Step 2: Run articles through validation pipeline
     print("\n🔍 Step 2: Processing articles through data validation pipeline...")
@@ -221,7 +221,7 @@ def demonstrate_etl_pipeline(use_mock: bool = True, batch_size: int = 100):
                 print(f"  ❌ {article['title'][:50]}... (Rejected)")
 
         print(
-            f"\n✅ Validation complete: {len(validated_articles)}/{len(sample_articles)} articles accepted"
+            "\n✅ Validation complete: {0}/{1} articles accepted".format(len(validated_articles), len(sample_articles))
         )
 
         # Show validation statistics
@@ -229,7 +229,7 @@ def demonstrate_etl_pipeline(use_mock: bool = True, batch_size: int = 100):
         print(f"📊 Validation Stats: {stats['acceptance_rate']:.1f}% acceptance rate")
 
     except Exception as e:
-        logger.error(f"Validation pipeline error: {e}")
+        logger.error("Validation pipeline error: {0}".format(e))
         print("⚠️  Using raw articles without validation")
         validated_articles = sample_articles
 
@@ -268,12 +268,12 @@ def demonstrate_etl_pipeline(use_mock: bool = True, batch_size: int = 100):
                 print("✅ Schema initialized")
 
             except Exception as e:
-                logger.error(f"Redshift connection failed: {e}")
+                logger.error("Redshift connection failed: {0}".format(e))
                 print("Using mock processor instead...")
                 etl_processor = create_mock_redshift_processor()
 
     # Step 4: Load articles into Redshift
-    print(f"\n📦 Step 4: Loading {len(validated_articles)} articles into Redshift...")
+    print("\n📦 Step 4: Loading {0} articles into Redshift...".format(len(validated_articles)))
 
     try:
         if use_mock:
@@ -285,7 +285,7 @@ def demonstrate_etl_pipeline(use_mock: bool = True, batch_size: int = 100):
             )
 
         print("✅ Batch load completed!")
-        print(f"📊 Load Statistics:")
+        print("📊 Load Statistics:")
         print(f"   • Total Articles: {load_stats['total_articles']}")
         print(f"   • Successfully Loaded: {load_stats['loaded_count']}")
         print(f"   • Failed: {load_stats['failed_count']}")
@@ -299,11 +299,11 @@ def demonstrate_etl_pipeline(use_mock: bool = True, batch_size: int = 100):
         if load_stats.get("errors"):
             print(f"⚠️  Errors encountered: {len(load_stats['errors'])}")
             for error in load_stats["errors"][:3]:  # Show first 3 errors
-                print(f"   • {error}")
+                print("   • {0}".format(error))
 
     except Exception as e:
-        logger.error(f"Batch loading failed: {e}")
-        print(f"❌ Batch loading failed: {e}")
+        logger.error("Batch loading failed: {0}".format(e))
+        print("❌ Batch loading failed: {0}".format(e))
 
     # Step 5: Get database statistics
     print("\n📈 Step 5: Retrieving database statistics...")
@@ -340,8 +340,8 @@ def demonstrate_etl_pipeline(use_mock: bool = True, batch_size: int = 100):
             print(f"   • {item['source']}: {item['count']} articles")
 
     except Exception as e:
-        logger.error(f"Statistics retrieval failed: {e}")
-        print(f"❌ Statistics retrieval failed: {e}")
+        logger.error("Statistics retrieval failed: {0}".format(e))
+        print("❌ Statistics retrieval failed: {0}".format(e))
 
     # Step 6: Cleanup
     print("\n🧹 Step 6: Cleanup...")
@@ -351,7 +351,7 @@ def demonstrate_etl_pipeline(use_mock: bool = True, batch_size: int = 100):
             etl_processor.close()
         print("✅ Database connection closed")
     except Exception as e:
-        logger.error(f"Cleanup failed: {e}")
+        logger.error("Cleanup failed: {0}".format(e))
 
     print("\n🎉 ETL Pipeline Demo Complete!")
     print("=" * 60)

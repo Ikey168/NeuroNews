@@ -25,7 +25,7 @@ async def test_database_connection():
             logger.info("✅ Database connection test passed")
             return True
     except Exception as e:
-        logger.error(f"❌ Database connection test failed: {e}")
+        logger.error("❌ Database connection test failed: {0}".format(e))
         return False
 
 
@@ -49,7 +49,7 @@ async def test_redis_connection():
         logger.info("✅ Redis connection test passed")
         return True
     except Exception as e:
-        logger.error(f"❌ Redis connection test failed: {e}")
+        logger.error("❌ Redis connection test failed: {0}".format(e))
         return False
 
 
@@ -92,7 +92,7 @@ async def test_s3_connection():
         logger.info("✅ S3/MinIO connection test passed")
         return True
     except Exception as e:
-        logger.error(f"❌ S3/MinIO connection test failed: {e}")
+        logger.error("❌ S3/MinIO connection test failed: {0}".format(e))
         return False
 
 
@@ -108,7 +108,7 @@ async def run_simplified_tests():
     success_count = sum([db_test, redis_test, s3_test])
     total_tests = 3
 
-    logger.info(f"📊 Test Results: {success_count}/{total_tests} passed")
+    logger.info("📊 Test Results: {0}/{1} passed".format(success_count, total_tests))
 
     if success_count == total_tests:
         logger.info("🎉 All integration tests passed!")

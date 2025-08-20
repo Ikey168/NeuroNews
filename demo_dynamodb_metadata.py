@@ -230,7 +230,7 @@ class DynamoDBMetadataDemo:
             print("✅ Enable full-text search capabilities")
 
         except Exception as e:
-            logger.error(f"Demo failed: {e}")
+            logger.error("Demo failed: {0}".format(e))
             raise
 
     async def _demo_initialization(self):
@@ -249,9 +249,9 @@ class DynamoDBMetadataDemo:
 
         setup_time = (time.time() - start_time) * 1000
 
-        print(f"✅ Manager initialized successfully ({setup_time:.2f}ms)")
-        print(f"📊 Table: {self.config.table_name}")
-        print(f"🌍 Region: {self.config.region}")
+        print("✅ Manager initialized successfully ({0}ms)".format(setup_time:.2f))
+        print("📊 Table: {0}".format(self.config.table_name))
+        print("🌍 Region: {0}".format(self.config.region))
         print(
             f"🔍 Full-text search: {'Enabled' if self.config.enable_full_text_search else 'Disabled'}"
         )
@@ -271,12 +271,12 @@ class DynamoDBMetadataDemo:
 
         indexing_time = (time.time() - start_time) * 1000
 
-        print(f"✅ Article indexed: {metadata.article_id}")
-        print(f"📝 Title: {metadata.title}")
-        print(f"📰 Source: {metadata.source}")
-        print(f"📅 Published: {metadata.published_date}")
+        print("✅ Article indexed: {0}".format(metadata.article_id))
+        print("📝 Title: {0}".format(metadata.title))
+        print("📰 Source: {0}".format(metadata.source))
+        print("📅 Published: {0}".format(metadata.published_date))
         print(f"🏷️ Tags: {', '.join(metadata.tags)}")
-        print(f"⚡ Indexing time: {indexing_time:.2f}ms")
+        print("⚡ Indexing time: {0}ms".format(indexing_time:.2f))
 
         # Demo batch indexing
         print("\n📚 Batch indexing multiple articles...")
@@ -287,17 +287,17 @@ class DynamoDBMetadataDemo:
 
         batch_time = (time.time() - start_time) * 1000
 
-        print(f"✅ Batch indexing completed")
+        print("✅ Batch indexing completed")
         print(f"📊 Total articles: {batch_result['total_articles']}")
         print(f"✅ Successfully indexed: {batch_result['indexed_count']}")
         print(f"❌ Failed: {batch_result['failed_count']}")
-        print(f"⚡ Batch time: {batch_time:.2f}ms")
+        print("⚡ Batch time: {0}ms".format(batch_time:.2f))
         print(f"🚀 Indexing rate: {batch_result['indexing_rate']:.1f} articles/second")
 
         # Show tokenization example
-        print(f"\n🔤 Title tokenization example:")
+        print("\n🔤 Title tokenization example:")
         print(f"Original: '{metadata.title}'")
-        print(f"Tokens: {metadata.title_tokens}")
+        print("Tokens: {0}".format(metadata.title_tokens))
 
     async def _demo_query_api(self):
         """Demo query API for quick lookups."""
@@ -313,8 +313,8 @@ class DynamoDBMetadataDemo:
         query_time = (time.time() - start_time) * 1000
 
         if article:
-            print(f"✅ Found article: {article.title}")
-            print(f"⚡ Query time: {query_time:.2f}ms")
+            print("✅ Found article: {0}".format(article.title))
+            print("⚡ Query time: {0}ms".format(query_time:.2f))
         else:
             print("❌ Article not found")
 
@@ -327,10 +327,10 @@ class DynamoDBMetadataDemo:
         query_time = (time.time() - start_time) * 1000
 
         print(f"✅ Found {source_result.count} articles from '{source}'")
-        print(f"⚡ Query time: {query_time:.2f}ms")
+        print("⚡ Query time: {0}ms".format(query_time:.2f))
 
         for article in source_result.items[:3]:  # Show first 3
-            print(f"  📄 {article.title}")
+            print("  📄 {0}".format(article.title))
 
         # Query by date range
         print("\n📅 Get articles by date range...")
@@ -345,8 +345,8 @@ class DynamoDBMetadataDemo:
         )
         query_time = (time.time() - start_time) * 1000
 
-        print(f"✅ Found {date_result.count} articles from {start_date} to {end_date}")
-        print(f"⚡ Query time: {query_time:.2f}ms")
+        print("✅ Found {0} articles from {1} to {2}".format(date_result.count, start_date, end_date))
+        print("⚡ Query time: {0}ms".format(query_time:.2f))
 
         # Query by tags
         print("\n🏷️ Get articles by tags...")
@@ -357,7 +357,7 @@ class DynamoDBMetadataDemo:
         query_time = (time.time() - start_time) * 1000
 
         print(f"✅ Found {tag_result.count} articles with tags: {', '.join(tags)}")
-        print(f"⚡ Query time: {query_time:.2f}ms")
+        print("⚡ Query time: {0}ms".format(query_time:.2f))
 
         # Query by category
         print("\n📂 Get articles by category...")
@@ -368,7 +368,7 @@ class DynamoDBMetadataDemo:
         query_time = (time.time() - start_time) * 1000
 
         print(f"✅ Found {category_result.count} articles in '{category}' category")
-        print(f"⚡ Query time: {query_time:.2f}ms")
+        print("⚡ Query time: {0}ms".format(query_time:.2f))
 
     async def _demo_full_text_search(self):
         """Demo full-text search capabilities."""
@@ -389,12 +389,12 @@ class DynamoDBMetadataDemo:
         search_time = (time.time() - start_time) * 1000
 
         print(f"✅ Search completed: '{search_query.query_text}'")
-        print(f"📊 Found {search_result.count} matching articles")
-        print(f"⚡ Search time: {search_time:.2f}ms")
+        print("📊 Found {0} matching articles".format(search_result.count))
+        print("⚡ Search time: {0}ms".format(search_time:.2f))
         print(f"🔤 Search tokens: {search_result.query_info.get('tokens', [])}")
 
         for i, article in enumerate(search_result.items[:3], 1):
-            print(f"  {i}. {article.title} (Source: {article.source})")
+            print("  {0}. {1} (Source: {2})".format(i, article.title, article.source))
 
         # Search with filters
         print("\n🔍 Search with filters...")
@@ -416,10 +416,10 @@ class DynamoDBMetadataDemo:
         filtered_result = await self.manager.search_articles(filtered_search)
         search_time = (time.time() - start_time) * 1000
 
-        print(f"✅ Filtered search completed")
-        print(f"📊 Found {filtered_result.count} matching articles")
-        print(f"⚡ Search time: {search_time:.2f}ms")
-        print(f"🔧 Filters applied: category=Technology, date range")
+        print("✅ Filtered search completed")
+        print("📊 Found {0} matching articles".format(filtered_result.count))
+        print("⚡ Search time: {0}ms".format(search_time:.2f))
+        print("🔧 Filters applied: category=Technology, date range")
 
         # Exact search mode
         print("\n🔍 Exact search mode...")
@@ -434,9 +434,9 @@ class DynamoDBMetadataDemo:
         exact_result = await self.manager.search_articles(exact_search)
         search_time = (time.time() - start_time) * 1000
 
-        print(f"✅ Exact search completed")
-        print(f"📊 Found {exact_result.count} exact matches")
-        print(f"⚡ Search time: {search_time:.2f}ms")
+        print("✅ Exact search completed")
+        print("📊 Found {0} exact matches".format(exact_result.count))
+        print("⚡ Search time: {0}ms".format(search_time:.2f))
 
         # Starts-with search mode
         print("\n🔍 Starts-with search mode...")
@@ -451,9 +451,9 @@ class DynamoDBMetadataDemo:
         prefix_result = await self.manager.search_articles(prefix_search)
         search_time = (time.time() - start_time) * 1000
 
-        print(f"✅ Prefix search completed")
+        print("✅ Prefix search completed")
         print(f"📊 Found {prefix_result.count} articles starting with 'AI'")
-        print(f"⚡ Search time: {search_time:.2f}ms")
+        print("⚡ Search time: {0}ms".format(search_time:.2f))
 
     async def _demo_system_integration(self):
         """Demo integration with existing systems."""
@@ -478,10 +478,10 @@ class DynamoDBMetadataDemo:
         s3_result = await integrate_with_s3_storage(s3_metadata, self.manager)
         integration_time = (time.time() - start_time) * 1000
 
-        print(f"✅ S3 integration successful")
-        print(f"📄 Article: {s3_result.title}")
-        print(f"🗂️ S3 Key: {s3_result.s3_key}")
-        print(f"⚡ Integration time: {integration_time:.2f}ms")
+        print("✅ S3 integration successful")
+        print("📄 Article: {0}".format(s3_result.title))
+        print("🗂️ S3 Key: {0}".format(s3_result.s3_key))
+        print("⚡ Integration time: {0}ms".format(integration_time:.2f))
 
         # Redshift integration
         print("\n📊 Redshift ETL Integration...")
@@ -498,7 +498,7 @@ class DynamoDBMetadataDemo:
         integration_time = (time.time() - start_time) * 1000
 
         print(f"✅ Redshift integration: {'Success' if redshift_success else 'Failed'}")
-        print(f"⚡ Integration time: {integration_time:.2f}ms")
+        print("⚡ Integration time: {0}ms".format(integration_time:.2f))
 
         # Scraper sync
         print("\n🕷️ Scraper Sync...")
@@ -521,11 +521,11 @@ class DynamoDBMetadataDemo:
         sync_result = await sync_metadata_from_scraper(scraper_articles, self.manager)
         sync_time = (time.time() - start_time) * 1000
 
-        print(f"✅ Scraper sync completed")
+        print("✅ Scraper sync completed")
         print(
             f"📊 Articles synced: {sync_result['indexed_count']}/{sync_result['total_articles']}"
         )
-        print(f"⚡ Sync time: {sync_time:.2f}ms")
+        print("⚡ Sync time: {0}ms".format(sync_time:.2f))
 
     async def _demo_performance_monitoring(self):
         """Demo performance monitoring and statistics."""
@@ -539,23 +539,23 @@ class DynamoDBMetadataDemo:
         stats = await self.manager.get_metadata_statistics()
         stats_time = (time.time() - start_time) * 1000
 
-        print(f"✅ Statistics generated ({stats_time:.2f}ms)")
+        print("✅ Statistics generated ({0}ms)".format(stats_time:.2f))
         print(f"📄 Total articles: {stats['total_articles']}")
         print(f"🔬 Sample size: {stats['sample_size']}")
 
-        print(f"\n📰 Top sources:")
+        print("\n📰 Top sources:")
         for source, count in list(stats["source_distribution"].items())[:5]:
-            print(f"  • {source}: {count} articles")
+            print("  • {0}: {1} articles".format(source, count))
 
-        print(f"\n📂 Categories:")
+        print("\n📂 Categories:")
         for category, count in stats["category_distribution"].items():
-            print(f"  • {category}: {count} articles")
+            print("  • {0}: {1} articles".format(category, count))
 
-        print(f"\n📅 Monthly distribution:")
+        print("\n📅 Monthly distribution:")
         for month, count in list(stats["monthly_distribution"].items())[:6]:
-            print(f"  • {month}: {count} articles")
+            print("  • {0}: {1} articles".format(month, count))
 
-        print(f"\n🏗️ Table info:")
+        print("\n🏗️ Table info:")
         print(f"  • Table: {stats['table_info']['table_name']}")
         print(f"  • Region: {stats['table_info']['region']}")
         print(
@@ -574,7 +574,7 @@ class DynamoDBMetadataDemo:
         health = await self.manager.health_check()
         health_time = (time.time() - start_time) * 1000
 
-        print(f"✅ Health check completed ({health_time:.2f}ms)")
+        print("✅ Health check completed ({0}ms)".format(health_time:.2f))
         print(f"🔋 Status: {health['status']}")
         print(f"📊 Table status: {health.get('table_status', 'Unknown')}")
         print(f"📖 Read capacity: {health.get('read_capacity', 'N/A')}")
@@ -599,15 +599,15 @@ class DynamoDBMetadataDemo:
         update_time = (time.time() - start_time) * 1000
 
         print(f"✅ Update test: {'Success' if update_success else 'Failed'}")
-        print(f"⚡ Update time: {update_time:.2f}ms")
+        print("⚡ Update time: {0}ms".format(update_time:.2f))
 
         # Verify update
         updated_article = await self.manager.get_article_by_id(test_article_id)
         if updated_article:
             print(
-                f"✅ Verified updated sentiment score: {updated_article.sentiment_score}"
+                "✅ Verified updated sentiment score: {0}".format(updated_article.sentiment_score)
             )
-            print(f"✅ Verified updated quality: {updated_article.content_quality}")
+            print("✅ Verified updated quality: {0}".format(updated_article.content_quality))
 
 
 class MockDynamoDBManager:

@@ -85,7 +85,7 @@ class TestArticleRecord(unittest.TestCase):
 
         for date_str in test_cases:
             result = ArticleRecord._parse_datetime(date_str)
-            self.assertIsNotNone(result, f"Failed to parse: {date_str}")
+            self.assertIsNotNone(result, "Failed to parse: {0}".format(date_str))
             self.assertIsInstance(result, datetime)
 
     def test_id_generation(self):
@@ -131,10 +131,10 @@ class TestRedshiftETLProcessor(unittest.TestCase):
 
         self.sample_articles = [
             {
-                "id": f"article_{i}",
-                "url": f"https://example.com/article-{i}",
-                "title": f"Test Article {i}",
-                "content": f"This is test article content {i} with sufficient length.",
+                "id": "article_{0}".format(i),
+                "url": "https://example.com/article-{0}".format(i),
+                "title": "Test Article {0}".format(i),
+                "content": "This is test article content {0} with sufficient length.".format(i),
                 "source": "example.com",
                 "validation_score": 80.0 + i,
                 "content_quality": "high",

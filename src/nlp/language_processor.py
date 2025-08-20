@@ -24,7 +24,7 @@ class LanguageDetector:
                 "is",
                 "in",
                 "to",
-                "of",
+                "o",
                 "a",
                 "that",
                 "it",
@@ -93,7 +93,7 @@ class LanguageDetector:
                 "mit",
                 "sich",
                 "des",
-                "auf",
+                "au",
                 "für",
                 "ist",
                 "im",
@@ -256,8 +256,8 @@ class LanguageDetector:
         """
         if not text or len(text.strip()) < min_length:
             logger.warning(
-                f"Text too short for reliable language detection: {
-                    len(text)} chars"
+                "Text too short for reliable language detection: {0} chars".format(
+                    len(text))
             )
             return {
                 "language": "unknown",
@@ -301,7 +301,7 @@ class LanguageDetector:
         # If confidence is too low, still return the best guess but mark as low
         # confidence
         if confidence < 0.1:
-            logger.warning(f"Low confidence language detection: {confidence}")
+            logger.warning("Low confidence language detection: {0}".format(confidence))
             return {
                 "language": "unknown",
                 "confidence": confidence,
@@ -311,8 +311,8 @@ class LanguageDetector:
             }
 
         logger.info(
-            f"Detected language: {best_language} (confidence: {
-                confidence:.2f})"
+            "Detected language: {0} (confidence: {1})".format(best_language, 
+                confidence:.2f)
         )
         return {
             "language": best_language,
@@ -474,7 +474,7 @@ class AWSTranslateService:
             }
 
         # Check cache first
-        cache_key = f"{source_language}:{target_language}:{hash(text[:100])}"
+        cache_key = "{0}:{1}:{2}".format(source_language, target_language, hash(text[))
         if cache_key in self._translation_cache:
             logger.info("Using cached translation")
             return self._translation_cache[cache_key]
@@ -482,7 +482,7 @@ class AWSTranslateService:
         # Truncate text if too long
         if len(text) > max_length:
             logger.warning(
-                f"Text truncated from {len(text)} to {max_length} characters"
+                "Text truncated from {0} to {1} characters".format(len(text), max_length)
             )
             text = text[:max_length]
 
@@ -505,12 +505,12 @@ class AWSTranslateService:
             self._translation_cache[cache_key] = result
 
             logger.info(
-                f"Successfully translated text from {source_language} to {target_language}"
+                "Successfully translated text from {0} to {1}".format(source_language, target_language)
             )
             return result
 
         except (BotoCoreError, ClientError, Exception) as e:
-            error_msg = f"AWS Translate error: {str(e)}"
+            error_msg = "AWS Translate error: {0}".format(str(e))
             logger.error(error_msg)
             return {
                 "translated_text": text,  # Return original text on error
@@ -526,7 +526,7 @@ class AWSTranslateService:
             response = self.translate_client.list_languages()
             return [lang["LanguageCode"] for lang in response["Languages"]]
         except (BotoCoreError, ClientError) as e:
-            logger.error(f"Error fetching supported languages: {e}")
+            logger.error("Error fetching supported languages: {0}".format(e))
             return [
                 "en",
                 "es",
@@ -571,7 +571,7 @@ class AWSTranslateService:
                 }
 
         except (BotoCoreError, ClientError) as e:
-            error_msg = f"AWS Comprehend error: {str(e)}"
+            error_msg = "AWS Comprehend error: {0}".format(str(e))
             logger.error(error_msg)
             return {"language_code": "en", "confidence": 0.5, "error": error_msg}
 
@@ -678,14 +678,14 @@ class TranslationQualityChecker:
             min_ratio, max_ratio = expected_ratios[lang_pair]
             if length_ratio < min_ratio:
                 issues.append(
-                    f"Translation too short (ratio: {
-                        length_ratio:.2f})"
+                    "Translation too short (ratio: {0})".format(
+                        length_ratio:.2f)
                 )
                 recommendations.append("Check for truncated translation")
             elif length_ratio > max_ratio:
                 issues.append(
-                    f"Translation too long (ratio: {
-                        length_ratio:.2f})"
+                    "Translation too long (ratio: {0})".format(
+                        length_ratio:.2f)
                 )
                 recommendations.append("Check for repeated or expanded content")
 

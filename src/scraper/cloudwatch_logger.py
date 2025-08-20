@@ -81,11 +81,11 @@ class CloudWatchLogger:
         """Create CloudWatch log group if it doesn't exist."""
         try:
             self.logs_client.create_log_group(logGroupName=self.log_group)
-            self.logger.info(f"Created CloudWatch log group: {self.log_group}")
+            self.logger.info("Created CloudWatch log group: {0}".format(self.log_group))
         except self.logs_client.exceptions.ResourceAlreadyExistsException:
-            self.logger.debug(f"Log group already exists: {self.log_group}")
+            self.logger.debug("Log group already exists: {0}".format(self.log_group))
         except Exception as e:
-            self.logger.error(f"Error creating log group: {e}")
+            self.logger.error("Error creating log group: {0}".format(e))
 
     async def log_scraping_attempt(self, metrics: ScrapingMetrics):
         """
@@ -151,7 +151,7 @@ class CloudWatchLogger:
             )
 
         except Exception as e:
-            self.logger.error(f"Error sending log entry to CloudWatch: {e}")
+            self.logger.error("Error sending log entry to CloudWatch: {0}".format(e))
 
     async def _send_cloudwatch_metrics(self, metrics: ScrapingMetrics):
         """Send metrics to CloudWatch for monitoring and alerting."""
@@ -274,7 +274,7 @@ class CloudWatchLogger:
             )
 
         except Exception as e:
-            self.logger.error(f"Error sending metrics to CloudWatch: {e}")
+            self.logger.error("Error sending metrics to CloudWatch: {0}".format(e))
 
     async def _send_batch_metrics(self):
         """Send aggregated metrics from buffer."""
@@ -322,7 +322,7 @@ class CloudWatchLogger:
             )
 
         except Exception as e:
-            self.logger.error(f"Error sending batch metrics: {e}")
+            self.logger.error("Error sending batch metrics: {0}".format(e))
 
     def _get_domain_from_url(self, url: str) -> str:
         """Extract domain from URL for grouping metrics."""
@@ -366,7 +366,7 @@ class CloudWatchLogger:
                 return 0.0
 
         except Exception as e:
-            self.logger.error(f"Error getting success rate: {e}")
+            self.logger.error("Error getting success rate: {0}".format(e))
             return 0.0
 
     async def get_failure_count(self, hours: int = 1) -> int:
@@ -399,7 +399,7 @@ class CloudWatchLogger:
                 return 0
 
         except Exception as e:
-            self.logger.error(f"Error getting failure count: {e}")
+            self.logger.error("Error getting failure count: {0}".format(e))
             return 0
 
     async def create_alarm(
@@ -434,14 +434,16 @@ class CloudWatchLogger:
                 Threshold=threshold,
                 ActionsEnabled=True,
                 AlarmActions=alarm_actions,
-                AlarmDescription=f"Alarm for {metric_name} in NeuroNews scraper",
+                AlarmDescription="Alarm for {0} in NeuroNews scraper".format(
+                    metric_name
+                ),
                 Unit="Count",
             )
 
-            self.logger.info(f"Created CloudWatch alarm: {alarm_name}")
+            self.logger.info("Created CloudWatch alarm: {0}".format(alarm_name))
 
         except Exception as e:
-            self.logger.error(f"Error creating alarm: {e}")
+            self.logger.error("Error creating alarm: {0}".format(e))
 
     async def flush_metrics(self):
         """Flush any remaining metrics in buffer."""

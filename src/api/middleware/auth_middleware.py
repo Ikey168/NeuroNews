@@ -69,7 +69,7 @@ class RoleBasedAccessMiddleware(BaseHTTPMiddleware):
         method = request.method
 
         # Check if route is protected
-        route_key = f"{method} {path}"
+        route_key = "{0} {1}".format(method, path)
         required_roles = self.protected_routes.get(route_key)
 
         if required_roles:

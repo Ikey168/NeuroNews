@@ -295,7 +295,7 @@ def create_test_app() -> FastAPI:
 
 def create_auth_token(role: str, user_id: str = "test_user") -> str:
     """Create test JWT token."""
-    token_data = {"sub": user_id, "email": f"{role}@test.com", "role": role}
+    token_data = {"sub": user_id, "email": "{0}@test.com".format(role), "role": role}
     return auth_handler.create_access_token(token_data)
 
 

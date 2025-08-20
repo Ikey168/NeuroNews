@@ -128,7 +128,9 @@ class RateLimitStore:
                 decode_responses=True,
             )
         except Exception as e:
-            logger.warning(f"Redis connection failed: {e}, falling back to memory")
+            logger.warning(
+                "Redis connection failed: {0}, falling back to memory".format(e)
+            )
             self.use_redis = False
             return None
 
@@ -145,9 +147,9 @@ class RateLimitStore:
         now = time.time()
 
         # Store in time-based windows
-        minute_key = f"rate_limit:{user_id}:minute:{int(now // 60)}"
-        hour_key = f"rate_limit:{user_id}:hour:{int(now // 3600)}"
-        day_key = f"rate_limit:{user_id}:day:{int(now // 86400)}"
+        minute_key = "rate_limit:{0}:minute:{1}".format(user_id, int(now // 60))
+        hour_key = "rate_limit:{0}:hour:{1}".format(user_id, int(now // 3600))
+        day_key = "rate_limit:{0}:day:{1}".format(user_id, int(now // 86400))
 
         # Increment counters with expiration
         pipe.incr(minute_key)
@@ -160,7 +162,7 @@ class RateLimitStore:
         pipe.expire(day_key, 172800)  # Keep for 2 days
 
         # Store detailed metrics
-        metrics_key = f"metrics:{user_id}"
+        metrics_key = "metrics:{0}".format(user_id)
         metrics_data = {
             "ip": metrics.ip_address,
             "endpoint": metrics.endpoint,
@@ -204,9 +206,9 @@ class RateLimitStore:
         """Get request counts from Redis."""
         now = time.time()
 
-        minute_key = f"rate_limit:{user_id}:minute:{int(now // 60)}"
-        hour_key = f"rate_limit:{user_id}:hour:{int(now // 3600)}"
-        day_key = f"rate_limit:{user_id}:day:{int(now // 86400)}"
+        minute_key = "rate_limit:{0}:minute:{1}".format(user_id, int(now // 60))
+        hour_key = "rate_limit:{0}:hour:{1}".format(user_id, int(now // 3600))
+        day_key = "rate_limit:{0}:day:{1}".format(user_id, int(now // 86400))
 
         pipe = self.redis_client.pipeline()
         pipe.get(minute_key)
@@ -251,7 +253,7 @@ class RateLimitStore:
 
     async def _increment_concurrent_redis(self, user_id: str) -> int:
         """Increment concurrent counter in Redis."""
-        key = f"concurrent:{user_id}"
+        key = "concurrent:{0}".format(user_id)
         new_count = await asyncio.get_event_loop().run_in_executor(
             None, self.redis_client.incr, key
         )
@@ -262,7 +264,7 @@ class RateLimitStore:
 
     async def _decrement_concurrent_redis(self, user_id: str):
         """Decrement concurrent counter in Redis."""
-        key = f"concurrent:{user_id}"
+        key = "concurrent:{0}".format(user_id)
         await asyncio.get_event_loop().run_in_executor(
             None, self.redis_client.decr, key
         )
@@ -324,7 +326,7 @@ class SuspiciousActivityDetector:
 
     async def _get_recent_metrics_redis(self, user_id: str) -> List[RequestMetrics]:
         """Get recent metrics from Redis."""
-        metrics_key = f"metrics:{user_id}"
+        metrics_key = "metrics:{0}".format(user_id)
         try:
             raw_metrics = await asyncio.get_event_loop().run_in_executor(
                 None, self.store.redis_client.lrange, metrics_key, 0, 100
@@ -345,7 +347,7 @@ class SuspiciousActivityDetector:
                 )
             return metrics
         except Exception as e:
-            logger.error(f"Error getting metrics from Redis: {e}")
+            logger.error("Error getting metrics from Redis: {0}".format(e))
             return []
 
     def _get_recent_metrics_memory(self, user_id: str) -> List[RequestMetrics]:
@@ -511,7 +513,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return response
 
         except Exception as e:
-            logger.error(f"Error in rate limit middleware: {e}")
+            logger.error("Error in rate limit middleware: {0}".format(e))
             raise
         finally:
             # Always decrement concurrent counter

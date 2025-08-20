@@ -87,7 +87,7 @@ class CNNSpider(scrapy.Spider):
             or response.css("span.metadata__byline__author::text").get()
             or response.css('meta[name="author"]::attr(content)').get()
         )
-        item["author"] = author.strip() if author else "CNN Staff"
+        item["author"] = author.strip() if author else "CNN Sta"
 
         # Extract category from URL or page structure
         category = self._extract_category(response.url, response)

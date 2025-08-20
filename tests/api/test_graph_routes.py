@@ -136,7 +136,7 @@ def test_get_event_timeline(
 ):
     mock_graph_builder_methods._execute_traversal.return_value = [
         {
-            "event_name": "AI Conf",
+            "event_name": "AI Con",
             "date": datetime.now(timezone.utc).isoformat(),
             "location": "Online",
         }
@@ -147,7 +147,7 @@ def test_get_event_timeline(
     data = response.json()
     assert data["topic"] == "AI"
     assert len(data["events"]) > 0
-    assert data["events"][0]["name"] == "AI Conf"
+    assert data["events"][0]["name"] == "AI Con"
     mock_graph_builder_methods._execute_traversal.assert_called()
 
 
@@ -160,7 +160,7 @@ def test_event_timeline_date_filtering(
     end_date_str = "2024-01-31T23:59:59Z"
     with TestClient(app_for_test) as client:
         response = client.get(
-            f"/graph/event_timeline?topic=AI&start_date={start_date_str}&end_date={end_date_str}"
+            "/graph/event_timeline?topic=AI&start_date={0}&end_date={1}".format(start_date_str, end_date_str)
         )
 
     assert response.status_code == 200, response.json()

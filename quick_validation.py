@@ -30,7 +30,7 @@ def test_basic_functionality():
             max_concurrent_tasks=5, batch_size=10, adaptive_batching=True
         )
         print(
-            f"✅ Created optimization config: {config.max_concurrent_tasks} concurrent tasks"
+            "✅ Created optimization config: {0} concurrent tasks".format(config.max_concurrent_tasks)
         )
 
         # Test pipeline creation
@@ -44,15 +44,15 @@ def test_basic_functionality():
         # Create test data
         test_articles = [
             {
-                "title": f"Test Article {i}",
-                "url": f"https://test.com/article/{i}",
-                "content": f"Test content for article {i}. " * 20,
+                "title": "Test Article {0}".format(i),
+                "url": "https://test.com/article/{0}".format(i),
+                "content": "Test content for article {0}. ".format(i) * 20,
                 "source": "test_source",
                 "published_date": "2024-01-01",
             }
             for i in range(10)
         ]
-        print(f"✅ Generated {len(test_articles)} test articles")
+        print("✅ Generated {0} test articles".format(len(test_articles)))
 
         # Test async processing
         async def test_processing():
@@ -88,9 +88,9 @@ def test_basic_functionality():
         # Test performance stats
         try:
             stats = pipeline.get_performance_stats()
-            print(f"✅ Retrieved performance stats: {len(stats)} metrics")
+            print("✅ Retrieved performance stats: {0} metrics".format(len(stats)))
         except Exception as e:
-            print(f"⚠️  Could not retrieve stats: {e}")
+            print("⚠️  Could not retrieve stats: {0}".format(e))
 
         # Cleanup
         pipeline.cleanup()
@@ -101,11 +101,11 @@ def test_basic_functionality():
         return True
 
     except ImportError as e:
-        print(f"❌ Import error: {e}")
+        print("❌ Import error: {0}".format(e))
         print("⚠️  This might be due to missing dependencies or path issues")
         return False
     except Exception as e:
-        print(f"❌ Unexpected error: {e}")
+        print("❌ Unexpected error: {0}".format(e))
         import traceback
 
         traceback.print_exc()
@@ -132,7 +132,7 @@ def test_scrapy_integration():
         # Test settings configuration
         test_settings = {"TEST_SETTING": "test_value"}
         optimized_settings = configure_optimized_settings(test_settings)
-        print(f"✅ Generated optimized settings with {len(optimized_settings)} options")
+        print("✅ Generated optimized settings with {0} options".format(len(optimized_settings)))
 
         # Verify key settings
         required_settings = [
@@ -144,18 +144,18 @@ def test_scrapy_integration():
 
         for setting in required_settings:
             if setting in optimized_settings:
-                print(f"✅ Found required setting: {setting}")
+                print("✅ Found required setting: {0}".format(setting))
             else:
-                print(f"⚠️  Missing setting: {setting}")
+                print("⚠️  Missing setting: {0}".format(setting))
 
         print("✅ Scrapy integration test completed successfully")
         return True
 
     except ImportError as e:
-        print(f"❌ Import error: {e}")
+        print("❌ Import error: {0}".format(e))
         return False
     except Exception as e:
-        print(f"❌ Unexpected error: {e}")
+        print("❌ Unexpected error: {0}".format(e))
         return False
 
 

@@ -61,7 +61,7 @@ class PlaywrightNewsSpider(scrapy.Spider):
             for selector in link_selectors:
                 links = await page.query_selector_all(selector)
                 for link in links:
-                    href = await link.get_attribute("href")
+                    href = await link.get_attribute("hre")
                     if href:
                         # Convert relative URLs to absolute
                         if href.startswith("/"):
@@ -74,7 +74,7 @@ class PlaywrightNewsSpider(scrapy.Spider):
                 # Get all links
                 all_links = await page.query_selector_all("a")
                 for link in all_links:
-                    href = await link.get_attribute("href")
+                    href = await link.get_attribute("hre")
                     if href:
                         # Filter for likely article URLs
                         if any(

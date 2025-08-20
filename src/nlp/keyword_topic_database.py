@@ -40,10 +40,11 @@ class KeywordTopicDatabase:
                 success_count += 1
             except Exception as e:
                 error_count += 1
-                errors.append(f"Article {result.article_id}: {str(e)}")
+                errors.append("Article {0}: {1}".format(result.article_id, str(e)))
                 logger.error(
-                    f"Error storing extraction result for {
-                        result.article_id}: {e}"
+                    "Error storing extraction result for {0}: {1}".format(
+                        result.article_id, e
+                    )
                 )
 
         return {
@@ -135,7 +136,7 @@ class KeywordTopicDatabase:
             LIMIT %s OFFSET %s
         """
 
-        params = [f"%{topic_name}%", min_probability, limit, offset]
+        params = ["%{0}%".format(topic_name), min_probability, limit, offset]
         results = await self.db.execute_query(query, params)
 
         articles = []
@@ -176,7 +177,7 @@ class KeywordTopicDatabase:
             LIMIT %s OFFSET %s
         """
 
-        params = [f"%{keyword}%", limit, offset]
+        params = ["%{0}%".format(keyword), limit, offset]
         results = await self.db.execute_query(query, params)
 
         articles = []
@@ -323,7 +324,7 @@ class KeywordTopicDatabase:
         # Content search
         if search_term:
             conditions.append("(title ILIKE %s OR content ILIKE %s)")
-            search_pattern = f"%{search_term}%"
+            search_pattern = "%{0}%".format(search_term)
             params.extend([search_pattern, search_pattern])
 
         # Topic filter
@@ -334,20 +335,20 @@ class KeywordTopicDatabase:
             conditions.append(
                 "CAST(JSON_EXTRACT_PATH_TEXT(dominant_topic, 'probability') AS FLOAT) >= %s"
             )
-            params.extend([f"%{topic_filter}%", min_topic_probability])
+            params.extend(["%{0}%".format(topic_filter), min_topic_probability])
 
         # Keyword filter
         if keyword_filter:
             conditions.append(
                 "JSON_EXTRACT_PATH_TEXT(keywords, '$[*].keyword') ILIKE %s"
             )
-            params.append(f"%{keyword_filter}%")
+            params.append("%{0}%".format(keyword_filter))
 
         # Base query
         where_clause = " AND ".join(conditions) if conditions else "1=1"
 
         # Count query
-        count_query = f"""
+        count_query = """
             SELECT COUNT(*)
             FROM news_articles
             WHERE {where_clause}
@@ -357,7 +358,7 @@ class KeywordTopicDatabase:
         total_count = count_results[0][0] if count_results else 0
 
         # Main query
-        main_query = f"""
+        main_query = """
             SELECT
                 id, url, title, content, source, published_date,
                 keywords, topics, dominant_topic,

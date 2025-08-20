@@ -88,7 +88,7 @@ async def lifespan_manager(app):
         logger.info("Optimized Knowledge Graph API initialized successfully")
 
     except Exception as e:
-        logger.error(f"Failed to initialize optimized graph API: {e}")
+        logger.error("Failed to initialize optimized graph API: {0}".format(e))
         optimized_graph_api = None
 
     # Yield control to the application
@@ -102,7 +102,7 @@ async def lifespan_manager(app):
             await optimized_graph_api.graph.close()
             logger.info("Optimized graph API closed successfully")
         except Exception as e:
-            logger.error(f"Error during graph API shutdown: {e}")
+            logger.error("Error during graph API shutdown: {0}".format(e))
 
 
 # Create router with enhanced configuration
@@ -186,7 +186,7 @@ async def get_related_entities_v2(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Unexpected error in get_related_entities_v2: {e}")
+        logger.error("Unexpected error in get_related_entities_v2: {0}".format(e))
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -224,7 +224,7 @@ async def get_related_entities_v2_post(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Unexpected error in get_related_entities_v2_post: {e}")
+        logger.error("Unexpected error in get_related_entities_v2_post: {0}".format(e))
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -308,7 +308,7 @@ async def get_event_timeline_v2(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Unexpected error in get_event_timeline_v2: {e}")
+        logger.error("Unexpected error in get_event_timeline_v2: {0}".format(e))
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -356,7 +356,7 @@ async def get_event_timeline_v2_post(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Unexpected error in get_event_timeline_v2_post: {e}")
+        logger.error("Unexpected error in get_event_timeline_v2_post: {0}".format(e))
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -409,7 +409,7 @@ async def search_entities_v2(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Unexpected error in search_entities_v2: {e}")
+        logger.error("Unexpected error in search_entities_v2: {0}".format(e))
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -446,7 +446,7 @@ async def search_entities_v2_post(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Unexpected error in search_entities_v2_post: {e}")
+        logger.error("Unexpected error in search_entities_v2_post: {0}".format(e))
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -487,7 +487,7 @@ async def get_api_stats(
         return stats
 
     except Exception as e:
-        logger.error(f"Error getting API stats: {e}")
+        logger.error("Error getting API stats: {0}".format(e))
         raise HTTPException(status_code=500, detail="Failed to retrieve API statistics")
 
 
@@ -606,7 +606,7 @@ async def clear_cache_v2(
         return result
 
     except Exception as e:
-        logger.error(f"Error clearing cache: {e}")
+        logger.error("Error clearing cache: {0}".format(e))
         raise HTTPException(status_code=500, detail="Failed to clear cache")
 
 
@@ -641,7 +641,7 @@ async def clear_cache_v2_post(
         return result
 
     except Exception as e:
-        logger.error(f"Error clearing cache via POST: {e}")
+        logger.error("Error clearing cache via POST: {0}".format(e))
         raise HTTPException(status_code=500, detail="Failed to clear cache")
 
 

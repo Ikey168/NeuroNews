@@ -44,7 +44,7 @@ def test_imports():
 
         return True
     except ImportError as e:
-        print(f"❌ Import failed: {e}")
+        print("❌ Import failed: {0}".format(e))
         return False
 
 
@@ -73,9 +73,9 @@ def test_service_functionality():
             impact_score=0.8,
         )
         print("✅ HistoricalEvent model working correctly")
-        print(f"   Event: {event.title}")
-        print(f"   Topic: {event.topic}")
-        print(f"   Impact Score: {event.impact_score}")
+        print("   Event: {0}".format(event.title))
+        print("   Topic: {0}".format(event.topic))
+        print("   Impact Score: {0}".format(event.impact_score))
 
         # Test event clustering
         sample_events = [event]
@@ -96,7 +96,7 @@ def test_service_functionality():
         return True
 
     except Exception as e:
-        print(f"❌ Service functionality test failed: {e}")
+        print("❌ Service functionality test failed: {0}".format(e))
         return False
 
 
@@ -119,8 +119,8 @@ def test_api_models():
             store_in_neptune=True,
         )
         print("✅ EventTrackingRequest validation successful")
-        print(f"   Topic: {tracking_request.topic}")
-        print(f"   Max Events: {tracking_request.max_events}")
+        print("   Topic: {0}".format(tracking_request.topic))
+        print("   Max Events: {0}".format(tracking_request.max_events))
 
         # Test TimelineVisualizationRequest
         viz_request = TimelineVisualizationRequest(
@@ -130,8 +130,8 @@ def test_api_models():
             include_impact_analysis=True,
         )
         print("✅ TimelineVisualizationRequest validation successful")
-        print(f"   Theme: {viz_request.theme}")
-        print(f"   Chart Type: {viz_request.chart_type}")
+        print("   Theme: {0}".format(viz_request.theme))
+        print("   Chart Type: {0}".format(viz_request.chart_type))
 
         # Test invalid values
         try:
@@ -157,7 +157,7 @@ def test_api_models():
         return True
 
     except Exception as e:
-        print(f"❌ API models test failed: {e}")
+        print("❌ API models test failed: {0}".format(e))
         return False
 
 
@@ -185,19 +185,19 @@ def test_fastapi_integration():
         expected_routes_set = set(expected_routes)
 
         if expected_routes_set.issubset(found_routes):
-            print(f"✅ All expected routes found ({len(event_timeline_routes)} total)")
+            print("✅ All expected routes found ({0} total)".format(len(event_timeline_routes)))
             for route in expected_routes:
-                print(f"   ✓ {route}")
+                print("   ✓ {0}".format(route))
         else:
             missing = expected_routes_set - found_routes
-            print(f"❌ Missing routes: {missing}")
+            print("❌ Missing routes: {0}".format(missing))
             return False
 
-        print(f"✅ FastAPI integration successful - {len(routes)} total routes")
+        print("✅ FastAPI integration successful - {0} total routes".format(len(routes)))
         return True
 
     except Exception as e:
-        print(f"❌ FastAPI integration failed: {e}")
+        print("❌ FastAPI integration failed: {0}".format(e))
         return False
 
 
@@ -316,9 +316,9 @@ async def test_mock_endpoints():
                     f"   ✓ Response structure correct - {data['total_events']} events"
                 )
             else:
-                print(f"   ❌ Unexpected response structure: {list(data.keys())}")
+                print("   ❌ Unexpected response structure: {0}".format(list(data.keys())))
         else:
-            print(f"❌ Enhanced timeline endpoint failed: {response.status_code}")
+            print("❌ Enhanced timeline endpoint failed: {0}".format(response.status_code))
             return False
 
         # Test 2: Event tracking endpoint
@@ -339,9 +339,9 @@ async def test_mock_endpoints():
             if "events_tracked" in data and "processing_time" in data:
                 print("   ✓ Tracking response structure correct")
             else:
-                print(f"   ❌ Unexpected tracking response: {list(data.keys())}")
+                print("   ❌ Unexpected tracking response: {0}".format(list(data.keys())))
         else:
-            print(f"❌ Event tracking endpoint failed: {response.status_code}")
+            print("❌ Event tracking endpoint failed: {0}".format(response.status_code))
             return False
 
         # Test 3: Visualization endpoint
@@ -356,9 +356,9 @@ async def test_mock_endpoints():
             if "chart_data" in data and "theme" in data:
                 print("   ✓ Visualization response structure correct")
             else:
-                print(f"   ❌ Unexpected visualization response: {list(data.keys())}")
+                print("   ❌ Unexpected visualization response: {0}".format(list(data.keys())))
         else:
-            print(f"❌ Visualization endpoint failed: {response.status_code}")
+            print("❌ Visualization endpoint failed: {0}".format(response.status_code))
             return False
 
         # Test 4: Export endpoint (JSON)
@@ -375,7 +375,7 @@ async def test_mock_endpoints():
                     f"   ❌ Unexpected content type: {response.headers.get('content-type')}"
                 )
         else:
-            print(f"❌ Export endpoint failed: {response.status_code}")
+            print("❌ Export endpoint failed: {0}".format(response.status_code))
             return False
 
         # Test 5: Health check
@@ -387,9 +387,9 @@ async def test_mock_endpoints():
             if data.get("service") == "event-timeline-api":
                 print("   ✓ Health check response correct")
             else:
-                print(f"   ❌ Unexpected health response: {data}")
+                print("   ❌ Unexpected health response: {0}".format(data))
         else:
-            print(f"❌ Health check failed: {response.status_code}")
+            print("❌ Health check failed: {0}".format(response.status_code))
             return False
 
         # Clean up
@@ -399,7 +399,7 @@ async def test_mock_endpoints():
         return True
 
     except Exception as e:
-        print(f"❌ Mock API endpoint testing failed: {e}")
+        print("❌ Mock API endpoint testing failed: {0}".format(e))
         import traceback
 
         traceback.print_exc()
@@ -441,14 +441,14 @@ def test_issue_38_requirements():
         if timeline_routes:
             requirements["implement_api_endpoint"] = True
             print("✅ Event timeline API endpoint implemented")
-            print(f"   Route: {timeline_routes[0]}")
+            print("   Route: {0}".format(timeline_routes[0]))
 
         # Requirement 4: Generate visualizations of event evolution
         if hasattr(service, "generate_visualization_data"):
             requirements["generate_visualizations"] = True
             print("✅ Visualization generation - Method implemented")
 
-        print(f"\n📊 Issue #38 Requirements Status:")
+        print("\n📊 Issue #38 Requirements Status:")
         all_met = True
         requirement_descriptions = {
             "track_historical_events": "Track historical events related to a topic",
@@ -460,14 +460,14 @@ def test_issue_38_requirements():
         for req, status in requirements.items():
             status_icon = "✅" if status else "❌"
             desc = requirement_descriptions[req]
-            print(f"   {status_icon} {desc}")
+            print("   {0} {1}".format(status_icon, desc))
             if not status:
                 all_met = False
 
         return all_met
 
     except Exception as e:
-        print(f"❌ Requirements validation failed: {e}")
+        print("❌ Requirements validation failed: {0}".format(e))
         return False
 
 
@@ -497,7 +497,7 @@ async def main():
                 result = test_func()
             results.append((test_name, result))
         except Exception as e:
-            print(f"❌ {test_name} failed with exception: {e}")
+            print("❌ {0} failed with exception: {1}".format(test_name, e))
             results.append((test_name, False))
 
     # Summary
@@ -508,9 +508,9 @@ async def main():
 
     for test_name, result in results:
         status = "✅ PASS" if result else "❌ FAIL"
-        print(f"{status} {test_name}")
+        print("{0} {1}".format(status, test_name))
 
-    print(f"\n📊 Overall Result: {passed}/{total} tests passed")
+    print("\n📊 Overall Result: {0}/{1} tests passed".format(passed, total))
 
     if passed == total:
         print("🎉 All validation tests PASSED!")
@@ -537,7 +537,7 @@ if __name__ == "__main__":
         print("\n⚠️  Validation interrupted by user")
         sys.exit(1)
     except Exception as e:
-        print(f"\n💥 Validation failed with error: {e}")
+        print("\n💥 Validation failed with error: {0}".format(e))
         import traceback
 
         traceback.print_exc()

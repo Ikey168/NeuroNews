@@ -86,7 +86,7 @@ class PerformanceValidator:
                 "url": f"https://{template['source'].lower()}.com/article/{i}",
                 "content": template["content_base"] * content_multiplier,
                 "source": template["source"],
-                "published_date": f"2024-01-{(i % 28) + 1:02d}T{(i % 24):02d}:00:00Z",
+                "published_date": "2024-01-{0}T{1}:00:00Z".format((i % 28) + 1:02d, (i % 24):02d),
                 "author": f"{template['author_base']} {i % 10}",
                 "category": template["category"],
                 "scraped_date": time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -141,7 +141,7 @@ class PerformanceValidator:
         name: str = "Optimized",
     ) -> Dict[str, Any]:
         """Run optimized pipeline benchmark."""
-        logger.info(f"Running {name} benchmark...")
+        logger.info("Running {0} benchmark...".format(name))
 
         pipeline = OptimizedIngestionPipeline(config)
 
@@ -181,7 +181,7 @@ class PerformanceValidator:
 
         for size in dataset_sizes:
             logger.info(f"\n{'='*50}")
-            logger.info(f"Testing with {size} articles")
+            logger.info("Testing with {0} articles".format(size))
             logger.info(f"{'='*50}")
 
             test_articles = self.test_data[:size]
@@ -227,7 +227,7 @@ class PerformanceValidator:
             )
             size_results["memory_optimized"] = memory_result
 
-            comparison_results[f"{size}_articles"] = size_results
+            comparison_results["{0}_articles".format(size)] = size_results
 
             # Print size comparison
             self._print_size_comparison(size, size_results)
@@ -236,7 +236,7 @@ class PerformanceValidator:
 
     def _print_size_comparison(self, size: int, results: Dict[str, Any]):
         """Print comparison results for a specific dataset size."""
-        print(f"\nResults for {size} articles:")
+        print("\nResults for {0} articles:".format(size))
         print(
             f"{'Configuration':<20} {'Time (s)':<10} {'Throughput (art/s)':<18} {'Speedup':<10}"
         )
@@ -250,12 +250,12 @@ class PerformanceValidator:
             speedup = baseline_time / time_taken if time_taken > 0 else 0
 
             print(
-                f"{config_name:<20} {time_taken:<10.3f} {throughput:<18.1f} {speedup:<10.2f}x"
+                "{0} {1} {2} {3}x".format(config_name:<20, time_taken:<10.3f, throughput:<18.1f, speedup:<10.2f)
             )
 
     async def run_stress_test(self, max_articles: int = 2000) -> Dict[str, Any]:
         """Run stress test with increasing load."""
-        logger.info(f"\nRunning stress test up to {max_articles} articles...")
+        logger.info("\nRunning stress test up to {0} articles...".format(max_articles))
 
         stress_results = {}
         article_counts = [100, 250, 500, 750, 1000, 1500, 2000]
@@ -269,13 +269,13 @@ class PerformanceValidator:
         )
 
         for count in article_counts:
-            logger.info(f"Stress testing with {count} articles...")
+            logger.info("Stress testing with {0} articles...".format(count))
 
             test_articles = self.test_data[:count]
 
             try:
                 result = await self.run_optimized_benchmark(
-                    test_articles, config, f"Stress Test {count}"
+                    test_articles, config, "Stress Test {0}".format(count)
                 )
 
                 stress_results[count] = {
@@ -290,7 +290,7 @@ class PerformanceValidator:
                 logger.info(f"✓ {count} articles: {result['throughput']:.1f} art/s")
 
             except Exception as e:
-                logger.error(f"✗ {count} articles failed: {e}")
+                logger.error("✗ {0} articles failed: {1}".format(count, e))
                 stress_results[count] = {"success": False, "error": str(e)}
 
         return stress_results
@@ -346,7 +346,7 @@ class PerformanceValidator:
         """Save validation results to file."""
         if output_path is None:
             timestamp = int(time.time())
-            output_path = f"data/performance_validation_{timestamp}.json"
+            output_path = "data/performance_validation_{0}.json".format(timestamp)
 
         # Ensure directory exists
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
@@ -363,10 +363,10 @@ class PerformanceValidator:
             with open(output_path, "w", encoding="utf-8") as f:
                 json.dump(results, f, indent=2, default=str)
 
-            logger.info(f"Results saved to: {output_path}")
+            logger.info("Results saved to: {0}".format(output_path))
 
         except Exception as e:
-            logger.error(f"Failed to save results: {e}")
+            logger.error("Failed to save results: {0}".format(e))
 
     def generate_performance_report(self, results: Dict[str, Any]) -> str:
         """Generate a comprehensive performance report."""
@@ -385,7 +385,7 @@ class PerformanceValidator:
 
             for size_key, size_results in results["performance_comparison"].items():
                 size = size_key.replace("_articles", "")
-                report_lines.append(f"Dataset Size: {size} articles")
+                report_lines.append("Dataset Size: {0} articles".format(size))
 
                 baseline_throughput = size_results["baseline"]["throughput"]
 
@@ -394,7 +394,7 @@ class PerformanceValidator:
                         throughput = result["throughput"]
                         speedup = throughput / baseline_throughput
                         report_lines.append(
-                            f"  {config_name:<20}: {throughput:>8.1f} art/s ({speedup:>5.2f}x speedup)"
+                            "  {0}: {1} art/s ({2}x speedup)".format(config_name:<20, throughput:>8.1f, speedup:>5.2f)
                         )
 
                 report_lines.append("")
@@ -425,11 +425,11 @@ class PerformanceValidator:
                     throughput = result["throughput"]
                     peak_memory = result.get("peak_memory", 0)
                     report_lines.append(
-                        f"{memory_limit:>4} MB limit: {throughput:>8.1f} art/s "
-                        f"(peak: {peak_memory:>6.1f} MB)"
+                        "{0} MB limit: {1} art/s ".format(memory_limit:>4, throughput:>8.1f)
+                        "(peak: {0} MB)".format(peak_memory:>6.1f)
                     )
                 else:
-                    report_lines.append(f"{memory_limit:>4} MB limit: FAILED")
+                    report_lines.append("{0} MB limit: FAILED".format(memory_limit:>4))
 
             report_lines.append("")
 
@@ -524,7 +524,7 @@ async def main():
             max_stress_articles = args.max_articles
 
         logger.info("Starting performance validation...")
-        logger.info(f"Test data generated: {len(validator.test_data)} articles")
+        logger.info("Test data generated: {0} articles".format(len(validator.test_data)))
 
         # Run performance comparison
         logger.info("\n" + "=" * 50)
@@ -564,19 +564,19 @@ async def main():
             report_path = args.output.replace(".json", "_report.txt")
         else:
             timestamp = int(time.time())
-            report_path = f"data/performance_report_{timestamp}.txt"
+            report_path = "data/performance_report_{0}.txt".format(timestamp)
 
         try:
             with open(report_path, "w", encoding="utf-8") as f:
                 f.write(report)
-            logger.info(f"Performance report saved to: {report_path}")
+            logger.info("Performance report saved to: {0}".format(report_path))
         except Exception as e:
-            logger.error(f"Failed to save report: {e}")
+            logger.error("Failed to save report: {0}".format(e))
 
         logger.info("Performance validation completed successfully!")
 
     except Exception as e:
-        logger.error(f"Validation failed: {e}")
+        logger.error("Validation failed: {0}".format(e))
         logger.error(traceback.format_exc())
         return 1
 

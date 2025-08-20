@@ -59,10 +59,12 @@ class SentimentPipeline:
                 provider=sentiment_provider, **sentiment_config
             )
             logger.info(
-                f"Initialized sentiment analyzer with provider: {sentiment_provider}"
+                "Initialized sentiment analyzer with provider: {0}".format(
+                    sentiment_provider
+                )
             )
         except Exception as e:
-            logger.error(f"Failed to initialize sentiment analyzer: {str(e)}")
+            logger.error("Failed to initialize sentiment analyzer: {0}".format(str(e)))
             raise
 
         # Initialize database schema
@@ -128,7 +130,7 @@ class SentimentPipeline:
                         "Successfully initialized sentiment analysis database schema"
                     )
         except Exception as e:
-            logger.error(f"Failed to initialize database: {str(e)}")
+            logger.error("Failed to initialize database: {0}".format(str(e)))
             raise
 
     def _store_sentiment_results(self, results: List[Dict[str, Any]]):
@@ -214,12 +216,13 @@ class SentimentPipeline:
 
                     conn.commit()
                     logger.info(
-                        f"Successfully stored sentiment results for {
-                            len(results)} articles"
+                        "Successfully stored sentiment results for {0} articles".format(
+                            len(results)
+                        )
                     )
 
         except Exception as e:
-            logger.error(f"Failed to store sentiment results: {str(e)}")
+            logger.error("Failed to store sentiment results: {0}".format(str(e)))
             raise
 
     def process_articles(self, articles: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -247,13 +250,13 @@ class SentimentPipeline:
             for article in articles:
                 title = article.get("title", "")
                 content = article.get("content", "")
-                combined_text = f"{title}. {content}".strip()
+                combined_text = "{0}. {1}".format(title, content).strip()
                 texts.append(combined_text)
 
             logger.info(
-                f"Analyzing sentiment for {
-                    len(articles)} articles using {
-                    self.sentiment_provider}"
+                "Analyzing sentiment for {0} articles using {1}".format(
+                    len(articles), self.sentiment_provider
+                )
             )
 
             # Perform batch sentiment analysis
@@ -313,13 +316,14 @@ class SentimentPipeline:
             self._store_sentiment_results(processed_results)
 
             logger.info(
-                f"Successfully processed sentiment analysis for {
-                    len(processed_results)} articles"
+                "Successfully processed sentiment analysis for {0} articles".format(
+                    len(processed_results)
+                )
             )
             return processed_results
 
         except Exception as e:
-            logger.error(f"Error in sentiment processing pipeline: {str(e)}")
+            logger.error("Error in sentiment processing pipeline: {0}".format(str(e)))
             raise
 
     def reprocess_articles(
@@ -339,7 +343,7 @@ class SentimentPipeline:
             # Build query to get articles to reprocess
             if article_ids:
                 placeholders = ",".join(["%s"] * len(article_ids))
-                query = f"""
+                query = """
                 SELECT id, title, content, url, source, publish_date
                 FROM news_articles
                 WHERE id IN ({placeholders})
@@ -393,7 +397,7 @@ class SentimentPipeline:
             }
 
         except Exception as e:
-            logger.error(f"Error reprocessing articles: {str(e)}")
+            logger.error("Error reprocessing articles: {0}".format(str(e)))
             raise
 
     def get_sentiment_stats(self, days: int = 30) -> Dict[str, Any]:
@@ -440,5 +444,5 @@ class SentimentPipeline:
             return stats
 
         except Exception as e:
-            logger.error(f"Error getting sentiment stats: {str(e)}")
+            logger.error("Error getting sentiment stats: {0}".format(str(e)))
             raise

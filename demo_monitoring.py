@@ -82,7 +82,7 @@ class MonitoringDemo:
             logger.info("✅ Enhanced retry manager initialized")
 
         except Exception as e:
-            logger.error(f"❌ Error initializing monitoring: {e}")
+            logger.error("❌ Error initializing monitoring: {0}".format(e))
             raise
 
     async def demo_successful_scraping(self):
@@ -105,7 +105,7 @@ class MonitoringDemo:
         if self.cloudwatch_logger:
             await self.cloudwatch_logger.log_scraping_attempt(metrics)
             logger.info(
-                f"✅ Logged successful scraping: {metrics.articles_scraped} articles in {metrics.duration_ms}ms"
+                "✅ Logged successful scraping: {0} articles in {1}ms".format(metrics.articles_scraped, metrics.duration_ms)
             )
 
     async def demo_failure_handling(self):
@@ -124,7 +124,7 @@ class MonitoringDemo:
                 response_code=408,
             )
             logger.info(
-                f"✅ Recorded failure: {failed_url.url} (attempt {failed_url.retry_count})"
+                "✅ Recorded failure: {0} (attempt {1})".format(failed_url.url, failed_url.retry_count)
             )
 
         # Log failure metrics
@@ -168,10 +168,10 @@ class MonitoringDemo:
             attempt_count += 1
 
             if attempt_count < 3:
-                logger.info(f"Attempt {attempt_count}: Simulating failure...")
-                raise Exception(f"Simulated failure {attempt_count}")
+                logger.info("Attempt {0}: Simulating failure...".format(attempt_count))
+                raise Exception("Simulated failure {0}".format(attempt_count))
 
-            logger.info(f"Attempt {attempt_count}: Success!")
+            logger.info("Attempt {0}: Success!".format(attempt_count))
             return {"articles": 15, "status": "success"}
 
         try:
@@ -180,9 +180,9 @@ class MonitoringDemo:
                 url="https://retry-demo.example.com",
                 context={"proxy_used": "proxy3.example.com:8080"},
             )
-            logger.info(f"✅ Retry logic successful: {result}")
+            logger.info("✅ Retry logic successful: {0}".format(result))
         except Exception as e:
-            logger.error(f"❌ Retry logic failed: {e}")
+            logger.error("❌ Retry logic failed: {0}".format(e))
 
     async def demo_monitoring_analytics(self):
         """Demonstrate monitoring analytics and statistics."""
@@ -191,7 +191,7 @@ class MonitoringDemo:
         if self.failure_manager:
             # Get failure statistics
             stats = await self.failure_manager.get_failure_statistics(hours=24)
-            logger.info(f"📈 Failure Statistics (24h):")
+            logger.info("📈 Failure Statistics (24h):")
             logger.info(f"   Total failures: {stats.get('total_failures', 0)}")
             logger.info(f"   Permanent failures: {stats.get('permanent_failures', 0)}")
             logger.info(f"   Pending retries: {stats.get('pending_retries', 0)}")
@@ -200,16 +200,16 @@ class MonitoringDemo:
             if failure_reasons:
                 logger.info("   Failure reasons:")
                 for reason, count in failure_reasons.items():
-                    logger.info(f"     {reason}: {count}")
+                    logger.info("     {0}: {1}".format(reason, count))
 
         if self.cloudwatch_logger:
             # Get success rate
             success_rate = await self.cloudwatch_logger.get_success_rate(hours=24)
-            logger.info(f"📊 Success Rate (24h): {success_rate:.1f}%")
+            logger.info("📊 Success Rate (24h): {0}%".format(success_rate:.1f))
 
             # Get failure count
             failure_count = await self.cloudwatch_logger.get_failure_count(hours=1)
-            logger.info(f"❌ Recent Failures (1h): {failure_count}")
+            logger.info("❌ Recent Failures (1h): {0}".format(failure_count))
 
         if self.retry_manager:
             # Get retry statistics
@@ -289,7 +289,7 @@ class MonitoringDemo:
             logger.info("🔄 Scraper is ready with full monitoring capabilities")
 
         except Exception as e:
-            logger.error(f"❌ Error starting scraper: {e}")
+            logger.error("❌ Error starting scraper: {0}".format(e))
         finally:
             await scraper.close()
             logger.info("✅ Scraper closed")
@@ -325,7 +325,7 @@ class MonitoringDemo:
             logger.info("=" * 60)
 
         except Exception as e:
-            logger.error(f"❌ Demo failed: {e}")
+            logger.error("❌ Demo failed: {0}".format(e))
             raise
 
     async def cleanup(self):
@@ -350,7 +350,7 @@ async def main():
     try:
         await demo.run_complete_demo()
     except Exception as e:
-        logger.error(f"Demo error: {e}")
+        logger.error("Demo error: {0}".format(e))
     finally:
         await demo.cleanup()
 

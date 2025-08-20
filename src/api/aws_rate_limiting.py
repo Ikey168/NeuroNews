@@ -79,11 +79,10 @@ class APIGatewayManager:
                 "apigatewaymanagementapi", region_name=self.region
             )
             logger.info(
-                f"AWS API Gateway client initialized for region {
-                    self.region}"
+                "AWS API Gateway client initialized for region {0}".format(self.region)
             )
         except Exception as e:
-            logger.error(f"Failed to initialize AWS API Gateway client: {e}")
+            logger.error("Failed to initialize AWS API Gateway client: {0}".format(e))
             self.client = None
             self.usage_client = None
 
@@ -118,10 +117,14 @@ class APIGatewayManager:
                         usagePlanId=plan_id, keyId=self.api_id, keyType="API_KEY"
                     )
 
-                logger.info(f"Created usage plan: {plan.name} (ID: {plan_id})")
+                logger.info(
+                    "Created usage plan: {0} (ID: {1})".format(plan.name, plan_id)
+                )
 
             except Exception as e:
-                logger.error(f"Failed to create usage plan {plan.name}: {e}")
+                logger.error(
+                    "Failed to create usage plan {0}: {1}".format(plan.name, e)
+                )
 
         return created_plans
 
@@ -138,7 +141,7 @@ class APIGatewayManager:
 
         plan_name = plan_mapping.get(tier)
         if not plan_name:
-            logger.error(f"Unknown tier: {tier}")
+            logger.error("Unknown tier: {0}".format(tier))
             return False
 
         try:
@@ -147,7 +150,7 @@ class APIGatewayManager:
             plan_id = usage_plans.get(plan_name)
 
             if not plan_id:
-                logger.error(f"Usage plan not found for tier: {tier}")
+                logger.error("Usage plan not found for tier: {0}".format(tier))
                 return False
 
             # Create or get API key for user
@@ -161,11 +164,17 @@ class APIGatewayManager:
                 usagePlanId=plan_id, keyId=key_id, keyType="API_KEY"
             )
 
-            logger.info(f"Assigned user {user_id} to {tier} tier (plan: {plan_id})")
+            logger.info(
+                "Assigned user {0} to {1} tier (plan: {2})".format(
+                    user_id, tier, plan_id
+                )
+            )
             return True
 
         except Exception as e:
-            logger.error(f"Failed to assign user {user_id} to plan {tier}: {e}")
+            logger.error(
+                "Failed to assign user {0} to plan {1}: {2}".format(user_id, tier, e)
+            )
             return False
 
     async def create_api_key_for_user(
@@ -177,8 +186,8 @@ class APIGatewayManager:
 
         try:
             response = self.client.create_api_key(
-                name=f"neuronews-user-{user_id}",
-                description=f"API key for NeuroNews user {user_id}",
+                name="neuronews-user-{0}".format(user_id),
+                description="API key for NeuroNews user {0}".format(user_id),
                 enabled=True,
                 value=api_key_value,
                 tags={
@@ -189,11 +198,13 @@ class APIGatewayManager:
             )
 
             key_id = response["id"]
-            logger.info(f"Created API key for user {user_id}: {key_id}")
+            logger.info("Created API key for user {0}: {1}".format(user_id, key_id))
             return key_id
 
         except Exception as e:
-            logger.error(f"Failed to create API key for user {user_id}: {e}")
+            logger.error(
+                "Failed to create API key for user {0}: {1}".format(user_id, e)
+            )
             return None
 
     async def get_usage_plans(self) -> Dict[str, str]:
@@ -212,7 +223,7 @@ class APIGatewayManager:
             return plans
 
         except Exception as e:
-            logger.error(f"Failed to get usage plans: {e}")
+            logger.error("Failed to get usage plans: {0}".format(e))
             return {}
 
     async def get_usage_statistics(
@@ -233,7 +244,7 @@ class APIGatewayManager:
                     break
 
             if not key_id:
-                logger.error(f"API key not found: {user_api_key}")
+                logger.error("API key not found: {0}".format(user_api_key))
                 return {}
 
             # Get usage data
@@ -242,7 +253,7 @@ class APIGatewayManager:
             )
 
             return {
-                "period": f"{start_date} to {end_date}",
+                "period": "{0} to {1}".format(start_date, end_date),
                 "total_requests": (
                     sum(response["values"].values()) if "values" in response else 0
                 ),
@@ -253,7 +264,7 @@ class APIGatewayManager:
             }
 
         except Exception as e:
-            logger.error(f"Failed to get usage statistics: {e}")
+            logger.error("Failed to get usage statistics: {0}".format(e))
             return {}
 
     async def update_user_tier(
@@ -274,12 +285,12 @@ class APIGatewayManager:
                     break
 
             if not user_key:
-                logger.error(f"API key not found for user: {user_id}")
+                logger.error("API key not found for user: {0}".format(user_id))
                 return False
 
             # Remove from old usage plan
             old_plans = await self.get_usage_plans()
-            old_plan_id = old_plans.get(f"{old_tier}_tier")
+            old_plan_id = old_plans.get("{0}_tier".format(old_tier))
 
             if old_plan_id:
                 try:
@@ -287,13 +298,13 @@ class APIGatewayManager:
                         usagePlanId=old_plan_id, keyId=user_key["id"]
                     )
                 except Exception as e:
-                    logger.warning(f"Could not remove from old plan: {e}")
+                    logger.warning("Could not remove from old plan: {0}".format(e))
 
             # Add to new usage plan
             return await self.assign_user_to_plan(user_id, new_tier, user_key["value"])
 
         except Exception as e:
-            logger.error(f"Failed to update user tier: {e}")
+            logger.error("Failed to update user tier: {0}".format(e))
             return False
 
     async def monitor_throttling_events(self) -> List[Dict[str, Any]]:
@@ -316,7 +327,7 @@ class APIGatewayManager:
             ]
 
         except Exception as e:
-            logger.error(f"Failed to monitor throttling events: {e}")
+            logger.error("Failed to monitor throttling events: {0}".format(e))
             return []
 
 
@@ -330,7 +341,7 @@ class CloudWatchMetrics:
             self.cloudwatch = boto3.client("cloudwatch", region_name=self.region)
             logger.info("CloudWatch client initialized")
         except Exception as e:
-            logger.error(f"Failed to initialize CloudWatch client: {e}")
+            logger.error("Failed to initialize CloudWatch client: {0}".format(e))
             self.cloudwatch = None
 
     async def put_rate_limit_metrics(
@@ -367,10 +378,10 @@ class CloudWatchMetrics:
                 ],
             )
 
-            logger.debug(f"Sent metrics to CloudWatch for user {user_id}")
+            logger.debug("Sent metrics to CloudWatch for user {0}".format(user_id))
 
         except Exception as e:
-            logger.error(f"Failed to send metrics to CloudWatch: {e}")
+            logger.error("Failed to send metrics to CloudWatch: {0}".format(e))
 
     async def create_rate_limit_alarms(self):
         """Create CloudWatch alarms for rate limiting violations."""
@@ -403,7 +414,7 @@ class CloudWatchMetrics:
             logger.info("Created CloudWatch alarms for rate limiting")
 
         except Exception as e:
-            logger.error(f"Failed to create CloudWatch alarms: {e}")
+            logger.error("Failed to create CloudWatch alarms: {0}".format(e))
 
 
 # Utility functions for integration
@@ -426,7 +437,7 @@ async def setup_aws_rate_limiting() -> bool:
 
         # Create usage plans
         plans = await api_manager.create_usage_plans()
-        logger.info(f"Created usage plans: {plans}")
+        logger.info("Created usage plans: {0}".format(plans))
 
         # Set up monitoring
         await cloudwatch.create_rate_limit_alarms()
@@ -435,5 +446,5 @@ async def setup_aws_rate_limiting() -> bool:
         return True
 
     except Exception as e:
-        logger.error(f"Failed to set up AWS rate limiting: {e}")
+        logger.error("Failed to set up AWS rate limiting: {0}".format(e))
         return False

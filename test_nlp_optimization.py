@@ -32,7 +32,7 @@ try:
 
     OPTIMIZED_PIPELINE_AVAILABLE = True
 except ImportError as e:
-    logger.warning(f"Optimized pipeline not available: {e}")
+    logger.warning("Optimized pipeline not available: {0}".format(e))
     OPTIMIZED_PIPELINE_AVAILABLE = False
 
 try:
@@ -46,7 +46,7 @@ try:
 
     INTEGRATION_AVAILABLE = True
 except ImportError as e:
-    logger.warning(f"NLP integration not available: {e}")
+    logger.warning("NLP integration not available: {0}".format(e))
     INTEGRATION_AVAILABLE = False
 
 
@@ -58,9 +58,9 @@ class TestOptimizedNLPPipeline:
         """Sample articles for testing."""
         return [
             {
-                "id": f"article_{i}",
-                "title": f"Test Article {i}",
-                "content": f"This is a test article about technology and innovation. "
+                "id": "article_{0}".format(i),
+                "title": "Test Article {0}".format(i),
+                "content": "This is a test article about technology and innovation. "
                 * 50,
             }
             for i in range(20)
@@ -248,9 +248,9 @@ class TestNLPIntegration:
         """Sample articles for testing."""
         return [
             {
-                "id": f"article_{i}",
-                "title": f"Test Article {i}",
-                "content": f"This is a test article for integration testing. " * 30,
+                "id": "article_{0}".format(i),
+                "title": "Test Article {0}".format(i),
+                "content": "This is a test article for integration testing. " * 30,
             }
             for i in range(5)
         ]
@@ -288,7 +288,7 @@ class TestNLPIntegration:
 
         except Exception as e:
             # Sentiment analysis might fail without proper models
-            logger.info(f"Sentiment analysis test failed (expected): {e}")
+            logger.info("Sentiment analysis test failed (expected): {0}".format(e))
 
     @pytest.mark.skipif(
         not INTEGRATION_AVAILABLE, reason="NLP integration not available"
@@ -311,7 +311,7 @@ class TestNLPIntegration:
 
         except Exception as e:
             # Embedding generation might fail without proper models
-            logger.info(f"Embedding generation test failed (expected): {e}")
+            logger.info("Embedding generation test failed (expected): {0}".format(e))
 
     @pytest.mark.skipif(
         not INTEGRATION_AVAILABLE, reason="NLP integration not available"
@@ -337,7 +337,7 @@ class TestNLPIntegration:
 
         except Exception as e:
             # Clustering might fail, which is fine for testing
-            logger.info(f"Clustering test failed (expected): {e}")
+            logger.info("Clustering test failed (expected): {0}".format(e))
 
     @pytest.mark.skipif(
         not INTEGRATION_AVAILABLE, reason="NLP integration not available"
@@ -366,7 +366,7 @@ class TestNLPIntegration:
             assert "optimization_enabled" in stats
 
         except Exception as e:
-            logger.info(f"Integrated processor test failed (expected): {e}")
+            logger.info("Integrated processor test failed (expected): {0}".format(e))
         finally:
             await processor.cleanup()
 
@@ -404,9 +404,9 @@ class TestPerformanceOptimizations:
 
         # Create articles with varying complexity
         articles = [
-            {"id": f"short_{i}", "content": "Short content"} for i in range(5)
+            {"id": "short_{0}".format(i), "content": "Short content"} for i in range(5)
         ] + [
-            {"id": f"long_{i}", "content": "Very long content " * 100} for i in range(3)
+            {"id": "long_{0}".format(i), "content": "Very long content " * 100} for i in range(3)
         ]
 
         batches = pipeline._create_adaptive_batches(articles)
@@ -427,7 +427,7 @@ class TestPerformanceOptimizations:
         try:
             # Test that pipeline can handle concurrent operations
             articles = [
-                {"id": f"test_{i}", "content": "Test content for concurrency"}
+                {"id": "test_{0}".format(i), "content": "Test content for concurrency"}
                 for i in range(4)
             ]
 
@@ -442,7 +442,7 @@ class TestPerformanceOptimizations:
             # Should not raise exceptions due to concurrency issues
             for result in results:
                 if isinstance(result, Exception):
-                    logger.info(f"Concurrent processing test result: {result}")
+                    logger.info("Concurrent processing test result: {0}".format(result))
                 else:
                     assert isinstance(result, dict)
 
@@ -492,7 +492,7 @@ class TestErrorHandlingAndFallbacks:
                 assert isinstance(results, list)
             except Exception as e:
                 # Expected to fail without proper models
-                logger.info(f"Fallback test failed as expected: {e}")
+                logger.info("Fallback test failed as expected: {0}".format(e))
 
     @pytest.mark.skipif(
         not OPTIMIZED_PIPELINE_AVAILABLE, reason="Optimized pipeline not available"
@@ -529,7 +529,7 @@ class TestErrorHandlingAndFallbacks:
             assert model is None or hasattr(model, "__call__")
         except Exception as e:
             # Expected to fail with invalid model
-            logger.info(f"Model loading test failed as expected: {e}")
+            logger.info("Model loading test failed as expected: {0}".format(e))
 
 
 class TestAWSSageMakerIntegration:
@@ -587,8 +587,8 @@ class TestPerformanceBenchmarks:
             # Create larger dataset for benchmarking
             articles = [
                 {
-                    "id": f"benchmark_{i}",
-                    "content": f"Benchmark article content for performance testing. "
+                    "id": "benchmark_{0}".format(i),
+                    "content": "Benchmark article content for performance testing. "
                     * 20,
                 }
                 for i in range(50)
@@ -602,9 +602,9 @@ class TestPerformanceBenchmarks:
             throughput = len(articles) / processing_time
 
             logger.info(
-                f"Benchmark: {len(articles)} articles in {processing_time:.2f}s"
+                "Benchmark: {0} articles in {1}s".format(len(articles), processing_time:.2f)
             )
-            logger.info(f"Throughput: {throughput:.2f} articles/sec")
+            logger.info("Throughput: {0} articles/sec".format(throughput:.2f))
 
             # Assert reasonable performance (adjust thresholds as needed)
             assert throughput > 5.0  # At least 5 articles per second
@@ -631,7 +631,7 @@ class TestPerformanceBenchmarks:
         try:
             articles = [
                 {
-                    "id": f"cache_test_{i}",
+                    "id": "cache_test_{0}".format(i),
                     "content": "This is content for cache performance testing. " * 10,
                 }
                 for i in range(10)
@@ -647,13 +647,13 @@ class TestPerformanceBenchmarks:
             results2 = await pipeline.process_articles_async(articles, ["keywords"])
             second_run_time = time.time() - start_time
 
-            logger.info(f"First run: {first_run_time:.2f}s")
-            logger.info(f"Second run: {second_run_time:.2f}s")
+            logger.info("First run: {0}s".format(first_run_time:.2f))
+            logger.info("Second run: {0}s".format(second_run_time:.2f))
 
             # Second run should be faster due to caching
             # (Note: might not always be true due to test environment variability)
             cache_stats = pipeline.cache_manager.get_stats()
-            logger.info(f"Cache stats: {cache_stats}")
+            logger.info("Cache stats: {0}".format(cache_stats))
 
             # Just verify both runs completed successfully
             assert len(results1["results"]) == len(articles)

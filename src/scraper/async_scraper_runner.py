@@ -84,13 +84,13 @@ class AsyncScraperRunner:
 
     async def run_scraper(self, sources: list, test_mode: bool = False) -> list:
         """Run the async scraper."""
-        self.logger.info(f"🚀 Starting Async News Scraper")
+        self.logger.info("🚀 Starting Async News Scraper")
         self.logger.info(
             f"📊 Configuration: {
                 self.config['max_concurrent']} concurrent, {
                 self.config['max_threads']} threads"
         )
-        self.logger.info(f"🎯 Sources: {[s.name for s in sources]}")
+        self.logger.info("🎯 Sources: {0}".format([s.name for s in sources]))
 
         start_time = time.time()
 
@@ -125,12 +125,12 @@ class AsyncScraperRunner:
             duration = end_time - start_time
 
             self.logger.info("🎉 Async scraping completed!")
-            self.logger.info(f"⏱️  Duration: {duration:.2f} seconds")
-            self.logger.info(f"📰 Articles: {len(articles)}")
+            self.logger.info("⏱️  Duration: {0} seconds".format(duration))
+            self.logger.info("📰 Articles: {0}".format(len(articles)))
             self.logger.info(
-                f"📈 Rate: {
+                "📈 Rate: {0} articles/second".format(
                     len(articles) /
-                    duration:.2f} articles/second"
+                    duration:.2f)
             )
 
             return articles
@@ -160,18 +160,18 @@ class AsyncScraperRunner:
 
         # Save articles
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        articles_file = output_dir / f"async_scraped_articles_{timestamp}.json"
+        articles_file = output_dir / "async_scraped_articles_{0}.json".format(timestamp)
 
         await scraper.save_articles(articles, str(articles_file))
 
         # Save performance stats
         stats = scraper.get_performance_stats()
-        stats_file = output_dir / f"performance_stats_{timestamp}.json"
+        stats_file = output_dir / "performance_stats_{0}.json".format(timestamp)
 
         with open(stats_file, "w") as f:
             json.dump(stats, f, indent=2)
 
-        self.logger.info(f"💾 Results saved to {output_dir}")
+        self.logger.info("💾 Results saved to {0}".format(output_dir))
 
         # Print summary
         self.print_summary(articles, stats)
@@ -183,7 +183,7 @@ class AsyncScraperRunner:
         print("=" * 60)
 
         print(f"⏱️  Total Duration: {stats['elapsed_time']:.2f} seconds")
-        print(f"📰 Total Articles: {len(articles)}")
+        print("📰 Total Articles: {0}".format(len(articles)))
         print(f"📈 Articles/Second: {stats['articles_per_second']:.2f}")
         print(f"✅ Success Rate: {stats['success_rate']:.1f}%")
         print(
@@ -195,7 +195,7 @@ class AsyncScraperRunner:
         print(f"💾 Avg Memory Usage: {stats['avg_memory_mb']:.1f} MB")
         print(f"🖥️  Avg CPU Usage: {stats['avg_cpu_percent']:.1f}%")
 
-        print(f"\n📋 Source Breakdown:")
+        print("\n📋 Source Breakdown:")
         for source, source_stats in stats["source_stats"].items():
             print(
                 f"  {source}: {
@@ -210,10 +210,10 @@ class AsyncScraperRunner:
             if quality in quality_counts:
                 quality_counts[quality] += 1
 
-        print(f"\n🏆 Quality Distribution:")
+        print("\n🏆 Quality Distribution:")
         for quality, count in quality_counts.items():
             percentage = (count / len(articles)) * 100 if articles else 0
-            print(f"  {quality.title()}: {count} ({percentage:.1f}%)")
+            print("  {0}: {1} ({2}%)".format(quality.title(), count, percentage:.1f))
 
         print("=" * 60)
 
@@ -262,14 +262,14 @@ def main():
     # Run scraper
     try:
         articles = asyncio.run(runner.run_scraper(sources, args.test))
-        print(f"🎉 Successfully scraped {len(articles)} articles!")
+        print("🎉 Successfully scraped {0} articles!".format(len(articles)))
         return 0
 
     except KeyboardInterrupt:
         print("\n⚠️  Scraping interrupted by user")
         return 1
     except Exception as e:
-        print(f"❌ Scraper failed: {e}")
+        print("❌ Scraper failed: {0}".format(e))
         return 1
 
 

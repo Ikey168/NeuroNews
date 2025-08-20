@@ -52,7 +52,7 @@ def test_import_with_mocking():
 
             return True
     except Exception as e:
-        print(f"❌ Import failed: {e}")
+        print("❌ Import failed: {0}".format(e))
         return False
 
 
@@ -71,7 +71,7 @@ def main():
         success_count += 1
 
     print("\n" + "=" * 50)
-    print(f"📊 VALIDATION SUMMARY: {success_count}/{total_tests} tests passed")
+    print("📊 VALIDATION SUMMARY: {0}/{1} tests passed".format(success_count, total_tests))
 
     if success_count == total_tests:
         print("🎉 ALL TESTS PASSED - DATABASE MOCKING APPROACH VALIDATED!")

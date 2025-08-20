@@ -30,15 +30,15 @@ def wait_for_service(host, port, timeout=30):
             sock.close()
 
             if result == 0:
-                logger.info(f"✅ Service {host}:{port} is ready")
+                logger.info("✅ Service {0}:{1} is ready".format(host, port))
                 return True
 
         except Exception as e:
-            logger.debug(f"Waiting for {host}:{port} - {e}")
+            logger.debug("Waiting for {0}:{1} - {2}".format(host, port, e))
 
         time.sleep(1)
 
-    logger.error(f"❌ Service {host}:{port} did not become ready within {timeout}s")
+    logger.error("❌ Service {0}:{1} did not become ready within {2}s".format(host, port, timeout))
     return False
 
 
@@ -67,7 +67,7 @@ def test_database_basic():
         return True
 
     except Exception as e:
-        logger.error(f"❌ Database connection test failed: {e}")
+        logger.error("❌ Database connection test failed: {0}".format(e))
         return False
 
 
@@ -92,7 +92,7 @@ def test_redis_basic():
         return True
 
     except Exception as e:
-        logger.error(f"❌ Redis connection test failed: {e}")
+        logger.error("❌ Redis connection test failed: {0}".format(e))
         return False
 
 
@@ -118,7 +118,7 @@ def test_environment():
             missing_vars.append(var)
 
     if missing_vars:
-        logger.error(f"❌ Missing environment variables: {missing_vars}")
+        logger.error("❌ Missing environment variables: {0}".format(missing_vars))
         return False
 
     logger.info("✅ All required environment variables are set")
@@ -157,13 +157,13 @@ def run_basic_tests():
     total_tests = len(tests_passed) + 1  # +1 for env test
     passed_tests = sum(tests_passed) + (1 if env_test else 0)
 
-    logger.info(f"📊 Test Results: {passed_tests}/{total_tests} passed")
+    logger.info("📊 Test Results: {0}/{1} passed".format(passed_tests, total_tests))
 
     if passed_tests == total_tests:
         logger.info("🎉 All basic tests passed!")
         return True
     else:
-        logger.error(f"❌ {total_tests - passed_tests} tests failed")
+        logger.error("❌ {0} tests failed".format(total_tests - passed_tests))
         return False
 
 

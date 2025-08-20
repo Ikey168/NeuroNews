@@ -72,7 +72,7 @@ class VergeSpider(scrapy.Spider):
             or response.css('span[data-testid="BylineAuthor"]::text').get()
             or response.css('meta[name="author"]::attr(content)').get()
         )
-        item["author"] = author.strip() if author else "The Verge Staff"
+        item["author"] = author.strip() if author else "The Verge Sta"
 
         # Extract category
         category = self._extract_category(response.url, response)

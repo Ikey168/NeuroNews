@@ -176,7 +176,7 @@ class NewsVisualization:
             x=list(frequencies),
             y=list(words),
             orientation="h",
-            title=f"Top {top_n} Keywords/Topics",
+            title="Top {0} Keywords/Topics".format(top_n),
             labels={"x": "Frequency", "y": "Keywords"},
         )
 
@@ -280,7 +280,7 @@ class NetworkVisualization:
             node_text.append(
                 f"{node_info.get('label', node[0])}<br>"
                 f"Type: {node_info.get('type', 'unknown')}<br>"
-                f"Connections: {G.degree(node[0])}"
+                "Connections: {0}".format(G.degree(node[0]))
             )
 
             # Color by type
@@ -307,16 +307,16 @@ class NetworkVisualization:
         fig = go.Figure(
             data=[edge_trace, node_trace],
             layout=go.Layout(
-                title=f"Entity Network ({
-                    G.number_of_nodes()} entities, {edge_count} relationships)",
+                title="Entity Network ({0} entities, {1} relationships)".format(
+                    G.number_of_nodes(), edge_count
+                ),
                 titlefont_size=16,
                 showlegend=False,
                 hovermode="closest",
                 margin=dict(b=20, l=5, r=5, t=40),
                 annotations=[
                     dict(
-                        text=f"Layout: {
-                            layout_type.title()}",
+                        text="Layout: {0}".format(layout_type.title()),
                         showarrow=False,
                         xref="paper",
                         yref="paper",

@@ -112,12 +112,12 @@ class APIKeyGenerator:
         # Convert to base64-like string but URL safe
         api_key = secrets.token_urlsafe(32)
         # Add prefix to identify as NeuroNews API key
-        return f"nn_{api_key}"
+        return "nn_{0}".format(api_key)
 
     @staticmethod
     def generate_key_id() -> str:
         """Generate a unique key ID."""
-        return f"key_{secrets.token_hex(16)}"
+        return "key_{0}".format(secrets.token_hex(16))
 
     @staticmethod
     def hash_api_key(api_key: str) -> str:
@@ -151,7 +151,7 @@ class DynamoDBAPIKeyStore:
                 self._ensure_table_exists()
             except Exception as e:
                 if "Unable to locate credentials" not in str(e):
-                    logger.warning(f"Failed to initialize DynamoDB: {e}")
+                    logger.warning("Failed to initialize DynamoDB: {0}".format(e))
                 self.dynamodb = None
                 self.table = None
         else:
@@ -165,13 +165,13 @@ class DynamoDBAPIKeyStore:
         try:
             # Check if table exists
             self.table.load()
-            logger.info(f"DynamoDB table {self.table_name} exists")
+            logger.info("DynamoDB table {0} exists".format(self.table_name))
         except ClientError as e:
             if e.response["Error"]["Code"] == "ResourceNotFoundException":
-                logger.info(f"Creating DynamoDB table {self.table_name}")
+                logger.info("Creating DynamoDB table {0}".format(self.table_name))
                 self._create_table()
             else:
-                logger.error(f"Error checking table: {e}")
+                logger.error("Error checking table: {0}".format(e))
 
     def _create_table(self):
         """Create the API keys table."""
@@ -203,10 +203,10 @@ class DynamoDBAPIKeyStore:
             # Wait for table to be created
             table.wait_until_exists()
             self.table = table
-            logger.info(f"Created DynamoDB table {self.table_name}")
+            logger.info("Created DynamoDB table {0}".format(self.table_name))
 
         except Exception as e:
-            logger.error(f"Failed to create table: {e}")
+            logger.error("Failed to create table: {0}".format(e))
 
     async def store_api_key(self, api_key: APIKey) -> bool:
         """Store API key in DynamoDB."""
@@ -217,14 +217,14 @@ class DynamoDBAPIKeyStore:
         try:
             self.table.put_item(Item=api_key.to_dict())
             logger.info(
-                f"Stored API key {
-                    api_key.key_id} for user {
-                    api_key.user_id}"
+                "Stored API key {0} for user {1}".format(
+                    api_key.key_id, api_key.user_id
+                )
             )
             return True
 
         except Exception as e:
-            logger.error(f"Failed to store API key {api_key.key_id}: {e}")
+            logger.error("Failed to store API key {0}: {1}".format(api_key.key_id, e))
             return False
 
     async def get_api_key(self, key_id: str) -> Optional[APIKey]:
@@ -239,7 +239,7 @@ class DynamoDBAPIKeyStore:
             return None
 
         except Exception as e:
-            logger.error(f"Failed to get API key {key_id}: {e}")
+            logger.error("Failed to get API key {0}: {1}".format(key_id, e))
             return None
 
     async def get_user_api_keys(self, user_id: str) -> List[APIKey]:
@@ -257,7 +257,7 @@ class DynamoDBAPIKeyStore:
             return [APIKey.from_dict(item) for item in response.get("Items", [])]
 
         except Exception as e:
-            logger.error(f"Failed to get API keys for user {user_id}: {e}")
+            logger.error("Failed to get API keys for user {0}: {1}".format(user_id, e))
             return []
 
     async def update_api_key_usage(self, key_id: str) -> bool:
@@ -275,7 +275,7 @@ class DynamoDBAPIKeyStore:
             return True
 
         except Exception as e:
-            logger.error(f"Failed to update API key usage {key_id}: {e}")
+            logger.error("Failed to update API key usage {0}: {1}".format(key_id, e))
             return False
 
     async def revoke_api_key(self, key_id: str) -> bool:
@@ -290,11 +290,11 @@ class DynamoDBAPIKeyStore:
                 ExpressionAttributeNames={"#status": "status"},
                 ExpressionAttributeValues={":status": APIKeyStatus.REVOKED.value},
             )
-            logger.info(f"Revoked API key {key_id}")
+            logger.info("Revoked API key {0}".format(key_id))
             return True
 
         except Exception as e:
-            logger.error(f"Failed to revoke API key {key_id}: {e}")
+            logger.error("Failed to revoke API key {0}: {1}".format(key_id, e))
             return False
 
     async def delete_api_key(self, key_id: str) -> bool:
@@ -304,11 +304,11 @@ class DynamoDBAPIKeyStore:
 
         try:
             self.table.delete_item(Key={"key_id": key_id})
-            logger.info(f"Deleted API key {key_id}")
+            logger.info("Deleted API key {0}".format(key_id))
             return True
 
         except Exception as e:
-            logger.error(f"Failed to delete API key {key_id}: {e}")
+            logger.error("Failed to delete API key {0}: {1}".format(key_id, e))
             return False
 
 
@@ -348,8 +348,9 @@ class APIKeyManager:
 
         if len(active_keys) >= self.max_keys_per_user:
             raise ValueError(
-                f"User has reached maximum API key limit ({
-                    self.max_keys_per_user})"
+                "User has reached maximum API key limit ({0})".format(
+                    self.max_keys_per_user
+                )
             )
 
         # Generate new API key
@@ -514,7 +515,7 @@ class APIKeyManager:
                     },
                 )
             except Exception as e:
-                logger.error(f"Failed to renew API key {key_id}: {e}")
+                logger.error("Failed to renew API key {0}: {1}".format(key_id, e))
                 raise RuntimeError("Failed to renew API key")
 
         return {

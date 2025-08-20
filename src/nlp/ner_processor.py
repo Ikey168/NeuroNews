@@ -127,8 +127,9 @@ class NERProcessor:
             self.device = device
 
         logger.info(
-            f"Initializing NER processor with model: {model_name} on device: {
-                self.device}"
+            "Initializing NER processor with model: {0} on device: {1}".format(
+                model_name, self.device
+            )
         )
 
         try:
@@ -144,7 +145,7 @@ class NERProcessor:
             logger.info("NER processor initialized successfully")
 
         except Exception as e:
-            logger.error(f"Failed to initialize NER processor: {e}")
+            logger.error("Failed to initialize NER processor: {0}".format(e))
             raise
 
         # Statistics tracking
@@ -169,7 +170,9 @@ class NERProcessor:
             List of extracted entities with metadata
         """
         if not text or not text.strip():
-            logger.warning(f"Empty or invalid text provided for article {article_id}")
+            logger.warning(
+                "Empty or invalid text provided for article {0}".format(article_id)
+            )
             return []
 
         try:
@@ -193,14 +196,17 @@ class NERProcessor:
                 )
 
             logger.info(
-                f"Extracted {
-                    len(processed_entities)} entities from article {article_id}"
+                "Extracted {0} entities from article {1}".format(
+                    len(processed_entities), article_id
+                )
             )
             return processed_entities
 
         except Exception as e:
             self.stats["processing_errors"] += 1
-            logger.error(f"Error extracting entities from article {article_id}: {e}")
+            logger.error(
+                "Error extracting entities from article {0}: {1}".format(article_id, e)
+            )
             return []
 
     def _preprocess_text(self, text: str) -> str:
@@ -259,7 +265,7 @@ class NERProcessor:
             return all_entities
 
         except Exception as e:
-            logger.error(f"Error in model prediction: {e}")
+            logger.error("Error in model prediction: {0}".format(e))
             return []
 
     def _split_text(self, text: str) -> List[str]:

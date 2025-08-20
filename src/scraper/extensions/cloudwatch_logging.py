@@ -64,9 +64,9 @@ class CloudWatchLoggingExtension:
 
             # Log that CloudWatch logging is configured
             spider.logger.info(
-                f"CloudWatch logging configured: "
-                f"group={handler.log_group_name}, "
-                f"stream={handler.log_stream_name}"
+                "CloudWatch logging configured: "
+                "group={0}, ".format(handler.log_group_name)
+                "stream={0}".format(handler.log_stream_name)
             )
 
     def spider_closed(self, spider):

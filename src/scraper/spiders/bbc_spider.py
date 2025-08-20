@@ -73,7 +73,7 @@ class BBCSpider(scrapy.Spider):
             or response.css(".byline__name::text").get()
             or response.css('meta[name="author"]::attr(content)').get()
         )
-        item["author"] = author.strip() if author else "BBC Staff"
+        item["author"] = author.strip() if author else "BBC Sta"
 
         # Extract category
         category = self._extract_category(response.url, response)

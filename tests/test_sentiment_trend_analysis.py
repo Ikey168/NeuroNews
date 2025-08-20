@@ -255,7 +255,7 @@ class TestSentimentTrendAnalyzer:
                 sentiment_label="positive",
                 confidence=0.8,
                 article_count=5,
-                source_articles=[f"article_{i}"],
+                source_articles=["article_{0}".format(i)],
                 metadata={},
             )
             for i in range(5, 0, -1)  # 5 points with increasing sentiment

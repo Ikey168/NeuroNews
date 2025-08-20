@@ -34,7 +34,7 @@ async def lifespan(app: FastAPI):  # app parameter is conventional for lifespan
         await graph_builder_instance.connect()
         logger.info("GraphBuilder connected successfully.")
     except Exception as e:
-        logger.error(f"GraphBuilder failed to connect during startup: {e}")
+        logger.error("GraphBuilder failed to connect during startup: {0}".format(e))
         graph_builder_instance = None
 
     yield
@@ -49,7 +49,7 @@ async def lifespan(app: FastAPI):  # app parameter is conventional for lifespan
             await graph_builder_instance.close()
             logger.info("GraphBuilder connection closed successfully.")
         except Exception as e:
-            logger.error(f"Error during GraphBuilder close: {e}")
+            logger.error("Error during GraphBuilder close: {0}".format(e))
     elif graph_builder_instance:
         logger.warning(
             "GraphBuilder instance does not have a callable close method or was None initially."
@@ -82,10 +82,12 @@ async def get_graph() -> GraphBuilder:
                 )
             logger.info("GraphBuilder reconnected successfully.")
         except Exception as e:
-            logger.error(f"Failed to reconnect GraphBuilder: {e}")
+            logger.error("Failed to reconnect GraphBuilder: {0}".format(e))
             raise HTTPException(
                 status_code=503,
-                detail=f"Graph database service not available (reconnect failed: {e}).",
+                detail="Graph database service not available (reconnect failed: {0}).".format(
+                    e
+                ),
             )
     return graph_builder_instance
 
@@ -163,11 +165,10 @@ async def get_related_entities(
         return formatted_results
 
     except ConnectionError as ce:
-        logger.error(f"Connection error in get_related_entities: {str(ce)}")
+        logger.error("Connection error in get_related_entities: {0}".format(str(ce)))
         raise HTTPException(
             status_code=503,
-            detail=f"Graph database connection error: {
-                str(ce)}",
+            detail="Graph database connection error: {0}".format(str(ce)),
         )
     except Exception as e:
         logger.error(
@@ -179,8 +180,7 @@ async def get_related_entities(
         logger.error(traceback.format_exc())
         raise HTTPException(
             status_code=500,
-            detail=f"Internal server error: {
-                str(e)}",
+            detail="Internal server error: {0}".format(str(e)),
         )
 
 
@@ -225,11 +225,10 @@ async def get_event_timeline(
         return timeline
 
     except ConnectionError as ce:
-        logger.error(f"Connection error in get_event_timeline: {str(ce)}")
+        logger.error("Connection error in get_event_timeline: {0}".format(str(ce)))
         raise HTTPException(
             status_code=503,
-            detail=f"Graph database connection error: {
-                str(ce)}",
+            detail="Graph database connection error: {0}".format(str(ce)),
         )
     except Exception as e:
         logger.error(
@@ -241,8 +240,7 @@ async def get_event_timeline(
         logger.error(traceback.format_exc())
         raise HTTPException(
             status_code=500,
-            detail=f"Internal server error: {
-                str(e)}",
+            detail="Internal server error: {0}".format(str(e)),
         )
 
 
@@ -252,19 +250,17 @@ async def health_check(graph: GraphBuilder = Depends(get_graph)) -> Dict[str, st
         await graph._execute_traversal(graph.g.V().limit(1))
         return {"status": "healthy"}
     except ConnectionError as ce:
-        logger.error(f"Health check failed due to connection error: {str(ce)}")
+        logger.error("Health check failed due to connection error: {0}".format(str(ce)))
         raise HTTPException(
             status_code=503,
-            detail=f"Graph database connection error: {
-                str(ce)}",
+            detail="Graph database connection error: {0}".format(str(ce)),
         )
     except Exception as e:
-        logger.error(f"Health check failed: {str(e)}")
+        logger.error("Health check failed: {0}".format(str(e)))
         import traceback
 
         logger.error(traceback.format_exc())
         raise HTTPException(
             status_code=503,
-            detail=f"Graph database connection failed: {
-                str(e)}",
+            detail="Graph database connection failed: {0}".format(str(e)),
         )

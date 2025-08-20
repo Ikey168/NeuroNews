@@ -114,12 +114,12 @@ class CacheManager:
                 self.redis_client.ping()
                 logger.info("Redis cache connection established")
             except Exception as e:
-                logger.warning(f"Redis connection failed: {e}. Using local cache only.")
+                logger.warning("Redis connection failed: {0}. Using local cache only.".format(e))
                 self.redis_client = None
 
     def _generate_cache_key(self, text: str, model_name: str, operation: str) -> str:
         """Generate a unique cache key for the operation."""
-        content = f"{operation}:{model_name}:{text}"
+        content = "{0}:{1}:{2}".format(operation, model_name, text)
         return hashlib.sha256(content.encode()).hexdigest()
 
     async def get(self, key: str) -> Optional[Any]:
@@ -146,7 +146,7 @@ class CacheManager:
             return None
 
         except Exception as e:
-            logger.warning(f"Cache get error: {e}")
+            logger.warning("Cache get error: {0}".format(e))
             self.cache_stats["misses"] += 1
             return None
 
@@ -174,7 +174,7 @@ class CacheManager:
             return True
 
         except Exception as e:
-            logger.warning(f"Cache set error: {e}")
+            logger.warning("Cache set error: {0}".format(e))
             return False
 
     def get_stats(self) -> Dict[str, Any]:
@@ -203,7 +203,7 @@ class ModelManager:
 
         # Determine device
         self.device = self._get_optimal_device()
-        logger.info(f"Using device: {self.device}")
+        logger.info("Using device: {0}".format(self.device))
 
     def _get_optimal_device(self) -> str:
         """Determine the best device for model execution."""
@@ -224,7 +224,7 @@ class ModelManager:
     @lru_cache(maxsize=3)
     def get_model(self, model_name: str, task: str = "sentiment-analysis") -> Any:
         """Get or load a model with caching."""
-        cache_key = f"{model_name}:{task}"
+        cache_key = "{0}:{1}".format(model_name, task)
 
         with self.lock:
             if cache_key in self.models:
@@ -232,7 +232,7 @@ class ModelManager:
                 return self.models[cache_key]
 
         try:
-            logger.info(f"Loading model: {model_name} for task: {task}")
+            logger.info("Loading model: {0} for task: {1}".format(model_name, task))
             start_time = time.time()
 
             if TRANSFORMERS_AVAILABLE:
@@ -248,14 +248,14 @@ class ModelManager:
                 if (
                     self.config.enable_model_quantization
                     and TORCH_AVAILABLE
-                    and hasattr(model_pipeline.model, "half")
+                    and hasattr(model_pipeline.model, "hal")
                 ):
                     if self.device == "cuda":
                         model_pipeline.model = model_pipeline.model.half()
                         logger.info("Applied FP16 quantization")
 
                 load_time = time.time() - start_time
-                logger.info(f"Model loaded in {load_time:.2f}s")
+                logger.info("Model loaded in {0}s".format(load_time))
 
                 with self.lock:
                     self.models[cache_key] = model_pipeline
@@ -266,7 +266,7 @@ class ModelManager:
                 raise RuntimeError("Transformers library not available")
 
         except Exception as e:
-            logger.error(f"Failed to load model {model_name}: {e}")
+            logger.error("Failed to load model {0}: {1}".format(model_name, e))
             raise
 
     def clear_unused_models(self):
@@ -286,7 +286,7 @@ class ModelManager:
                     if TORCH_AVAILABLE and torch.cuda.is_available():
                         torch.cuda.empty_cache()
 
-                    logger.info(f"Cleared unused model: {model_key}")
+                    logger.info("Cleared unused model: {0}".format(model_key))
 
 
 class MemoryManager:
@@ -312,7 +312,7 @@ class MemoryManager:
 
         if usage_ratio > self.config.gc_threshold:
             logger.warning(
-                f"High memory usage: {current_usage:.1f}MB ({usage_ratio:.1%})"
+                "High memory usage: {0}MB ({1})".format(current_usage:.1f, usage_ratio)
             )
             self.memory_stats["memory_warnings"] += 1
 
@@ -324,7 +324,7 @@ class MemoryManager:
             self.memory_stats["gc_triggered"] += 1
 
             new_usage = self.get_memory_usage_mb()
-            logger.info(f"GC freed {current_usage - new_usage:.1f}MB")
+            logger.info("GC freed {0}MB".format(current_usage - new_usage))
 
             return True
 
@@ -401,15 +401,15 @@ class OptimizedNLPPipeline:
             operations = ["sentiment", "embedding"]
 
         logger.info(
-            f"Processing {
-                len(articles)} articles with operations: {operations}"
+            "Processing {0} articles with operations: {1}".format(
+                len(articles), operations)
         )
         start_time = time.time()
 
         try:
             # Create adaptive batches
             batches = self._create_adaptive_batches(articles)
-            logger.info(f"Created {len(batches)} adaptive batches")
+            logger.info("Created {0} adaptive batches".format(len(batches)))
 
             # Process batches concurrently
             batch_tasks = []
@@ -430,7 +430,7 @@ class OptimizedNLPPipeline:
                 if isinstance(result, list):
                     all_results.extend(result)
                 elif isinstance(result, Exception):
-                    logger.error(f"Batch processing error: {result}")
+                    logger.error("Batch processing error: {0}".format(result))
                     self.stats["errors"] += 1
 
             processing_time = time.time() - start_time
@@ -455,7 +455,7 @@ class OptimizedNLPPipeline:
             }
 
         except Exception as e:
-            logger.error(f"Pipeline processing error: {e}")
+            logger.error("Pipeline processing error: {0}".format(e))
             self.stats["errors"] += 1
             raise
 
@@ -516,8 +516,8 @@ class OptimizedNLPPipeline:
 
             try:
                 logger.debug(
-                    f"Processing batch {batch_id} with {
-                        len(batch)} articles"
+                    "Processing batch {0} with {1} articles".format(batch_id, 
+                        len(batch))
                 )
 
                 # Check memory pressure
@@ -549,14 +549,14 @@ class OptimizedNLPPipeline:
 
                 batch_time = time.time() - batch_start_time
                 logger.debug(
-                    f"Batch {batch_id} completed in {
-                        batch_time:.2f}s"
+                    "Batch {0} completed in {1}s".format(batch_id, 
+                        batch_time:.2f)
                 )
 
                 return results
 
             except Exception as e:
-                logger.error(f"Error processing batch {batch_id}: {e}")
+                logger.error("Error processing batch {0}: {1}".format(batch_id, e))
                 self.stats["errors"] += 1
                 return []
 
@@ -576,11 +576,11 @@ class OptimizedNLPPipeline:
             elif operation == "summary":
                 return await self._process_summary_batch(batch)
             else:
-                logger.warning(f"Unknown operation: {operation}")
-                return [{"error": f"Unknown operation: {operation}"} for _ in batch]
+                logger.warning("Unknown operation: {0}".format(operation))
+                return [{"error": "Unknown operation: {0}".format(operation)} for _ in batch]
 
         except Exception as e:
-            logger.error(f"Error processing {operation} operation: {e}")
+            logger.error("Error processing {0} operation: {1}".format(operation, e))
             return [{"error": str(e)} for _ in batch]
 
     async def _process_sentiment_batch(
@@ -650,7 +650,7 @@ class OptimizedNLPPipeline:
             return results
 
         except Exception as e:
-            logger.error(f"Sentiment inference error: {e}")
+            logger.error("Sentiment inference error: {0}".format(e))
             return [{"error": str(e)} for _ in texts]
 
     async def _process_embedding_batch(
@@ -677,7 +677,7 @@ class OptimizedNLPPipeline:
                 {"embedding": [0.0] * 384, "error": "Simple embedding"} for _ in batch
             ]
         except Exception as e:
-            logger.error(f"Embedding generation error: {e}")
+            logger.error("Embedding generation error: {0}".format(e))
             return [{"error": str(e)} for _ in batch]
 
     async def _process_ner_batch(
@@ -775,16 +775,16 @@ class OptimizedNLPPipeline:
                     self.current_batch_size + 4, self.config.max_batch_size
                 )
                 logger.debug(
-                    f"Increased batch size to {
-                        self.current_batch_size}"
+                    "Increased batch size to {0}".format(
+                        self.current_batch_size)
                 )
 
             # If performance is poor, decrease batch size
             elif avg_throughput < 20 and self.current_batch_size > 8:
                 self.current_batch_size = max(self.current_batch_size - 4, 8)
                 logger.debug(
-                    f"Decreased batch size to {
-                        self.current_batch_size}"
+                    "Decreased batch size to {0}".format(
+                        self.current_batch_size)
                 )
 
     def get_performance_stats(self) -> Dict[str, Any]:
@@ -874,9 +874,9 @@ if __name__ == "__main__":
         # Sample articles for testing
         sample_articles = [
             {
-                "id": f"article_{i}",
-                "title": f"Test Article {i}",
-                "content": f"This is the content of test article {i}. " * 50,
+                "id": "article_{0}".format(i),
+                "title": "Test Article {0}".format(i),
+                "content": "This is the content of test article {0}. ".format(i) * 50,
             }
             for i in range(20)
         ]

@@ -241,7 +241,7 @@ async def test_graph_management_operations(mocked_graph: GraphBuilder):
     except Exception as e:
         # If method doesn't exist or fails, that's also acceptable for basic
         # testing
-        print(f"Graph clearing not available in mock: {e}")
+        print("Graph clearing not available in mock: {0}".format(e))
         assert True
 
     # Verify operations were attempted
@@ -266,7 +266,7 @@ async def test_vertex_retrieval_operations(mocked_graph: GraphBuilder):
         assert result is not None or result == [] or result is None
     except Exception as e:
         # Method may not be implemented or may fail in mock environment
-        print(f"Vertex retrieval method not available or failed: {e}")
+        print("Vertex retrieval method not available or failed: {0}".format(e))
         assert True
 
     try:
@@ -275,7 +275,7 @@ async def test_vertex_retrieval_operations(mocked_graph: GraphBuilder):
         assert result is not None or result == [] or result is None
     except Exception as e:
         # Method may not be implemented or may fail in mock environment
-        print(f"Related vertices method not available or failed: {e}")
+        print("Related vertices method not available or failed: {0}".format(e))
         assert True
 
 
@@ -363,9 +363,9 @@ async def test_complex_entity_scenario(mocked_graph: GraphBuilder):
     assert len(edge_ops) >= 4  # 4 relationships
 
     print(
-        f"✅ Complex scenario test completed: {
-            len(vertex_ops)} vertices, {
-            len(edge_ops)} edges created"
+        "✅ Complex scenario test completed: {0} vertices, {1} edges created".format(
+            len(vertex_ops), 
+            len(edge_ops))
     )
 
 

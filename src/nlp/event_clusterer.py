@@ -82,16 +82,16 @@ class EventClusterer:
             List of detected event clusters
         """
         logger.info(
-            f"Starting event detection for {
-                len(embeddings_data)} articles"
+            "Starting event detection for {0} articles".format(
+                len(embeddings_data))
         )
         start_time = time.time()
 
         try:
             if len(embeddings_data) < self.min_cluster_size:
                 logger.warning(
-                    f"Not enough articles ({
-                        len(embeddings_data)}) for clustering"
+                    "Not enough articles ({0}) for clustering".format(
+                        len(embeddings_data))
                 )
                 return []
 
@@ -106,7 +106,7 @@ class EventClusterer:
 
             # Determine optimal number of clusters
             optimal_clusters = self._find_optimal_clusters(embeddings_normalized)
-            logger.info(f"Optimal number of clusters: {optimal_clusters}")
+            logger.info("Optimal number of clusters: {0}".format(optimal_clusters))
 
             # Perform clustering
             cluster_labels, cluster_metrics = self._perform_clustering(
@@ -140,14 +140,14 @@ class EventClusterer:
             )
 
             logger.info(
-                f"Detected {
-                    len(events)} events in {
-                    processing_time:.2f}s"
+                "Detected {0} events in {1}s".format(
+                    len(events), 
+                    processing_time:.2f)
             )
             return events
 
         except Exception as e:
-            logger.error(f"Error in event detection: {e}")
+            logger.error("Error in event detection: {0}".format(e))
             raise
 
     def _find_optimal_clusters(self, embeddings: np.ndarray) -> int:
@@ -192,16 +192,16 @@ class EventClusterer:
             best_k_idx = np.argmax(silhouette_scores)
             optimal_k = list(k_range)[best_k_idx]
 
-            logger.info(f"Silhouette scores: {dict(zip(k_range, silhouette_scores))}")
+            logger.info("Silhouette scores: {0}".format(dict(zip(k_range, silhouette_scores))))
             logger.info(
-                f"Best silhouette score: {
-                    max(silhouette_scores):.3f} for k={optimal_k}"
+                "Best silhouette score: {0} for k={1}".format(
+                    max(silhouette_scores):.3f, optimal_k)
             )
 
             return optimal_k
 
         except Exception as e:
-            logger.warning(f"Error finding optimal clusters: {e}")
+            logger.warning("Error finding optimal clusters: {0}".format(e))
             return min(5, max(2, len(embeddings) // 10))  # Fallback
 
     def _perform_clustering(
@@ -266,15 +266,15 @@ class EventClusterer:
 
             else:
                 raise ValueError(
-                    f"Unknown clustering method: {
-                        self.clustering_method}"
+                    "Unknown clustering method: {0}".format(
+                        self.clustering_method)
                 )
 
-            logger.info(f"Clustering metrics: {metrics}")
+            logger.info("Clustering metrics: {0}".format(metrics))
             return cluster_labels, metrics
 
         except Exception as e:
-            logger.error(f"Error in clustering: {e}")
+            logger.error("Error in clustering: {0}".format(e))
             raise
 
     async def _process_clusters_to_events(
@@ -321,7 +321,7 @@ class EventClusterer:
             return events
 
         except Exception as e:
-            logger.error(f"Error processing clusters to events: {e}")
+            logger.error("Error processing clusters to events: {0}".format(e))
             return []
 
     async def _create_event_from_cluster(
@@ -444,7 +444,7 @@ class EventClusterer:
             return event
 
         except Exception as e:
-            logger.error(f"Error creating event from cluster: {e}")
+            logger.error("Error creating event from cluster: {0}".format(e))
             return None
 
     def _generate_cluster_name(self, articles: List[Dict[str, Any]]) -> str:
@@ -795,7 +795,7 @@ class EventClusterer:
             return events
 
         except Exception as e:
-            logger.warning(f"Error calculating event significance: {e}")
+            logger.warning("Error calculating event significance: {0}".format(e))
             return events
 
     async def _store_events(self, events: List[Dict[str, Any]]) -> int:
@@ -897,11 +897,11 @@ class EventClusterer:
 
                     conn.commit()
 
-            logger.info(f"Stored {stored_count} events in database")
+            logger.info("Stored {0} events in database".format(stored_count))
             return stored_count
 
         except Exception as e:
-            logger.error(f"Error storing events: {e}")
+            logger.error("Error storing events: {0}".format(e))
             return 0
 
     async def get_breaking_news(
@@ -959,7 +959,7 @@ class EventClusterer:
                     return events
 
         except Exception as e:
-            logger.error(f"Error getting breaking news: {e}")
+            logger.error("Error getting breaking news: {0}".format(e))
             return []
 
     def get_statistics(self) -> Dict[str, Any]:
@@ -997,7 +997,7 @@ if __name__ == "__main__":
             # Detect events
             events = await clusterer.detect_events(embeddings_data)
 
-            print(f"Detected {len(events)} events:")
+            print("Detected {0} events:".format(len(events)))
             for event in events[:3]:  # Show first 3
                 print(
                     f"- {event['cluster_name']} ({event['event_type']}) - {event['cluster_size']} articles"

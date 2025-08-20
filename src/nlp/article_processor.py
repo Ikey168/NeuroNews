@@ -53,10 +53,12 @@ class ArticleProcessor:
         try:
             self.analyzer = create_analyzer(sentiment_provider, **sentiment_kwargs)
             logger.info(
-                f"Initialized sentiment analyzer with provider: {sentiment_provider}"
+                "Initialized sentiment analyzer with provider: {0}".format(
+                    sentiment_provider
+                )
             )
         except Exception as e:
-            logger.error(f"Failed to initialize sentiment analyzer: {str(e)}")
+            logger.error("Failed to initialize sentiment analyzer: {0}".format(str(e)))
             raise
 
         # Create tables if they don't exist
@@ -87,7 +89,7 @@ class ArticleProcessor:
                     conn.commit()
                     logger.info("Successfully initialized database tables")
         except Exception as e:
-            logger.error(f"Failed to initialize database: {str(e)}")
+            logger.error("Failed to initialize database: {0}".format(str(e)))
             raise
 
     def _store_results(self, results: List[Dict]):
@@ -114,11 +116,12 @@ class ArticleProcessor:
                     execute_batch(cur, insert_sql, results, page_size=self.batch_size)
                     conn.commit()
                     logger.info(
-                        f"Successfully stored {
-                            len(results)} results in Redshift"
+                        "Successfully stored {0} results in Redshift".format(
+                            len(results)
+                        )
                     )
         except Exception as e:
-            logger.error(f"Failed to store results in Redshift: {str(e)}")
+            logger.error("Failed to store results in Redshift: {0}".format(str(e)))
             raise
 
     def process_articles(self, articles: List[Dict]) -> List[Dict]:
@@ -172,7 +175,7 @@ class ArticleProcessor:
             return processed_results
 
         except Exception as e:
-            logger.error(f"Error processing articles: {str(e)}")
+            logger.error("Error processing articles: {0}".format(str(e)))
             raise
 
 
@@ -206,4 +209,4 @@ if __name__ == "__main__":
 
     # Process articles
     results = processor.process_articles(articles)
-    print(f"Processed {len(results)} articles")
+    print("Processed {0} articles".format(len(results)))

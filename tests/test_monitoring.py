@@ -409,7 +409,7 @@ if __name__ == "__main__":
             await cloudwatch_logger.log_scraping_attempt(metrics)
             print("✅ CloudWatch logging test passed")
         except Exception as e:
-            print(f"❌ CloudWatch logging test failed: {e}")
+            print("❌ CloudWatch logging test failed: {0}".format(e))
 
         # Test DynamoDB manager
         print("\n2. Testing DynamoDB Failure Manager...")
@@ -424,11 +424,11 @@ if __name__ == "__main__":
                 error_details="Connection timeout after 30s",
             )
             print(
-                f"✅ DynamoDB failure recording test passed: {
-                    failed_url.url}"
+                "✅ DynamoDB failure recording test passed: {0}".format(
+                    failed_url.url)
             )
         except Exception as e:
-            print(f"❌ DynamoDB failure recording test failed: {e}")
+            print("❌ DynamoDB failure recording test failed: {0}".format(e))
 
         # Test SNS alert manager
         print("\n3. Testing SNS Alert Manager...")
@@ -451,7 +451,7 @@ if __name__ == "__main__":
             # code path
             print("✅ SNS alert manager initialization test passed")
         except Exception as e:
-            print(f"⚠️ SNS alert manager test: {e}")
+            print("⚠️ SNS alert manager test: {0}".format(e))
 
         # Test retry manager
         print("\n4. Testing Enhanced Retry Manager...")
@@ -473,10 +473,10 @@ if __name__ == "__main__":
                 retry_config=RetryConfig(max_retries=3, base_delay=0.1),
             )
             print(
-                f"✅ Retry manager test passed: {result} (after {call_count} attempts)"
+                "✅ Retry manager test passed: {0} (after {1} attempts)".format(result, call_count)
             )
         except Exception as e:
-            print(f"❌ Retry manager test failed: {e}")
+            print("❌ Retry manager test failed: {0}".format(e))
 
         print("\n🎉 Manual tests completed!")
 

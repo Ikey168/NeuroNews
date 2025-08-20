@@ -129,7 +129,7 @@ class SummaryDatabase:
 
     async def create_table(self):
         """Create the summaries table if it doesn't exist."""
-        create_sql = f"""
+        create_sql = """
         CREATE TABLE IF NOT EXISTS {self.table_name} (
             id BIGINT IDENTITY(1,1) PRIMARY KEY,
             article_id VARCHAR(255) NOT NULL,
@@ -172,11 +172,11 @@ class SummaryDatabase:
             self._update_metrics(query_time)
 
             logger.info(
-                f"Table {self.table_name} created/verified in {query_time:.2f}s"
+                "Table {0} created/verified in {1}s".format(self.table_name, query_time)
             )
 
         except Exception as e:
-            logger.error(f"Failed to create table {self.table_name}: {str(e)}")
+            logger.error("Failed to create table {0}: {1}".format(self.table_name, str(e)))
             raise
 
     async def store_summary(
@@ -198,10 +198,10 @@ class SummaryDatabase:
         # Check if summary already exists
         existing = await self.get_summary_by_hash(content_hash)
         if existing:
-            logger.info(f"Summary already exists for hash {content_hash}")
+            logger.info("Summary already exists for hash {0}".format(content_hash))
             return existing.id
 
-        insert_sql = f"""
+        insert_sql = """
         INSERT INTO {self.table_name} (
             article_id, content_hash, summary_text, summary_length,
             model_used, confidence_score, processing_time, word_count,
@@ -253,17 +253,17 @@ class SummaryDatabase:
                 created_at=datetime.now(),
             )
 
-            cache_key = f"hash:{content_hash}"
+            cache_key = "hash:{0}".format(content_hash)
             self._cache_set(cache_key, record)
 
             logger.info(
-                f"Summary stored with ID {summary_id} in {
-                    query_time:.2f}s"
+                "Summary stored with ID {0} in {1}s".format(summary_id, 
+                    query_time:.2f)
             )
             return summary_id
 
         except Exception as e:
-            logger.error(f"Failed to store summary: {str(e)}")
+            logger.error("Failed to store summary: {0}".format(str(e)))
             raise
 
     async def get_summary_by_hash(self, content_hash: str) -> Optional[SummaryRecord]:
@@ -276,7 +276,7 @@ class SummaryDatabase:
         Returns:
             SummaryRecord if found, None otherwise
         """
-        cache_key = f"hash:{content_hash}"
+        cache_key = "hash:{0}".format(content_hash)
 
         # Check cache first
         cached = self._cache_get(cache_key)
@@ -284,7 +284,7 @@ class SummaryDatabase:
             self._update_metrics(0, cache_hit=True)
             return cached
 
-        select_sql = f"""
+        select_sql = """
         SELECT id, article_id, content_hash, summary_text, summary_length,
                model_used, confidence_score, processing_time, word_count,
                sentence_count, compression_ratio, created_at, updated_at
@@ -331,8 +331,8 @@ class SummaryDatabase:
 
         except Exception as e:
             logger.error(
-                f"Failed to get summary by hash {content_hash}: {
-                    str(e)}"
+                "Failed to get summary by hash {0}: {1}".format(content_hash, 
+                    str(e))
             )
             raise
 
@@ -346,7 +346,7 @@ class SummaryDatabase:
         Returns:
             List of SummaryRecord objects
         """
-        cache_key = f"article:{article_id}"
+        cache_key = "article:{0}".format(article_id)
 
         # Check cache first
         cached = self._cache_get(cache_key)
@@ -354,7 +354,7 @@ class SummaryDatabase:
             self._update_metrics(0, cache_hit=True)
             return [cached] if cached else []
 
-        select_sql = f"""
+        select_sql = """
         SELECT id, article_id, content_hash, summary_text, summary_length,
                model_used, confidence_score, processing_time, word_count,
                sentence_count, compression_ratio, created_at, updated_at
@@ -397,8 +397,8 @@ class SummaryDatabase:
 
         except Exception as e:
             logger.error(
-                f"Failed to get summaries for article {article_id}: {
-                    str(e)}"
+                "Failed to get summaries for article {0}: {1}".format(article_id, 
+                    str(e))
             )
             raise
 
@@ -415,7 +415,7 @@ class SummaryDatabase:
         Returns:
             SummaryRecord if found, None otherwise
         """
-        cache_key = f"article:{article_id}:length:{length.value}"
+        cache_key = "article:{0}:length:{1}".format(article_id, length.value)
 
         # Check cache first
         cached = self._cache_get(cache_key)
@@ -423,7 +423,7 @@ class SummaryDatabase:
             self._update_metrics(0, cache_hit=True)
             return cached
 
-        select_sql = f"""
+        select_sql = """
         SELECT id, article_id, content_hash, summary_text, summary_length,
                model_used, confidence_score, processing_time, word_count,
                sentence_count, compression_ratio, created_at, updated_at
@@ -470,8 +470,8 @@ class SummaryDatabase:
 
         except Exception as e:
             logger.error(
-                f"Failed to get summary for article {article_id} "
-                f"with length {length.value}: {str(e)}"
+                "Failed to get summary for article {0} ".format(article_id)
+                "with length {0}: {1}".format(length.value, str(e))
             )
             raise
 
@@ -485,7 +485,7 @@ class SummaryDatabase:
         Returns:
             Number of deleted records
         """
-        delete_sql = f"""
+        delete_sql = """
         DELETE FROM {self.table_name}
         WHERE article_id = %s;
         """
@@ -506,7 +506,7 @@ class SummaryDatabase:
             keys_to_remove = [
                 key
                 for key in self._cache.keys()
-                if key.startswith(f"article:{article_id}")
+                if key.startswith("article:{0}".format(article_id))
             ]
             for key in keys_to_remove:
                 del self._cache[key]
@@ -514,15 +514,15 @@ class SummaryDatabase:
                     del self._cache_timestamps[key]
 
             logger.info(
-                f"Deleted {deleted_count} summaries for article {article_id} "
-                f"in {query_time:.2f}s"
+                "Deleted {0} summaries for article {1} ".format(deleted_count, article_id)
+                "in {0}s".format(query_time)
             )
             return deleted_count
 
         except Exception as e:
             logger.error(
-                f"Failed to delete summaries for article {article_id}: {
-                    str(e)}"
+                "Failed to delete summaries for article {0}: {1}".format(article_id, 
+                    str(e))
             )
             raise
 
@@ -533,7 +533,7 @@ class SummaryDatabase:
         Returns:
             Dictionary with summary statistics
         """
-        stats_sql = f"""
+        stats_sql = """
         SELECT
             COUNT(*) as total_summaries,
             COUNT(DISTINCT article_id) as unique_articles,
@@ -598,7 +598,7 @@ class SummaryDatabase:
             return stats
 
         except Exception as e:
-            logger.error(f"Failed to get summary statistics: {str(e)}")
+            logger.error("Failed to get summary statistics: {0}".format(str(e)))
             raise
 
     def clear_cache(self):

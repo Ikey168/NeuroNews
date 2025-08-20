@@ -265,9 +265,9 @@ class TestS3ArticleStorage:
 
         articles = [
             {
-                "title": f"Article {i}",
-                "content": f"Content {i}",
-                "url": f"https://example.com/article{i}",
+                "title": "Article {0}".format(i),
+                "content": "Content {0}".format(i),
+                "url": "https://example.com/article{0}".format(i),
                 "source": "test-source",
             }
             for i in range(3)
@@ -331,9 +331,9 @@ class TestS3IngestionFunctions:
         """Create sample articles for testing."""
         return [
             {
-                "title": f"Article {i}",
-                "content": f"Content for article {i}",
-                "url": f"https://example.com/article{i}",
+                "title": "Article {0}".format(i),
+                "content": "Content for article {0}".format(i),
+                "url": "https://example.com/article{0}".format(i),
                 "source": "test-source",
                 "published_date": "2025-08-13",
             }
@@ -349,15 +349,15 @@ class TestS3IngestionFunctions:
         mock_storage = Mock()
         mock_storage.batch_store_raw_articles.return_value = [
             ArticleMetadata(
-                article_id=f"id{i}",
+                article_id="id{0}".format(i),
                 source="test-source",
-                url=f"https://example.com/article{i}",
-                title=f"Article {i}",
+                url="https://example.com/article{0}".format(i),
+                title="Article {0}".format(i),
                 published_date="2025-08-13",
                 scraped_date="2025-08-13T10:00:00Z",
                 content_hash="hash",
                 file_size=1000,
-                s3_key=f"raw_articles/2025/08/13/id{i}.json",
+                s3_key="raw_articles/2025/08/13/id{0}.json".format(i),
                 article_type=ArticleType.RAW,
                 processing_status="stored",
             )
@@ -466,15 +466,15 @@ if __name__ == "__main__":
 
         # Test key generation
         key = storage._generate_s3_key(article, ArticleType.RAW)
-        print(f"✅ S3 key generated: {key}")
+        print("✅ S3 key generated: {0}".format(key))
 
         # Test hash calculation
         content_hash = storage._calculate_content_hash(article["content"])
-        print(f"✅ Content hash calculated: {content_hash[:16]}...")
+        print("✅ Content hash calculated: {0}...".format(content_hash[:16]))
 
         print("\n🎯 All basic tests passed!")
         print("Note: AWS integration tests require valid credentials")
 
     except Exception as e:
-        print(f"⚠️  Basic test completed with expected credential warning: {e}")
+        print("⚠️  Basic test completed with expected credential warning: {0}".format(e))
         print("✅ This is normal in development environment without AWS credentials")

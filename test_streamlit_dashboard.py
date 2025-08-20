@@ -41,8 +41,8 @@ try:
     print("   streamlit run src/dashboards/streamlit_dashboard.py")
 
 except ImportError as e:
-    print(f"❌ Import error: {e}")
+    print("❌ Import error: {0}".format(e))
     sys.exit(1)
 except Exception as e:
-    print(f"❌ Unexpected error: {e}")
+    print("❌ Unexpected error: {0}".format(e))
     sys.exit(1)

@@ -106,7 +106,7 @@ class QuickSightDashboardService:
             self.sts_client = boto3.client("sts")
             logger.info("QuickSight service initialized successfully")
         except Exception as e:
-            logger.error(f"Failed to initialize AWS clients: {e}")
+            logger.error("Failed to initialize AWS clients: {0}".format(e))
             raise
 
         # Validate configuration
@@ -120,7 +120,7 @@ class QuickSightDashboardService:
         ]
 
         if missing_fields:
-            logger.warning(f"Missing configuration fields: {missing_fields}")
+            logger.warning("Missing configuration fields: {0}".format(missing_fields))
             logger.info("Some functionality may be limited without full configuration")
 
     async def setup_quicksight_resources(self) -> Dict[str, Any]:
@@ -173,7 +173,7 @@ class QuickSightDashboardService:
             return setup_results
 
         except Exception as e:
-            logger.error(f"Failed to set up QuickSight resources: {e}")
+            logger.error("Failed to set up QuickSight resources: {0}".format(e))
             setup_results["errors"].append(str(e))
             return setup_results
 
@@ -200,10 +200,11 @@ class QuickSightDashboardService:
                 },
                 "Permissions": [
                     {
-                        "Principal": f"arn:aws:quicksight:{
-                            self.config.region}:{
-                            self.config.aws_account_id}:user/{
-                            self.config.namespace}/admin",
+                        "Principal": "arn:aws:quicksight:{0}:{1}:user/{2}/admin".format(
+                            self.config.region,
+                            self.config.aws_account_id,
+                            self.config.namespace,
+                        ),
                         "Actions": [
                             "quicksight:DescribeDataSource",
                             "quicksight:DescribeDataSourcePermissions",
@@ -236,8 +237,7 @@ class QuickSightDashboardService:
             response = self.quicksight_client.create_data_source(**data_source_params)
 
             logger.info(
-                f"Created Redshift data source: {
-                    self.config.data_source_id}"
+                "Created Redshift data source: {0}".format(self.config.data_source_id)
             )
             return {
                 "success": True,
@@ -247,7 +247,7 @@ class QuickSightDashboardService:
             }
 
         except Exception as e:
-            logger.error(f"Failed to create Redshift data source: {e}")
+            logger.error("Failed to create Redshift data source: {0}".format(e))
             return {"success": False, "error": str(e)}
 
     async def _create_datasets(self) -> List[Dict[str, Any]]:
@@ -284,7 +284,7 @@ class QuickSightDashboardService:
                     existing = self.quicksight_client.describe_data_set(
                         AwsAccountId=self.config.aws_account_id, DataSetId=dataset_id
                     )
-                    logger.info(f"Dataset {dataset_id} already exists")
+                    logger.info("Dataset {0} already exists".format(dataset_id))
                     results.append(
                         {
                             "success": True,
@@ -304,10 +304,11 @@ class QuickSightDashboardService:
                     "Name": dataset_config["name"],
                     "PhysicalTableMap": {
                         "CustomSql": {
-                            "DataSourceArn": f"arn:aws:quicksight:{
-                                self.config.region}:{
-                                self.config.aws_account_id}:datasource/{
-                                self.config.data_source_id}",
+                            "DataSourceArn": "arn:aws:quicksight:{0}:{1}:datasource/{2}".format(
+                                self.config.region,
+                                self.config.aws_account_id,
+                                self.config.data_source_id,
+                            ),
                             "Name": dataset_config["name"],
                             "SqlQuery": dataset_config["sql"],
                             "Columns": self._get_dataset_columns(dataset_config["id"]),
@@ -316,10 +317,11 @@ class QuickSightDashboardService:
                     "ImportMode": "DIRECT_QUERY",
                     "Permissions": [
                         {
-                            "Principal": f"arn:aws:quicksight:{
-                                self.config.region}:{
-                                self.config.aws_account_id}:user/{
-                                self.config.namespace}/admin",
+                            "Principal": "arn:aws:quicksight:{0}:{1}:user/{2}/admin".format(
+                                self.config.region,
+                                self.config.aws_account_id,
+                                self.config.namespace,
+                            ),
                             "Actions": [
                                 "quicksight:DescribeDataSet",
                                 "quicksight:DescribeDataSetPermissions",
@@ -338,7 +340,7 @@ class QuickSightDashboardService:
 
                 response = self.quicksight_client.create_data_set(**dataset_params)
 
-                logger.info(f"Created dataset: {dataset_id}")
+                logger.info("Created dataset: {0}".format(dataset_id))
                 results.append(
                     {
                         "success": True,
@@ -537,7 +539,7 @@ class QuickSightDashboardService:
                     existing = self.quicksight_client.describe_analysis(
                         AwsAccountId=self.config.aws_account_id, AnalysisId=analysis_id
                     )
-                    logger.info(f"Analysis {analysis_id} already exists")
+                    logger.info("Analysis {0} already exists".format(analysis_id))
                     results.append(
                         {
                             "success": True,
@@ -558,10 +560,11 @@ class QuickSightDashboardService:
                     "Definition": self._get_analysis_definition(analysis_config),
                     "Permissions": [
                         {
-                            "Principal": f"arn:aws:quicksight:{
-                                self.config.region}:{
-                                self.config.aws_account_id}:user/{
-                                self.config.namespace}/admin",
+                            "Principal": "arn:aws:quicksight:{0}:{1}:user/{2}/admin".format(
+                                self.config.region,
+                                self.config.aws_account_id,
+                                self.config.namespace,
+                            ),
                             "Actions": [
                                 "quicksight:RestoreAnalysis",
                                 "quicksight:UpdateAnalysisPermissions",
@@ -577,7 +580,7 @@ class QuickSightDashboardService:
 
                 response = self.quicksight_client.create_analysis(**analysis_params)
 
-                logger.info(f"Created analysis: {analysis_id}")
+                logger.info("Created analysis: {0}".format(analysis_id))
                 results.append(
                     {
                         "success": True,
@@ -613,9 +616,9 @@ class QuickSightDashboardService:
         return {
             "DataSetIdentifierDeclarations": [
                 {
-                    "DataSetArn": f"arn:aws:quicksight:{
-                        self.config.region}:{
-                        self.config.aws_account_id}:dataset/{dataset_id}",
+                    "DataSetArn": "arn:aws:quicksight:{0}:{1}:dataset/{2}".format(
+                        self.config.region, self.config.aws_account_id, dataset_id
+                    ),
                     "Identifier": dataset_id,
                 }
             ],
@@ -832,7 +835,7 @@ class QuickSightDashboardService:
                         AwsAccountId=self.config.aws_account_id,
                         DashboardId=dashboard_id,
                     )
-                    logger.info(f"Dashboard {dashboard_id} already exists")
+                    logger.info("Dashboard {0} already exists".format(dashboard_id))
                     results.append(
                         {
                             "success": True,
@@ -853,10 +856,11 @@ class QuickSightDashboardService:
                     "Definition": self._get_dashboard_definition(dashboard_config),
                     "Permissions": [
                         {
-                            "Principal": f"arn:aws:quicksight:{
-                                self.config.region}:{
-                                self.config.aws_account_id}:user/{
-                                self.config.namespace}/admin",
+                            "Principal": "arn:aws:quicksight:{0}:{1}:user/{2}/admin".format(
+                                self.config.region,
+                                self.config.aws_account_id,
+                                self.config.namespace,
+                            ),
                             "Actions": [
                                 "quicksight:DescribeDashboard",
                                 "quicksight:ListDashboardVersions",
@@ -873,7 +877,7 @@ class QuickSightDashboardService:
 
                 response = self.quicksight_client.create_dashboard(**dashboard_params)
 
-                logger.info(f"Created dashboard: {dashboard_id}")
+                logger.info("Created dashboard: {0}".format(dashboard_id))
                 results.append(
                     {
                         "success": True,
@@ -906,21 +910,21 @@ class QuickSightDashboardService:
         return {
             "DataSetIdentifierDeclarations": [
                 {
-                    "DataSetArn": f"arn:aws:quicksight:{
-                        self.config.region}:{
-                        self.config.aws_account_id}:dataset/sentiment_trends_dataset",
+                    "DataSetArn": "arn:aws:quicksight:{0}:{1}:dataset/sentiment_trends_dataset".format(
+                        self.config.region, self.config.aws_account_id
+                    ),
                     "Identifier": "sentiment_trends_dataset",
                 },
                 {
-                    "DataSetArn": f"arn:aws:quicksight:{
-                        self.config.region}:{
-                        self.config.aws_account_id}:dataset/entity_relationships_dataset",
+                    "DataSetArn": "arn:aws:quicksight:{0}:{1}:dataset/entity_relationships_dataset".format(
+                        self.config.region, self.config.aws_account_id
+                    ),
                     "Identifier": "entity_relationships_dataset",
                 },
                 {
-                    "DataSetArn": f"arn:aws:quicksight:{
-                        self.config.region}:{
-                        self.config.aws_account_id}:dataset/event_timeline_dataset",
+                    "DataSetArn": "arn:aws:quicksight:{0}:{1}:dataset/event_timeline_dataset".format(
+                        self.config.region, self.config.aws_account_id
+                    ),
                     "Identifier": "event_timeline_dataset",
                 },
             ],
@@ -992,13 +996,13 @@ class QuickSightDashboardService:
         "Create a dashboard layout for trending topics by sentiment,
         knowledge graph entity relationships, event timeline analysis."
         """
-        logger.info(f"Creating dashboard layout for {layout_type.value}")
+        logger.info("Creating dashboard layout for {0}".format(layout_type.value))
 
         try:
             layout_config = self._get_layout_config(layout_type)
 
             # Create specific dashboard for this layout
-            dashboard_id = f"neuronews_{layout_type.value}_dashboard"
+            dashboard_id = "neuronews_{0}_dashboard".format(layout_type.value)
 
             dashboard_params = {
                 "AwsAccountId": self.config.aws_account_id,
@@ -1007,17 +1011,17 @@ class QuickSightDashboardService:
                 "Definition": {
                     "DataSetIdentifierDeclarations": [
                         {
-                            "DataSetArn": f"arn:aws:quicksight:{
-                                self.config.region}:{
-                                self.config.aws_account_id}:dataset/{
-                                self._get_dataset_for_layout(layout_type)}",
+                            "DataSetArn": "arn:aws:quicksight:{0}:{1}:dataset/{2}".format(
+                                self.config.region,
+                                self.config.aws_account_id,
+                                self._get_dataset_for_layout(layout_type),
+                            ),
                             "Identifier": self._get_dataset_for_layout(layout_type),
                         }
                     ],
                     "Sheets": [
                         {
-                            "SheetId": f"{
-                                layout_type.value}_sheet",
+                            "SheetId": "{0}_sheet".format(layout_type.value),
                             "Name": layout_config.name,
                             "Visuals": layout_config.visuals,
                             "FilterControls": layout_config.filters,
@@ -1026,10 +1030,11 @@ class QuickSightDashboardService:
                 },
                 "Permissions": [
                     {
-                        "Principal": f"arn:aws:quicksight:{
-                            self.config.region}:{
-                            self.config.aws_account_id}:user/{
-                            self.config.namespace}/admin",
+                        "Principal": "arn:aws:quicksight:{0}:{1}:user/{2}/admin".format(
+                            self.config.region,
+                            self.config.aws_account_id,
+                            self.config.namespace,
+                        ),
                         "Actions": [
                             "quicksight:DescribeDashboard",
                             "quicksight:ListDashboardVersions",
@@ -1044,7 +1049,7 @@ class QuickSightDashboardService:
 
             response = self.quicksight_client.create_dashboard(**dashboard_params)
 
-            logger.info(f"Created {layout_type.value} dashboard successfully")
+            logger.info("Created {0} dashboard successfully".format(layout_type.value))
             return {
                 "success": True,
                 "dashboard_id": dashboard_id,
@@ -1054,8 +1059,9 @@ class QuickSightDashboardService:
 
         except Exception as e:
             logger.error(
-                f"Failed to create dashboard layout {
-                    layout_type.value}: {e}"
+                "Failed to create dashboard layout {0}: {1}".format(
+                    layout_type.value, e
+                )
             )
             return {"success": False, "error": str(e)}
 
@@ -1135,7 +1141,7 @@ class QuickSightDashboardService:
                 ],
             )
         else:
-            raise ValueError(f"Unsupported layout type: {layout_type}")
+            raise ValueError("Unsupported layout type: {0}".format(layout_type))
 
     def _get_dataset_for_layout(self, layout_type: DashboardType) -> str:
         """Get dataset ID for specific layout type."""
@@ -1169,7 +1175,7 @@ class QuickSightDashboardService:
             for dataset_id in datasets:
                 try:
                     # Create refresh schedule for dataset
-                    schedule_id = f"{dataset_id}_refresh_schedule"
+                    schedule_id = "{0}_refresh_schedule".format(dataset_id)
 
                     refresh_params = {
                         "DataSetId": dataset_id,
@@ -1197,7 +1203,9 @@ class QuickSightDashboardService:
                     )
 
                 except Exception as e:
-                    logger.error(f"Failed to set up refresh for {dataset_id}: {e}")
+                    logger.error(
+                        "Failed to set up refresh for {0}: {1}".format(dataset_id, e)
+                    )
                     refresh_results.append(
                         {"dataset_id": dataset_id, "status": "failed", "error": str(e)}
                     )
@@ -1210,13 +1218,14 @@ class QuickSightDashboardService:
             }
 
         except Exception as e:
-            logger.error(f"Failed to setup real-time updates: {e}")
+            logger.error("Failed to setup real-time updates: {0}".format(e))
             return {"success": False, "error": str(e)}
 
     def _get_dashboard_url(self, dashboard_id: str) -> str:
         """Get QuickSight dashboard URL."""
-        return f"https://{
-            self.config.region}.quicksight.aws.amazon.com/sn/dashboards/{dashboard_id}"
+        return "https://{0}.quicksight.aws.amazon.com/sn/dashboards/{1}".format(
+            self.config.region, dashboard_id
+        )
 
     async def get_dashboard_info(
         self, dashboard_id: Optional[str] = None
@@ -1264,7 +1273,7 @@ class QuickSightDashboardService:
                 }
 
         except Exception as e:
-            logger.error(f"Failed to get dashboard info: {e}")
+            logger.error("Failed to get dashboard info: {0}".format(e))
             return {"success": False, "error": str(e)}
 
     async def validate_setup(self) -> Dict[str, Any]:
@@ -1289,7 +1298,7 @@ class QuickSightDashboardService:
                 validation_results["data_source_valid"] = True
             except Exception as e:
                 validation_results["errors"].append(
-                    f"Data source validation failed: {e}"
+                    "Data source validation failed: {0}".format(e)
                 )
 
             # Validate datasets
@@ -1306,7 +1315,7 @@ class QuickSightDashboardService:
                     validation_results["datasets_valid"].append(dataset_id)
                 except Exception as e:
                     validation_results["errors"].append(
-                        f"Dataset {dataset_id} validation failed: {e}"
+                        "Dataset {0} validation failed: {1}".format(dataset_id, e)
                     )
 
             # Validate analyses
@@ -1323,7 +1332,7 @@ class QuickSightDashboardService:
                     validation_results["analyses_valid"].append(analysis_id)
                 except Exception as e:
                     validation_results["errors"].append(
-                        f"Analysis {analysis_id} validation failed: {e}"
+                        "Analysis {0} validation failed: {1}".format(analysis_id, e)
                     )
 
             # Validate dashboards
@@ -1337,7 +1346,7 @@ class QuickSightDashboardService:
                     validation_results["dashboards_valid"].append(dashboard_id)
                 except Exception as e:
                     validation_results["errors"].append(
-                        f"Dashboard {dashboard_id} validation failed: {e}"
+                        "Dashboard {0} validation failed: {1}".format(dashboard_id, e)
                     )
 
             validation_results["overall_valid"] = (
@@ -1353,7 +1362,7 @@ class QuickSightDashboardService:
             return validation_results
 
         except Exception as e:
-            logger.error(f"Validation failed: {e}")
+            logger.error("Validation failed: {0}".format(e))
             validation_results["errors"].append(str(e))
             return validation_results
 
@@ -1411,7 +1420,7 @@ async def demo_quicksight_dashboard_service():
         print("\n🎉 QuickSight Dashboard Service demo completed!")
 
     except Exception as e:
-        print(f"❌ Demo failed: {e}")
+        print("❌ Demo failed: {0}".format(e))
 
 
 if __name__ == "__main__":

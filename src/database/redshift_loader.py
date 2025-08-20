@@ -69,8 +69,10 @@ class ArticleRecord:
 
     def _generate_id(self) -> str:
         """Generate a unique ID for the article based on URL and content."""
-        content_hash = hashlib.md5(f"{self.url}{self.title}".encode()).hexdigest()
-        return f"article_{content_hash[:16]}"
+        content_hash = hashlib.md5(
+            "{0}{1}".format(self.url, self.title).encode()
+        ).hexdigest()
+        return "article_{0}".format(content_hash[)
 
     @classmethod
     def from_validated_article(cls, validated_data: Dict[str, Any]) -> "ArticleRecord":
@@ -132,7 +134,7 @@ class ArticleRecord:
         formats = [
             "%Y-%m-%dT%H:%M:%S.%fZ",
             "%Y-%m-%dT%H:%M:%SZ",
-            "%Y-%m-%dT%H:%M:%S.%f",
+            "%Y-%m-%dT%H:%M:%S.%",
             "%Y-%m-%dT%H:%M:%S",
             "%Y-%m-%d %H:%M:%S",
             "%Y-%m-%d",
@@ -144,7 +146,7 @@ class ArticleRecord:
             except ValueError:
                 continue
 
-        logger.warning(f"Could not parse datetime: {date_str}")
+        logger.warning("Could not parse datetime: {0}".format(date_str))
         return None
 
 
@@ -198,9 +200,9 @@ class RedshiftETLProcessor:
                 self._cursor = self._conn.cursor(
                     cursor_factory=psycopg2.extras.DictCursor
                 )
-                logger.info(f"Connected to Redshift cluster: {self._host}")
+                logger.info("Connected to Redshift cluster: {0}".format(self._host))
             except Exception as e:
-                logger.error(f"Failed to connect to Redshift: {e}")
+                logger.error("Failed to connect to Redshift: {0}".format(e))
                 raise
 
     def close(self) -> None:
@@ -232,8 +234,8 @@ class RedshiftETLProcessor:
                 return self._cursor.fetchall()
             return []
         except Exception as e:
-            logger.error(f"Query execution failed: {e}")
-            logger.error(f"Query: {query}")
+            logger.error("Query execution failed: {0}".format(e))
+            logger.error("Query: {0}".format(query))
             self._conn.rollback()
             raise
 
@@ -263,14 +265,16 @@ class RedshiftETLProcessor:
 
             for statement in statements:
                 if statement:
-                    logger.debug(f"Executing schema statement: {statement[:100]}...")
+                    logger.debug(
+                        "Executing schema statement: {0}...".format(statement[)
+                    )
                     self._cursor.execute(statement)
 
             self.commit()
             logger.info("Schema initialized successfully")
 
         except Exception as e:
-            logger.error(f"Schema initialization failed: {e}")
+            logger.error("Schema initialization failed: {0}".format(e))
             self.rollback()
             raise
 
@@ -295,7 +299,7 @@ class RedshiftETLProcessor:
 
             # Check if article already exists
             if self._article_exists(record.id):
-                logger.warning(f"Article {record.id} already exists, skipping")
+                logger.warning("Article {0} already exists, skipping".format(record.id))
                 return False
 
             # Insert article
@@ -339,11 +343,11 @@ class RedshiftETLProcessor:
 
             self.execute_query(query, params)
             self.commit()
-            logger.debug(f"Successfully loaded article: {record.id}")
+            logger.debug("Successfully loaded article: {0}".format(record.id))
             return True
 
         except Exception as e:
-            logger.error(f"Failed to load article: {e}")
+            logger.error("Failed to load article: {0}".format(e))
             self.rollback()
             return False
 
@@ -382,8 +386,9 @@ class RedshiftETLProcessor:
 
                 batch_num = i // self._batch_size + 1
                 logger.info(
-                    f"Processed batch {batch_num}: "
-                    f"{batch_result['loaded']} loaded, {batch_result['failed']} failed"
+                    "Processed batch {0}: {1} loaded, {2} failed".format(
+                        batch_num, batch_result["loaded"], batch_result["failed"]
+                    )
                 )
 
             processing_time = (datetime.now() - start_time).total_seconds()
@@ -404,14 +409,15 @@ class RedshiftETLProcessor:
             }
 
             logger.info(
-                f"Batch load completed: {loaded_count}/{total_articles} articles loaded "
-                f"({stats['success_rate']:.1f}% success rate)"
+                "Batch load completed: {0}/{1} articles loaded ({2:.1f}% success rate)".format(
+                    loaded_count, total_articles, stats["success_rate"]
+                )
             )
 
             return stats
 
         except Exception as e:
-            logger.error(f"Batch load failed: {e}")
+            logger.error("Batch load failed: {0}".format(e))
             self.rollback()
             raise
 
@@ -466,7 +472,7 @@ class RedshiftETLProcessor:
                     records.append(record)
                 except Exception as e:
                     failed += 1
-                    errors.append(f"Failed to convert article: {e}")
+                    errors.append("Failed to convert article: {0}".format(e))
 
             if not records:
                 return {"loaded": 0, "failed": failed, "skipped": 0, "errors": errors}
@@ -508,7 +514,7 @@ class RedshiftETLProcessor:
                     ]
                 )
 
-            staging_query = f"""
+            staging_query = """
                 INSERT INTO news_articles_staging (
                     id, url, title, content, source, published_date, scraped_at,
                     validation_score, content_quality, source_credibility, validation_flags,
@@ -541,7 +547,7 @@ class RedshiftETLProcessor:
             }
 
         except Exception as e:
-            logger.error(f"Staging batch processing failed: {e}")
+            logger.error("Staging batch processing failed: {0}".format(e))
             self.rollback()
             return {"loaded": 0, "failed": len(batch), "skipped": 0, "errors": [str(e)]}
 
@@ -607,7 +613,7 @@ class RedshiftETLProcessor:
                 else:
                     stats[stat_name] = [dict(row) for row in result]
             except Exception as e:
-                logger.error(f"Failed to get {stat_name}: {e}")
+                logger.error("Failed to get {0}: {1}".format(stat_name, e))
                 stats[stat_name] = None
 
         return stats
@@ -625,8 +631,9 @@ class RedshiftETLProcessor:
             Processing statistics
         """
         logger.info(
-            f"Processing {
-                len(validation_results)} validated articles for Redshift storage"
+            "Processing {0} validated articles for Redshift storage".format(
+                len(validation_results)
+            )
         )
 
         # Filter out invalid results
@@ -641,9 +648,9 @@ class RedshiftETLProcessor:
 
         if len(valid_articles) != len(validation_results):
             logger.warning(
-                f"Filtered out {
-                    len(validation_results) -
-                    len(valid_articles)} invalid articles"
+                "Filtered out {0} invalid articles".format(
+                    len(validation_results) - len(valid_articles)
+                )
             )
 
         if not valid_articles:
@@ -723,7 +730,9 @@ class RedshiftLoader(RedshiftETLProcessor):
         where_clause = " AND ".join(conditions) if conditions else "1=1"
 
         # Get total count
-        count_query = f"SELECT COUNT(*) FROM news_articles WHERE {where_clause}"
+        count_query = "SELECT COUNT(*) FROM news_articles WHERE {0}".format(
+            where_clause
+        )
         result = await self.execute_query(count_query, params)
         total = result[0][0]
 
@@ -732,7 +741,7 @@ class RedshiftLoader(RedshiftETLProcessor):
         pages = (total + per_page - 1) // per_page  # Ceiling division
 
         # Get paginated results
-        query = f"""
+        query = """
             SELECT id, title, url, publish_date, category, source,
                    sentiment_score, sentiment_label
             FROM news_articles
@@ -775,7 +784,7 @@ class RedshiftLoader(RedshiftETLProcessor):
         required_fields = ["id", "title", "url", "content"]
         missing = [f for f in required_fields if f not in article_data]
         if missing:
-            raise ValueError(f"Missing required fields: {', '.join(missing)}")
+            raise ValueError("Missing required fields: {0}".format(", ".join(missing)))
 
         query = """
             INSERT INTO news_articles (

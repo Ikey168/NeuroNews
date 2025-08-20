@@ -92,7 +92,7 @@ async def get_all_roles(_: dict = Depends(require_auth)):
         }
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve roles: {str(e)}"
+            status_code=500, detail="Failed to retrieve roles: {0}".format(str(e))
         )
 
 
@@ -125,8 +125,7 @@ async def get_role_info(role_name: str, _: dict = Depends(require_auth)):
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to retrieve role information: {
-                str(e)}",
+            detail="Failed to retrieve role information: {0}".format(str(e)),
         )
 
 
@@ -157,8 +156,9 @@ async def update_user_role(
             )
 
         return {
-            "message": f"Successfully updated user {user_id} to role {
-                role_update.new_role.value}",
+            "message": "Successfully updated user {0} to role {1}".format(
+                user_id, role_update.new_role.value
+            ),
             "user_id": user_id,
             "new_role": role_update.new_role.value,
             "updated_by": admin_user.get("sub"),
@@ -167,7 +167,7 @@ async def update_user_role(
 
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to update user role: {str(e)}"
+            status_code=500, detail="Failed to update user role: {0}".format(str(e))
         )
 
 
@@ -223,8 +223,7 @@ async def get_user_permissions(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to retrieve user permissions: {
-                str(e)}",
+            detail="Failed to retrieve user permissions: {0}".format(str(e)),
         )
 
 
@@ -266,7 +265,7 @@ async def check_access(
         return AccessCheckResponse(
             has_access=has_access,
             user_role=access_request.user_role.value,
-            endpoint=f"{access_request.method} {access_request.path}",
+            endpoint="{0} {1}".format(access_request.method, access_request.path),
             required_permissions=[p.value for p in required_permissions],
             user_permissions=[p.value for p in user_permissions],
             minimum_required_role=minimum_role,
@@ -275,8 +274,7 @@ async def check_access(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to check access: {
-                str(e)}",
+            detail="Failed to check access: {0}".format(str(e)),
         )
 
 
@@ -292,7 +290,7 @@ async def get_all_permissions(_: dict = Depends(require_auth)):
         return [permission.value for permission in Permission]
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve permissions: {str(e)}"
+            status_code=500, detail="Failed to retrieve permissions: {0}".format(str(e))
         )
 
 
@@ -316,7 +314,7 @@ async def get_endpoint_permissions(
         required_permissions = rbac_manager.get_endpoint_permissions(method, path)
 
         return {
-            "endpoint": f"{method} {path}",
+            "endpoint": "{0} {1}".format(method, path),
             "required_permissions": [p.value for p in required_permissions],
             "permission_count": len(required_permissions),
             "public_endpoint": len(required_permissions) == 0,
@@ -325,8 +323,7 @@ async def get_endpoint_permissions(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to get endpoint permissions: {
-                str(e)}",
+            detail="Failed to get endpoint permissions: {0}".format(str(e)),
         )
 
 
@@ -355,8 +352,7 @@ async def get_rbac_metrics(admin_user: dict = Depends(require_admin)):
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to retrieve RBAC metrics: {
-                str(e)}",
+            detail="Failed to retrieve RBAC metrics: {0}".format(str(e)),
         )
 
 
@@ -383,7 +379,7 @@ async def delete_user_permissions(
             )
 
         return {
-            "message": f"Successfully deleted permissions for user {user_id}",
+            "message": "Successfully deleted permissions for user {0}".format(user_id),
             "user_id": user_id,
             "deleted_by": admin_user.get("sub"),
             "deleted_at": datetime.utcnow().isoformat(),
@@ -392,6 +388,5 @@ async def delete_user_permissions(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to delete user permissions: {
-                str(e)}",
+            detail="Failed to delete user permissions: {0}".format(str(e)),
         )

@@ -121,9 +121,9 @@ class UserAgentRotator:
         self.max_profile_usage = random.randint(50, 150)
 
         self.logger.info(
-            f"Rotated to new browser profile: {
-                self.current_profile.browser_name} {
-                self.current_profile.version}"
+            "Rotated to new browser profile: {0} {1}".format(
+                self.current_profile.browser_name, 
+                self.current_profile.version)
         )
 
     def _initialize_default_profiles(self):
@@ -258,7 +258,7 @@ class UserAgentRotator:
             + mobile_profiles
         )
 
-        self.logger.info(f"Initialized {len(self.browser_profiles)} browser profiles")
+        self.logger.info("Initialized {0} browser profiles".format(len(self.browser_profiles)))
 
     def load_config(self, config_file: str):
         """Load browser profiles from configuration file."""
@@ -266,7 +266,7 @@ class UserAgentRotator:
             config_path = Path(config_file)
             if not config_path.exists():
                 self.logger.warning(
-                    f"User-Agent config file not found: {config_file}, using defaults"
+                    "User-Agent config file not found: {0}, using defaults".format(config_file)
                 )
                 self._initialize_default_profiles()
                 return
@@ -287,11 +287,11 @@ class UserAgentRotator:
             self.max_profile_usage = settings.get("max_profile_usage", 100)
 
             self.logger.info(
-                f"Loaded {len(self.browser_profiles)} browser profiles from {config_file}"
+                "Loaded {0} browser profiles from {1}".format(len(self.browser_profiles), config_file)
             )
 
         except Exception as e:
-            self.logger.error(f"Error loading user-agent config: {e}")
+            self.logger.error("Error loading user-agent config: {0}".format(e))
             self._initialize_default_profiles()
 
     def get_profile(self, force_new: bool = False) -> BrowserProfile:
@@ -331,11 +331,11 @@ class UserAgentRotator:
         self.max_profile_usage = random.randint(50, 150)  # Randomize next rotation
 
         self.logger.info(
-            f"Rotated to new profile: {
-                self.current_profile.browser_name} "
-            f"{
-                self.current_profile.version} on {
-                self.current_profile.platform}"
+            "Rotated to new profile: {0} ".format(
+                self.current_profile.browser_name)
+            "{0} on {1}".format(
+                self.current_profile.version, 
+                self.current_profile.platform)
         )
 
     def get_headers(

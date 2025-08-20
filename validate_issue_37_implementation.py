@@ -36,7 +36,7 @@ def test_imports():
 
         return True
     except ImportError as e:
-        print(f"❌ Import failed: {e}")
+        print("❌ Import failed: {0}".format(e))
         return False
 
 
@@ -119,7 +119,7 @@ def test_pydantic_models():
         return True
 
     except Exception as e:
-        print(f"❌ Pydantic model validation failed: {e}")
+        print("❌ Pydantic model validation failed: {0}".format(e))
         return False
 
 
@@ -148,19 +148,19 @@ def test_fastapi_integration():
         expected_routes_set = set(expected_routes)
 
         if expected_routes_set.issubset(found_routes):
-            print(f"✅ All expected routes found ({len(kg_routes)} total)")
+            print("✅ All expected routes found ({0} total)".format(len(kg_routes)))
             for route in expected_routes:
-                print(f"   ✓ {route}")
+                print("   ✓ {0}".format(route))
         else:
             missing = expected_routes_set - found_routes
-            print(f"❌ Missing routes: {missing}")
+            print("❌ Missing routes: {0}".format(missing))
             return False
 
-        print(f"✅ FastAPI integration successful - {len(routes)} total routes")
+        print("✅ FastAPI integration successful - {0} total routes".format(len(routes)))
         return True
 
     except Exception as e:
-        print(f"❌ FastAPI integration failed: {e}")
+        print("❌ FastAPI integration failed: {0}".format(e))
         return False
 
 
@@ -239,9 +239,9 @@ async def test_mock_api_endpoints():
             if data.get("status") == "healthy":
                 print("   ✓ Health status correct")
             else:
-                print(f"   ❌ Unexpected health status: {data}")
+                print("   ❌ Unexpected health status: {0}".format(data))
         else:
-            print(f"❌ Health endpoint failed: {response.status_code}")
+            print("❌ Health endpoint failed: {0}".format(response.status_code))
             return False
 
         # Test related entities endpoint
@@ -255,11 +255,11 @@ async def test_mock_api_endpoints():
             if "related_entities" in data and "total_results" in data:
                 print("   ✓ Response structure correct")
             else:
-                print(f"   ❌ Unexpected response structure: {list(data.keys())}")
+                print("   ❌ Unexpected response structure: {0}".format(list(data.keys())))
         else:
-            print(f"❌ Related entities endpoint failed: {response.status_code}")
+            print("❌ Related entities endpoint failed: {0}".format(response.status_code))
             if response.status_code != 200:
-                print(f"   Error: {response.text}")
+                print("   Error: {0}".format(response.text))
             return False
 
         # Test SPARQL query endpoint
@@ -276,9 +276,9 @@ async def test_mock_api_endpoints():
             if "results" in data and "query" in data:
                 print("   ✓ SPARQL response structure correct")
             else:
-                print(f"   ❌ Unexpected SPARQL response: {list(data.keys())}")
+                print("   ❌ Unexpected SPARQL response: {0}".format(list(data.keys())))
         else:
-            print(f"❌ SPARQL query endpoint failed: {response.status_code}")
+            print("❌ SPARQL query endpoint failed: {0}".format(response.status_code))
             return False
 
         # Clean up
@@ -288,7 +288,7 @@ async def test_mock_api_endpoints():
         return True
 
     except Exception as e:
-        print(f"❌ Mock API endpoint testing failed: {e}")
+        print("❌ Mock API endpoint testing failed: {0}".format(e))
         import traceback
 
         traceback.print_exc()
@@ -339,7 +339,7 @@ def test_issue_37_requirements():
             requirements["unit_tests"] = True
             print("✅ Unit tests file exists")
 
-        print(f"\n📊 Issue #37 Requirements Status:")
+        print("\n📊 Issue #37 Requirements Status:")
         all_met = True
         for req, status in requirements.items():
             status_icon = "✅" if status else "❌"
@@ -350,7 +350,7 @@ def test_issue_37_requirements():
         return all_met
 
     except Exception as e:
-        print(f"❌ Requirements validation failed: {e}")
+        print("❌ Requirements validation failed: {0}".format(e))
         return False
 
 
@@ -379,7 +379,7 @@ async def main():
                 result = test_func()
             results.append((test_name, result))
         except Exception as e:
-            print(f"❌ {test_name} failed with exception: {e}")
+            print("❌ {0} failed with exception: {1}".format(test_name, e))
             results.append((test_name, False))
 
     # Summary
@@ -390,9 +390,9 @@ async def main():
 
     for test_name, result in results:
         status = "✅ PASS" if result else "❌ FAIL"
-        print(f"{status} {test_name}")
+        print("{0} {1}".format(status, test_name))
 
-    print(f"\n📊 Overall Result: {passed}/{total} tests passed")
+    print("\n📊 Overall Result: {0}/{1} tests passed".format(passed, total))
 
     if passed == total:
         print("🎉 All validation tests PASSED!")
@@ -412,7 +412,7 @@ if __name__ == "__main__":
         print("\n⚠️  Validation interrupted by user")
         sys.exit(1)
     except Exception as e:
-        print(f"\n💥 Validation failed with error: {e}")
+        print("\n💥 Validation failed with error: {0}".format(e))
         import traceback
 
         traceback.print_exc()

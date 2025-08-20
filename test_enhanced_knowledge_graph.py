@@ -248,7 +248,7 @@ class TestEnhancedEntityExtractor:
             assert "title" in sarah_entity.properties
             assert (
                 "cto" in sarah_entity.properties["title"].lower()
-                or "chief" in sarah_entity.properties["title"].lower()
+                or "chie" in sarah_entity.properties["title"].lower()
             )
 
 
@@ -397,9 +397,9 @@ class TestEnhancedKnowledgeGraphPopulator:
         """Test batch processing of multiple articles."""
         articles = [
             {
-                "id": f"batch_test_{i}",
-                "title": f"Test Article {i}",
-                "content": f"This is test article number {i} content.",
+                "id": "batch_test_{0}".format(i),
+                "title": "Test Article {0}".format(i),
+                "content": "This is test article number {0} content.".format(i),
                 "published_date": datetime.now(timezone.utc),
                 "metadata": {"batch": True},
             }
@@ -558,7 +558,7 @@ class TestEnhancedKnowledgeGraphPopulator:
             # Process multiple articles
             for i in range(3):
                 article_data = sample_article_data.copy()
-                article_data["id"] = f"stats_test_{i}"
+                article_data["id"] = "stats_test_{0}".format(i)
 
                 await populator.populate_from_article(
                     article_id=article_data["id"],
@@ -587,7 +587,7 @@ class TestEnhancedKnowledgeGraphPopulator:
         """Test confidence-based filtering of entities and relationships."""
         # Create extractor with low confidence entities
         low_confidence_entity = EnhancedEntity(
-            entity_id="low_conf",
+            entity_id="low_con",
             text="Low Confidence Entity",
             label="ORGANIZATION",
             start=0,
@@ -774,10 +774,10 @@ if __name__ == "__main__":
 
             # Test factory functions
             extractor = create_advanced_entity_extractor()
-            print(f"✅ Entity extractor created: {type(extractor).__name__}")
+            print("✅ Entity extractor created: {0}".format(type(extractor).__name__))
 
             populator = create_enhanced_knowledge_graph_populator("ws://test")
-            print(f"✅ Graph populator created: {type(populator).__name__}")
+            print("✅ Graph populator created: {0}".format(type(populator).__name__))
 
             print(
                 "\n🎯 Run full tests with: pytest test_enhanced_knowledge_graph.py -v"
@@ -787,7 +787,7 @@ if __name__ == "__main__":
             print("   Install required dependencies and verify imports")
 
     except Exception as e:
-        print(f"❌ Test setup failed: {e}")
+        print("❌ Test setup failed: {0}".format(e))
 
     print("\n📋 Test Coverage:")
     print("  • Entity extraction with advanced patterns")

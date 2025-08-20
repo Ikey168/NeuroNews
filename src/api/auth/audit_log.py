@@ -141,7 +141,7 @@ class SecurityAuditLogger:
                     Namespace="NeuroNews/Security",
                     MetricData=[
                         {
-                            "MetricName": f"SecurityEvent{event_type}",
+                            "MetricName": "SecurityEvent{0}".format(event_type),
                             "Value": 1,
                             "Unit": "Count",
                             "Dimensions": [
@@ -152,7 +152,7 @@ class SecurityAuditLogger:
                 )
 
         except Exception as e:
-            logger.error(f"Failed to log security event: {e}", extra=log_entry)
+            logger.error("Failed to log security event: {0}".format(e), extra=log_entry)
 
     async def log_auth_failure(
         self, reason: str, request: Request, user: Optional[Dict[str, Any]] = None

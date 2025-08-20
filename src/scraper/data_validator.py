@@ -230,7 +230,7 @@ class ScrapedDataValidator:
 
         for article in articles:
             author = article.get("author", "").strip()
-            if not author or author.lower() in ["unknown", "staff", ""]:
+            if not author or author.lower() in ["unknown", "sta", ""]:
                 unknown_authors += 1
                 author = "unknown"
             authors[author] += 1
@@ -367,7 +367,7 @@ class ScrapedDataValidator:
         with open(output_path, "w") as f:
             json.dump(results, f, indent=2)
 
-        print(f"Validation report saved to: {output_path}")
+        print("Validation report saved to: {0}".format(output_path))
         return results
 
 

@@ -70,7 +70,7 @@ class MultiSourceRunner:
             print("No spiders to run.")
             return
 
-        print(f"Running spiders: {list(spiders_to_run.keys())}")
+        print("Running spiders: {0}".format(list(spiders_to_run.keys())))
 
         process = CrawlerProcess(self.settings)
         for spider_class in spiders_to_run.values():
@@ -129,14 +129,14 @@ class MultiSourceRunner:
                             report["quality_distribution"][quality] += 1
 
                 except Exception as e:
-                    print(f"Error processing {filename}: {e}")
+                    print("Error processing {0}: {1}".format(filename, e))
 
         # Save report
         report_path = os.path.join(data_dir, "scraping_report.json")
         with open(report_path, "w") as f:
             json.dump(report, f, indent=2)
 
-        print(f"Report generated: {report_path}")
+        print("Report generated: {0}".format(report_path))
         print(f"Total articles scraped: {report['total_articles']}")
         print(f"Sources processed: {len(report['sources'])}")
 
@@ -164,7 +164,7 @@ def main():
     if args.list:
         print("Available spiders:")
         for spider_name in runner.spiders.keys():
-            print(f"  - {spider_name}")
+            print("  - {0}".format(spider_name))
         return
 
     if args.report:

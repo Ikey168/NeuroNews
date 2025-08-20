@@ -27,7 +27,7 @@ def test_imports():
         print("✅ All imports successful")
         return True
     except ImportError as e:
-        print(f"❌ Import error: {e}")
+        print("❌ Import error: {0}".format(e))
         return False
 
 
@@ -43,12 +43,12 @@ def test_configuration():
         required_sections = ["event_detection", "embedding", "clustering", "categories"]
         for section in required_sections:
             if section not in config["event_detection"]:
-                raise ValueError(f"Missing section: {section}")
+                raise ValueError("Missing section: {0}".format(section))
 
         print("✅ Configuration file valid")
         return True
     except Exception as e:
-        print(f"❌ Configuration error: {e}")
+        print("❌ Configuration error: {0}".format(e))
         return False
 
 
@@ -66,12 +66,12 @@ def test_database_schema():
         ]
         for table in required_tables:
             if table not in schema:
-                raise ValueError(f"Missing table: {table}")
+                raise ValueError("Missing table: {0}".format(table))
 
         print("✅ Database schema valid")
         return True
     except Exception as e:
-        print(f"❌ Database schema error: {e}")
+        print("❌ Database schema error: {0}".format(e))
         return False
 
 
@@ -106,7 +106,7 @@ async def test_pipeline_components():
 
         return True
     except Exception as e:
-        print(f"❌ Pipeline component error: {e}")
+        print("❌ Pipeline component error: {0}".format(e))
         return False
 
 
@@ -127,12 +127,12 @@ def test_api_routes():
 
         for path in expected_paths:
             if not any(path in route_path for route_path in route_paths):
-                raise ValueError(f"Missing route: {path}")
+                raise ValueError("Missing route: {0}".format(path))
 
         print("✅ API routes configured correctly")
         return True
     except Exception as e:
-        print(f"❌ API routes error: {e}")
+        print("❌ API routes error: {0}".format(e))
         return False
 
 
@@ -154,7 +154,7 @@ def test_demo_results():
         )
         return True
     except Exception as e:
-        print(f"❌ Demo results error: {e}")
+        print("❌ Demo results error: {0}".format(e))
         return False
 
 
@@ -174,17 +174,17 @@ def test_performance_metrics():
 
         assert (
             avg_embedding_time < max_embedding_time
-        ), f"Embedding too slow: {avg_embedding_time}s"
+        ), "Embedding too slow: {0}s".format(avg_embedding_time)
         assert (
             clustering_time < max_clustering_time
-        ), f"Clustering too slow: {clustering_time}s"
+        ), "Clustering too slow: {0}s".format(clustering_time)
 
-        print(f"✅ Performance metrics acceptable:")
-        print(f"   📊 Embedding: {avg_embedding_time:.3f}s per article")
-        print(f"   🔍 Clustering: {clustering_time:.3f}s total")
+        print("✅ Performance metrics acceptable:")
+        print("   📊 Embedding: {0}s per article".format(avg_embedding_time:.3f))
+        print("   🔍 Clustering: {0}s total".format(clustering_time:.3f))
         return True
     except Exception as e:
-        print(f"❌ Performance metrics error: {e}")
+        print("❌ Performance metrics error: {0}".format(e))
         return False
 
 
@@ -206,12 +206,12 @@ def test_file_completeness():
             with open(file_path, "r") as f:
                 content = f.read()
                 if len(content) < 100:  # Basic sanity check
-                    missing_files.append(f"{file_path} (too small)")
+                    missing_files.append("{0} (too small)".format(file_path))
         except FileNotFoundError:
             missing_files.append(file_path)
 
     if missing_files:
-        print(f"❌ Missing or incomplete files: {missing_files}")
+        print("❌ Missing or incomplete files: {0}".format(missing_files))
         return False
     else:
         print("✅ All required files present and substantial")
@@ -238,7 +238,7 @@ async def main():
     total = len(tests)
 
     for test_name, test_func in tests:
-        print(f"\n🧪 Testing {test_name}...")
+        print("\n🧪 Testing {0}...".format(test_name))
         try:
             if asyncio.iscoroutinefunction(test_func):
                 result = await test_func()
@@ -248,10 +248,10 @@ async def main():
             if result:
                 passed += 1
         except Exception as e:
-            print(f"❌ {test_name} failed with exception: {e}")
+            print("❌ {0} failed with exception: {1}".format(test_name, e))
 
     print("\n" + "=" * 50)
-    print(f"📊 VALIDATION SUMMARY: {passed}/{total} tests passed")
+    print("📊 VALIDATION SUMMARY: {0}/{1} tests passed".format(passed, total))
 
     if passed == total:
         print("🎉 ALL TESTS PASSED - ISSUE #31 READY FOR DEPLOYMENT!")
@@ -261,7 +261,7 @@ async def main():
         print("✅ Ready for production deployment")
         return True
     else:
-        print(f"❌ {total - passed} tests failed - please review issues above")
+        print("❌ {0} tests failed - please review issues above".format(total - passed))
         return False
 
 

@@ -288,7 +288,7 @@ class AsyncNewsScraperEngine:
                     await self.alert_manager.test_alert_system()
                     self.logger.info("SNS alert system test successful")
                 except Exception as e:
-                    self.logger.warning(f"SNS alert system test failed: {e}")
+                    self.logger.warning("SNS alert system test failed: {0}".format(e))
 
         # Proxy setup
         connector = None
@@ -299,21 +299,23 @@ class AsyncNewsScraperEngine:
             # Use proxy rotation manager
             proxy_config = await self.proxy_manager.get_proxy()
             if proxy_config:
-                proxy = f"{
-                    proxy_config.proxy_type}://{
-                    proxy_config.host}:{
-                    proxy_config.port}"
+                proxy = "{0}://{1}:{2}".format(
+                    proxy_config.proxy_type, proxy_config.host, proxy_config.port
+                )
                 if proxy_config.username:
-                    proxy = f"{
-                        proxy_config.proxy_type}://{
-                        proxy_config.username}:{
-                        proxy_config.password}@{
-                        proxy_config.host}:{
-                        proxy_config.port}"
+                    proxy = "{0}://{1}:{2}@{3}:{4}".format(
+                        proxy_config.proxy_type,
+                        proxy_config.username,
+                        proxy_config.password,
+                        proxy_config.host,
+                        proxy_config.port,
+                    )
         elif self.use_tor and self.tor_manager:
             proxy = self.tor_manager.get_proxy_url()
         elif self.proxy:
-            proxy = f"{self.proxy.proxy_type}://{self.proxy.host}:{self.proxy.port}"
+            proxy = "{0}://{1}:{2}".format(
+                self.proxy.proxy_type, self.proxy.host, self.proxy.port
+            )
 
         # Setup connector
         connector = aiohttp.TCPConnector(
@@ -341,7 +343,7 @@ class AsyncNewsScraperEngine:
         self.playwright = await async_playwright().start()
         browser_args = ["--no-sandbox", "--disable-dev-shm-usage"]
         if proxy:
-            browser_args.append(f"--proxy-server={proxy}")
+            browser_args.append("--proxy-server={0}".format(proxy))
         self.browser = await self.playwright.chromium.launch(
             headless=self.headless, args=browser_args
         )
@@ -363,10 +365,11 @@ class AsyncNewsScraperEngine:
             asyncio.create_task(self.proxy_manager.start_health_monitor())
 
         self.logger.info(
-            f"AsyncNewsScraperEngine started with {
-                self.max_concurrent} concurrent connections"
+            "AsyncNewsScraperEngine started with {0} concurrent connections".format(
+                self.max_concurrent
+            )
         )
-        self.logger.info(f"Monitoring enabled: {self.enable_monitoring}")
+        self.logger.info("Monitoring enabled: {0}".format(self.enable_monitoring))
         if proxy:
             self.logger.info(
                 f"Using proxy: {proxy.split('@')[-1] if '@' in proxy else proxy}"
@@ -381,7 +384,9 @@ class AsyncNewsScraperEngine:
                     await self.cloudwatch_logger.flush_metrics()
                     self.logger.info("Flushed remaining CloudWatch metrics")
                 except Exception as e:
-                    self.logger.error(f"Error flushing CloudWatch metrics: {e}")
+                    self.logger.error(
+                        "Error flushing CloudWatch metrics: {0}".format(e)
+                    )
 
             if self.failure_manager:
                 try:
@@ -390,7 +395,7 @@ class AsyncNewsScraperEngine:
                     await self.failure_manager.cleanup_old_failures(days=30)
                     self.logger.info("Cleaned up old failure records")
                 except Exception as e:
-                    self.logger.error(f"Error cleaning up failures: {e}")
+                    self.logger.error("Error cleaning up failures: {0}".format(e))
 
         if self.session:
             await self.session.close()
@@ -419,7 +424,7 @@ class AsyncNewsScraperEngine:
 
     async def scrape_sources_async(self, sources: List[NewsSource]) -> List[Article]:
         """Scrape multiple sources concurrently."""
-        self.logger.info(f"Starting async scraping of {len(sources)} sources")
+        self.logger.info("Starting async scraping of {0} sources".format(len(sources)))
 
         # Create tasks for each source
         tasks = []
@@ -435,15 +440,14 @@ class AsyncNewsScraperEngine:
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 self.logger.error(
-                    f"Error scraping {
-                        sources[i].name}: {result}"
+                    "Error scraping {0}: {1}".format(sources[i].name, result)
                 )
                 self.monitor.record_error(sources[i].name)
             else:
                 all_articles.extend(result)
 
         self.logger.info(
-            f"Async scraping completed: {len(all_articles)} articles collected"
+            "Async scraping completed: {0} articles collected".format(len(all_articles))
         )
         return all_articles
 
@@ -465,7 +469,7 @@ class AsyncNewsScraperEngine:
                     return await self.scrape_http_source(source)
 
             except Exception as e:
-                self.logger.error(f"Error scraping {source.name}: {e}")
+                self.logger.error("Error scraping {0}: {1}".format(source.name, e))
                 self.monitor.record_error(source.name)
                 return []
 
@@ -476,7 +480,7 @@ class AsyncNewsScraperEngine:
         try:
             # Get article links
             links = await self.get_article_links_http(source)
-            self.logger.info(f"Found {len(links)} links for {source.name}")
+            self.logger.info("Found {0} links for {1}".format(len(links), source.name))
 
             # Scrape articles concurrently
             semaphore = asyncio.Semaphore(self.max_concurrent)
@@ -508,7 +512,7 @@ class AsyncNewsScraperEngine:
             return valid_articles
 
         except Exception as e:
-            self.logger.error(f"HTTP scraping error for {source.name}: {e}")
+            self.logger.error("HTTP scraping error for {0}: {1}".format(source.name, e))
             self.monitor.record_error(source.name)
             return []
 
@@ -535,8 +539,9 @@ class AsyncNewsScraperEngine:
                     # CAPTCHA detection (simple placeholder)
                     if "captcha" in html.lower() and self.captcha_solver:
                         self.logger.warning(
-                            f"CAPTCHA detected on {
-                                source.base_url}, attempting to solve..."
+                            "CAPTCHA detected on {0}, attempting to solve...".format(
+                                source.base_url
+                            )
                         )
                         # Here you would extract sitekey and call self.captcha_solver.solve_recaptcha_v2(...)
                         # For now, just log and skip
@@ -549,15 +554,12 @@ class AsyncNewsScraperEngine:
                     return links
                 else:
                     self.logger.warning(
-                        f"HTTP {
-                            response.status} for {
-                            source.base_url}"
+                        "HTTP {0} for {1}".format(response.status, source.base_url)
                     )
                     return []
         except Exception as e:
             self.logger.error(
-                f"Error getting links from {
-                    source.base_url}: {e}"
+                "Error getting links from {0}: {1}".format(source.base_url, e)
             )
             return []
 
@@ -587,7 +589,9 @@ class AsyncNewsScraperEngine:
                         # CAPTCHA detection (simple placeholder)
                         if "captcha" in html.lower() and self.captcha_solver:
                             self.logger.warning(
-                                f"CAPTCHA detected on {url}, attempting to solve..."
+                                "CAPTCHA detected on {0}, attempting to solve...".format(
+                                    url
+                                )
                             )
                             # Here you would extract sitekey and call self.captcha_solver.solve_recaptcha_v2(...)
                             # For now, just log and skip
@@ -599,10 +603,12 @@ class AsyncNewsScraperEngine:
                         )
                         return article
                     else:
-                        self.logger.warning(f"HTTP {response.status} for {url}")
+                        self.logger.warning(
+                            "HTTP {0} for {1}".format(response.status, url)
+                        )
                         return None
             except Exception as e:
-                self.logger.error(f"Error scraping article {url}: {e}")
+                self.logger.error("Error scraping article {0}: {1}".format(url, e))
                 return None
 
     def parse_article_html(
@@ -636,7 +642,7 @@ class AsyncNewsScraperEngine:
                 title=title.strip(),
                 url=url,
                 content=content.strip(),
-                author=author.strip() if author else f"{source.name} Staff",
+                author=author.strip() if author else "{0} Staf".format(source.name),
                 published_date=date if date else datetime.now().isoformat(),
                 source=source.name,
                 scraped_date=datetime.now().isoformat(),
@@ -655,7 +661,7 @@ class AsyncNewsScraperEngine:
             return article if article.validation_score >= 50 else None
 
         except Exception as e:
-            self.logger.debug(f"Error parsing article {url}: {e}")
+            self.logger.debug("Error parsing article {0}: {1}".format(url, e))
             return None
 
     def extract_text_by_selector(self, soup, selector: str) -> str:
@@ -678,8 +684,7 @@ class AsyncNewsScraperEngine:
         """Scrape JavaScript-heavy source using Playwright."""
         if not self.browser_contexts:
             self.logger.warning(
-                f"No browser contexts available for {
-                    source.name}"
+                "No browser contexts available for {0}".format(source.name)
             )
             return []
 
@@ -687,11 +692,13 @@ class AsyncNewsScraperEngine:
         context = self.browser_contexts[0]
 
         try:
-            self.logger.info(f"Using Playwright for {source.name}")
+            self.logger.info("Using Playwright for {0}".format(source.name))
 
             # Get article links
             links = await self.get_article_links_js(context, source)
-            self.logger.info(f"Found {len(links)} JS links for {source.name}")
+            self.logger.info(
+                "Found {0} JS links for {1}".format(len(links), source.name)
+            )
 
             # Scrape articles with controlled concurrency
             semaphore = asyncio.Semaphore(2)  # Limit browser concurrency
@@ -719,7 +726,7 @@ class AsyncNewsScraperEngine:
             return valid_articles
 
         except Exception as e:
-            self.logger.error(f"JS scraping error for {source.name}: {e}")
+            self.logger.error("JS scraping error for {0}: {1}".format(source.name, e))
             self.monitor.record_error(source.name)
             return []
 
@@ -738,7 +745,7 @@ class AsyncNewsScraperEngine:
 
             # Extract links
             links = await page.evaluate(
-                f"""
+                """
                 () => {{
                     const patterns = {json.dumps(source.link_patterns)};
                     const links = Array.from(document.querySelectorAll('a[href]'))
@@ -753,8 +760,7 @@ class AsyncNewsScraperEngine:
 
         except Exception as e:
             self.logger.error(
-                f"Error getting JS links from {
-                    source.base_url}: {e}"
+                "Error getting JS links from {0}: {1}".format(source.base_url, e)
             )
             return []
         finally:
@@ -780,7 +786,7 @@ class AsyncNewsScraperEngine:
 
                 # Extract article data using JavaScript
                 article_data = await page.evaluate(
-                    f"""
+                    """
                     () => {{
                         const selectors = {json.dumps(source.article_selectors)};
 
@@ -812,9 +818,7 @@ class AsyncNewsScraperEngine:
                     title=article_data["title"],
                     url=url,
                     content=article_data["content"],
-                    author=article_data["author"]
-                    or f"{
-                        source.name} Staff",
+                    author=article_data["author"] or "{0} Staf".format(source.name),
                     published_date=article_data["date"] or datetime.now().isoformat(),
                     source=source.name,
                     scraped_date=datetime.now().isoformat(),
@@ -835,7 +839,7 @@ class AsyncNewsScraperEngine:
                 return article if article.validation_score >= 50 else None
 
             except Exception as e:
-                self.logger.debug(f"Error scraping JS article {url}: {e}")
+                self.logger.debug("Error scraping JS article {0}: {1}".format(url, e))
                 return None
             finally:
                 await page.close()
@@ -906,7 +910,7 @@ class AsyncNewsScraperEngine:
         async with aiofiles.open(output_file, "w") as f:
             await f.write(json.dumps(articles_data, indent=2, ensure_ascii=False))
 
-        self.logger.info(f"Saved {len(articles)} articles to {output_file}")
+        self.logger.info("Saved {0} articles to {1}".format(len(articles), output_file))
 
     def get_performance_stats(self) -> Dict[str, Any]:
         """Get current performance statistics."""

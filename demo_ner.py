@@ -116,7 +116,7 @@ class NERDemo:
         ]
 
         logger.info(
-            f"Loaded {len(self.sample_articles)} sample articles for demonstration"
+            "Loaded {0} sample articles for demonstration".format(len(self.sample_articles))
         )
 
     def demo_basic_ner(self):
@@ -132,13 +132,13 @@ class NERDemo:
             full_text = f"{article['title']}. {article['content']}"
 
             logger.info(f"Processing article: {article['title']}")
-            logger.info(f"Text length: {len(full_text)} characters")
+            logger.info("Text length: {0} characters".format(len(full_text)))
 
             # Extract entities
             entities = ner_processor.extract_entities(full_text, article["article_id"])
 
             # Display results
-            logger.info(f"Extracted {len(entities)} entities:")
+            logger.info("Extracted {0} entities:".format(len(entities)))
 
             entity_types = {}
             for entity in entities:
@@ -154,11 +154,11 @@ class NERDemo:
             # Show entity type distribution
             logger.info("\nEntity Type Distribution:")
             for entity_type, type_entities in entity_types.items():
-                logger.info(f"  {entity_type}: {len(type_entities)} entities")
+                logger.info("  {0}: {1} entities".format(entity_type, len(type_entities)))
 
             # Show statistics
             stats = ner_processor.get_statistics()
-            logger.info(f"\nProcessing Statistics:")
+            logger.info("\nProcessing Statistics:")
             logger.info(f"  Total texts processed: {stats['total_texts_processed']}")
             logger.info(
                 f"  Total entities extracted: {stats['total_entities_extracted']}"
@@ -170,7 +170,7 @@ class NERDemo:
             return entities
 
         except Exception as e:
-            logger.error(f"Error in basic NER demo: {e}")
+            logger.error("Error in basic NER demo: {0}".format(e))
             return []
 
     def demo_entity_types(self):
@@ -203,7 +203,7 @@ class NERDemo:
 
             # Display by type
             for entity_type, entities in sorted(entity_groups.items()):
-                logger.info(f"\n{entity_type} Entities ({len(entities)} found):")
+                logger.info("\n{0} Entities ({1} found):".format(entity_type, len(entities)))
 
                 # Show top entities by confidence
                 sorted_entities = sorted(
@@ -216,12 +216,12 @@ class NERDemo:
                     )
 
                 if len(entities) > 5:
-                    logger.info(f"  ... and {len(entities) - 5} more")
+                    logger.info("  ... and {0} more".format(len(entities) - 5))
 
             return entity_groups
 
         except Exception as e:
-            logger.error(f"Error in entity types demo: {e}")
+            logger.error("Error in entity types demo: {0}".format(e))
             return {}
 
     def demo_technology_detection(self):
@@ -277,7 +277,7 @@ class NERDemo:
             }
 
         except Exception as e:
-            logger.error(f"Error in technology detection demo: {e}")
+            logger.error("Error in technology detection demo: {0}".format(e))
             return {}
 
     def demo_policy_detection(self):
@@ -322,7 +322,7 @@ class NERDemo:
             return entities
 
         except Exception as e:
-            logger.error(f"Error in policy detection demo: {e}")
+            logger.error("Error in policy detection demo: {0}".format(e))
             return []
 
     def demo_full_pipeline(self):
@@ -385,11 +385,11 @@ class NERDemo:
                 logger.info(f"  - Entities: {result['entity_count']} extracted")
                 logger.info(f"  - Entity types: {', '.join(result['entity_types'])}")
 
-            logger.info(f"\nPipeline completed: {len(results)} articles processed")
+            logger.info("\nPipeline completed: {0} articles processed".format(len(results)))
 
             # Simulate database storage summary
             total_entities = sum(r["entity_count"] for r in results)
-            logger.info(f"Would store {total_entities} entities in database tables:")
+            logger.info("Would store {0} entities in database tables:".format(total_entities))
             logger.info("  - article_sentiment: sentiment analysis results")
             logger.info("  - article_entities: detailed entity information")
             logger.info("  - news_articles: updated with entities JSON")
@@ -397,7 +397,7 @@ class NERDemo:
             return results
 
         except Exception as e:
-            logger.error(f"Error in full pipeline demo: {e}")
+            logger.error("Error in full pipeline demo: {0}".format(e))
             return []
 
     def demo_statistics_and_search(self):
@@ -436,7 +436,7 @@ class NERDemo:
                 reverse=True,
             ):
                 percentage = (count / stats["total_entities_extracted"]) * 100
-                logger.info(f"  {entity_type}: {count} ({percentage:.1f}%)")
+                logger.info("  {0}: {1} ({2}%)".format(entity_type, count, percentage:.1f))
 
             # Demonstrate search functionality
             logger.info("\nEntity Search Examples:")
@@ -444,7 +444,7 @@ class NERDemo:
             # Search for Apple entities
             apple_entities = [e for e in all_entities if "apple" in e["text"].lower()]
             if apple_entities:
-                logger.info(f"  🔍 Found {len(apple_entities)} Apple-related entities:")
+                logger.info("  🔍 Found {0} Apple-related entities:".format(len(apple_entities)))
                 for entity in apple_entities[:3]:
                     logger.info(
                         f"    • {entity['text']} ({entity['type']}) - {entity['confidence']:.2f}"
@@ -453,7 +453,7 @@ class NERDemo:
             # Search for high-confidence entities
             high_conf_entities = [e for e in all_entities if e["confidence"] >= 0.9]
             logger.info(
-                f"  🏆 High-confidence entities (≥0.9): {len(high_conf_entities)}"
+                "  🏆 High-confidence entities (≥0.9): {0}".format(len(high_conf_entities))
             )
             for entity in sorted(
                 high_conf_entities, key=lambda x: x["confidence"], reverse=True
@@ -464,7 +464,7 @@ class NERDemo:
 
             # Search by entity type
             org_entities = [e for e in all_entities if "ORGANIZATION" in e["type"]]
-            logger.info(f"  🏢 Organization entities: {len(org_entities)}")
+            logger.info("  🏢 Organization entities: {0}".format(len(org_entities)))
             for entity in sorted(
                 org_entities, key=lambda x: x["confidence"], reverse=True
             )[:5]:
@@ -475,7 +475,7 @@ class NERDemo:
             return stats
 
         except Exception as e:
-            logger.error(f"Error in statistics demo: {e}")
+            logger.error("Error in statistics demo: {0}".format(e))
             return {}
 
     def run_all_demos(self):
@@ -504,7 +504,7 @@ class NERDemo:
             logger.info("  ✅ Database storage simulation")
 
         except Exception as e:
-            logger.error(f"Error running demo suite: {e}")
+            logger.error("Error running demo suite: {0}".format(e))
             raise
 
 
@@ -513,9 +513,9 @@ def save_demo_results(results: List[Dict], filename: str = "ner_demo_results.jso
     try:
         with open(filename, "w") as f:
             json.dump(results, f, indent=2, default=str)
-        logger.info(f"Demo results saved to {filename}")
+        logger.info("Demo results saved to {0}".format(filename))
     except Exception as e:
-        logger.error(f"Failed to save results: {e}")
+        logger.error("Failed to save results: {0}".format(e))
 
 
 if __name__ == "__main__":
@@ -526,8 +526,8 @@ if __name__ == "__main__":
         import torch
         import transformers
 
-        logger.info(f"PyTorch version: {torch.__version__}")
-        logger.info(f"Transformers version: {transformers.__version__}")
+        logger.info("PyTorch version: {0}".format(torch.__version__))
+        logger.info("Transformers version: {0}".format(transformers.__version__))
 
         # Run the demo
         demo = NERDemo()
@@ -536,7 +536,7 @@ if __name__ == "__main__":
     except ImportError as e:
         logger.error("Missing required dependencies for NER demo")
         logger.error("Please install: pip install torch transformers")
-        logger.error(f"Import error: {e}")
+        logger.error("Import error: {0}".format(e))
 
         # Show what the demo would do
         logger.info("\n" + "=" * 50)
@@ -552,5 +552,5 @@ if __name__ == "__main__":
         logger.info("7. Statistics and search capabilities")
 
     except Exception as e:
-        logger.error(f"Demo failed with error: {e}")
+        logger.error("Demo failed with error: {0}".format(e))
         raise

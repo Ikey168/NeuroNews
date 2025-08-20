@@ -168,11 +168,11 @@ class KnowledgeGraphDemo:
             await self._demo_validation_and_stats()
 
             print("\n🎉 Demo completed successfully!")
-            print(f"📊 Final Statistics: {self.stats}")
+            print("📊 Final Statistics: {0}".format(self.stats))
 
         except Exception as e:
-            print(f"❌ Demo failed: {e}")
-            logger.error(f"Demo error: {e}", exc_info=True)
+            print("❌ Demo failed: {0}".format(e))
+            logger.error("Demo error: {0}".format(e), exc_info=True)
 
     async def _demo_entity_extraction(self):
         """Demonstrate advanced entity extraction capabilities."""
@@ -201,8 +201,8 @@ class KnowledgeGraphDemo:
             )
             processing_time = (datetime.now() - start_time).total_seconds()
 
-            print(f"⏱️  Extraction time: {processing_time:.3f}s")
-            print(f"🔍 Entities found: {len(entities)}")
+            print("⏱️  Extraction time: {0}s".format(processing_time:.3f))
+            print("🔍 Entities found: {0}".format(len(entities)))
 
             # Display entities by type
             entity_types = {}
@@ -213,20 +213,20 @@ class KnowledgeGraphDemo:
                 entity_types[entity_type].append(entity)
 
             for entity_type, type_entities in entity_types.items():
-                print(f"\n  {entity_type} ({len(type_entities)}):")
+                print("\n  {0} ({1}):".format(entity_type, len(type_entities)))
                 for entity in type_entities[:3]:  # Show first 3 of each type
-                    print(f"    • {entity.text} (confidence: {entity.confidence:.2f})")
+                    print("    • {0} (confidence: {1})".format(entity.text, entity.confidence:.2f))
                     if hasattr(entity, "properties") and entity.properties:
                         for prop, value in list(entity.properties.items())[:2]:
-                            print(f"      - {prop}: {value}")
+                            print("      - {0}: {1}".format(prop, value))
                 if len(type_entities) > 3:
-                    print(f"    ... and {len(type_entities) - 3} more")
+                    print("    ... and {0} more".format(len(type_entities) - 3))
 
             self.stats["total_entities"] += len(entities)
             self.stats["processing_time"] += processing_time
 
         except Exception as e:
-            print(f"❌ Entity extraction demo failed: {e}")
+            print("❌ Entity extraction demo failed: {0}".format(e))
 
     async def _demo_relationship_detection(self):
         """Demonstrate relationship detection between entities."""
@@ -259,30 +259,30 @@ class KnowledgeGraphDemo:
             )
             processing_time = (datetime.now() - start_time).total_seconds()
 
-            print(f"⏱️  Relationship detection time: {processing_time:.3f}s")
-            print(f"🔗 Relationships found: {len(relationships)}")
+            print("⏱️  Relationship detection time: {0}s".format(processing_time:.3f))
+            print("🔗 Relationships found: {0}".format(len(relationships)))
 
             # Display relationships
             for i, rel in enumerate(relationships[:5]):  # Show first 5 relationships
-                print(f"\n  Relationship {i+1}:")
+                print("\n  Relationship {0}:".format(i+1))
                 print(
-                    f"    Source: {rel.source_entity.text} ({rel.source_entity.label})"
+                    "    Source: {0} ({1})".format(rel.source_entity.text, rel.source_entity.label)
                 )
                 print(
-                    f"    Target: {rel.target_entity.text} ({rel.target_entity.label})"
+                    "    Target: {0} ({1})".format(rel.target_entity.text, rel.target_entity.label)
                 )
-                print(f"    Type: {rel.relation_type}")
-                print(f"    Confidence: {rel.confidence:.2f}")
-                print(f"    Context: {rel.context[:100]}...")
+                print("    Type: {0}".format(rel.relation_type))
+                print("    Confidence: {0}".format(rel.confidence:.2f))
+                print("    Context: {0}...".format(rel.context[:100]))
 
             if len(relationships) > 5:
-                print(f"    ... and {len(relationships) - 5} more relationships")
+                print("    ... and {0} more relationships".format(len(relationships) - 5))
 
             self.stats["total_relationships"] += len(relationships)
             self.stats["processing_time"] += processing_time
 
         except Exception as e:
-            print(f"❌ Relationship detection demo failed: {e}")
+            print("❌ Relationship detection demo failed: {0}".format(e))
 
     async def _demo_graph_population(self):
         """Demonstrate knowledge graph population with Neptune."""
@@ -305,7 +305,7 @@ class KnowledgeGraphDemo:
                 populator = self._create_mock_graph_populator()
 
             # Process all articles
-            print(f"\n📚 Processing {len(DEMO_ARTICLES)} articles...")
+            print("\n📚 Processing {0} articles...".format(len(DEMO_ARTICLES)))
 
             total_start_time = datetime.now()
             results = []
@@ -323,7 +323,7 @@ class KnowledgeGraphDemo:
                     print(f"    ⏱️  Time: {result['processing_time']:.3f}s")
 
                 except Exception as e:
-                    print(f"    ❌ Failed: {e}")
+                    print("    ❌ Failed: {0}".format(e))
                     continue
 
             total_time = (datetime.now() - total_start_time).total_seconds()
@@ -332,12 +332,12 @@ class KnowledgeGraphDemo:
             total_entities = sum(r["entities"]["created"] for r in results)
             total_relationships = sum(r["relationships"]["created"] for r in results)
 
-            print(f"\n📊 Population Summary:")
-            print(f"  • Articles processed: {len(results)}")
-            print(f"  • Total entities created: {total_entities}")
-            print(f"  • Total relationships created: {total_relationships}")
-            print(f"  • Total processing time: {total_time:.3f}s")
-            print(f"  • Average time per article: {total_time/len(results):.3f}s")
+            print("\n📊 Population Summary:")
+            print("  • Articles processed: {0}".format(len(results)))
+            print("  • Total entities created: {0}".format(total_entities))
+            print("  • Total relationships created: {0}".format(total_relationships))
+            print("  • Total processing time: {0}s".format(total_time:.3f))
+            print("  • Average time per article: {0}s".format(total_time/len(results):.3f))
 
             self.stats["total_articles"] = len(results)
             self.stats["total_entities"] = total_entities
@@ -345,7 +345,7 @@ class KnowledgeGraphDemo:
             self.stats["processing_time"] += total_time
 
         except Exception as e:
-            print(f"❌ Graph population demo failed: {e}")
+            print("❌ Graph population demo failed: {0}".format(e))
 
     async def _demo_graph_querying(self):
         """Demonstrate graph querying with Gremlin and SPARQL."""
@@ -383,12 +383,12 @@ class KnowledgeGraphDemo:
                 mock_results = await self._mock_execute_gremlin_query(
                     query_info["query"]
                 )
-                print(f"  Results: {len(mock_results)} entities found")
+                print("  Results: {0} entities found".format(len(mock_results)))
 
                 for result in mock_results[:3]:
-                    print(f"    • {result}")
+                    print("    • {0}".format(result))
                 if len(mock_results) > 3:
-                    print(f"    ... and {len(mock_results) - 3} more")
+                    print("    ... and {0} more".format(len(mock_results) - 3))
 
             # Demo SPARQL queries
             print("\n📋 SPARQL Query Examples:")
@@ -423,11 +423,11 @@ class KnowledgeGraphDemo:
                 print(f"  Description: {query_info['description']}")
                 print(f"  SPARQL: {query_info['query'].strip()}")
                 print(
-                    f"  Status: Mock execution (SPARQL endpoint needed for real queries)"
+                    "  Status: Mock execution (SPARQL endpoint needed for real queries)"
                 )
 
         except Exception as e:
-            print(f"❌ Graph querying demo failed: {e}")
+            print("❌ Graph querying demo failed: {0}".format(e))
 
     async def _demo_validation_and_stats(self):
         """Demonstrate data validation and quality checks."""
@@ -458,13 +458,13 @@ class KnowledgeGraphDemo:
 
             print("\n📊 Entity Distribution:")
             for entity_type, count in validation_results["entity_counts"].items():
-                print(f"  • {entity_type}: {count}")
+                print("  • {0}: {1}".format(entity_type, count))
 
-            print(f"\n🔗 Relationship Distribution:")
+            print("\n🔗 Relationship Distribution:")
             for rel_type, count in validation_results["relationship_counts"].items():
-                print(f"  • {rel_type}: {count}")
+                print("  • {0}: {1}".format(rel_type, count))
 
-            print(f"\n🔍 Data Quality Metrics:")
+            print("\n🔍 Data Quality Metrics:")
             print(f"  • Orphaned entities: {validation_results['orphaned_entities']}")
             print(f"  • Duplicate entities: {validation_results['duplicate_entities']}")
             print(
@@ -472,7 +472,7 @@ class KnowledgeGraphDemo:
             )
 
             # Quality recommendations
-            print(f"\n💡 Quality Recommendations:")
+            print("\n💡 Quality Recommendations:")
             if validation_results["orphaned_entities"] > 0:
                 print(
                     f"  • Review {validation_results['orphaned_entities']} orphaned entities"
@@ -482,12 +482,12 @@ class KnowledgeGraphDemo:
                     f"  • Merge {validation_results['duplicate_entities']} duplicate entities"
                 )
             if validation_results["data_quality_score"] < 0.95:
-                print(f"  • Improve entity linking to reach 95% quality score")
+                print("  • Improve entity linking to reach 95% quality score")
             else:
-                print(f"  • ✅ Data quality meets high standards")
+                print("  • ✅ Data quality meets high standards")
 
         except Exception as e:
-            print(f"❌ Validation demo failed: {e}")
+            print("❌ Validation demo failed: {0}".format(e))
 
     def _create_mock_entity_extractor(self):
         """Create a mock entity extractor for demo purposes."""
@@ -724,5 +724,5 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n👋 Demo interrupted by user")
     except Exception as e:
-        print(f"\n❌ Demo failed with error: {e}")
-        logger.error(f"Demo error: {e}", exc_info=True)
+        print("\n❌ Demo failed with error: {0}".format(e))
+        logger.error("Demo error: {0}".format(e), exc_info=True)

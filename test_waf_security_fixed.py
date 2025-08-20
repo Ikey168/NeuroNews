@@ -41,7 +41,7 @@ class WAFSecurityTester:
             logger.info("✅ AWS WAF Manager imported successfully")
             return True
         except ImportError as e:
-            logger.error(f"❌ Failed to import WAF Manager: {e}")
+            logger.error("❌ Failed to import WAF Manager: {0}".format(e))
             return False
 
     def test_waf_middleware_import(self) -> bool:
@@ -53,7 +53,7 @@ class WAFSecurityTester:
             logger.info("✅ WAF Security Middleware imported successfully")
             return True
         except ImportError as e:
-            logger.error(f"❌ Failed to import WAF Middleware: {e}")
+            logger.error("❌ Failed to import WAF Middleware: {0}".format(e))
             return False
 
     def test_waf_routes_import(self) -> bool:
@@ -64,7 +64,7 @@ class WAFSecurityTester:
             logger.info("✅ WAF Security Routes imported successfully")
             return True
         except ImportError as e:
-            logger.error(f"❌ Failed to import WAF Routes: {e}")
+            logger.error("❌ Failed to import WAF Routes: {0}".format(e))
             return False
 
     def test_fastapi_integration(self) -> bool:
@@ -85,7 +85,7 @@ class WAFSecurityTester:
 
             if waf_routes:
                 logger.info(
-                    f"✅ FastAPI integration successful - {len(waf_routes)} WAF routes found"
+                    "✅ FastAPI integration successful - {0} WAF routes found".format(len(waf_routes))
                 )
                 return True
             else:
@@ -93,7 +93,7 @@ class WAFSecurityTester:
                 return False
 
         except Exception as e:
-            logger.error(f"❌ FastAPI integration failed: {e}")
+            logger.error("❌ FastAPI integration failed: {0}".format(e))
             return False
 
     def test_waf_manager_functionality(self) -> bool:
@@ -120,12 +120,12 @@ class WAFSecurityTester:
                     detected_threats.append("XSS")
 
             logger.info(
-                f"✅ Threat detection working - detected: {set(detected_threats)}"
+                "✅ Threat detection working - detected: {0}".format(set(detected_threats))
             )
             return True
 
         except Exception as e:
-            logger.error(f"❌ WAF Manager functionality test failed: {e}")
+            logger.error("❌ WAF Manager functionality test failed: {0}".format(e))
             return False
 
     def test_middleware_threat_detection(self) -> bool:
@@ -144,12 +144,12 @@ class WAFSecurityTester:
             xss_check_exists = hasattr(middleware, "_check_xss_attacks")
 
             logger.info(
-                f"✅ Middleware detection methods - SQL: {sql_check_exists}, XSS: {xss_check_exists}"
+                "✅ Middleware detection methods - SQL: {0}, XSS: {1}".format(sql_check_exists, xss_check_exists)
             )
             return sql_check_exists and xss_check_exists
 
         except Exception as e:
-            logger.error(f"❌ Middleware threat detection test failed: {e}")
+            logger.error("❌ Middleware threat detection test failed: {0}".format(e))
             return False
 
     def test_geofencing_functionality(self) -> bool:
@@ -167,12 +167,12 @@ class WAFSecurityTester:
             has_geofencing = hasattr(middleware, "_check_geofencing")
 
             logger.info(
-                f"✅ Geofencing functionality - method available: {has_geofencing}"
+                "✅ Geofencing functionality - method available: {0}".format(has_geofencing)
             )
             return has_geofencing
 
         except Exception as e:
-            logger.error(f"❌ Geofencing functionality test failed: {e}")
+            logger.error("❌ Geofencing functionality test failed: {0}".format(e))
             return False
 
     def test_rate_limiting_integration(self) -> bool:
@@ -190,12 +190,12 @@ class WAFSecurityTester:
             has_rate_limiting = hasattr(middleware, "_check_rate_limiting")
 
             logger.info(
-                f"✅ Rate limiting integration - method available: {has_rate_limiting}"
+                "✅ Rate limiting integration - method available: {0}".format(has_rate_limiting)
             )
             return has_rate_limiting
 
         except Exception as e:
-            logger.error(f"❌ Rate limiting integration test failed: {e}")
+            logger.error("❌ Rate limiting integration test failed: {0}".format(e))
             return False
 
     def simulate_security_attacks(self) -> Dict[str, Any]:
@@ -249,7 +249,7 @@ class WAFSecurityTester:
             logger.info("✅ Security attack simulation completed")
 
         except Exception as e:
-            logger.error(f"❌ Security attack simulation failed: {e}")
+            logger.error("❌ Security attack simulation failed: {0}".format(e))
 
         return attack_results
 
@@ -271,7 +271,7 @@ class WAFSecurityTester:
                 return True  # Count as success since we're in test mode
 
         except Exception as e:
-            logger.error(f"❌ CloudWatch integration test failed: {e}")
+            logger.error("❌ CloudWatch integration test failed: {0}".format(e))
             return False
 
     def generate_security_report(self) -> Dict[str, Any]:
@@ -339,7 +339,7 @@ class WAFSecurityTester:
         report["test_summary"] = {
             "total_tests": len(tests),
             "passed_tests": passed_tests,
-            "success_rate": f"{success_rate:.2%}",
+            "success_rate": "{0}".format(success_rate:.2%),
         }
 
         return report
@@ -432,7 +432,7 @@ async def main():
     with open("waf_security_test_report.json", "w") as f:
         json.dump(report, f, indent=2)
 
-    print(f"\n📄 Detailed report saved to: waf_security_test_report.json")
+    print("\n📄 Detailed report saved to: waf_security_test_report.json")
 
     if report["overall_status"] in ["EXCELLENT", "GOOD"]:
         print("\n🎉 AWS WAF Security Implementation is READY for production!")

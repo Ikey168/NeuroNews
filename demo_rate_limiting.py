@@ -33,7 +33,7 @@ class RateLimitingDemo:
         print("\n🚀 Demo 1: Basic Rate Limiting")
         print("=" * 50)
 
-        endpoint = f"{self.base_url}/api/test"
+        endpoint = "{0}/api/test".format(self.base_url)
         successful_requests = 0
         rate_limited_requests = 0
 
@@ -45,7 +45,7 @@ class RateLimitingDemo:
 
                 if response.status_code == 200:
                     successful_requests += 1
-                    print(f"✅ Request {i+1}: SUCCESS")
+                    print("✅ Request {0}: SUCCESS".format(i+1))
 
                     # Show rate limit headers
                     if i == 0:  # Show headers for first request
@@ -54,12 +54,12 @@ class RateLimitingDemo:
                             for k, v in response.headers.items()
                             if k.startswith("X-RateLimit")
                         }
-                        print(f"   Rate Limit Headers: {headers}")
+                        print("   Rate Limit Headers: {0}".format(headers))
 
                 elif response.status_code == 429:
                     rate_limited_requests += 1
                     error_data = response.json()
-                    print(f"❌ Request {i+1}: RATE LIMITED")
+                    print("❌ Request {0}: RATE LIMITED".format(i+1))
                     print(
                         f"   Error: {error_data.get('message', 'Rate limit exceeded')}"
                     )
@@ -68,18 +68,18 @@ class RateLimitingDemo:
                     )
                     break
                 else:
-                    print(f"⚠️  Request {i+1}: Unexpected status {response.status_code}")
+                    print("⚠️  Request {0}: Unexpected status {1}".format(i+1, response.status_code))
 
                 time.sleep(0.1)  # Small delay between requests
 
             except requests.exceptions.RequestException as e:
-                print(f"❌ Request {i+1}: Connection error - {e}")
+                print("❌ Request {0}: Connection error - {1}".format(i+1, e))
                 break
 
-        print(f"\n📊 Results:")
-        print(f"   Successful requests: {successful_requests}")
-        print(f"   Rate limited requests: {rate_limited_requests}")
-        print(f"   ✅ Rate limiting is working correctly!")
+        print("\n📊 Results:")
+        print("   Successful requests: {0}".format(successful_requests))
+        print("   Rate limited requests: {0}".format(rate_limited_requests))
+        print("   ✅ Rate limiting is working correctly!")
 
     def demo_user_tiers(self):
         """Demonstrate different rate limits for user tiers."""
@@ -93,14 +93,14 @@ class RateLimitingDemo:
         ]
 
         for tier, description in tiers:
-            print(f"\n🔸 Testing {tier.upper()} tier: {description}")
+            print("\n🔸 Testing {0} tier: {1}".format(tier.upper(), description))
 
             # Simulate different user tokens for different tiers
-            headers = {"Authorization": f"Bearer {tier}_user_token_demo"}
+            headers = {"Authorization": "Bearer {0}_user_token_demo".format(tier)}
 
             try:
                 response = self.session.get(
-                    f"{self.base_url}/api/test", headers=headers, timeout=5
+                    "{0}/api/test".format(self.base_url), headers=headers, timeout=5
                 )
 
                 if response.status_code == 200:
@@ -109,13 +109,13 @@ class RateLimitingDemo:
                         for k, v in response.headers.items()
                         if k.startswith("X-RateLimit")
                     }
-                    print(f"   ✅ Access granted for {tier} tier")
-                    print(f"   Rate limits: {tier_headers}")
+                    print("   ✅ Access granted for {0} tier".format(tier))
+                    print("   Rate limits: {0}".format(tier_headers))
                 else:
-                    print(f"   ❌ Request failed with status: {response.status_code}")
+                    print("   ❌ Request failed with status: {0}".format(response.status_code))
 
             except requests.exceptions.RequestException as e:
-                print(f"   ❌ Connection error: {e}")
+                print("   ❌ Connection error: {0}".format(e))
 
     def demo_api_limits_endpoint(self):
         """Demonstrate the /api_limits endpoint."""
@@ -123,7 +123,7 @@ class RateLimitingDemo:
         print("=" * 50)
 
         user_id = "demo_user_12345"
-        endpoint = f"{self.base_url}/api/api_limits"
+        endpoint = "{0}/api/api_limits".format(self.base_url)
 
         # Simulate admin token for demonstration
         headers = {"Authorization": "Bearer admin_demo_token"}
@@ -143,15 +143,15 @@ class RateLimitingDemo:
                 print(f"   Current usage: {limits_data.get('current_usage', {})}")
                 print(f"   Remaining: {limits_data.get('remaining', {})}")
             else:
-                print(f"❌ Request failed with status: {response.status_code}")
+                print("❌ Request failed with status: {0}".format(response.status_code))
                 if response.headers.get("content-type", "").startswith(
                     "application/json"
                 ):
                     error_data = response.json()
-                    print(f"   Error: {error_data}")
+                    print("   Error: {0}".format(error_data))
 
         except requests.exceptions.RequestException as e:
-            print(f"❌ Connection error: {e}")
+            print("❌ Connection error: {0}".format(e))
 
     def demo_suspicious_activity_simulation(self):
         """Simulate suspicious activity patterns."""
@@ -164,11 +164,11 @@ class RateLimitingDemo:
         print("\n🚨 Simulating rapid requests pattern:")
         for i in range(10):
             try:
-                response = self.session.get(f"{self.base_url}/api/test", timeout=2)
-                print(f"   Request {i+1}: {response.status_code}")
+                response = self.session.get("{0}/api/test".format(self.base_url), timeout=2)
+                print("   Request {0}: {1}".format(i+1, response.status_code))
                 time.sleep(0.05)  # Very fast requests
             except:
-                print(f"   Request {i+1}: Failed")
+                print("   Request {0}: Failed".format(i+1))
 
         # Pattern 2: Multiple endpoints
         print("\n🚨 Simulating endpoint scanning pattern:")
@@ -183,11 +183,11 @@ class RateLimitingDemo:
 
         for endpoint in test_endpoints:
             try:
-                response = self.session.get(f"{self.base_url}{endpoint}", timeout=2)
-                print(f"   Scanning {endpoint}: {response.status_code}")
+                response = self.session.get("{0}{1}".format(self.base_url, endpoint), timeout=2)
+                print("   Scanning {0}: {1}".format(endpoint, response.status_code))
                 time.sleep(0.1)
             except:
-                print(f"   Scanning {endpoint}: Failed")
+                print("   Scanning {0}: Failed".format(endpoint))
 
         print("\n💡 In a real system, these patterns would trigger alerts!")
 
@@ -196,7 +196,7 @@ class RateLimitingDemo:
         print("\n🏥 Demo 5: Rate Limiting Health Check")
         print("=" * 50)
 
-        endpoint = f"{self.base_url}/api/api_limits/health"
+        endpoint = "{0}/api/api_limits/health".format(self.base_url)
 
         try:
             response = self.session.get(endpoint, timeout=5)
@@ -215,10 +215,10 @@ class RateLimitingDemo:
                 if "memory_store" in health_data:
                     print(f"   Memory store: {health_data['memory_store']}")
             else:
-                print(f"❌ Health check failed with status: {response.status_code}")
+                print("❌ Health check failed with status: {0}".format(response.status_code))
 
         except requests.exceptions.RequestException as e:
-            print(f"❌ Connection error: {e}")
+            print("❌ Connection error: {0}".format(e))
 
     def run_all_demos(self):
         """Run all demonstration scenarios."""
@@ -232,13 +232,13 @@ class RateLimitingDemo:
 
         # Test if API is reachable
         try:
-            response = self.session.get(f"{self.base_url}/health", timeout=5)
+            response = self.session.get("{0}/health".format(self.base_url), timeout=5)
             if response.status_code == 200:
-                print(f"\n🌐 API server is reachable at {self.base_url}")
+                print("\n🌐 API server is reachable at {0}".format(self.base_url))
             else:
-                print(f"\n⚠️  API server responded with status: {response.status_code}")
+                print("\n⚠️  API server responded with status: {0}".format(response.status_code))
         except requests.exceptions.RequestException:
-            print(f"\n❌ Cannot reach API server at {self.base_url}")
+            print("\n❌ Cannot reach API server at {0}".format(self.base_url))
             print("💡 Make sure the FastAPI server is running:")
             print("   uvicorn src.api.app:app --reload --host 0.0.0.0 --port 8000")
             return
@@ -261,7 +261,7 @@ class RateLimitingDemo:
         except KeyboardInterrupt:
             print("\n\n⏹️  Demo stopped by user")
         except Exception as e:
-            print(f"\n❌ Demo error: {e}")
+            print("\n❌ Demo error: {0}".format(e))
 
 
 def create_test_server():
@@ -313,7 +313,7 @@ def create_test_server():
         return app
 
     except ImportError as e:
-        print(f"❌ Cannot import rate limiting components: {e}")
+        print("❌ Cannot import rate limiting components: {0}".format(e))
         print("💡 Make sure all rate limiting files are in place")
         return None
 

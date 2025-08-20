@@ -126,7 +126,9 @@ async def analyze_sentiment_trends(
     """
     try:
         logger.info(
-            f"API request for sentiment trend analysis: topic={topic}, granularity={time_granularity}"
+            "API request for sentiment trend analysis: topic={0}, granularity={1}".format(
+                topic, time_granularity
+            )
         )
 
         # Validate date range
@@ -146,7 +148,9 @@ async def analyze_sentiment_trends(
         if (end_date - start_date).days > max_days:
             raise HTTPException(
                 status_code=400,
-                detail=f"Date range too large. Maximum {max_days} days allowed.",
+                detail="Date range too large. Maximum {0} days allowed.".format(
+                    max_days
+                ),
             )
 
         # Perform trend analysis
@@ -205,19 +209,19 @@ async def analyze_sentiment_trends(
         }
 
         logger.info(
-            f"Successfully analyzed trends for {
-                len(response_summaries)} topics"
+            "Successfully analyzed trends for {0} topics".format(
+                len(response_summaries)
+            )
         )
         return response
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error analyzing sentiment trends: {str(e)}")
+        logger.error("Error analyzing sentiment trends: {0}".format(str(e)))
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to analyze sentiment trends: {
-                str(e)}",
+            detail="Failed to analyze sentiment trends: {0}".format(str(e)),
         )
 
 
@@ -247,7 +251,9 @@ async def generate_sentiment_alerts(
     """
     try:
         logger.info(
-            f"API request to generate sentiment alerts: topic={topic}, lookback_days={lookback_days}"
+            "API request to generate sentiment alerts: topic={0}, lookback_days={1}".format(
+                topic, lookback_days
+            )
         )
 
         # Generate alerts
@@ -292,15 +298,14 @@ async def generate_sentiment_alerts(
             "status": "success",
         }
 
-        logger.info(f"Generated {len(alerts)} sentiment alerts")
+        logger.info("Generated {0} sentiment alerts".format(len(alerts)))
         return response
 
     except Exception as e:
-        logger.error(f"Error generating sentiment alerts: {str(e)}")
+        logger.error("Error generating sentiment alerts: {0}".format(str(e)))
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to generate sentiment alerts: {
-                str(e)}",
+            detail="Failed to generate sentiment alerts: {0}".format(str(e)),
         )
 
 
@@ -330,7 +335,9 @@ async def get_sentiment_alerts(
     """
     try:
         logger.info(
-            f"API request for sentiment alerts: topic={topic}, severity={severity}"
+            "API request for sentiment alerts: topic={0}, severity={1}".format(
+                topic, severity
+            )
         )
 
         # Get alerts (currently only supports active alerts)
@@ -379,15 +386,14 @@ async def get_sentiment_alerts(
             "status": "success",
         }
 
-        logger.info(f"Retrieved {len(alerts)} sentiment alerts")
+        logger.info("Retrieved {0} sentiment alerts".format(len(alerts)))
         return response
 
     except Exception as e:
-        logger.error(f"Error retrieving sentiment alerts: {str(e)}")
+        logger.error("Error retrieving sentiment alerts: {0}".format(str(e)))
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to retrieve sentiment alerts: {
-                str(e)}",
+            detail="Failed to retrieve sentiment alerts: {0}".format(str(e)),
         )
 
 
@@ -408,7 +414,9 @@ async def get_topic_sentiment_trends(
         Dictionary containing comprehensive topic trend analysis
     """
     try:
-        logger.info(f"API request for topic sentiment trends: {topic}, days={days}")
+        logger.info(
+            "API request for topic sentiment trends: {0}, days={1}".format(topic, days)
+        )
 
         # Validate topic
         if not topic or len(topic.strip()) < 2:
@@ -497,12 +505,11 @@ async def get_topic_sentiment_trends(
         raise
     except Exception as e:
         logger.error(
-            f"Error retrieving topic sentiment trends for {topic}: {
-                str(e)}"
+            "Error retrieving topic sentiment trends for {0}: {1}".format(topic, str(e))
         )
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to retrieve sentiment trends for topic: {str(e)}",
+            detail="Failed to retrieve sentiment trends for topic: {0}".format(str(e)),
         )
 
 
@@ -620,16 +627,17 @@ async def get_sentiment_trends_summary(
         }
 
         logger.info(
-            f"Generated sentiment trends summary for {
-                len(topic_summaries)} topics"
+            "Generated sentiment trends summary for {0} topics".format(
+                len(topic_summaries)
+            )
         )
         return response
 
     except Exception as e:
-        logger.error(f"Error generating sentiment trends summary: {str(e)}")
+        logger.error("Error generating sentiment trends summary: {0}".format(str(e)))
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to generate sentiment trends summary: {str(e)}",
+            detail="Failed to generate sentiment trends summary: {0}".format(str(e)),
         )
 
 
@@ -663,10 +671,10 @@ async def update_topic_summaries(
         return response
 
     except Exception as e:
-        logger.error(f"Error scheduling topic summaries update: {str(e)}")
+        logger.error("Error scheduling topic summaries update: {0}".format(str(e)))
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to schedule topic summaries update: {str(e)}",
+            detail="Failed to schedule topic summaries update: {0}".format(str(e)),
         )
 
 
@@ -713,7 +721,7 @@ async def sentiment_trends_health_check(
         return response
 
     except Exception as e:
-        logger.error(f"Health check failed: {str(e)}")
+        logger.error("Health check failed: {0}".format(str(e)))
         raise HTTPException(
-            status_code=503, detail=f"Service health check failed: {str(e)}"
+            status_code=503, detail="Service health check failed: {0}".format(str(e))
         )

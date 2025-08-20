@@ -47,7 +47,7 @@ def test_db(monkeypatch):
             return list(articles.values())
 
         if "INSERT" in query:
-            article_id = f"test_{len(articles) + 1}"
+            article_id = "test_{0}".format(len(articles) + 1)
             article = {
                 "id": article_id,
                 "title": params[0],
@@ -94,14 +94,14 @@ def test_db(monkeypatch):
 def create_token(role: str = "user", user_id: str = "test_user"):
     """Create test JWT token."""
     return auth_handler.create_access_token(
-        {"sub": user_id, "role": role, "email": f"{role}@example.com"}
+        {"sub": user_id, "role": role, "email": "{0}@example.com".format(role)}
     )
 
 
 def test_read_articles_user(client, test_db):
     """Test regular user can read articles."""
     token = create_token("user")
-    response = client.get("/articles", headers={"Authorization": f"Bearer {token}"})
+    response = client.get("/articles", headers={"Authorization": "Bearer {0}".format(token)})
     assert response.status_code == 200
 
 
@@ -109,7 +109,7 @@ def test_create_article_editor(client, test_db):
     """Test editor can create articles."""
     token = create_token("editor")
     response = client.post(
-        "/articles", headers={"Authorization": f"Bearer {token}"}, json=TEST_ARTICLE
+        "/articles", headers={"Authorization": "Bearer {0}".format(token)}, json=TEST_ARTICLE
     )
     assert response.status_code == 200
     assert response.json()["title"] == TEST_ARTICLE["title"]
@@ -119,7 +119,7 @@ def test_create_article_user_forbidden(client, test_db):
     """Test regular user cannot create articles."""
     token = create_token("user")
     response = client.post(
-        "/articles", headers={"Authorization": f"Bearer {token}"}, json=TEST_ARTICLE
+        "/articles", headers={"Authorization": "Bearer {0}".format(token)}, json=TEST_ARTICLE
     )
     assert response.status_code == 403
     assert "Missing required permissions" in response.json()["detail"]
@@ -131,7 +131,7 @@ def test_update_own_article_editor(client, test_db):
 
     # Create article
     create_response = client.post(
-        "/articles", headers={"Authorization": f"Bearer {token}"}, json=TEST_ARTICLE
+        "/articles", headers={"Authorization": "Bearer {0}".format(token)}, json=TEST_ARTICLE
     )
     article_id = create_response.json()["id"]
 
@@ -139,8 +139,8 @@ def test_update_own_article_editor(client, test_db):
     update_data = dict(TEST_ARTICLE)
     update_data["title"] = "Updated Title"
     response = client.put(
-        f"/articles/{article_id}",
-        headers={"Authorization": f"Bearer {token}"},
+        "/articles/{0}".format(article_id),
+        headers={"Authorization": "Bearer {0}".format(token)},
         json=update_data,
     )
     assert response.status_code == 200
@@ -152,7 +152,7 @@ def test_update_others_article_editor(client, test_db):
     # First editor creates article
     token1 = create_token("editor", "editor1")
     create_response = client.post(
-        "/articles", headers={"Authorization": f"Bearer {token1}"}, json=TEST_ARTICLE
+        "/articles", headers={"Authorization": "Bearer {0}".format(token1)}, json=TEST_ARTICLE
     )
     article_id = create_response.json()["id"]
 
@@ -161,8 +161,8 @@ def test_update_others_article_editor(client, test_db):
     update_data = dict(TEST_ARTICLE)
     update_data["title"] = "Updated Title"
     response = client.put(
-        f"/articles/{article_id}",
-        headers={"Authorization": f"Bearer {token2}"},
+        "/articles/{0}".format(article_id),
+        headers={"Authorization": "Bearer {0}".format(token2)},
         json=update_data,
     )
     assert response.status_code == 403
@@ -174,7 +174,7 @@ def test_update_any_article_admin(client, test_db):
     editor_token = create_token("editor", "editor1")
     create_response = client.post(
         "/articles",
-        headers={"Authorization": f"Bearer {editor_token}"},
+        headers={"Authorization": "Bearer {0}".format(editor_token)},
         json=TEST_ARTICLE,
     )
     article_id = create_response.json()["id"]
@@ -184,8 +184,8 @@ def test_update_any_article_admin(client, test_db):
     update_data = dict(TEST_ARTICLE)
     update_data["title"] = "Admin Updated"
     response = client.put(
-        f"/articles/{article_id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        "/articles/{0}".format(article_id),
+        headers={"Authorization": "Bearer {0}".format(admin_token)},
         json=update_data,
     )
     assert response.status_code == 200
@@ -198,7 +198,7 @@ def test_delete_article_permissions(client, test_db):
     editor_token = create_token("editor", "editor1")
     create_response = client.post(
         "/articles",
-        headers={"Authorization": f"Bearer {editor_token}"},
+        headers={"Authorization": "Bearer {0}".format(editor_token)},
         json=TEST_ARTICLE,
     )
     article_id = create_response.json()["id"]
@@ -206,20 +206,20 @@ def test_delete_article_permissions(client, test_db):
     # User cannot delete
     user_token = create_token("user")
     response = client.delete(
-        f"/articles/{article_id}", headers={"Authorization": f"Bearer {user_token}"}
+        "/articles/{0}".format(article_id), headers={"Authorization": "Bearer {0}".format(user_token)}
     )
     assert response.status_code == 403
 
     # Different editor cannot delete
     editor2_token = create_token("editor", "editor2")
     response = client.delete(
-        f"/articles/{article_id}", headers={"Authorization": f"Bearer {editor2_token}"}
+        "/articles/{0}".format(article_id), headers={"Authorization": "Bearer {0}".format(editor2_token)}
     )
     assert response.status_code == 403
 
     # Original editor can delete
     response = client.delete(
-        f"/articles/{article_id}", headers={"Authorization": f"Bearer {editor_token}"}
+        "/articles/{0}".format(article_id), headers={"Authorization": "Bearer {0}".format(editor_token)}
     )
     assert response.status_code == 200
 

@@ -96,10 +96,10 @@ class TestSentimentAnalysisPipeline:
         try:
             # Test endpoint
             response = client.get("/news_sentiment?topic=Technology")
-            print(f"Response status: {response.status_code}")
-            print(f"Response content: {response.content}")
+            print("Response status: {0}".format(response.status_code))
+            print("Response content: {0}".format(response.content))
             if response.status_code != 200:
-                print(f"Response text: {response.text}")
+                print("Response text: {0}".format(response.text))
             assert response.status_code == 200
 
             data = response.json()
@@ -274,7 +274,7 @@ class TestSentimentPipelinePerformance:
             assert processing_time < 60  # Should complete within 60 seconds
 
             # Log performance for monitoring
-            print(f"Batch size {batch_size}: {processing_time:.2f} seconds")
+            print("Batch size {0}: {1} seconds".format(batch_size, processing_time:.2f))
 
 
 # Integration test for demo script

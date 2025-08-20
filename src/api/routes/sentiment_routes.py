@@ -82,7 +82,7 @@ async def get_sentiment_trends(
         # Add topic filter if provided
         if topic:
             conditions.append("(title ILIKE %s OR content ILIKE %s)")
-            topic_pattern = f"%{topic}%"
+            topic_pattern = "%{0}%".format(topic)
             params.extend([topic_pattern, topic_pattern])
 
         # Add source filter if provided
@@ -104,7 +104,7 @@ async def get_sentiment_trends(
             date_trunc = "DATE_TRUNC('day', publish_date)"
 
         # Query for sentiment trends over time
-        trends_query = f"""
+        trends_query = """
             SELECT
                 {date_trunc} as period,
                 sentiment_label,
@@ -121,7 +121,7 @@ async def get_sentiment_trends(
         trends_results = await db.execute_query(trends_query, params)
 
         # Query for overall sentiment statistics
-        overall_query = f"""
+        overall_query = """
             SELECT
                 sentiment_label,
                 COUNT(*) as count,
@@ -136,7 +136,7 @@ async def get_sentiment_trends(
         overall_results = await db.execute_query(overall_query, params)
 
         # Query for total article count
-        count_query = f"""
+        count_query = """
             SELECT COUNT(*) as total_articles
             FROM news_articles
             WHERE {where_clause}
@@ -187,8 +187,7 @@ async def get_sentiment_trends(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Error retrieving sentiment trends: {
-                str(e)}",
+            detail="Error retrieving sentiment trends: {0}".format(str(e)),
         )
 
 
@@ -217,12 +216,12 @@ async def get_sentiment_summary(
 
         if topic:
             conditions.append("(title ILIKE %s OR content ILIKE %s)")
-            topic_pattern = f"%{topic}%"
+            topic_pattern = "%{0}%".format(topic)
             params.extend([topic_pattern, topic_pattern])
 
         where_clause = " AND ".join(conditions)
 
-        query = f"""
+        query = """
             SELECT
                 sentiment_label,
                 COUNT(*) as count,
@@ -264,8 +263,7 @@ async def get_sentiment_summary(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Error retrieving sentiment summary: {
-                str(e)}",
+            detail="Error retrieving sentiment summary: {0}".format(str(e)),
         )
 
 
@@ -343,5 +341,5 @@ async def get_topic_sentiment_analysis(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Error retrieving topic sentiment analysis: {str(e)}",
+            detail="Error retrieving topic sentiment analysis: {0}".format(str(e)),
         )

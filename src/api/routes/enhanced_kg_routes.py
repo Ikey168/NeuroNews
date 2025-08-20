@@ -183,11 +183,10 @@ async def get_enhanced_graph_populator() -> EnhancedKnowledgeGraphPopulator:
         return populator
 
     except Exception as e:
-        logger.error(f"Failed to create enhanced graph populator: {e}")
+        logger.error("Failed to create enhanced graph populator: {0}".format(e))
         raise HTTPException(
             status_code=503,
-            detail=f"Knowledge graph service not available: {
-                str(e)}",
+            detail="Knowledge graph service not available: {0}".format(str(e)),
         )
 
 
@@ -220,7 +219,7 @@ async def get_related_entities(
     start_time = datetime.now()
 
     try:
-        logger.info(f"API request for related entities: {entity}")
+        logger.info("API request for related entities: {0}".format(entity))
 
         # Validate input
         if not entity or len(entity.strip()) < 2:
@@ -273,8 +272,9 @@ async def get_related_entities(
         )
 
         logger.info(
-            f"Successfully returned {
-                len(related_entities)} related entities for {entity}"
+            "Successfully returned {0} related entities for {1}".format(
+                len(related_entities), entity
+            )
         )
         return response
 
@@ -282,12 +282,13 @@ async def get_related_entities(
         raise
     except Exception as e:
         logger.error(
-            f"Error processing related entities request for {entity}: {str(e)}"
+            "Error processing related entities request for {0}: {1}".format(
+                entity, str(e)
+            )
         )
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to retrieve related entities: {
-                str(e)}",
+            detail="Failed to retrieve related entities: {0}".format(str(e)),
         )
 
 
@@ -317,7 +318,7 @@ async def get_event_timeline(
     start_time = datetime.now()
 
     try:
-        logger.info(f"API request for event timeline: {topic}")
+        logger.info("API request for event timeline: {0}".format(topic))
 
         # Validate input
         if not topic or len(topic.strip()) < 2:
@@ -383,8 +384,9 @@ async def get_event_timeline(
         )
 
         logger.info(
-            f"Successfully returned {
-                len(timeline_events)} timeline events for {topic}"
+            "Successfully returned {0} timeline events for {1}".format(
+                len(timeline_events), topic
+            )
         )
         return response
 
@@ -392,13 +394,11 @@ async def get_event_timeline(
         raise
     except Exception as e:
         logger.error(
-            f"Error processing event timeline request for {topic}: {
-                str(e)}"
+            "Error processing event timeline request for {0}: {1}".format(topic, str(e))
         )
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to retrieve event timeline: {
-                str(e)}",
+            detail="Failed to retrieve event timeline: {0}".format(str(e)),
         )
 
 
@@ -420,7 +420,7 @@ async def get_entity_details(
         GET /api/v1/knowledge-graph/entity_details/google_inc_001
     """
     try:
-        logger.info(f"API request for entity details: {entity_id}")
+        logger.info("API request for entity details: {0}".format(entity_id))
 
         # Query entity details using Gremlin
         entity_details = await _query_entity_details(
@@ -436,20 +436,18 @@ async def get_entity_details(
                 status_code=404, detail=f"Entity with ID '{entity_id}' not found"
             )
 
-        logger.info(f"Successfully returned details for entity {entity_id}")
+        logger.info("Successfully returned details for entity {0}".format(entity_id))
         return entity_details
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error(
-            f"Error retrieving entity details for {entity_id}: {
-                str(e)}"
+            "Error retrieving entity details for {0}: {1}".format(entity_id, str(e))
         )
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to retrieve entity details: {
-                str(e)}",
+            detail="Failed to retrieve entity details: {0}".format(str(e)),
         )
 
 
@@ -477,8 +475,7 @@ async def advanced_graph_search(
     """
     try:
         logger.info(
-            f"API request for advanced graph search: {
-                query.query_type}"
+            "API request for advanced graph search: {0}".format(query.query_type)
         )
 
         # Validate query type
@@ -486,7 +483,9 @@ async def advanced_graph_search(
         if query.query_type not in valid_query_types:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid query_type. Must be one of: {valid_query_types}",
+                detail="Invalid query_type. Must be one of: {0}".format(
+                    valid_query_types
+                ),
             )
 
         # Execute search based on query type
@@ -508,17 +507,16 @@ async def advanced_graph_search(
         }
 
         logger.info(
-            f"Successfully returned {
-                len(search_results)} search results"
+            "Successfully returned {0} search results".format(len(search_results))
         )
         return response
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error processing advanced graph search: {str(e)}")
+        logger.error("Error processing advanced graph search: {0}".format(str(e)))
         raise HTTPException(
-            status_code=500, detail=f"Failed to execute graph search: {str(e)}"
+            status_code=500, detail="Failed to execute graph search: {0}".format(str(e))
         )
 
 
@@ -543,14 +541,14 @@ async def get_graph_analytics(
         GET /api/v1/knowledge-graph/graph_analytics?metric_type=centrality&top_n=20
     """
     try:
-        logger.info(f"API request for graph analytics: {metric_type}")
+        logger.info("API request for graph analytics: {0}".format(metric_type))
 
         # Validate metric type
         valid_metrics = ["overview", "centrality", "clustering"]
         if metric_type not in valid_metrics:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid metric_type. Must be one of: {valid_metrics}",
+                detail="Invalid metric_type. Must be one of: {0}".format(valid_metrics),
             )
 
         # Get graph analytics
@@ -568,17 +566,16 @@ async def get_graph_analytics(
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-        logger.info(f"Successfully returned graph analytics for {metric_type}")
+        logger.info("Successfully returned graph analytics for {0}".format(metric_type))
         return response
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error processing graph analytics request: {str(e)}")
+        logger.error("Error processing graph analytics request: {0}".format(str(e)))
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to retrieve graph analytics: {
-                str(e)}",
+            detail="Failed to retrieve graph analytics: {0}".format(str(e)),
         )
 
 
@@ -598,7 +595,7 @@ async def execute_sparql_query(
         GET /api/v1/knowledge-graph/sparql_query?query=SELECT * WHERE { ?s ?p ?o } LIMIT 10
     """
     try:
-        logger.info(f"API request for SPARQL query execution")
+        logger.info("API request for SPARQL query execution")
 
         # Validate SPARQL query
         if not query or len(query.strip()) < 10:
@@ -618,15 +615,15 @@ async def execute_sparql_query(
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-        logger.info(f"Successfully executed SPARQL query")
+        logger.info("Successfully executed SPARQL query")
         return response
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error executing SPARQL query: {str(e)}")
+        logger.error("Error executing SPARQL query: {0}".format(str(e)))
         raise HTTPException(
-            status_code=500, detail=f"Failed to execute SPARQL query: {str(e)}"
+            status_code=500, detail="Failed to execute SPARQL query: {0}".format(str(e))
         )
 
 
@@ -645,7 +642,7 @@ async def _query_timeline_events(
     """Query timeline events from the knowledge graph."""
     try:
         # Use Gremlin to find articles related to the topic
-        gremlin_query = f"""
+        gremlin_query = """
         g.V().hasLabel('Article')
              .or(
                  has('title', containing('{topic}')),
@@ -719,7 +716,7 @@ async def _query_timeline_events(
         return timeline_events
 
     except Exception as e:
-        logger.error(f"Error querying timeline events: {e}")
+        logger.error("Error querying timeline events: {0}".format(e))
         return []
 
 
@@ -741,7 +738,7 @@ async def _get_article_entities(
         return results or []
 
     except Exception as e:
-        logger.debug(f"Error getting article entities: {e}")
+        logger.debug("Error getting article entities: {0}".format(e))
         return []
 
 
@@ -795,7 +792,7 @@ async def _query_entity_details(
         return details
 
     except Exception as e:
-        logger.error(f"Error querying entity details: {e}")
+        logger.error("Error querying entity details: {0}".format(e))
         return None
 
 
@@ -855,7 +852,7 @@ async def _get_entity_relationships(
         return relationships
 
     except Exception as e:
-        logger.debug(f"Error getting entity relationships: {e}")
+        logger.debug("Error getting entity relationships: {0}".format(e))
         return []
 
 
@@ -886,7 +883,7 @@ async def _get_entity_articles(
         return articles
 
     except Exception as e:
-        logger.debug(f"Error getting entity articles: {e}")
+        logger.debug("Error getting entity articles: {0}".format(e))
         return []
 
 
@@ -914,7 +911,7 @@ async def _execute_advanced_search(
             return []
 
     except Exception as e:
-        logger.error(f"Error executing advanced search: {e}")
+        logger.error("Error executing advanced search: {0}".format(e))
         return []
 
 
@@ -986,7 +983,7 @@ async def _search_entities(
         return entities
 
     except Exception as e:
-        logger.error(f"Error searching entities: {e}")
+        logger.error("Error searching entities: {0}".format(e))
         return []
 
 
@@ -1025,7 +1022,7 @@ async def _search_relationships(
         return relationships
 
     except Exception as e:
-        logger.error(f"Error searching relationships: {e}")
+        logger.error("Error searching relationships: {0}".format(e))
         return []
 
 
@@ -1062,7 +1059,7 @@ async def _search_paths(
         for i, path in enumerate(results):
             paths.append(
                 {
-                    "path_id": f"path_{i}",
+                    "path_id": "path_{0}".format(i),
                     "source": source_term,
                     "target": target_term,
                     "length": len(path) - 1,
@@ -1073,7 +1070,7 @@ async def _search_paths(
         return paths
 
     except Exception as e:
-        logger.error(f"Error searching paths: {e}")
+        logger.error("Error searching paths: {0}".format(e))
         return []
 
 
@@ -1095,7 +1092,7 @@ async def _get_graph_analytics(
             return {}
 
     except Exception as e:
-        logger.error(f"Error getting graph analytics: {e}")
+        logger.error("Error getting graph analytics: {0}".format(e))
         return {}
 
 
@@ -1131,7 +1128,7 @@ async def _get_overview_analytics(
         }
 
     except Exception as e:
-        logger.error(f"Error getting overview analytics: {e}")
+        logger.error("Error getting overview analytics: {0}".format(e))
         return {}
 
 
@@ -1172,7 +1169,7 @@ async def _get_centrality_analytics(
         }
 
     except Exception as e:
-        logger.error(f"Error getting centrality analytics: {e}")
+        logger.error("Error getting centrality analytics: {0}".format(e))
         return {}
 
 
@@ -1205,7 +1202,7 @@ async def _get_clustering_analytics(
         }
 
     except Exception as e:
-        logger.error(f"Error getting clustering analytics: {e}")
+        logger.error("Error getting clustering analytics: {0}".format(e))
         return {}
 
 
@@ -1224,6 +1221,5 @@ async def health_check():
     except Exception as e:
         raise HTTPException(
             status_code=503,
-            detail=f"Service unhealthy: {
-                str(e)}",
+            detail="Service unhealthy: {0}".format(str(e)),
         )

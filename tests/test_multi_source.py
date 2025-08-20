@@ -20,12 +20,12 @@ def test_spider_imports():
 
     try:
         runner = MultiSourceRunner()
-        print(f"✅ Successfully imported {len(runner.spiders)} spiders:")
+        print("✅ Successfully imported {0} spiders:".format(len(runner.spiders)))
         for spider_name in runner.spiders.keys():
-            print(f"   - {spider_name}")
+            print("   - {0}".format(spider_name))
         return True
     except Exception as e:
-        print(f"❌ Error importing spiders: {e}")
+        print("❌ Error importing spiders: {0}".format(e))
         return False
 
 
@@ -36,19 +36,19 @@ def test_configuration():
     try:
         config_path = "config/settings.json"
         if not os.path.exists(config_path):
-            print(f"❌ Configuration file not found: {config_path}")
+            print("❌ Configuration file not found: {0}".format(config_path))
             return False
 
         with open(config_path, "r") as f:
             config = json.load(f)
 
         sources = config.get("scraping", {}).get("sources", [])
-        print(f"✅ Configuration loaded with {len(sources)} sources:")
+        print("✅ Configuration loaded with {0} sources:".format(len(sources)))
         for source in sources:
-            print(f"   - {source}")
+            print("   - {0}".format(source))
         return True
     except Exception as e:
-        print(f"❌ Error loading configuration: {e}")
+        print("❌ Error loading configuration: {0}".format(e))
         return False
 
 
@@ -61,7 +61,7 @@ def test_data_validator():
         print("✅ Data validator initialized successfully")
         return True
     except Exception as e:
-        print(f"❌ Error initializing data validator: {e}")
+        print("❌ Error initializing data validator: {0}".format(e))
         return False
 
 
@@ -88,18 +88,18 @@ def test_pipelines():
         if len(found_classes) == len(pipeline_classes):
             print("✅ All pipelines found:")
             for class_name in found_classes:
-                print(f"   - {class_name}")
+                print("   - {0}".format(class_name))
             return True
         else:
             print(
-                f"❌ Missing pipeline classes: {
+                "❌ Missing pipeline classes: {0}".format(
                     set(pipeline_classes) -
-                    set(found_classes)}"
+                    set(found_classes))
             )
             return False
 
     except Exception as e:
-        print(f"❌ Error importing pipelines: {e}")
+        print("❌ Error importing pipelines: {0}".format(e))
         return False
 
 
@@ -118,10 +118,10 @@ def test_items():
         item["source"] = "Test Source"
 
         print("✅ NewsItem created and populated successfully")
-        print(f"   Fields available: {list(item.fields.keys())}")
+        print("   Fields available: {0}".format(list(item.fields.keys())))
         return True
     except Exception as e:
-        print(f"❌ Error with NewsItem: {e}")
+        print("❌ Error with NewsItem: {0}".format(e))
         return False
 
 
@@ -147,11 +147,11 @@ def run_all_tests():
             else:
                 failed += 1
         except Exception as e:
-            print(f"❌ Test {test.__name__} failed with exception: {e}")
+            print("❌ Test {0} failed with exception: {1}".format(test.__name__, e))
             failed += 1
 
     print(f"\n{'=' * 50}")
-    print(f"📊 Test Results: {passed} passed, {failed} failed")
+    print("📊 Test Results: {0} passed, {1} failed".format(passed, failed))
 
     if failed == 0:
         print("🎉 All tests passed! Multi-source scraper is ready to use.")

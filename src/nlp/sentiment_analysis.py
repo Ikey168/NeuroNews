@@ -56,7 +56,7 @@ class SentimentAnalyzer:
 
     def __init__(self, model_name: Optional[str] = None, **_: object) -> None:
         if model_name and model_name != self.DEFAULT_MODEL:
-            raise ValueError(f"Unsupported model: {model_name}")
+            raise ValueError("Unsupported model: {0}".format(model_name))
         self.model_name = model_name or self.DEFAULT_MODEL
 
         # Try to create a Hugging Face pipeline if transformers is installed.
@@ -177,19 +177,23 @@ def create_analyzer(
             return AWSComprehendSentimentAnalyzer(**kwargs)
         except ImportError as e:
             logger.warning(
-                f"AWS Comprehend not available: {e}. Falling back to HuggingFace."
+                "AWS Comprehend not available: {0}. Falling back to HuggingFace.".format(
+                    e
+                )
             )
             provider = "huggingface"
         except Exception as e:
             logger.error(
-                f"Failed to initialize AWS Comprehend: {e}. Falling back to HuggingFace."
+                "Failed to initialize AWS Comprehend: {0}. Falling back to HuggingFace.".format(
+                    e
+                )
             )
             provider = "huggingface"
 
     if provider == "huggingface":
         return SentimentAnalyzer(model_name=model_name)
 
-    raise ValueError(f"Unsupported sentiment provider: {provider}")
+    raise ValueError("Unsupported sentiment provider: {0}".format(provider))
 
 
 # Backward compatibility function

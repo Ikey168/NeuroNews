@@ -81,7 +81,7 @@ class TechCrunchSpider(scrapy.Spider):
             or response.css(".article__byline a::text").get()
             or response.css('meta[name="author"]::attr(content)').get()
         )
-        item["author"] = author.strip() if author else "TechCrunch Staff"
+        item["author"] = author.strip() if author else "TechCrunch Sta"
 
         # TechCrunch is primarily technology focused
         item["category"] = self._extract_category(response.url, response)

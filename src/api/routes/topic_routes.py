@@ -24,7 +24,7 @@ async def get_keyword_topic_db() -> KeywordTopicDatabase:
         return await create_keyword_topic_db()
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Database connection error: {str(e)}"
+            status_code=500, detail="Database connection error: {0}".format(str(e))
         )
 
 
@@ -81,8 +81,7 @@ async def get_articles_by_topic(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Error retrieving articles by topic: {
-                str(e)}",
+            detail="Error retrieving articles by topic: {0}".format(str(e)),
         )
 
 
@@ -129,8 +128,7 @@ async def get_articles_by_keyword(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Error retrieving articles by keyword: {
-                str(e)}",
+            detail="Error retrieving articles by keyword: {0}".format(str(e)),
         )
 
 
@@ -166,8 +164,7 @@ async def get_topic_statistics(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Error retrieving topic statistics: {
-                str(e)}",
+            detail="Error retrieving topic statistics: {0}".format(str(e)),
         )
 
 
@@ -207,8 +204,7 @@ async def get_keyword_statistics(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Error retrieving keyword statistics: {
-                str(e)}",
+            detail="Error retrieving keyword statistics: {0}".format(str(e)),
         )
 
 
@@ -270,8 +266,7 @@ async def advanced_search(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Error performing advanced search: {
-                str(e)}",
+            detail="Error performing advanced search: {0}".format(str(e)),
         )
 
 
@@ -324,8 +319,7 @@ async def get_trending_topics(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Error retrieving trending topics: {
-                str(e)}",
+            detail="Error retrieving trending topics: {0}".format(str(e)),
         )
 
 
@@ -377,6 +371,5 @@ async def get_trending_keywords(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Error retrieving trending keywords: {
-                str(e)}",
+            detail="Error retrieving trending keywords: {0}".format(str(e)),
         )

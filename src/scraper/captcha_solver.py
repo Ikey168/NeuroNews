@@ -32,7 +32,7 @@ class CaptchaSolver:
         page_lower = page_content.lower()
         for indicator in captcha_indicators:
             if indicator in page_lower:
-                self.logger.info(f"CAPTCHA detected: {indicator}")
+                self.logger.info("CAPTCHA detected: {0}".format(indicator))
                 return True
 
         return False
@@ -53,7 +53,7 @@ class CaptchaSolver:
             async with session.post("https://2captcha.com/in.php", data=data) as resp:
                 result = await resp.json()
                 if result.get("status") != 1:
-                    self.logger.error(f"2Captcha error: {result}")
+                    self.logger.error("2Captcha error: {0}".format(result))
                     return None
                 captcha_id = result["request"]
 
@@ -61,7 +61,9 @@ class CaptchaSolver:
             for _ in range(timeout // 5):
                 await asyncio.sleep(5)
                 async with session.get(
-                    f"https://2captcha.com/res.php?key={self.api_key}&action=get&id={captcha_id}&json=1"
+                    "https://2captcha.com/res.php?key={0}&action=get&id={1}&json=1".format(
+                        self.api_key, captcha_id
+                    )
                 ) as resp:
                     result = await resp.json()
                     if result.get("status") == 1:
@@ -70,7 +72,7 @@ class CaptchaSolver:
                     elif result.get("request") == "CAPCHA_NOT_READY":
                         continue
                     else:
-                        self.logger.error(f"2Captcha polling error: {result}")
+                        self.logger.error("2Captcha polling error: {0}".format(result))
                         return None
             self.logger.error("2Captcha timeout")
             return None
@@ -90,14 +92,16 @@ class CaptchaSolver:
             async with session.post("https://2captcha.com/in.php", data=data) as resp:
                 result = await resp.json()
                 if result.get("status") != 1:
-                    self.logger.error(f"2Captcha error: {result}")
+                    self.logger.error("2Captcha error: {0}".format(result))
                     return None
                 captcha_id = result["request"]
 
             for _ in range(timeout // 5):
                 await asyncio.sleep(5)
                 async with session.get(
-                    f"https://2captcha.com/res.php?key={self.api_key}&action=get&id={captcha_id}&json=1"
+                    "https://2captcha.com/res.php?key={0}&action=get&id={1}&json=1".format(
+                        self.api_key, captcha_id
+                    )
                 ) as resp:
                     result = await resp.json()
                     if result.get("status") == 1:
@@ -106,7 +110,7 @@ class CaptchaSolver:
                     elif result.get("request") == "CAPCHA_NOT_READY":
                         continue
                     else:
-                        self.logger.error(f"2Captcha polling error: {result}")
+                        self.logger.error("2Captcha polling error: {0}".format(result))
                         return None
             self.logger.error("2Captcha timeout")
             return None

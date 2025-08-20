@@ -134,22 +134,22 @@ class SentimentTrendDemo:
 
                     sample_data.append(
                         {
-                            "id": f"demo_article_{article_id}",
-                            "title": f"{topic.title()} News Article {article_id}",
-                            "content": f"Sample content for {topic} article {article_id}",
+                            "id": "demo_article_{0}".format(article_id),
+                            "title": "{0} News Article {1}".format(topic.title(), article_id),
+                            "content": "Sample content for {0} article {1}".format(topic, article_id),
                             "publish_date": current_date,
                             "sentiment_label": sentiment_label,
                             "sentiment_score": round(sentiment_score, 3),
                             "sentiment_confidence": round(confidence, 3),
                             "topic": topic,
-                            "keywords": [f"{topic}_keyword_{i}" for i in range(1, 4)],
-                            "source": f"demo_source_{(article_id % 5) + 1}",
+                            "keywords": ["{0}_keyword_{1}".format(topic, i) for i in range(1, 4)],
+                            "source": "demo_source_{0}".format((article_id % 5) + 1),
                         }
                     )
                     article_id += 1
 
         logger.info(
-            f"Generated {len(sample_data)} sample articles across {len(topics)} topics"
+            "Generated {0} sample articles across {1} topics".format(len(sample_data), len(topics))
         )
         return sample_data
 
@@ -167,10 +167,10 @@ class SentimentTrendDemo:
         end_date = datetime.now(timezone.utc)
 
         print(
-            f"\nAnalyzing sentiment trends from {start_date.date()} to {end_date.date()}"
+            "\nAnalyzing sentiment trends from {0} to {1}".format(start_date.date(), end_date.date())
         )
-        print(f"Time granularity: daily")
-        print(f"Data points: {len(self.sample_data)} articles")
+        print("Time granularity: daily")
+        print("Data points: {0} articles".format(len(self.sample_data)))
 
         summaries = await analyzer.analyze_historical_trends(
             topic=None,  # Analyze all topics
@@ -180,7 +180,7 @@ class SentimentTrendDemo:
         )
 
         # Display results
-        print(f"\n📊 TREND ANALYSIS RESULTS")
+        print("\n📊 TREND ANALYSIS RESULTS")
         print("-" * 50)
 
         topic_summaries = {}
@@ -205,7 +205,7 @@ class SentimentTrendDemo:
             topic=None, lookback_days=7  # Check all topics
         )
 
-        print(f"\n🚨 GENERATED ALERTS: {len(alerts)}")
+        print("\n🚨 GENERATED ALERTS: {0}".format(len(alerts)))
         print("-" * 50)
 
         if alerts:
@@ -220,14 +220,14 @@ class SentimentTrendDemo:
         self, topic: str
     ) -> Optional[TopicTrendSummary]:
         """Demonstrate topic-specific trend analysis."""
-        print(f"\n" + "=" * 80)
-        print(f"TOPIC-SPECIFIC ANALYSIS: {topic.upper()}")
+        print("\n" + "=" * 80)
+        print("TOPIC-SPECIFIC ANALYSIS: {0}".format(topic.upper()))
         print("=" * 80)
 
         # Create mock analyzer for demo
         analyzer = MockSentimentTrendAnalyzer(self.sample_data, self.redshift_config)
 
-        print(f"\nAnalyzing sentiment trends for topic: {topic}")
+        print("\nAnalyzing sentiment trends for topic: {0}".format(topic))
 
         summary = await analyzer.get_topic_trend_summary(topic, days=30)
 
@@ -235,7 +235,7 @@ class SentimentTrendDemo:
             self._display_detailed_topic_analysis(summary)
             return summary
         else:
-            print(f"No sufficient data found for topic: {topic}")
+            print("No sufficient data found for topic: {0}".format(topic))
             return None
 
     async def demo_real_time_monitoring(self) -> None:
@@ -251,22 +251,22 @@ class SentimentTrendDemo:
         print("Checking for alerts every 30 seconds (demo simulation)")
 
         for cycle in range(3):  # Demo 3 monitoring cycles
-            print(f"\n⏰ Monitoring Cycle {cycle + 1}")
+            print("\n⏰ Monitoring Cycle {0}".format(cycle + 1))
             print("-" * 30)
 
             # Check for new alerts
             alerts = await analyzer.generate_sentiment_alerts(lookback_days=1)
 
             if alerts:
-                print(f"🚨 {len(alerts)} new alerts detected:")
+                print("🚨 {0} new alerts detected:".format(len(alerts)))
                 for alert in alerts[:2]:  # Show first 2 alerts
-                    print(f"  • {alert.topic}: {alert.alert_type} ({alert.severity})")
+                    print("  • {0}: {1} ({2})".format(alert.topic, alert.alert_type, alert.severity))
             else:
                 print("✅ No new alerts detected")
 
             # Simulate checking active alerts
             active_alerts = await analyzer.get_active_alerts(limit=5)
-            print(f"📊 Total active alerts: {len(active_alerts)}")
+            print("📊 Total active alerts: {0}".format(len(active_alerts)))
 
             # Simulate delay
             await asyncio.sleep(1)  # In real implementation, this would be 30 seconds
@@ -323,7 +323,7 @@ class SentimentTrendDemo:
                 ax2.text(
                     bar.get_x() + bar.get_width() / 2.0,
                     height + (0.01 if height >= 0 else -0.03),
-                    f"{value:.2f}",
+                    "{0}".format(value:.2f),
                     ha="center",
                     va="bottom" if height >= 0 else "top",
                 )
@@ -360,7 +360,7 @@ class SentimentTrendDemo:
             output_path.parent.mkdir(exist_ok=True)
             plt.savefig(output_path, dpi=300, bbox_inches="tight")
 
-            print(f"📈 Visualization saved to: {output_path}")
+            print("📈 Visualization saved to: {0}".format(output_path))
             print("   The plot shows:")
             print("   • Sentiment trends over time for each topic")
             print("   • Average sentiment comparison across topics")
@@ -371,20 +371,20 @@ class SentimentTrendDemo:
             print("📈 Visualization requires matplotlib and seaborn")
             print("   Install with: pip install matplotlib seaborn")
         except Exception as e:
-            print(f"📈 Visualization error: {e}")
+            print("📈 Visualization error: {0}".format(e))
 
     def _display_topic_summary(self, summary: TopicTrendSummary) -> None:
         """Display topic trend summary in a formatted way."""
-        print(f"\n🔍 Topic: {summary.topic.upper()}")
+        print("\n🔍 Topic: {0}".format(summary.topic.upper()))
         print(
-            f"   Time Range: {summary.time_range[0].date()} to {summary.time_range[1].date()}"
+            "   Time Range: {0} to {1}".format(summary.time_range[0].date(), summary.time_range[1].date())
         )
-        print(f"   Current Sentiment: {summary.current_sentiment:.3f}")
-        print(f"   Average Sentiment: {summary.average_sentiment:.3f}")
-        print(f"   Trend Direction: {summary.trend_direction}")
-        print(f"   Trend Strength: {summary.trend_strength:.3f}")
-        print(f"   Volatility: {summary.sentiment_volatility:.3f}")
-        print(f"   Data Points: {len(summary.data_points)}")
+        print("   Current Sentiment: {0}".format(summary.current_sentiment:.3f))
+        print("   Average Sentiment: {0}".format(summary.average_sentiment:.3f))
+        print("   Trend Direction: {0}".format(summary.trend_direction))
+        print("   Trend Strength: {0}".format(summary.trend_strength:.3f))
+        print("   Volatility: {0}".format(summary.sentiment_volatility:.3f))
+        print("   Data Points: {0}".format(len(summary.data_points)))
         print(
             f"   Total Articles: {summary.statistical_summary.get('total_articles', 'N/A')}"
         )
@@ -400,13 +400,13 @@ class SentimentTrendDemo:
             trend_emoji = "📊"
             trend_desc = "stable sentiment"
 
-        print(f"   Interpretation: {trend_emoji} {trend_desc}")
+        print("   Interpretation: {0} {1}".format(trend_emoji, trend_desc))
 
     def _display_detailed_topic_analysis(self, summary: TopicTrendSummary) -> None:
         """Display detailed analysis for a specific topic."""
         self._display_topic_summary(summary)
 
-        print(f"\n📊 DETAILED STATISTICS")
+        print("\n📊 DETAILED STATISTICS")
         print("-" * 30)
         stats = summary.statistical_summary
         for key, value in stats.items():
@@ -415,7 +415,7 @@ class SentimentTrendDemo:
             else:
                 print(f"   {key.replace('_', ' ').title()}: {value}")
 
-        print(f"\n📈 RECENT TREND POINTS (Last 5)")
+        print("\n📈 RECENT TREND POINTS (Last 5)")
         print("-" * 40)
         recent_points = (
             summary.data_points[-5:]
@@ -430,7 +430,7 @@ class SentimentTrendDemo:
                 else "😞" if point.sentiment_score < -0.1 else "😐"
             )
             print(
-                f"   {date_str}: {point.sentiment_score:.3f} {sentiment_emoji} ({point.article_count} articles)"
+                "   {0}: {1} {2} ({3} articles)".format(date_str, point.sentiment_score:.3f, sentiment_emoji, point.article_count)
             )
 
     def _display_alert(self, alert: TrendAlert) -> None:
@@ -445,18 +445,18 @@ class SentimentTrendDemo:
 
         print(
             f"\n{severity_emoji.get(alert.severity, '⚠️')} {alert_type_emoji.get(alert.alert_type, '📈')} "
-            f"ALERT: {alert.topic.upper()}"
+            "ALERT: {0}".format(alert.topic.upper())
         )
         print(f"   Type: {alert.alert_type.replace('_', ' ').title()}")
-        print(f"   Severity: {alert.severity.upper()}")
-        print(f"   Current Sentiment: {alert.current_sentiment:.3f}")
-        print(f"   Previous Sentiment: {alert.previous_sentiment:.3f}")
-        print(f"   Change Magnitude: {alert.change_magnitude:.3f}")
-        print(f"   Change Percentage: {alert.change_percentage:.1f}%")
-        print(f"   Confidence: {alert.confidence:.3f}")
-        print(f"   Time Window: {alert.time_window}")
+        print("   Severity: {0}".format(alert.severity.upper()))
+        print("   Current Sentiment: {0}".format(alert.current_sentiment:.3f))
+        print("   Previous Sentiment: {0}".format(alert.previous_sentiment:.3f))
+        print("   Change Magnitude: {0}".format(alert.change_magnitude:.3f))
+        print("   Change Percentage: {0}%".format(alert.change_percentage:.1f))
+        print("   Confidence: {0}".format(alert.confidence:.3f))
+        print("   Time Window: {0}".format(alert.time_window))
         print(f"   Triggered: {alert.triggered_at.strftime('%Y-%m-%d %H:%M:%S UTC')}")
-        print(f"   Description: {alert.description}")
+        print("   Description: {0}".format(alert.description))
 
     async def run_complete_demo(self) -> None:
         """Run the complete demo workflow."""
@@ -498,8 +498,8 @@ class SentimentTrendDemo:
             print("• Implement notification systems")
 
         except Exception as e:
-            logger.error(f"Demo failed: {e}")
-            print(f"\n❌ Demo failed: {e}")
+            logger.error("Demo failed: {0}".format(e))
+            print("\n❌ Demo failed: {0}".format(e))
 
 
 class MockSentimentTrendAnalyzer:

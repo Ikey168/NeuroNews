@@ -479,7 +479,7 @@ def run_api_key_tests():
         test_gen.test_verify_api_key()
         print("✅ API Key Generator tests passed")
     except Exception as e:
-        print(f"❌ API Key Generator tests failed: {e}")
+        print("❌ API Key Generator tests failed: {0}".format(e))
         return False
 
     # Test APIKey data structure
@@ -490,7 +490,7 @@ def run_api_key_tests():
         test_key.test_to_dict_and_from_dict()
         print("✅ APIKey data structure tests passed")
     except Exception as e:
-        print(f"❌ APIKey data structure tests failed: {e}")
+        print("❌ APIKey data structure tests failed: {0}".format(e))
         return False
 
     # Test async functions
@@ -535,7 +535,7 @@ def run_api_key_tests():
 
         print("✅ Async API key operations tests passed")
     except Exception as e:
-        print(f"❌ Async API key operations tests failed: {e}")
+        print("❌ Async API key operations tests failed: {0}".format(e))
         return False
 
     # Test system completeness
@@ -554,7 +554,7 @@ def run_api_key_tests():
 
         print("✅ API Key System completeness verified")
     except Exception as e:
-        print(f"❌ API Key System completeness test failed: {e}")
+        print("❌ API Key System completeness test failed: {0}".format(e))
         return False
 
     print("\n🎉 All API Key Management tests passed!")

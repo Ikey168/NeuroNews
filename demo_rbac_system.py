@@ -119,13 +119,13 @@ class RBACDemo:
     def print_header(self, title: str):
         """Print formatted header."""
         print(f"\n{'='*60}")
-        print(f" {title}")
+        print(" {0}".format(title))
         print(f"{'='*60}")
 
     def print_section(self, title: str):
         """Print formatted section header."""
         print(f"\n{'-'*40}")
-        print(f" {title}")
+        print(" {0}".format(title))
         print(f"{'-'*40}")
 
     def demo_role_definitions(self):
@@ -149,7 +149,7 @@ class RBACDemo:
             if len(role_info["permissions"]) > 5:
                 print(f"   ... and {len(role_info['permissions']) - 5} more")
 
-        print(f"\n✅ Successfully defined {len(role_summary)} user roles")
+        print("\n✅ Successfully defined {0} user roles".format(len(role_summary)))
 
     def demo_endpoint_restrictions(self):
         """Demonstrate endpoint access restrictions."""
@@ -158,7 +158,7 @@ class RBACDemo:
         print("\n🔒 Testing Access Control for Different Endpoints:")
 
         for endpoint_name, endpoint_info in self.test_endpoints.items():
-            print(f"\n📍 {endpoint_name}")
+            print("\n📍 {0}".format(endpoint_name))
             print(f"   {endpoint_info['method']} {endpoint_info['path']}")
             print(f"   {endpoint_info['description']}")
 
@@ -172,18 +172,18 @@ class RBACDemo:
                     )
                     access_results[role_name] = has_access
                 except Exception as e:
-                    print(f"   ❌ Error checking {role_name}: {e}")
+                    print("   ❌ Error checking {0}: {1}".format(role_name, e))
                     access_results[role_name] = False
 
             # Display results
-            print(f"   Access Control:")
+            print("   Access Control:")
             for role_name, has_access in access_results.items():
                 expected = endpoint_info["expected_access"][role_name]
                 status = "✅" if has_access == expected else "❌"
                 access_icon = "🟢" if has_access else "🔴"
-                print(f"     {status} {role_name.capitalize()}: {access_icon}")
+                print("     {0} {1}: {2}".format(status, role_name.capitalize(), access_icon))
 
-        print(f"\n✅ Endpoint access restrictions working correctly")
+        print("\n✅ Endpoint access restrictions working correctly")
 
     def demo_middleware_integration(self):
         """Demonstrate FastAPI middleware integration."""
@@ -198,7 +198,7 @@ class RBACDemo:
             print("   ✅ EnhancedRBACMiddleware - Role-based access control")
             print("   ✅ RBACMetricsMiddleware - Access tracking and metrics")
         except ImportError as e:
-            print(f"   ❌ Error importing middleware: {e}")
+            print("   ❌ Error importing middleware: {0}".format(e))
             return
 
         print("\n🔧 Middleware Features:")
@@ -227,11 +227,11 @@ class RBACDemo:
                 has_access = rbac_manager.has_access(user_role, method, path)
                 status = "✅" if has_access == expected else "❌"
                 result = "ALLOW" if has_access else "DENY"
-                print(f"   {status} {role.upper()} {method} {path} → {result}")
+                print("   {0} {1} {2} {3} → {4}".format(status, role.upper(), method, path, result))
             except Exception as e:
-                print(f"   ❌ Error testing {role} {method} {path}: {e}")
+                print("   ❌ Error testing {0} {1} {2}: {3}".format(role, method, path, e))
 
-        print(f"\n✅ FastAPI middleware integration ready")
+        print("\n✅ FastAPI middleware integration ready")
 
     async def demo_dynamodb_storage(self):
         """Demonstrate DynamoDB permission storage."""
@@ -255,11 +255,11 @@ class RBACDemo:
                     "   📊 Attributes: role, created_at, updated_at, custom_permissions"
                 )
             else:
-                print(f"   ✅ DynamoDB connected - Table: {store.table_name}")
-                print(f"   🌍 Region: {store.region}")
+                print("   ✅ DynamoDB connected - Table: {0}".format(store.table_name))
+                print("   🌍 Region: {0}".format(store.region))
 
         except Exception as e:
-            print(f"   ❌ Error with DynamoDB setup: {e}")
+            print("   ❌ Error with DynamoDB setup: {0}".format(e))
 
         print("\n💾 Testing Permission Storage Operations:")
 
@@ -271,9 +271,9 @@ class RBACDemo:
                     user.user_id, user_role
                 )
                 status = "✅" if success else "⚠️"
-                print(f"   {status} Store permissions: {user.name} ({user_role.value})")
+                print("   {0} Store permissions: {1} ({2})".format(status, user.name, user_role.value))
             except Exception as e:
-                print(f"   ❌ Error storing {user.name}: {e}")
+                print("   ❌ Error storing {0}: {1}".format(user.name, e))
 
         print("\n🔍 Testing Permission Retrieval:")
 
@@ -282,13 +282,13 @@ class RBACDemo:
                 stored_role = await rbac_manager.get_user_role_from_db(user.user_id)
                 if stored_role:
                     status = "✅" if stored_role.value == role_name else "⚠️"
-                    print(f"   {status} Retrieved: {user.name} → {stored_role.value}")
+                    print("   {0} Retrieved: {1} → {2}".format(status, user.name, stored_role.value))
                 else:
-                    print(f"   ⚠️  Not found: {user.name} (expected in test mode)")
+                    print("   ⚠️  Not found: {0} (expected in test mode)".format(user.name))
             except Exception as e:
-                print(f"   ❌ Error retrieving {user.name}: {e}")
+                print("   ❌ Error retrieving {0}: {1}".format(user.name, e))
 
-        print(f"\n✅ DynamoDB integration implemented")
+        print("\n✅ DynamoDB integration implemented")
 
     def generate_test_tokens(self):
         """Generate JWT tokens for demo users."""
@@ -299,9 +299,9 @@ class RBACDemo:
             try:
                 token = auth_handler.create_access_token(user.to_token_data())
                 tokens[role_name] = token
-                print(f"✅ {user.name}: {token[:50]}...")
+                print("✅ {0}: {1}...".format(user.name, token[:50]))
             except Exception as e:
-                print(f"❌ Error creating token for {user.name}: {e}")
+                print("❌ Error creating token for {0}: {1}".format(user.name, e))
 
         return tokens
 
@@ -311,36 +311,36 @@ class RBACDemo:
 
         try:
             # Test health endpoint (should work without auth)
-            response = requests.get(f"{self.base_url}/health", timeout=5)
+            response = requests.get("{0}/health".format(self.base_url), timeout=5)
             if response.status_code == 200:
-                print(f"✅ Server running at {self.base_url}")
+                print("✅ Server running at {0}".format(self.base_url))
 
                 # Test RBAC endpoints with different roles
                 for role_name, token in tokens.items():
-                    headers = {"Authorization": f"Bearer {token}"}
+                    headers = {"Authorization": "Bearer {0}".format(token)}
 
                     # Test getting role information
                     try:
                         resp = requests.get(
-                            f"{self.base_url}/api/rbac/roles",
+                            "{0}/api/rbac/roles".format(self.base_url),
                             headers=headers,
                             timeout=5,
                         )
                         if resp.status_code == 200:
                             print(
-                                f"✅ {role_name.capitalize()} user can access RBAC info"
+                                "✅ {0} user can access RBAC info".format(role_name.capitalize())
                             )
                         else:
                             print(
-                                f"⚠️  {role_name.capitalize()} user RBAC access: {resp.status_code}"
+                                "⚠️  {0} user RBAC access: {1}".format(role_name.capitalize(), resp.status_code)
                             )
                     except Exception as e:
-                        print(f"❌ Error testing {role_name}: {e}")
+                        print("❌ Error testing {0}: {1}".format(role_name, e))
             else:
-                print(f"⚠️  Server not responding at {self.base_url}")
+                print("⚠️  Server not responding at {0}".format(self.base_url))
 
         except requests.exceptions.RequestException:
-            print(f"⚠️  Could not connect to {self.base_url}")
+            print("⚠️  Could not connect to {0}".format(self.base_url))
             print("   💡 Start the server with: uvicorn src.api.app:app --reload")
 
     def run_complete_demo(self):

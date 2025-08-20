@@ -97,7 +97,7 @@ class S3ArticleStorage:
             # Re-raise ValueError from bucket validation
             raise e
         except Exception as e:
-            logger.error(f"Failed to initialize S3 client: {e}")
+            logger.error("Failed to initialize S3 client: {0}".format(e))
             self.s3_client = None
 
     def _ensure_bucket_exists(self) -> None:
@@ -107,7 +107,7 @@ class S3ArticleStorage:
 
         try:
             self.s3_client.head_bucket(Bucket=self.bucket_name)
-            logger.info(f"S3 bucket {self.bucket_name} is accessible")
+            logger.info("S3 bucket {0} is accessible".format(self.bucket_name))
 
             # Configure bucket if needed
             self._configure_bucket()
@@ -115,11 +115,11 @@ class S3ArticleStorage:
         except ClientError as e:
             error_code = int(e.response["Error"]["Code"])
             if error_code == 404:
-                logger.warning(f"Bucket {self.bucket_name} does not exist")
+                logger.warning("Bucket {0} does not exist".format(self.bucket_name))
                 # In production, bucket should be pre-created
-                raise ValueError(f"Bucket {self.bucket_name} does not exist")
+                raise ValueError("Bucket {0} does not exist".format(self.bucket_name))
             elif error_code == 403:
-                raise ValueError(f"Access denied to bucket {self.bucket_name}")
+                raise ValueError("Access denied to bucket {0}".format(self.bucket_name))
             else:
                 raise
 
@@ -157,7 +157,7 @@ class S3ArticleStorage:
             )
 
         except ClientError as e:
-            logger.warning(f"Could not configure bucket settings: {e}")
+            logger.warning("Could not configure bucket settings: {0}".format(e))
 
     def _generate_article_id(self, article: Dict[str, Any]) -> str:
         """Generate unique article ID based on content."""
@@ -199,7 +199,7 @@ class S3ArticleStorage:
             # Parse date and create directory structure
             date_parts = date_str.split("-")
             if len(date_parts) != 3:
-                raise ValueError(f"Invalid date format: {date_str}")
+                raise ValueError("Invalid date format: {0}".format(date_str))
 
             year, month, day = date_parts
 
@@ -208,12 +208,14 @@ class S3ArticleStorage:
 
             # Create S3 key with proper structure
             prefix = article_type.value
-            key = f"{prefix}/{year}/{month}/{day}/{article_id}.json"
+            key = "{0}/{1}/{2}/{3}/{4}.json".format(
+                prefix, year, month, day, article_id
+            )
 
             return key
 
         except (KeyError, ValueError, IndexError) as e:
-            logger.error(f"Error generating S3 key: {e}")
+            logger.error("Error generating S3 key: {0}".format(e))
             # Fallback to simple structure
             article_id = str(uuid.uuid4())
             prefix = article_type.value
@@ -273,7 +275,7 @@ class S3ArticleStorage:
 
             # Check file size
             if file_size > self.config.max_file_size_mb * 1024 * 1024:
-                raise ValueError(f"Article too large: {file_size} bytes")
+                raise ValueError("Article too large: {0} bytes".format(file_size))
 
             # Upload to S3
             extra_args = {}
@@ -307,11 +309,11 @@ class S3ArticleStorage:
                 processing_status="stored",
             )
 
-            logger.info(f"Stored raw article {article_id} to S3: {s3_key}")
+            logger.info("Stored raw article {0} to S3: {1}".format(article_id, s3_key))
             return article_metadata
 
         except Exception as e:
-            logger.error(f"Failed to store raw article: {e}")
+            logger.error("Failed to store raw article: {0}".format(e))
             raise
 
     async def store_processed_article(
@@ -383,11 +385,13 @@ class S3ArticleStorage:
                 processing_status="processed",
             )
 
-            logger.info(f"Stored processed article {article_id} to S3: {s3_key}")
+            logger.info(
+                "Stored processed article {0} to S3: {1}".format(article_id, s3_key)
+            )
             return article_metadata
 
         except Exception as e:
-            logger.error(f"Failed to store processed article: {e}")
+            logger.error("Failed to store processed article: {0}".format(e))
             raise
 
     async def retrieve_article(self, s3_key: str) -> Dict[str, Any]:
@@ -411,18 +415,18 @@ class S3ArticleStorage:
             article_json = response["Body"].read().decode("utf-8")
             article = json.loads(article_json)
 
-            logger.info(f"Retrieved article from S3: {s3_key}")
+            logger.info("Retrieved article from S3: {0}".format(s3_key))
             return article
 
         except ClientError as e:
             error_code = e.response["Error"]["Code"]
             if error_code == "NoSuchKey":
-                raise ValueError(f"Article not found: {s3_key}")
+                raise ValueError("Article not found: {0}".format(s3_key))
             else:
-                logger.error(f"Failed to retrieve article {s3_key}: {e}")
+                logger.error("Failed to retrieve article {0}: {1}".format(s3_key, e))
                 raise
         except Exception as e:
-            logger.error(f"Error retrieving article {s3_key}: {e}")
+            logger.error("Error retrieving article {0}: {1}".format(s3_key, e))
             raise
 
     async def verify_article_integrity(self, s3_key: str) -> bool:
@@ -441,7 +445,7 @@ class S3ArticleStorage:
             # Get stored hash
             stored_hash = article.get("content_hash")
             if not stored_hash:
-                logger.warning(f"No content hash found for article: {s3_key}")
+                logger.warning("No content hash found for article: {0}".format(s3_key))
                 return False
 
             # Calculate current hash
@@ -451,12 +455,12 @@ class S3ArticleStorage:
             # Compare hashes
             is_valid = stored_hash == current_hash
             if not is_valid:
-                logger.error(f"Content hash mismatch for article: {s3_key}")
+                logger.error("Content hash mismatch for article: {0}".format(s3_key))
 
             return is_valid
 
         except Exception as e:
-            logger.error(f"Error verifying article integrity {s3_key}: {e}")
+            logger.error("Error verifying article integrity {0}: {1}".format(s3_key, e))
             return False
 
     async def list_articles_by_date(
@@ -480,15 +484,15 @@ class S3ArticleStorage:
             # Convert date to S3 prefix
             date_parts = date.split("-")
             if len(date_parts) != 3:
-                raise ValueError(f"Invalid date format: {date}")
+                raise ValueError("Invalid date format: {0}".format(date))
 
             year, month, day = date_parts
-            prefix = f"{article_type.value}/{year}/{month}/{day}/"
+            prefix = "{0}/{1}/{2}/{3}/".format(article_type.value, year, month, day)
 
             return await self.list_articles_by_prefix(prefix, limit)
 
         except Exception as e:
-            logger.error(f"Error listing articles by date {date}: {e}")
+            logger.error("Error listing articles by date {0}: {1}".format(date, e))
             return []
 
     async def list_articles_by_prefix(
@@ -523,7 +527,7 @@ class S3ArticleStorage:
             return keys
 
         except Exception as e:
-            logger.error(f"Error listing articles by prefix {prefix}: {e}")
+            logger.error("Error listing articles by prefix {0}: {1}".format(prefix, e))
             return []
 
     async def batch_store_raw_articles(
@@ -550,7 +554,7 @@ class S3ArticleStorage:
                 metadata_result = await self.store_raw_article(article, metadata)
                 results.append(metadata_result)
             except Exception as e:
-                error_msg = f"Failed to store article {i}: {e}"
+                error_msg = "Failed to store article {0}: {1}".format(i, e)
                 logger.error(error_msg)
                 errors.append(error_msg)
 
@@ -577,8 +581,7 @@ class S3ArticleStorage:
 
         if errors:
             logger.warning(
-                f"Batch operation completed with {
-                    len(errors)} errors"
+                "Batch operation completed with {0} errors".format(len(errors))
             )
 
         return results
@@ -644,7 +647,7 @@ class S3ArticleStorage:
             return stats
 
         except Exception as e:
-            logger.error(f"Error getting storage statistics: {e}")
+            logger.error("Error getting storage statistics: {0}".format(e))
             return {"error": str(e)}
 
     async def cleanup_old_articles(self, days: int = 365) -> int:
@@ -680,16 +683,16 @@ class S3ArticleStorage:
                                 Bucket=self.bucket_name, Key=key
                             )
                             deleted_count += 1
-                            logger.info(f"Deleted old article: {key}")
+                            logger.info("Deleted old article: {0}".format(key))
 
                     except Exception as e:
-                        logger.error(f"Error processing article {key}: {e}")
+                        logger.error("Error processing article {0}: {1}".format(key, e))
 
-            logger.info(f"Cleanup completed: {deleted_count} articles deleted")
+            logger.info("Cleanup completed: {0} articles deleted".format(deleted_count))
             return deleted_count
 
         except Exception as e:
-            logger.error(f"Error during cleanup: {e}")
+            logger.error("Error during cleanup: {0}".format(e))
             return 0
 
     def delete_article(self, key: str) -> None:
@@ -704,9 +707,9 @@ class S3ArticleStorage:
 
         try:
             self.s3_client.delete_object(Bucket=self.bucket_name, Key=key)
-            logger.info(f"Deleted article: {key}")
+            logger.info("Deleted article: {0}".format(key))
         except Exception as e:
-            logger.error(f"Error deleting article {key}: {e}")
+            logger.error("Error deleting article {0}: {1}".format(key, e))
             raise
 
     async def export_articles_to_local(
@@ -753,13 +756,15 @@ class S3ArticleStorage:
                     exported_count += 1
 
                 except Exception as e:
-                    logger.error(f"Error exporting article {key}: {e}")
+                    logger.error("Error exporting article {0}: {1}".format(key, e))
 
-            logger.info(f"Exported {exported_count} articles to {local_directory}")
+            logger.info(
+                "Exported {0} articles to {1}".format(exported_count, local_directory)
+            )
             return exported_count
 
         except Exception as e:
-            logger.error(f"Error during export: {e}")
+            logger.error("Error during export: {0}".format(e))
             return 0
 
 
@@ -780,7 +785,7 @@ class S3Storage(S3ArticleStorage):
             bucket_name=bucket_name,
             region=aws_region,
             raw_prefix=prefix,
-            processed_prefix=f"{prefix}_processed",
+            processed_prefix="{0}_processed".format(prefix),
         )
         super().__init__(config, aws_access_key_id, aws_secret_access_key)
         self.prefix = prefix
@@ -816,7 +821,9 @@ class S3Storage(S3ArticleStorage):
         # Create legacy key structure
         source = article.get("source", "unknown").replace(" ", "-").lower()
 
-        return f"{self.prefix}/{year}/{month}/{day}/{source}/{content_hash}.json"
+        return "{0}/{1}/{2}/{3}/{4}/{5}.json".format(
+            self.prefix, year, month, day, source, content_hash
+        )
 
     def upload_article(self, article: Dict[str, Any]) -> str:
         """Upload article using legacy interface."""
@@ -861,11 +868,11 @@ class S3Storage(S3ArticleStorage):
                 Body=json.dumps(enhanced_article, ensure_ascii=False),
                 ContentType="application/json",
             )
-            logger.info(f"Successfully uploaded article to S3: {s3_key}")
+            logger.info("Successfully uploaded article to S3: {0}".format(s3_key))
             return s3_key
 
         except Exception as e:
-            logger.error(f"Failed to upload article to S3: {e}")
+            logger.error("Failed to upload article to S3: {0}".format(e))
             raise
 
     def get_article(self, key: str) -> Dict[str, Any]:
@@ -956,7 +963,7 @@ async def ingest_scraped_articles_to_s3(
         }
 
     except Exception as e:
-        logger.error(f"Critical error during S3 ingestion: {e}")
+        logger.error("Critical error during S3 ingestion: {0}".format(e))
         return {
             "status": "error",
             "total_articles": len(articles),
@@ -1024,19 +1031,18 @@ async def verify_s3_data_consistency(
                     valid_count += 1
                 else:
                     invalid_count += 1
-                    errors.append(f"Integrity check failed for: {key}")
+                    errors.append("Integrity check failed for: {0}".format(key))
 
             except Exception as e:
                 invalid_count += 1
-                errors.append(f"Error verifying {key}: {str(e)}")
+                errors.append("Error verifying {0}: {1}".format(key, str(e)))
 
         # Get overall statistics
         stats = await storage.get_storage_statistics()
 
         return {
             "status": "success" if invalid_count == 0 else "warning",
-            "message": f"Verified {
-                len(all_keys)} articles",
+            "message": "Verified {0} articles".format(len(all_keys)),
             "total_checked": len(all_keys),
             "valid_articles": valid_count,
             "invalid_articles": invalid_count,
@@ -1046,10 +1052,10 @@ async def verify_s3_data_consistency(
         }
 
     except Exception as e:
-        logger.error(f"Error during data consistency verification: {e}")
+        logger.error("Error during data consistency verification: {0}".format(e))
         return {
             "status": "error",
-            "message": f"Verification failed: {str(e)}",
+            "message": "Verification failed: {0}".format(str(e)),
             "total_checked": 0,
             "valid_articles": 0,
             "invalid_articles": 0,

@@ -47,17 +47,15 @@ class S3StoragePipeline:
             error_code = e.response["Error"]["Code"]
             if error_code == "404":
                 spider.logger.error(
-                    f"S3 bucket {
-                        self.s3_bucket} does not exist"
+                    "S3 bucket {0} does not exist".format(self.s3_bucket)
                 )
             elif error_code == "403":
                 spider.logger.error(
-                    f"Access to S3 bucket {self.s3_bucket} is forbidden"
+                    "Access to S3 bucket {0} is forbidden".format(self.s3_bucket)
                 )
             else:
                 spider.logger.error(
-                    f"Error accessing S3 bucket {
-                        self.s3_bucket}: {e}"
+                    "Error accessing S3 bucket {0}: {1}".format(self.s3_bucket, e)
                 )
             raise DropItem("S3 bucket not accessible")
 
@@ -77,8 +75,9 @@ class S3StoragePipeline:
         title_slug = re.sub(r"[^a-z0-9-]", "", title_slug)
 
         # Create the S3 key
-        s3_key = f"{
-            self.s3_prefix}/{source_domain}/{timestamp}_{title_slug}.json"
+        s3_key = "{0}/{1}/{2}_{3}.json".format(
+            self.s3_prefix, source_domain, timestamp, title_slug
+        )
 
         # Prepare metadata
         metadata = {
@@ -110,9 +109,9 @@ class S3StoragePipeline:
                     "scraped_at": metadata["scraped_at"][:255],
                 },
             )
-            spider.logger.info(f"Stored article in S3: {s3_key}")
+            spider.logger.info("Stored article in S3: {0}".format(s3_key))
         except ClientError as e:
-            spider.logger.error(f"Failed to upload article to S3: {e}")
+            spider.logger.error("Failed to upload article to S3: {0}".format(e))
             raise DropItem("Failed to store in S3")
 
         return item

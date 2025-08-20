@@ -94,22 +94,22 @@ class ProxyRotationManager:
                 self.proxies.append(proxy)
 
                 # Initialize stats and connection tracking
-                proxy_key = f"{proxy.host}:{proxy.port}"
+                proxy_key = "{0}:{1}".format(proxy.host, proxy.port)
                 self.proxy_stats[proxy_key] = ProxyStats()
                 self.active_connections[proxy_key] = 0
 
-            self.logger.info(f"Loaded {len(self.proxies)} proxies from config")
+            self.logger.info("Loaded {0} proxies from config".format(len(self.proxies)))
 
         except Exception as e:
-            self.logger.error(f"Error loading proxy config: {e}")
+            self.logger.error("Error loading proxy config: {0}".format(e))
 
     def add_proxy(self, proxy: ProxyConfig):
         """Add a proxy to the rotation pool."""
-        proxy_key = f"{proxy.host}:{proxy.port}"
-        if proxy_key not in [f"{p.host}:{p.port}" for p in self.proxies]:
+        proxy_key = "{0}:{1}".format(proxy.host, proxy.port)
+        if proxy_key not in ["{0}:{1}".format(p.host, p.port) for p in self.proxies]:
             self.proxies.append(proxy)
             self.proxy_stats[proxy_key] = ProxyStats()
-            self.logger.info(f"Added proxy: {proxy_key}")
+            self.logger.info("Added proxy: {0}".format(proxy_key))
 
     async def get_proxy(self) -> Optional[ProxyConfig]:
         """Get next proxy based on rotation strategy."""
@@ -156,7 +156,7 @@ class ProxyRotationManager:
         # Sort by health score and select best performing
         proxy_scores = []
         for proxy in healthy_proxies:
-            key = f"{proxy.host}:{proxy.port}"
+            key = "{0}:{1}".format(proxy.host, proxy.port)
             stats = self.proxy_stats.get(key, ProxyStats())
             proxy_scores.append((proxy, stats.health_score))
 
@@ -165,7 +165,7 @@ class ProxyRotationManager:
 
     def _is_proxy_healthy(self, proxy: ProxyConfig) -> bool:
         """Check if proxy is healthy for use."""
-        key = f"{proxy.host}:{proxy.port}"
+        key = "{0}:{1}".format(proxy.host, proxy.port)
         stats = self.proxy_stats.get(key, ProxyStats())
         return (
             stats.is_healthy and self.active_connections[key] < proxy.concurrent_limit
@@ -175,7 +175,7 @@ class ProxyRotationManager:
         self, proxy: ProxyConfig, success: bool, response_time: float = 0.0
     ):
         """Record proxy usage statistics."""
-        key = f"{proxy.host}:{proxy.port}"
+        key = "{0}:{1}".format(proxy.host, proxy.port)
         stats = self.proxy_stats.get(key, ProxyStats())
 
         stats.total_requests += 1
@@ -193,7 +193,9 @@ class ProxyRotationManager:
             # Block proxy if too many consecutive failures
             if stats.consecutive_failures >= 5:
                 stats.blocked_until = time.time() + 300  # Block for 5 minutes
-                self.logger.warning(f"Proxy {key} blocked due to consecutive failures")
+                self.logger.warning(
+                    "Proxy {0} blocked due to consecutive failures".format(key)
+                )
 
         # Update average response time
         if response_time > 0:
@@ -207,10 +209,10 @@ class ProxyRotationManager:
 
     async def check_proxy_health(self, proxy: ProxyConfig) -> bool:
         """Check if a proxy is accessible and working."""
-        key = f"{proxy.host}:{proxy.port}"
+        key = "{0}:{1}".format(proxy.host, proxy.port)
         try:
             # Test proxy with a simple HTTP request
-            proxy_url = f"{proxy.proxy_type}://{proxy.host}:{proxy.port}"
+            proxy_url = "{0}://{1}:{2}".format(proxy.proxy_type, proxy.host, proxy.port)
 
             connector = aiohttp.TCPConnector()
             timeout = aiohttp.ClientTimeout(total=10)
@@ -236,12 +238,12 @@ class ProxyRotationManager:
                         return True
                     else:
                         self.logger.warning(
-                            f"Proxy {key} returned status {response.status}"
+                            "Proxy {0} returned status {1}".format(key, response.status)
                         )
                         return False
 
         except Exception as e:
-            self.logger.warning(f"Proxy {key} health check failed: {e}")
+            self.logger.warning("Proxy {0} health check failed: {1}".format(key, e))
             return False
 
     async def health_check_all(self):
@@ -256,7 +258,7 @@ class ProxyRotationManager:
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         for proxy, result in zip(self.proxies, results):
-            key = f"{proxy.host}:{proxy.port}"
+            key = "{0}:{1}".format(proxy.host, proxy.port)
             stats = self.proxy_stats.get(key, ProxyStats())
 
             if isinstance(result, bool) and result:
@@ -272,15 +274,18 @@ class ProxyRotationManager:
             1 for stats in self.proxy_stats.values() if stats.is_healthy
         )
         self.logger.info(
-            f"Health check complete: {healthy_count}/{len(self.proxies)} proxies healthy"
+            "Health check complete: {0}/{1} proxies healthy".format(
+                healthy_count, len(self.proxies)
+            )
         )
 
     async def start_health_monitor(self):
         """Start background health monitoring."""
         if self.health_check_interval > 0:
             self.logger.info(
-                f"Starting proxy health monitor (interval: {
-                    self.health_check_interval}s)"
+                "Starting proxy health monitor (interval: {0}s)".format(
+                    self.health_check_interval
+                )
             )
             while True:
                 try:
@@ -289,12 +294,12 @@ class ProxyRotationManager:
                 except asyncio.CancelledError:
                     break
                 except Exception as e:
-                    self.logger.error(f"Error in health monitor: {e}")
+                    self.logger.error("Error in health monitor: {0}".format(e))
                     await asyncio.sleep(60)  # Wait 1 minute before retry
 
     async def acquire_connection(self, proxy: ProxyConfig) -> bool:
         """Acquire a connection slot for the proxy."""
-        key = f"{proxy.host}:{proxy.port}"
+        key = "{0}:{1}".format(proxy.host, proxy.port)
         async with self._lock:
             if self.active_connections[key] < proxy.concurrent_limit:
                 self.active_connections[key] += 1
@@ -303,7 +308,7 @@ class ProxyRotationManager:
 
     async def release_connection(self, proxy: ProxyConfig):
         """Release a connection slot for the proxy."""
-        key = f"{proxy.host}:{proxy.port}"
+        key = "{0}:{1}".format(proxy.host, proxy.port)
         async with self._lock:
             if self.active_connections[key] > 0:
                 self.active_connections[key] -= 1
@@ -312,7 +317,7 @@ class ProxyRotationManager:
         """Get statistics for all proxies."""
         stats = {}
         for proxy in self.proxies:
-            key = f"{proxy.host}:{proxy.port}"
+            key = "{0}:{1}".format(proxy.host, proxy.port)
             proxy_stats = self.proxy_stats.get(key, ProxyStats())
             stats[key] = {
                 "total_requests": proxy_stats.total_requests,
@@ -334,7 +339,7 @@ class ProxyRotationManager:
         proxies_to_remove = []
 
         for proxy in self.proxies:
-            key = f"{proxy.host}:{proxy.port}"
+            key = "{0}:{1}".format(proxy.host, proxy.port)
             stats = self.proxy_stats.get(key, ProxyStats())
 
             if stats.health_score < min_health_score:
@@ -343,11 +348,11 @@ class ProxyRotationManager:
 
         for proxy in proxies_to_remove:
             self.proxies.remove(proxy)
-            key = f"{proxy.host}:{proxy.port}"
+            key = "{0}:{1}".format(proxy.host, proxy.port)
             del self.proxy_stats[key]
             del self.active_connections[key]
 
         if removed_count > 0:
-            self.logger.info(f"Removed {removed_count} unhealthy proxies")
+            self.logger.info("Removed {0} unhealthy proxies".format(removed_count))
 
         return removed_count

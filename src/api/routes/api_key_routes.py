@@ -125,7 +125,7 @@ async def generate_api_key(
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to generate API key: {str(e)}"
+            status_code=500, detail="Failed to generate API key: {0}".format(str(e))
         )
 
 
@@ -173,7 +173,7 @@ async def generate_api_key_query_param(
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to generate API key: {str(e)}"
+            status_code=500, detail="Failed to generate API key: {0}".format(str(e))
         )
 
 
@@ -194,7 +194,7 @@ async def list_api_keys(user_id: str = Depends(get_user_id)):
 
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve API keys: {str(e)}"
+            status_code=500, detail="Failed to retrieve API keys: {0}".format(str(e))
         )
 
 
@@ -227,7 +227,7 @@ async def get_api_key(
         raise
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve API key: {str(e)}"
+            status_code=500, detail="Failed to retrieve API key: {0}".format(str(e))
         )
 
 
@@ -254,7 +254,7 @@ async def revoke_api_key(
             )
 
         return {
-            "message": f"API key {request.key_id} has been revoked",
+            "message": "API key {0} has been revoked".format(request.key_id),
             "key_id": request.key_id,
             "status": "revoked",
             "revoked_at": datetime.utcnow().isoformat(),
@@ -264,7 +264,7 @@ async def revoke_api_key(
         raise
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to revoke API key: {str(e)}"
+            status_code=500, detail="Failed to revoke API key: {0}".format(str(e))
         )
 
 
@@ -292,7 +292,7 @@ async def delete_api_key(
             )
 
         return {
-            "message": f"API key {key_id} has been deleted",
+            "message": "API key {0} has been deleted".format(key_id),
             "key_id": key_id,
             "status": "deleted",
             "deleted_at": datetime.utcnow().isoformat(),
@@ -302,7 +302,7 @@ async def delete_api_key(
         raise
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to delete API key: {str(e)}"
+            status_code=500, detail="Failed to delete API key: {0}".format(str(e))
         )
 
 
@@ -333,7 +333,7 @@ async def renew_api_key(
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to renew API key: {str(e)}"
+            status_code=500, detail="Failed to renew API key: {0}".format(str(e))
         )
 
 
@@ -393,7 +393,7 @@ async def get_api_key_usage_stats(user_id: str = Depends(get_user_id)):
 
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to get usage stats: {str(e)}"
+            status_code=500, detail="Failed to get usage stats: {0}".format(str(e))
         )
 
 
@@ -429,7 +429,7 @@ async def get_admin_api_key_metrics(current_user: dict = Depends(require_auth)):
 
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to get admin metrics: {str(e)}"
+            status_code=500, detail="Failed to get admin metrics: {0}".format(str(e))
         )
 
 
@@ -453,14 +453,14 @@ async def cleanup_expired_keys(current_user: dict = Depends(require_auth)):
         cleaned_count = await api_key_manager.cleanup_expired_keys()
 
         return {
-            "message": f"Cleaned up {cleaned_count} expired API keys",
+            "message": "Cleaned up {0} expired API keys".format(cleaned_count),
             "cleaned_count": cleaned_count,
             "timestamp": datetime.utcnow().isoformat(),
         }
 
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to cleanup expired keys: {str(e)}"
+            status_code=500, detail="Failed to cleanup expired keys: {0}".format(str(e))
         )
 
 

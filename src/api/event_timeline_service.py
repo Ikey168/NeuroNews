@@ -114,20 +114,20 @@ class EventTimelineService:
             "default": {
                 "primary_color": "#1f77b4",
                 "secondary_color": "#ff7f0e",
-                "background_color": "#ffffff",
+                "background_color": "#ffff",
                 "text_color": "#333333",
             },
             "dark": {
                 "primary_color": "#8dd3c7",
                 "secondary_color": "#ffffb3",
-                "background_color": "#2f2f2f",
-                "text_color": "#ffffff",
+                "background_color": "#2f2f2",
+                "text_color": "#fffff",
             },
             "scientific": {
                 "primary_color": "#2ca02c",
                 "secondary_color": "#d62728",
                 "background_color": "#f8f8f8",
-                "text_color": "#2f2f2f",
+                "text_color": "#2f2f2",
             },
         }
 
@@ -149,7 +149,7 @@ class EventTimelineService:
             else:
                 logger.warning("No graph or NLP components available")
         except Exception as e:
-            logger.error(f"Failed to initialize components: {e}")
+            logger.error("Failed to initialize components: {0}".format(e))
 
     async def track_historical_events(
         self,
@@ -165,7 +165,7 @@ class EventTimelineService:
         This implements the first requirement of Issue #38:
         "Track historical events related to a topic."
         """
-        logger.info(f"Tracking historical events for topic: {topic}")
+        logger.info("Tracking historical events for topic: {0}".format(topic))
 
         # Set default time range if not provided
         if end_date is None:
@@ -192,13 +192,14 @@ class EventTimelineService:
             enhanced_events.sort(key=lambda x: x.timestamp)
 
             logger.info(
-                f"Tracked {
-                    len(enhanced_events)} historical events for {topic}"
+                "Tracked {0} historical events for {1}".format(
+                    len(enhanced_events), topic
+                )
             )
             return enhanced_events
 
         except Exception as e:
-            logger.error(f"Failed to track historical events: {e}")
+            logger.error("Failed to track historical events: {0}".format(e))
             raise
 
     async def store_event_relationships(
@@ -211,8 +212,7 @@ class EventTimelineService:
         "Store event timestamps & relationships in Neptune."
         """
         logger.info(
-            f"Storing {
-                len(events)} events and relationships in Neptune"
+            "Storing {0} events and relationships in Neptune".format(len(events))
         )
 
         try:
@@ -233,15 +233,17 @@ class EventTimelineService:
                     storage_results["relationships_created"] += len(relationships)
 
                 except Exception as e:
-                    error_msg = f"Failed to store event {event.event_id}: {e}"
+                    error_msg = "Failed to store event {0}: {1}".format(
+                        event.event_id, e
+                    )
                     logger.error(error_msg)
                     storage_results["errors"].append(error_msg)
 
-            logger.info(f"Storage complete: {storage_results}")
+            logger.info("Storage complete: {0}".format(storage_results))
             return storage_results
 
         except Exception as e:
-            logger.error(f"Failed to store event relationships: {e}")
+            logger.error("Failed to store event relationships: {0}".format(e))
             raise
 
     async def generate_timeline_api_response(
@@ -260,7 +262,7 @@ class EventTimelineService:
 
         Enhanced version of the Issue #37 endpoint with visualization support.
         """
-        logger.info(f"Generating timeline API response for topic: {topic}")
+        logger.info("Generating timeline API response for topic: {0}".format(topic))
 
         try:
             # Track historical events
@@ -296,13 +298,12 @@ class EventTimelineService:
                 response["visualization"] = visualization_data
 
             logger.info(
-                f"Generated timeline response with {
-                    len(events)} events"
+                "Generated timeline response with {0} events".format(len(events))
             )
             return response
 
         except Exception as e:
-            logger.error(f"Failed to generate timeline API response: {e}")
+            logger.error("Failed to generate timeline API response: {0}".format(e))
             raise
 
     async def generate_visualization_data(
@@ -318,7 +319,7 @@ class EventTimelineService:
         This implements the fourth requirement of Issue #38:
         "Generate visualizations of event evolution."
         """
-        logger.info(f"Generating visualization data for {len(events)} events")
+        logger.info("Generating visualization data for {0} events".format(len(events)))
 
         try:
             # Prepare timeline data
@@ -334,10 +335,14 @@ class EventTimelineService:
                     theme, self.visualization_themes["default"]
                 ),
                 "export_options": {
-                    "json": f"/api/v1/event-timeline/{topic}/export?format=json",
-                    "csv": f"/api/v1/event-timeline/{topic}/export?format=csv",
-                    "png": f"/api/v1/event-timeline/{topic}/export?format=png",
-                    "html": f"/api/v1/event-timeline/{topic}/export?format=html",
+                    "json": "/api/v1/event-timeline/{0}/export?format=json".format(
+                        topic
+                    ),
+                    "csv": "/api/v1/event-timeline/{0}/export?format=csv".format(topic),
+                    "png": "/api/v1/event-timeline/{0}/export?format=png".format(topic),
+                    "html": "/api/v1/event-timeline/{0}/export?format=html".format(
+                        topic
+                    ),
                 },
             }
 
@@ -345,7 +350,7 @@ class EventTimelineService:
             return visualizations
 
         except Exception as e:
-            logger.error(f"Failed to generate visualization data: {e}")
+            logger.error("Failed to generate visualization data: {0}".format(e))
             raise
 
     async def _query_events_from_graph(
@@ -365,7 +370,7 @@ class EventTimelineService:
             # Use enhanced graph populator if available
             if hasattr(self.graph_populator, "_execute_traversal"):
                 # Build Gremlin query for events
-                query = f"""
+                query = """
                 g.V().has('entity_type', 'ARTICLE')
                      .has('title', containing('{topic}'))
                      .has('published_date', between('{start_date.isoformat()}', '{end_date.isoformat()}'))
@@ -380,7 +385,7 @@ class EventTimelineService:
                 return self._generate_sample_events(topic, start_date, end_date)
 
         except Exception as e:
-            logger.error(f"Failed to query events from graph: {e}")
+            logger.error("Failed to query events from graph: {0}".format(e))
             # Return sample events as fallback
             return self._generate_sample_events(topic, start_date, end_date)
 
@@ -403,7 +408,7 @@ class EventTimelineService:
 
                 # Extract event data from graph result
                 event_data = {
-                    "event_id": safe_extract("id", f"event_{len(events)}"),
+                    "event_id": safe_extract("id", "event_{0}".format(len(events))),
                     "title": safe_extract("title", "Unknown Event"),
                     # Truncate
                     "description": str(safe_extract("content", ""))[:500],
@@ -424,7 +429,7 @@ class EventTimelineService:
                 events.append(event_data)
 
             except Exception as e:
-                logger.warning(f"Failed to process graph result: {e}")
+                logger.warning("Failed to process graph result: {0}".format(e))
                 continue
 
         return events
@@ -450,13 +455,13 @@ class EventTimelineService:
                     topic.replace(
                         ' ',
                         '_').lower()}",
-                "title": f"Sample Event {
-                    i +
-                    1} for {topic}",
-                "content": f"This is a sample event related to {topic}. This demonstrates the event timeline functionality for Issue #38.",
+                "title": "Sample Event {0} for {1}".format(i + 1, topic),
+                "content": "This is a sample event related to {0}. This demonstrates the event timeline functionality for Issue #38.".format(
+                    topic
+                ),
                 "published_date": event_time.isoformat(),
                 "author": "Sample Author",
-                "source_url": f"https://example.com/event_{i}",
+                "source_url": "https://example.com/event_{0}".format(i),
                 "category": (
                     "Technology"
                     if "AI" in topic or "technology" in topic.lower()
@@ -498,7 +503,7 @@ class EventTimelineService:
             return event
 
         except Exception as e:
-            logger.error(f"Failed to enhance event data: {e}")
+            logger.error("Failed to enhance event data: {0}".format(e))
             # Return basic event on failure
             return HistoricalEvent(
                 event_id=event_data.get("event_id", "unknown"),
@@ -524,15 +529,14 @@ class EventTimelineService:
                 existing = await self._check_event_exists(event.event_id)
                 if existing:
                     logger.debug(
-                        f"Event {
-                            event.event_id} already exists, skipping"
+                        "Event {0} already exists, skipping".format(event.event_id)
                     )
                     return True
 
             # Create event vertex in Neptune
             title_escaped = event.title.replace("'", "\\'")
             description_escaped = event.description.replace("'", "\\'")
-            event_vertex_query = f"""
+            event_vertex_query = """
             g.addV('EVENT')
              .property('event_id', '{event.event_id}')
              .property('title', '{title_escaped}')
@@ -546,14 +550,14 @@ class EventTimelineService:
 
             if hasattr(self.graph_populator, "_execute_traversal"):
                 await self.graph_populator._execute_traversal(event_vertex_query)
-                logger.debug(f"Stored event {event.event_id} in Neptune")
+                logger.debug("Stored event {0} in Neptune".format(event.event_id))
                 return True
             else:
                 logger.warning("Graph populator does not support traversal execution")
                 return False
 
         except Exception as e:
-            logger.error(f"Failed to store event in Neptune: {e}")
+            logger.error("Failed to store event in Neptune: {0}".format(e))
             return False
 
     async def _create_event_relationships(self, event: HistoricalEvent) -> List[str]:
@@ -567,7 +571,7 @@ class EventTimelineService:
             # Create relationships to entities
             for entity in event.entities_involved:
                 try:
-                    relationship_query = f"""
+                    relationship_query = """
                     g.V().has('event_id', '{event.event_id}').as('event')
                      .V().has('normalized_form', '{entity}').as('entity')
                      .addE('INVOLVES_ENTITY')
@@ -580,17 +584,21 @@ class EventTimelineService:
                         await self.graph_populator._execute_traversal(
                             relationship_query
                         )
-                        relationships.append(f"event-{event.event_id}-entity-{entity}")
+                        relationships.append(
+                            "event-{0}-entity-{1}".format(event.event_id, entity)
+                        )
 
                 except Exception as e:
                     logger.warning(
-                        f"Failed to create relationship to entity {entity}: {e}"
+                        "Failed to create relationship to entity {0}: {1}".format(
+                            entity, e
+                        )
                     )
 
             # Create relationships to related events
             for related_event_id in event.related_events:
                 try:
-                    relationship_query = f"""
+                    relationship_query = """
                     g.V().has('event_id', '{event.event_id}').as('event1')
                      .V().has('event_id', '{related_event_id}').as('event2')
                      .addE('RELATED_TO')
@@ -603,23 +611,25 @@ class EventTimelineService:
                             relationship_query
                         )
                         relationships.append(
-                            f"event-{event.event_id}-related-{related_event_id}"
+                            "event-{0}-related-{1}".format(
+                                event.event_id, related_event_id
+                            )
                         )
 
                 except Exception as e:
                     logger.warning(
-                        f"Failed to create relationship to related event: {e}"
+                        "Failed to create relationship to related event: {0}".format(e)
                     )
 
             logger.debug(
-                f"Created {
-                    len(relationships)} relationships for event {
-                    event.event_id}"
+                "Created {0} relationships for event {1}".format(
+                    len(relationships), event.event_id
+                )
             )
             return relationships
 
         except Exception as e:
-            logger.error(f"Failed to create event relationships: {e}")
+            logger.error("Failed to create event relationships: {0}".format(e))
             return relationships
 
     def _prepare_timeline_chart_data(
@@ -684,7 +694,7 @@ class EventTimelineService:
             return chart_data
 
         except Exception as e:
-            logger.error(f"Failed to prepare timeline chart data: {e}")
+            logger.error("Failed to prepare timeline chart data: {0}".format(e))
             return {"type": "timeline", "data": [], "error": str(e)}
 
     def _generate_event_clusters(self, events: List[HistoricalEvent]) -> Dict[str, Any]:
@@ -696,7 +706,7 @@ class EventTimelineService:
             for event in events:
                 # Create cluster key based on event type and time period
                 time_period = event.timestamp.strftime("%Y-%m")
-                cluster_key = f"{event.event_type}_{time_period}"
+                cluster_key = "{0}_{1}".format(event.event_type, time_period)
                 clusters[cluster_key].append(event)
 
             # Format clusters for visualization
@@ -718,7 +728,7 @@ class EventTimelineService:
             return {"total_clusters": len(cluster_data), "clusters": cluster_data}
 
         except Exception as e:
-            logger.error(f"Failed to generate event clusters: {e}")
+            logger.error("Failed to generate event clusters: {0}".format(e))
             return {"total_clusters": 0, "clusters": [], "error": str(e)}
 
     def _generate_impact_analysis(
@@ -759,7 +769,7 @@ class EventTimelineService:
             return analysis
 
         except Exception as e:
-            logger.error(f"Failed to generate impact analysis: {e}")
+            logger.error("Failed to generate impact analysis: {0}".format(e))
             return {"total_events": 0, "analysis": {}, "error": str(e)}
 
     def _generate_entity_involvement_chart(
@@ -815,7 +825,7 @@ class EventTimelineService:
             return chart_data
 
         except Exception as e:
-            logger.error(f"Failed to generate entity involvement chart: {e}")
+            logger.error("Failed to generate entity involvement chart: {0}".format(e))
             return {"type": "bar", "data": [], "error": str(e)}
 
     # Helper methods
@@ -839,11 +849,11 @@ class EventTimelineService:
                     continue
 
             # If all formats fail, return current time
-            logger.warning(f"Could not parse timestamp: {timestamp_str}")
+            logger.warning("Could not parse timestamp: {0}".format(timestamp_str))
             return datetime.now()
 
         except Exception as e:
-            logger.error(f"Error parsing timestamp {timestamp_str}: {e}")
+            logger.error("Error parsing timestamp {0}: {1}".format(timestamp_str, e))
             return datetime.now()
 
     def _classify_event_type(self, result: Dict[str, Any]) -> str:
@@ -880,7 +890,7 @@ class EventTimelineService:
                 return "general"
 
         except Exception as e:
-            logger.warning(f"Failed to classify event type: {e}")
+            logger.warning("Failed to classify event type: {0}".format(e))
             return "unknown"
 
     def _extract_entities_from_result(self, result: Dict[str, Any]) -> List[str]:
@@ -912,7 +922,7 @@ class EventTimelineService:
             return entities[:5]  # Limit to 5 entities
 
         except Exception as e:
-            logger.warning(f"Failed to extract entities: {e}")
+            logger.warning("Failed to extract entities: {0}".format(e))
             return []
 
     async def _calculate_impact_score(self, event: HistoricalEvent) -> float:
@@ -950,7 +960,7 @@ class EventTimelineService:
             return min(max(score, 0.0), 1.0)
 
         except Exception as e:
-            logger.warning(f"Failed to calculate impact score: {e}")
+            logger.warning("Failed to calculate impact score: {0}".format(e))
             return 0.5
 
     async def _find_related_events(self, event: HistoricalEvent) -> List[str]:
@@ -968,7 +978,7 @@ class EventTimelineService:
             return related_events
 
         except Exception as e:
-            logger.warning(f"Failed to find related events: {e}")
+            logger.warning("Failed to find related events: {0}".format(e))
             return []
 
     async def _check_event_exists(self, event_id: str) -> bool:
@@ -985,7 +995,7 @@ class EventTimelineService:
             return result and result[0] > 0
 
         except Exception as e:
-            logger.warning(f"Failed to check if event exists: {e}")
+            logger.warning("Failed to check if event exists: {0}".format(e))
             return False
 
     def _event_to_dict(self, event: HistoricalEvent) -> Dict[str, Any]:
@@ -1023,7 +1033,7 @@ async def demo_event_timeline_service():
             start_date=datetime.now() - timedelta(days=30),
             end_date=datetime.now(),
         )
-        print(f"   Found {len(events)} events")
+        print("   Found {0} events".format(len(events)))
 
         # Test 2: Store events in Neptune
         print("\n2. Storing events and relationships in Neptune...")
@@ -1063,12 +1073,12 @@ async def demo_event_timeline_service():
             viz_data = await service.generate_visualization_data(
                 topic="Artificial Intelligence", events=events[:10], theme="default"
             )
-            print(f"   Generated visualizations: {list(viz_data.keys())}")
+            print("   Generated visualizations: {0}".format(list(viz_data.keys())))
 
         print("\n✅ Event Timeline Service demo completed successfully!")
 
     except Exception as e:
-        print(f"\n❌ Demo failed: {e}")
+        print("\n❌ Demo failed: {0}".format(e))
         import traceback
 
         traceback.print_exc()

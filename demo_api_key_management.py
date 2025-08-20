@@ -79,7 +79,7 @@ class APIKeyDemo:
                 # Generate API key
                 result = await api_key_manager.generate_api_key(
                     user_id=user_data["user_id"],
-                    name=f"{user_name}_primary_key",
+                    name="{0}_primary_key".format(user_name),
                     expires_in_days=365,
                     permissions=(
                         ["read", "write"] if user_data["role"] != "free" else ["read"]
@@ -96,7 +96,7 @@ class APIKeyDemo:
                 print()
 
             except Exception as e:
-                print(f"   ❌ Failed: {e}")
+                print("   ❌ Failed: {0}".format(e))
                 print()
 
         # Test key revocation
@@ -114,7 +114,7 @@ class APIKeyDemo:
                 print(f"   ❌ Failed to revoke Alice's key")
 
         except Exception as e:
-            print(f"   ❌ Revocation error: {e}")
+            print("   ❌ Revocation error: {0}".format(e))
 
         print()
         print("✅ API key generation and revocation testing complete")
@@ -130,8 +130,8 @@ class APIKeyDemo:
         print("🗄️ DynamoDB API Key Storage:")
         if api_key_manager.store.table:
             print("   ✅ DynamoDB connection established")
-            print(f"   📋 Table: {api_key_manager.store.table_name}")
-            print(f"   🌎 Region: {api_key_manager.store.region}")
+            print("   📋 Table: {0}".format(api_key_manager.store.table_name))
+            print("   🌎 Region: {0}".format(api_key_manager.store.region))
         else:
             print(
                 "   ⚠️  DynamoDB not configured (boto3 not available or AWS not configured)"
@@ -163,7 +163,7 @@ class APIKeyDemo:
                     )
 
             except Exception as e:
-                print(f"   ❌ Error retrieving keys for {user_name}: {e}")
+                print("   ❌ Error retrieving keys for {0}: {1}".format(user_name, e))
 
         print()
         print("✅ DynamoDB storage integration demonstrated")
@@ -177,8 +177,8 @@ class APIKeyDemo:
         print()
 
         print("⏰ API Key Expiration Policies:")
-        print(f"   📅 Default expiration: {api_key_manager.default_expiry_days} days")
-        print(f"   🔢 Max keys per user: {api_key_manager.max_keys_per_user}")
+        print("   📅 Default expiration: {0} days".format(api_key_manager.default_expiry_days))
+        print("   🔢 Max keys per user: {0}".format(api_key_manager.max_keys_per_user))
         print("   ♻️  Automatic cleanup of expired keys")
         print("   🔄 Renewal extends expiration without changing key")
         print()
@@ -211,7 +211,7 @@ class APIKeyDemo:
             print(f"   📈 Extended by: {renewed['extended_days']} days")
 
         except Exception as e:
-            print(f"   ❌ Error testing expiration/renewal: {e}")
+            print("   ❌ Error testing expiration/renewal: {0}".format(e))
 
         print()
 
@@ -225,20 +225,20 @@ class APIKeyDemo:
             for i in range(api_key_manager.max_keys_per_user + 2):
                 try:
                     key = await api_key_manager.generate_api_key(
-                        user_id=charlie_user_id, name=f"test_key_{i+1}"
+                        user_id=charlie_user_id, name="test_key_{0}".format(i+1)
                     )
                     created_keys += 1
                     if created_keys <= 3:  # Only show first few
                         print(f"   ✅ Created key {i+1}: {key['key_prefix']}****")
                 except ValueError as e:
                     if "maximum API key limit" in str(e):
-                        print(f"   🛑 Limit reached after {created_keys} keys: {e}")
+                        print("   🛑 Limit reached after {0} keys: {1}".format(created_keys, e))
                         break
                     else:
                         raise
 
         except Exception as e:
-            print(f"   ❌ Error testing key limits: {e}")
+            print("   ❌ Error testing key limits: {0}".format(e))
 
         print()
         print("✅ Expiration and renewal policies demonstrated")
@@ -266,24 +266,24 @@ class APIKeyDemo:
         ]
 
         for endpoint in endpoints:
-            print(f"   📡 {endpoint}")
+            print("   📡 {0}".format(endpoint))
 
         print()
 
         # Test endpoint integration (if server is running)
         print("🧪 Testing API Endpoint Integration:")
         try:
-            response = requests.get(f"{self.base_url}/api/keys/health", timeout=2)
+            response = requests.get("{0}/api/keys/health".format(self.base_url), timeout=2)
 
             if response.status_code == 200:
                 health_data = response.json()
                 print(f"   ✅ Health check successful: {health_data['status']}")
                 print(f"   🏥 Components: {health_data['components']}")
             else:
-                print(f"   ⚠️  Health check returned status: {response.status_code}")
+                print("   ⚠️  Health check returned status: {0}".format(response.status_code))
 
         except requests.exceptions.RequestException:
-            print(f"   ⚠️  Could not connect to {self.base_url}")
+            print("   ⚠️  Could not connect to {0}".format(self.base_url))
             print("   💡 Start the server with: uvicorn src.api.app:app --reload")
 
         print()
@@ -295,7 +295,7 @@ class APIKeyDemo:
                 token = self._generate_test_token(user_data)
                 print(f"   👤 {user_data['name']}: {token[:50]}...")
             except Exception as e:
-                print(f"   ❌ Failed to generate token for {user_name}: {e}")
+                print("   ❌ Failed to generate token for {0}: {1}".format(user_name, e))
 
         print()
         print("✅ API endpoints demonstrated")
@@ -384,7 +384,7 @@ async def run_api_key_demo():
         print("🚀 Ready for Production Deployment!")
 
     except Exception as e:
-        print(f"❌ Demo failed with error: {e}")
+        print("❌ Demo failed with error: {0}".format(e))
         import traceback
 
         traceback.print_exc()

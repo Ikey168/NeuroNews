@@ -123,7 +123,7 @@ class OptimizedGraphAPI:
             return True
 
         except Exception as e:
-            logger.warning(f"Redis initialization failed: {e}")
+            logger.warning("Redis initialization failed: {0}".format(e))
             logger.info("Falling back to in-memory caching")
             self.redis_client = None
             return False
@@ -132,8 +132,8 @@ class OptimizedGraphAPI:
         """Generate a cache key for the query."""
         # Create deterministic hash from query type and parameters
         param_str = json.dumps(parameters, sort_keys=True, default=str)
-        key_data = f"{query_type}:{param_str}"
-        return f"graph_api:{hashlib.md5(key_data.encode()).hexdigest()}"
+        key_data = "{0}:{1}".format(query_type, param_str)
+        return "graph_api:{0}".format(hashlib.md5(key_data.encode()).hexdigest())
 
     async def _get_from_cache(self, cache_key: str) -> Optional[Any]:
         """Retrieve data from cache (Redis or memory)."""
@@ -164,7 +164,7 @@ class OptimizedGraphAPI:
             return None
 
         except Exception as e:
-            logger.warning(f"Cache retrieval error: {e}")
+            logger.warning("Cache retrieval error: {0}".format(e))
             self.metrics["cache_misses"] += 1
             return None
 
@@ -199,7 +199,7 @@ class OptimizedGraphAPI:
             return True
 
         except Exception as e:
-            logger.warning(f"Cache storage error: {e}")
+            logger.warning("Cache storage error: {0}".format(e))
             return False
 
     async def _execute_optimized_query(
@@ -228,9 +228,9 @@ class OptimizedGraphAPI:
                 # Limit results to prevent memory issues
                 if len(results) > self.optimization_config.max_results_per_query:
                     logger.warning(
-                        f"Query returned {
-                            len(results)} results, limiting to {
-                            self.optimization_config.max_results_per_query}"
+                        "Query returned {0} results, limiting to {1}".format(
+                            len(results), self.optimization_config.max_results_per_query
+                        )
                     )
                     results = results[: self.optimization_config.max_results_per_query]
 
@@ -248,7 +248,9 @@ class OptimizedGraphAPI:
 
             except asyncio.TimeoutError:
                 logger.warning(
-                    f"Query timeout on attempt {attempt + 1}/{self.optimization_config.retry_attempts}"
+                    "Query timeout on attempt {0}/{1}".format(
+                        attempt + 1, self.optimization_config.retry_attempts
+                    )
                 )
                 if attempt < self.optimization_config.retry_attempts - 1:
                     await asyncio.sleep(
@@ -259,12 +261,13 @@ class OptimizedGraphAPI:
                     self.metrics["errors_total"] += 1
                     raise HTTPException(
                         status_code=408,
-                        detail=f"Query timeout after {
-                            self.optimization_config.retry_attempts} attempts",
+                        detail="Query timeout after {0} attempts".format(
+                            self.optimization_config.retry_attempts
+                        ),
                     )
 
             except Exception as e:
-                logger.error(f"Query error on attempt {attempt + 1}: {e}")
+                logger.error("Query error on attempt {0}: {1}".format(attempt + 1, e))
                 if attempt < self.optimization_config.retry_attempts - 1:
                     await asyncio.sleep(
                         self.optimization_config.retry_delay * (attempt + 1)
@@ -273,7 +276,7 @@ class OptimizedGraphAPI:
                 else:
                     self.metrics["errors_total"] += 1
                     raise HTTPException(
-                        status_code=500, detail=f"Graph query failed: {str(e)}"
+                        status_code=500, detail="Graph query failed: {0}".format(str(e))
                     )
 
     async def get_related_entities_optimized(
@@ -315,7 +318,7 @@ class OptimizedGraphAPI:
         if use_cache:
             cached_result = await self._get_from_cache(cache_key)
             if cached_result:
-                logger.debug(f"Cache hit for related entities query: {entity}")
+                logger.debug("Cache hit for related entities query: {0}".format(entity))
                 return cached_result
 
         try:
@@ -356,7 +359,8 @@ class OptimizedGraphAPI:
 
             # Execute optimized query
             results = await self._execute_optimized_query(
-                final_traversal, f"related_entities({entity}, depth={max_depth})"
+                final_traversal,
+                "related_entities({0}, depth={1})".format(entity, max_depth),
             )
 
             # Format results
@@ -389,7 +393,7 @@ class OptimizedGraphAPI:
                     )
 
                 except Exception as e:
-                    logger.warning(f"Error formatting result: {e}")
+                    logger.warning("Error formatting result: {0}".format(e))
                     continue
 
             # Cache the result
@@ -401,12 +405,11 @@ class OptimizedGraphAPI:
         except HTTPException:
             raise
         except Exception as e:
-            logger.error(f"Error in get_related_entities_optimized: {e}")
+            logger.error("Error in get_related_entities_optimized: {0}".format(e))
             self.metrics["errors_total"] += 1
             raise HTTPException(
                 status_code=500,
-                detail=f"Failed to retrieve related entities: {
-                    str(e)}",
+                detail="Failed to retrieve related entities: {0}".format(str(e)),
             )
 
     def _extract_entity_name(self, result: Dict[str, Any]) -> str:
@@ -458,7 +461,7 @@ class OptimizedGraphAPI:
         if use_cache:
             cached_result = await self._get_from_cache(cache_key)
             if cached_result:
-                logger.debug(f"Cache hit for event timeline query: {topic}")
+                logger.debug("Cache hit for event timeline query: {0}".format(topic))
                 return cached_result
 
         try:
@@ -493,7 +496,8 @@ class OptimizedGraphAPI:
 
             # Execute optimized query
             results = await self._execute_optimized_query(
-                projected_query, f"event_timeline({topic}, {start_date} to {end_date})"
+                projected_query,
+                "event_timeline({0}, {1} to {2})".format(topic, start_date, end_date),
             )
 
             # Format timeline
@@ -516,7 +520,7 @@ class OptimizedGraphAPI:
                         }
                     )
                 except Exception as e:
-                    logger.warning(f"Error formatting timeline event: {e}")
+                    logger.warning("Error formatting timeline event: {0}".format(e))
                     continue
 
             # Sort events by date
@@ -531,12 +535,11 @@ class OptimizedGraphAPI:
         except HTTPException:
             raise
         except Exception as e:
-            logger.error(f"Error in get_event_timeline_optimized: {e}")
+            logger.error("Error in get_event_timeline_optimized: {0}".format(e))
             self.metrics["errors_total"] += 1
             raise HTTPException(
                 status_code=500,
-                detail=f"Failed to retrieve event timeline: {
-                    str(e)}",
+                detail="Failed to retrieve event timeline: {0}".format(str(e)),
             )
 
     async def search_entities_optimized(
@@ -579,7 +582,7 @@ class OptimizedGraphAPI:
         if use_cache:
             cached_result = await self._get_from_cache(cache_key)
             if cached_result:
-                logger.debug(f"Cache hit for entity search: {search_term}")
+                logger.debug("Cache hit for entity search: {0}".format(search_term))
                 return cached_result
 
         try:
@@ -602,7 +605,7 @@ class OptimizedGraphAPI:
 
             # Execute optimized query
             results = await self._execute_optimized_query(
-                query, f"search_entities({search_term})"
+                query, "search_entities({0})".format(search_term)
             )
 
             # Format search results
@@ -639,7 +642,7 @@ class OptimizedGraphAPI:
                     )
 
                 except Exception as e:
-                    logger.warning(f"Error formatting search result: {e}")
+                    logger.warning("Error formatting search result: {0}".format(e))
                     continue
 
             # Sort by relevance
@@ -654,10 +657,10 @@ class OptimizedGraphAPI:
         except HTTPException:
             raise
         except Exception as e:
-            logger.error(f"Error in search_entities_optimized: {e}")
+            logger.error("Error in search_entities_optimized: {0}".format(e))
             self.metrics["errors_total"] += 1
             raise HTTPException(
-                status_code=500, detail=f"Entity search failed: {str(e)}"
+                status_code=500, detail="Entity search failed: {0}".format(str(e))
             )
 
     def _calculate_relevance(self, name: str, search_term: str) -> float:
@@ -733,7 +736,7 @@ class OptimizedGraphAPI:
                     "keyspace_misses": redis_info.get("keyspace_misses", 0),
                 }
             except Exception as e:
-                logger.warning(f"Failed to get Redis stats: {e}")
+                logger.warning("Failed to get Redis stats: {0}".format(e))
 
         return stats
 
@@ -745,7 +748,9 @@ class OptimizedGraphAPI:
             if self.redis_client:
                 if pattern:
                     # Clear specific pattern from Redis
-                    keys = await self.redis_client.keys(f"graph_api:*{pattern}*")
+                    keys = await self.redis_client.keys(
+                        "graph_api:*{0}*".format(pattern)
+                    )
                     if keys:
                         cleared_count = await self.redis_client.delete(*keys)
                 else:
@@ -773,7 +778,7 @@ class OptimizedGraphAPI:
             }
 
         except Exception as e:
-            logger.error(f"Error clearing cache: {e}")
+            logger.error("Error clearing cache: {0}".format(e))
             return {
                 "status": "error",
                 "message": str(e),
@@ -792,7 +797,7 @@ class OptimizedGraphAPI:
                 logger.info("Redis connection pool closed")
 
         except Exception as e:
-            logger.error(f"Error during cleanup: {e}")
+            logger.error("Error during cleanup: {0}".format(e))
 
     async def __aenter__(self):
         """Async context manager entry."""

@@ -19,7 +19,7 @@ class GraphBuilder:
         self.client: Client = None
         self.connection: DriverRemoteConnection = None
         self.g: __ = None  # GraphTraversalSource
-        logger.info(f"GraphBuilder initialized with endpoint: {self.endpoint}")
+        logger.info("GraphBuilder initialized with endpoint: {0}".format(self.endpoint))
 
     async def connect(self):
         """
@@ -31,8 +31,7 @@ class GraphBuilder:
             return
 
         logger.info(
-            f"Attempting to connect to Gremlin server at {
-                self.endpoint}..."
+            "Attempting to connect to Gremlin server at {0}...".format(self.endpoint)
         )
         try:
             # For AiohttpTransport, the loop is implicitly handled by asyncio.get_event_loop()
@@ -66,7 +65,7 @@ class GraphBuilder:
                 "Successfully connected to Gremlin server and graph traversal source 'g' initialized."
             )
         except Exception as e:
-            logger.error(f"Failed to connect to Gremlin server: {e}")
+            logger.error("Failed to connect to Gremlin server: {0}".format(e))
             self.connection = None  # Ensure connection is None if connect fails
             self.g = None
             raise  # Re-raise the exception to signal connection failure
@@ -79,16 +78,16 @@ class GraphBuilder:
                 logger.error("Connection not established. Cannot execute traversal.")
                 raise ConnectionError("Gremlin client not connected.")
 
-        logger.debug(f"Executing Gremlin Bytecode: {traversal_obj.bytecode}")
+        logger.debug("Executing Gremlin Bytecode: {0}".format(traversal_obj.bytecode))
         try:
             # Use client.submit_async for executing traversals constructed with
             # 'g'
             result_set = await self.client.submit_async(traversal_obj.bytecode)
             results = await result_set.all()  # Get all results as a list
-            logger.debug(f"Traversal results: {results}")
+            logger.debug("Traversal results: {0}".format(results))
             return results
         except Exception as e:
-            logger.error(f"Error executing Gremlin traversal: {e}")
+            logger.error("Error executing Gremlin traversal: {0}".format(e))
             # Consider how to handle different types of errors, e.g.,
             # connection vs. query errors
             raise
@@ -183,7 +182,9 @@ class GraphBuilder:
                 logger.info("Gremlin client connection closed successfully.")
             except Exception as e:
                 logger.error(
-                    f"Error closing Gremlin client connection asynchronously: {e}"
+                    "Error closing Gremlin client connection asynchronously: {0}".format(
+                        e
+                    )
                 )
             finally:
                 self.client = None

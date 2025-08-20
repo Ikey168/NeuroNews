@@ -248,8 +248,8 @@ class TestSuspiciousActivityDetector:
             requests.append(
                 {
                     "user_id": user_id,
-                    "ip_address": f"192.168.1.{i % 10 + 1}",
-                    "endpoint": f"/test/endpoint/{i % 3}",
+                    "ip_address": "192.168.1.{0}".format(i % 10 + 1),
+                    "endpoint": "/test/endpoint/{0}".format(i % 3),
                     "timestamp": base_time + timedelta(seconds=i * 2),
                     "response_code": 200 if i % 10 != 0 else 500,
                     "processing_time": 0.1 + (i % 5) * 0.1,
@@ -307,7 +307,7 @@ class TestSuspiciousActivityDetector:
                 {
                     "user_id": user_id,
                     "timestamp": now - timedelta(minutes=i),
-                    "ip_address": f"192.168.{i}.1",  # Different IP for each request
+                    "ip_address": "192.168.{0}.1".format(i),  # Different IP for each request
                     "endpoint": "/test",
                     "response_code": 200,
                     "processing_time": 0.1,
@@ -544,8 +544,8 @@ def create_mock_request_metrics(user_id: str, count: int = 1) -> list:
         metrics.append(
             RequestMetrics(
                 user_id=user_id,
-                ip_address=f"192.168.1.{i % 10 + 1}",
-                endpoint=f"/test/endpoint/{i % 3}",
+                ip_address="192.168.1.{0}".format(i % 10 + 1),
+                endpoint="/test/endpoint/{0}".format(i % 3),
                 timestamp=base_time + timedelta(seconds=i),
                 response_code=200,
                 processing_time=0.1,

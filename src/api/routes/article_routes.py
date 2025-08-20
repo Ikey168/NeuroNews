@@ -99,7 +99,7 @@ async def list_articles(
 
     where_clause = " AND ".join(conditions) if conditions else "1=1"
 
-    query = f"""
+    query = """
         SELECT id, title, content, category, source,
                created_by, created_at, updated_at,
                sentiment_score, sentiment_label

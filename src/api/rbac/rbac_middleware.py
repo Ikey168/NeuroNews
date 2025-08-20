@@ -95,14 +95,15 @@ class EnhancedRBACMiddleware(BaseHTTPMiddleware):
                         user_data.get(
                             'sub',
                             'unknown')} "
-                    f"attempted to access {method} {path}"
+                    "attempted to access {0} {1}".format(method, path)
                 )
 
                 return JSONResponse(
                     status_code=403,
                     content={
-                        "detail": f"Access denied. {
-                            user_role.value.title()} users cannot access this endpoint",
+                        "detail": "Access denied. {0} users cannot access this endpoint".format(
+                            user_role.value.title()
+                        ),
                         "error_code": "ACCESS_DENIED",
                         "required_role": self._get_minimum_required_role(method, path),
                         "user_role": user_role.value,
@@ -120,7 +121,7 @@ class EnhancedRBACMiddleware(BaseHTTPMiddleware):
                     user_data.get(
                         'sub',
                         'unknown')} "
-                f"accessing {method} {path}"
+                "accessing {0} {1}".format(method, path)
             )
 
             response = await call_next(request)
@@ -135,7 +136,7 @@ class EnhancedRBACMiddleware(BaseHTTPMiddleware):
             # Pass through HTTP exceptions (from auth system)
             return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
         except Exception as e:
-            logger.error(f"RBAC middleware error: {e}")
+            logger.error("RBAC middleware error: {0}".format(e))
             return JSONResponse(
                 status_code=500,
                 content={
@@ -163,7 +164,7 @@ class EnhancedRBACMiddleware(BaseHTTPMiddleware):
             # No valid authentication
             return None
         except Exception as e:
-            logger.error(f"Error extracting user from request: {e}")
+            logger.error("Error extracting user from request: {0}".format(e))
             return None
 
     def _extract_user_role(self, user_data: Dict[str, Any]) -> Optional[UserRole]:
@@ -185,7 +186,7 @@ class EnhancedRBACMiddleware(BaseHTTPMiddleware):
             return role_mapping.get(role_str)
 
         except Exception as e:
-            logger.error(f"Error extracting user role: {e}")
+            logger.error("Error extracting user role: {0}".format(e))
             return None
 
     def _get_minimum_required_role(self, method: str, path: str) -> str:
@@ -220,7 +221,7 @@ class RBACMetricsMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
 
         # Track metrics
-        endpoint = f"{method} {path}"
+        endpoint = "{0} {1}".format(method, path)
         user_role = getattr(request.state, "user_role", None)
 
         if user_role:

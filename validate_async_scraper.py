@@ -49,10 +49,10 @@ def test_imports():
         return True
 
     except ImportError as e:
-        print(f"❌ Import error: {e}")
+        print("❌ Import error: {0}".format(e))
         return False
     except Exception as e:
-        print(f"❌ Unexpected error: {e}")
+        print("❌ Unexpected error: {0}".format(e))
         return False
 
 
@@ -64,7 +64,7 @@ def test_config_loading():
         config_path = Path("/workspaces/NeuroNews/src/scraper/config_async.json")
 
         if not config_path.exists():
-            print(f"❌ Config file not found: {config_path}")
+            print("❌ Config file not found: {0}".format(config_path))
             return False
 
         with open(config_path, "r") as f:
@@ -74,7 +74,7 @@ def test_config_loading():
         required_sections = ["async_scraper", "sources", "pipelines", "output"]
         for section in required_sections:
             if section not in config:
-                print(f"❌ Missing config section: {section}")
+                print("❌ Missing config section: {0}".format(section))
                 return False
 
         print(f"✅ Config loaded with {len(config['sources'])} sources")
@@ -84,7 +84,7 @@ def test_config_loading():
         return True
 
     except Exception as e:
-        print(f"❌ Config loading error: {e}")
+        print("❌ Config loading error: {0}".format(e))
         return False
 
 
@@ -116,7 +116,7 @@ async def test_engine_creation():
         return True
 
     except Exception as e:
-        print(f"❌ Engine creation error: {e}")
+        print("❌ Engine creation error: {0}".format(e))
         return False
 
 
@@ -140,12 +140,12 @@ async def test_pipeline_creation():
         }
 
         is_valid = await processor.validate_article_async(test_article)
-        print(f"✅ Article validation: {is_valid}")
+        print("✅ Article validation: {0}".format(is_valid))
 
         return True
 
     except Exception as e:
-        print(f"❌ Pipeline creation error: {e}")
+        print("❌ Pipeline creation error: {0}".format(e))
         return False
 
 
@@ -172,7 +172,7 @@ def test_monitor_creation():
         return True
 
     except Exception as e:
-        print(f"❌ Monitor creation error: {e}")
+        print("❌ Monitor creation error: {0}".format(e))
         return False
 
 
@@ -184,7 +184,7 @@ async def test_basic_functionality():
         # Test AsyncIO operations
         async def test_task(delay, name):
             await asyncio.sleep(delay)
-            return f"Task {name} completed"
+            return "Task {0} completed".format(name)
 
         start_time = time.time()
 
@@ -196,12 +196,12 @@ async def test_basic_functionality():
 
         assert len(results) == 3
         assert duration < 0.5  # Should complete concurrently, not sequentially
-        print(f"✅ AsyncIO concurrency validated ({duration:.2f}s)")
+        print("✅ AsyncIO concurrency validated ({0}s)".format(duration:.2f))
 
         return True
 
     except Exception as e:
-        print(f"❌ Basic functionality error: {e}")
+        print("❌ Basic functionality error: {0}".format(e))
         return False
 
 
@@ -222,7 +222,7 @@ async def main():
     results = {}
 
     for test_name, test_func in tests:
-        print(f"\n🔍 Running {test_name}...")
+        print("\n🔍 Running {0}...".format(test_name))
         try:
             if asyncio.iscoroutinefunction(test_func):
                 result = await test_func()
@@ -230,7 +230,7 @@ async def main():
                 result = test_func()
             results[test_name] = result
         except Exception as e:
-            print(f"❌ {test_name} failed with exception: {e}")
+            print("❌ {0} failed with exception: {1}".format(test_name, e))
             results[test_name] = False
 
     # Summary
@@ -243,12 +243,12 @@ async def main():
 
     for test_name, result in results.items():
         status = "✅ PASS" if result else "❌ FAIL"
-        print(f"{test_name:<20} {status}")
+        print("{0} {1}".format(test_name:<20, status))
         if result:
             passed += 1
 
     print("=" * 40)
-    print(f"Tests passed: {passed}/{total}")
+    print("Tests passed: {0}/{1}".format(passed, total))
 
     if passed == total:
         print("🎉 All tests passed! AsyncIO scraper is ready to use.")

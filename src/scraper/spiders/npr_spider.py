@@ -75,7 +75,7 @@ class NPRSpider(scrapy.Spider):
             or response.css(".byline a::text").get()
             or response.css('meta[name="author"]::attr(content)').get()
         )
-        item["author"] = author.strip() if author else "NPR Staff"
+        item["author"] = author.strip() if author else "NPR Sta"
 
         # Extract category
         category = self._extract_category(response.url, response)

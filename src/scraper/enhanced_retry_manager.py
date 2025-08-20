@@ -131,7 +131,7 @@ class EnhancedRetryManager:
 
         # Check circuit breaker
         if self._is_circuit_breaker_open(url):
-            raise Exception(f"Circuit breaker is open for {url}")
+            raise Exception("Circuit breaker is open for {0}".format(url))
 
         for attempt in range(config.max_retries + 1):
             attempt_start = time.time()
@@ -201,8 +201,8 @@ class EnhancedRetryManager:
 
                 # Log retry attempt
                 self.logger.warning(
-                    f"Retry attempt {attempt + 1}/{config.max_retries} for {url} "
-                    f"after {delay:.2f}s delay. Reason: {retry_reason.value}"
+                    "Retry attempt {0}/{1} for {2} ".format(attempt + 1, config.max_retries, url)
+                    "after {0}s delay. Reason: {1}".format(delay)
                 )
 
                 # Record retry metrics
@@ -303,7 +303,7 @@ class EnhancedRetryManager:
             await self.failure_manager.mark_success(url)
 
         self.logger.info(
-            f"Successfully scraped {url} after {retry_count} retries in {duration_ms}ms"
+            "Successfully scraped {0} after {1} retries in {2}ms".format(url, retry_count, duration_ms)
         )
 
     async def _record_retry_attempt(
@@ -323,7 +323,7 @@ class EnhancedRetryManager:
                 timestamp=time.time(),
                 duration_ms=0,
                 retry_count=attempt,
-                error_message=f"{reason.value}: {error}",
+                error_message="{0}: {1}".format(reason.value, error),
                 proxy_used=context.get("proxy_used"),
                 user_agent=context.get("user_agent_used"),
                 response_code=context.get("response_code"),
@@ -375,7 +375,7 @@ class EnhancedRetryManager:
             )
 
         self.logger.error(
-            f"Final failure for {url} after {retry_count} retries: {error}"
+            "Final failure for {0} after {1} retries: {2}".format(url, retry_count, error)
         )
 
     async def _record_permanent_failure(
@@ -390,7 +390,7 @@ class EnhancedRetryManager:
                 timestamp=time.time(),
                 duration_ms=0,
                 retry_count=attempt,
-                error_message=f"PERMANENT: {error}",
+                error_message="PERMANENT: {0}".format(error),
                 proxy_used=context.get("proxy_used"),
                 user_agent=context.get("user_agent_used"),
                 response_code=context.get("response_code"),
@@ -401,7 +401,7 @@ class EnhancedRetryManager:
         if self.failure_manager:
             await self.failure_manager.record_failure(
                 url=url,
-                failure_reason=f"PERMANENT: {error}",
+                failure_reason="PERMANENT: {0}".format(error),
                 error_details=error,
                 proxy_used=context.get("proxy_used"),
                 user_agent_used=context.get("user_agent_used"),
@@ -409,7 +409,7 @@ class EnhancedRetryManager:
             )
             await self.failure_manager.mark_permanent_failure(url)
 
-        self.logger.error(f"Permanent failure for {url}: {error}")
+        self.logger.error("Permanent failure for {0}: {1}".format(url, error))
 
     # Circuit breaker implementation
     def _is_circuit_breaker_open(self, url: str) -> bool:
@@ -448,7 +448,7 @@ class EnhancedRetryManager:
         if state["failure_count"] >= self.circuit_breaker_failure_threshold:
             state["state"] = "open"
             state["open_until"] = current_time + self.circuit_breaker_timeout
-            self.logger.warning(f"Circuit breaker opened for {domain}")
+            self.logger.warning("Circuit breaker opened for {0}".format(domain))
 
     def _reset_circuit_breaker(self, url: str):
         """Reset circuit breaker after successful operation."""
@@ -496,20 +496,20 @@ class EnhancedRetryManager:
                     # This would be called by the main scraper to retry the URL
                     # For now, just log that it's ready for retry
                     self.logger.info(
-                        f"URL ready for retry: {failed_url.url} "
-                        f"(attempt {failed_url.retry_count + 1})"
+                        "URL ready for retry: {0} ".format(failed_url.url)
+                        "(attempt {0})".format(failed_url.retry_count + 1)
                     )
                     processed_urls.append(failed_url.url)
 
                 except Exception as e:
                     self.logger.error(
-                        f"Error processing retry for {failed_url.url}: {e}"
+                        "Error processing retry for {0}: {1}".format(failed_url.url, e)
                     )
 
             return processed_urls
 
         except Exception as e:
-            self.logger.error(f"Error processing retry queue: {e}")
+            self.logger.error("Error processing retry queue: {0}".format(e))
             return []
 
     async def get_retry_statistics(self) -> Dict[str, Any]:
@@ -530,6 +530,6 @@ class EnhancedRetryManager:
                 failure_stats = await self.failure_manager.get_failure_statistics()
                 stats["failure_stats"] = failure_stats
             except Exception as e:
-                self.logger.error(f"Error getting failure statistics: {e}")
+                self.logger.error("Error getting failure statistics: {0}".format(e))
 
         return stats

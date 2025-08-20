@@ -124,11 +124,11 @@ class SentimentPipelineDemo:
         try:
             self.analyzer = create_analyzer()
             logger.info(
-                f"✅ Sentiment analyzer initialized with model: {self.analyzer.model_name}"
+                "✅ Sentiment analyzer initialized with model: {0}".format(self.analyzer.model_name)
             )
             return True
         except Exception as e:
-            logger.error(f"❌ Failed to initialize sentiment analyzer: {e}")
+            logger.error("❌ Failed to initialize sentiment analyzer: {0}".format(e))
             return False
 
     async def analyze_single_article(self, article: Dict[str, Any]) -> Dict[str, Any]:
@@ -187,7 +187,7 @@ class SentimentPipelineDemo:
         logger.info(
             f"📄 Content Sentiment: {content_result['label']} ({content_result['score']:.3f})"
         )
-        logger.info(f"🎯 Overall Sentiment: {overall_label} ({overall_score:.3f})")
+        logger.info("🎯 Overall Sentiment: {0} ({1})".format(overall_label, overall_score:.3f))
 
         return result
 
@@ -196,12 +196,12 @@ class SentimentPipelineDemo:
     ) -> List[Dict[str, Any]]:
         """Analyze sentiment for multiple articles."""
         logger.info(
-            f"\n🔄 Starting batch sentiment analysis for {len(articles)} articles..."
+            "\n🔄 Starting batch sentiment analysis for {0} articles...".format(len(articles))
         )
 
         results = []
         for i, article in enumerate(articles, 1):
-            logger.info(f"\n--- Article {i}/{len(articles)} ---")
+            logger.info("\n--- Article {0}/{1} ---".format(i, len(articles)))
             result = await self.analyze_single_article(article)
             results.append(result)
 
@@ -209,7 +209,7 @@ class SentimentPipelineDemo:
 
     def analyze_sentiment_trends(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Analyze overall sentiment trends across articles."""
-        logger.info(f"\n📊 Analyzing Sentiment Trends Across {len(results)} Articles")
+        logger.info("\n📊 Analyzing Sentiment Trends Across {0} Articles".format(len(results)))
         logger.info("=" * 60)
 
         # Count sentiments by label
@@ -252,12 +252,12 @@ class SentimentPipelineDemo:
         logger.info("Overall Sentiment Distribution:")
         for label, count in sentiment_counts.items():
             percentage = sentiment_percentages[label]
-            logger.info(f"  {label}: {count} articles ({percentage:.1f}%)")
+            logger.info("  {0}: {1} articles ({2}%)".format(label, count, percentage:.1f))
 
-        logger.info(f"\nAverage Sentiment Score: {total_score / total_articles:.3f}")
+        logger.info("\nAverage Sentiment Score: {0}".format(total_score / total_articles:.3f))
 
         # Log topic-based trends
-        logger.info(f"\nSentiment by Topic:")
+        logger.info("\nSentiment by Topic:")
         for topic, sentiments in topic_sentiments.items():
             total_topic = sum(
                 sentiments[label] for label in ["POSITIVE", "NEGATIVE", "NEUTRAL"]
@@ -267,14 +267,14 @@ class SentimentPipelineDemo:
                 sentiments, key=lambda x: sentiments[x] if x != "scores" else 0
             )
             logger.info(
-                f"  📂 {topic}: {dominant} dominant (avg score: {avg_score:.3f})"
+                "  📂 {0}: {1} dominant (avg score: {2})".format(topic, dominant, avg_score:.3f)
             )
 
         # Log source-based trends
-        logger.info(f"\nSentiment by Source:")
+        logger.info("\nSentiment by Source:")
         for source, sentiments in source_sentiments.items():
             dominant = max(sentiments, key=sentiments.get)
-            logger.info(f"  📰 {source}: {dominant} dominant")
+            logger.info("  📰 {0}: {1} dominant".format(source, dominant))
 
         return {
             "total_articles": total_articles,
@@ -301,12 +301,12 @@ class SentimentPipelineDemo:
         with open(output_file, "w") as f:
             json.dump(output_data, f, indent=2)
 
-        logger.info(f"💾 Results saved to {output_file}")
+        logger.info("💾 Results saved to {0}".format(output_file))
         return output_file
 
     async def demonstrate_real_time_analysis(self):
         """Demonstrate real-time sentiment analysis."""
-        logger.info(f"\n⚡ Real-time Sentiment Analysis Demo")
+        logger.info("\n⚡ Real-time Sentiment Analysis Demo")
         logger.info("=" * 50)
 
         sample_texts = [
@@ -328,15 +328,15 @@ class SentimentPipelineDemo:
         self, results: List[Dict[str, Any]], trends: Dict[str, Any]
     ):
         """Generate a comprehensive summary report."""
-        logger.info(f"\n📋 SENTIMENT ANALYSIS PIPELINE SUMMARY REPORT")
+        logger.info("\n📋 SENTIMENT ANALYSIS PIPELINE SUMMARY REPORT")
         logger.info("=" * 70)
 
-        logger.info(f"📊 Analysis Overview:")
+        logger.info("📊 Analysis Overview:")
         logger.info(f"   • Total articles processed: {trends['total_articles']}")
-        logger.info(f"   • Analysis model: {self.analyzer.model_name}")
+        logger.info("   • Analysis model: {0}".format(self.analyzer.model_name))
         logger.info(f"   • Average sentiment score: {trends['average_score']:.3f}")
 
-        logger.info(f"\n🎯 Key Findings:")
+        logger.info("\n🎯 Key Findings:")
 
         # Most positive article
         most_positive = max(
@@ -364,12 +364,12 @@ class SentimentPipelineDemo:
 
         # Sentiment distribution
         dist = trends["sentiment_percentages"]
-        logger.info(f"\n📊 Sentiment Distribution:")
+        logger.info("\n📊 Sentiment Distribution:")
         logger.info(f"   🟢 Positive: {dist['POSITIVE']:.1f}%")
         logger.info(f"   🔴 Negative: {dist['NEGATIVE']:.1f}%")
         logger.info(f"   ⚪ Neutral: {dist['NEUTRAL']:.1f}%")
 
-        logger.info(f"\n✅ Analysis completed successfully!")
+        logger.info("\n✅ Analysis completed successfully!")
 
 
 async def main():
@@ -381,7 +381,7 @@ async def main():
         if not await demo.initialize():
             return
 
-        logger.info(f"📰 Loaded {len(SAMPLE_ARTICLES)} sample articles for analysis")
+        logger.info("📰 Loaded {0} sample articles for analysis".format(len(SAMPLE_ARTICLES)))
 
         # Analyze articles
         results = await demo.analyze_batch_articles(SAMPLE_ARTICLES)
@@ -398,11 +398,11 @@ async def main():
         # Save results
         output_file = demo.save_results(results, trends)
 
-        logger.info(f"\n🎉 Sentiment Analysis Pipeline Demo Completed Successfully!")
-        logger.info(f"📄 Detailed results available in: {output_file}")
+        logger.info("\n🎉 Sentiment Analysis Pipeline Demo Completed Successfully!")
+        logger.info("📄 Detailed results available in: {0}".format(output_file))
 
     except Exception as e:
-        logger.error(f"❌ Demo failed: {e}")
+        logger.error("❌ Demo failed: {0}".format(e))
         return 1
 
     return 0

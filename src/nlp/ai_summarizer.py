@@ -159,8 +159,8 @@ class AIArticleSummarizer:
         }
 
         logger.info(
-            f"AIArticleSummarizer initialized with device: {
-                self.device}"
+            "AIArticleSummarizer initialized with device: {0}".format(
+                self.device)
         )
 
     def _load_model(self, model_type: SummarizationModel) -> Tuple:
@@ -176,7 +176,7 @@ class AIArticleSummarizer:
         if model_type in self._models and self.enable_caching:
             return self._models[model_type]
 
-        logger.info(f"Loading model: {model_type.value}")
+        logger.info("Loading model: {0}".format(model_type.value))
         start_time = time.time()
 
         try:
@@ -195,14 +195,14 @@ class AIArticleSummarizer:
                 tokenizer = AutoTokenizer.from_pretrained(model_type.value)
                 model = AutoModelForSeq2SeqLM.from_pretrained(model_type.value)
             else:
-                raise ValueError(f"Unsupported model type: {model_type}")
+                raise ValueError("Unsupported model type: {0}".format(model_type))
 
             # Move model to device
             model = model.to(self.device)
             model.eval()  # Set to evaluation mode
 
             load_time = time.time() - start_time
-            logger.info(f"Model {model_type.value} loaded in {load_time:.2f}s")
+            logger.info("Model {0} loaded in {1}s".format(model_type.value, load_time))
 
             if self.enable_caching:
                 self._models[model_type] = (model, tokenizer)
@@ -210,7 +210,7 @@ class AIArticleSummarizer:
             return model, tokenizer
 
         except Exception as e:
-            logger.error(f"Failed to load model {model_type.value}: {str(e)}")
+            logger.error("Failed to load model {0}: {1}".format(model_type.value, str(e)))
             raise
 
     def _preprocess_text(self, text: str) -> str:
@@ -306,7 +306,7 @@ class AIArticleSummarizer:
 
             # Prepare text for model
             if model_type == SummarizationModel.T5:
-                input_text = f"summarize: {clean_text}"
+                input_text = "summarize: {0}".format(clean_text)
             else:
                 input_text = clean_text
 
@@ -361,8 +361,8 @@ class AIArticleSummarizer:
                 f"Summary generated: {
                     length.value} ({
                     metrics['word_count']} words, "
-                f"{
-                    processing_time:.2f}s)"
+                "{0}s)".format(
+                    processing_time:.2f)
             )
 
             return summary
@@ -370,9 +370,9 @@ class AIArticleSummarizer:
         except Exception as e:
             processing_time = time.time() - start_time
             logger.error(
-                f"Summarization failed after {
-                    processing_time:.2f}s: {
-                    str(e)}"
+                "Summarization failed after {0}s: {1}".format(
+                    processing_time:.2f, 
+                    str(e))
             )
             raise
 
@@ -448,7 +448,7 @@ def create_summary_hash(
     Returns:
         SHA256 hash string
     """
-    content = f"{text}{length.value}{model.value}"
+    content = "{0}{1}{2}".format(text, length.value, model.value)
     return hashlib.sha256(content.encode()).hexdigest()
 
 
@@ -483,14 +483,14 @@ async def demo_summarization():
     summaries = await summarizer.summarize_article_all_lengths(sample_text)
 
     for length, summary in summaries.items():
-        print(f"\n{length.value.upper()} SUMMARY:")
-        print(f"Text: {summary.text}")
+        print("\n{0} SUMMARY:".format(length.value.upper()))
+        print("Text: {0}".format(summary.text))
         print(
-            f"Words: {
-                summary.word_count}, Compression: {
-                summary.compression_ratio:.2%}"
+            "Words: {0}, Compression: {1}".format(
+                summary.word_count, 
+                summary.compression_ratio:.2%)
         )
-        print(f"Processing time: {summary.processing_time:.2f}s")
+        print("Processing time: {0}s".format(summary.processing_time))
 
 
 if __name__ == "__main__":

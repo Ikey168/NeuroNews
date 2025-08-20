@@ -90,7 +90,7 @@ class EnhancedEntity:
         """Generate a unique entity ID based on normalized form and type."""
         import hashlib
 
-        content = f"{self.label}:{self.normalized_form}"
+        content = "{0}:{1}".format(self.label, self.normalized_form)
         return hashlib.md5(content.encode()).hexdigest()[:12]
 
 
@@ -305,7 +305,7 @@ class AdvancedEntityExtractor:
             logger.info("NLP components initialized successfully")
 
         except Exception as e:
-            logger.error(f"Failed to initialize NLP components: {e}")
+            logger.error("Failed to initialize NLP components: {0}".format(e))
             raise
 
     async def extract_entities_from_article(
@@ -328,7 +328,7 @@ class AdvancedEntityExtractor:
         start_time = datetime.now()
 
         try:
-            full_text = f"{title}. {content}"
+            full_text = "{0}. {1}".format(title, content)
 
             # Extract entities using NER processor
             ner_entities = self.ner_processor.extract_entities(full_text, article_id)
@@ -374,13 +374,13 @@ class AdvancedEntityExtractor:
             self.stats["processing_time"] += processing_time
 
             logger.info(
-                f"Extracted {
-                    len(deduplicated_entities)} entities from article {article_id}"
+                "Extracted {0} entities from article {1}".format(
+                    len(deduplicated_entities), article_id)
             )
             return deduplicated_entities
 
         except Exception as e:
-            logger.error(f"Error extracting entities from article {article_id}: {e}")
+            logger.error("Error extracting entities from article {0}: {1}".format(article_id, e))
             return []
 
     async def extract_relationships(
@@ -431,14 +431,14 @@ class AdvancedEntityExtractor:
             self.stats["relationships_found"] += len(filtered_relationships)
 
             logger.info(
-                f"Extracted {
-                    len(filtered_relationships)} relationships for article {article_id}"
+                "Extracted {0} relationships for article {1}".format(
+                    len(filtered_relationships), article_id)
             )
             return filtered_relationships
 
         except Exception as e:
             logger.error(
-                f"Error extracting relationships for article {article_id}: {e}"
+                "Error extracting relationships for article {0}: {1}".format(article_id, e)
             )
             return []
 
@@ -558,7 +558,7 @@ class AdvancedEntityExtractor:
         entity_map = {}
 
         for entity in entities:
-            key = f"{entity.label}:{entity.normalized_form}"
+            key = "{0}:{1}".format(entity.label, entity.normalized_form)
 
             if key in entity_map:
                 # Merge with existing entity
@@ -878,10 +878,10 @@ if __name__ == "__main__":
             print("🔍 Extracted Entities:")
             for entity in entities:
                 print(
-                    f"  • {entity.text} ({entity.label}) - Confidence: {entity.confidence:.2f}"
+                    "  • {0} ({1}) - Confidence: {2}".format(entity.text, entity.label, entity.confidence)
                 )
                 if entity.properties:
-                    print(f"    Properties: {entity.properties}")
+                    print("    Properties: {0}".format(entity.properties))
 
             # Extract relationships
             relationships = await extractor.extract_relationships(
@@ -890,22 +890,22 @@ if __name__ == "__main__":
                 sample_article["id"],
             )
 
-            print(f"\n🔗 Extracted Relationships:")
+            print("\n🔗 Extracted Relationships:")
             for rel in relationships:
                 print(
-                    f"  • {rel.source_entity.text} --[{rel.relation_type}]--> {rel.target_entity.text}"
+                    "  • {0} --[{1}]--> {2}".format(rel.source_entity.text, rel.relation_type, rel.target_entity.text)
                 )
-                print(f"    Confidence: {rel.confidence:.2f}")
-                print(f"    Context: {rel.context[:100]}...")
+                print("    Confidence: {0}".format(rel.confidence))
+                print("    Context: {0}...".format(rel.context[))
 
             # Get statistics
             stats = extractor.get_extraction_statistics()
-            print(f"\n📊 Extraction Statistics:")
+            print("\n📊 Extraction Statistics:")
             for key, value in stats.items():
-                print(f"  • {key}: {value}")
+                print("  • {0}: {1}".format(key, value))
 
         except Exception as e:
-            print(f"❌ Error in demonstration: {e}")
+            print("❌ Error in demonstration: {0}".format(e))
 
     # Run the example
     asyncio.run(main())
