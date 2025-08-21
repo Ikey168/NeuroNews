@@ -38,6 +38,7 @@ except ImportError:
 # Import existing knowledge graph components
 try:
     from .graph_builder import GraphBuilder
+    from gremlin_python.process.graph_traversal import __
 
     GRAPH_BUILDER_AVAILABLE = True
 except ImportError:
@@ -249,7 +250,7 @@ class EnhancedKnowledgeGraphPopulator:
 
         # Process articles in smaller batches to manage memory
         for i in range(0, len(articles), self.batch_size):
-            batch = articles[i : i + self.batch_size]
+            batch = articles[i: i + self.batch_size]
 
             # Process batch concurrently
             batch_tasks = []
@@ -508,10 +509,10 @@ class EnhancedKnowledgeGraphPopulator:
         """Find existing entity in the knowledge graph by normalized form."""
         try:
             # Query Neptune for existing entity
-            g.V().hasLabel('{self._get_neptune_label(entity.label)}')
-                 .has('normalized_form', '{entity.normalized_form}')
-                 .id()
-            """
+            # query = commented out - unused variable
+            # g.V().hasLabel('{self._get_neptune_label(entity.label)}')
+            #      .has('normalized_form', '{entity.normalized_form}')
+            #      .id()
 
             results = await self.graph_builder._execute_traversal(
                 self.graph_builder.g.V()

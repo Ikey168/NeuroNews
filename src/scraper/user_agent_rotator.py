@@ -322,8 +322,8 @@ class UserAgentRotator:
         self.profile_usage_count += 1
         return self.current_profile
 
-    def _rotate_profile(self):
-        """Rotate to a new browser profile."""
+    def _rotate_profile_advanced(self):
+        """Rotate to a new browser profile (advanced method)."""
         # Select new profile (avoid same as current)
         available_profiles = [
             p for p in self.browser_profiles if p != self.current_profile

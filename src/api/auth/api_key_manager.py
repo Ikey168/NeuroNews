@@ -250,7 +250,7 @@ class DynamoDBAPIKeyStore:
         try:
             response = self.table.query(
                 IndexName="user-id-index",
-                KeyConditionExpression="user_id = :user_id",
+                KeyConditionExpression="user_id =:user_id",
                 ExpressionAttributeValues={":user_id": user_id},
             )
 
@@ -269,7 +269,7 @@ class DynamoDBAPIKeyStore:
             now = datetime.now(timezone.utc)
             self.table.update_item(
                 Key={"key_id": key_id},
-                UpdateExpression="SET last_used_at = :last_used, usage_count = usage_count + :inc",
+                UpdateExpression="SET last_used_at =:last_used, usage_count = usage_count +:inc",
                 ExpressionAttributeValues={":last_used": now.isoformat(), ":inc": 1},
             )
             return True
@@ -286,7 +286,7 @@ class DynamoDBAPIKeyStore:
         try:
             self.table.update_item(
                 Key={"key_id": key_id},
-                UpdateExpression="SET #status = :status",
+                UpdateExpression="SET #status =:status",
                 ExpressionAttributeNames={"#status": "status"},
                 ExpressionAttributeValues={":status": APIKeyStatus.REVOKED.value},
             )
@@ -507,7 +507,7 @@ class APIKeyManager:
             try:
                 self.store.table.update_item(
                     Key={"key_id": key_id},
-                    UpdateExpression="SET expires_at = :expires_at",
+                    UpdateExpression="SET expires_at =:expires_at",
                     ExpressionAttributeValues={
                         ":expires_at": new_expires_at.isoformat()
                     },

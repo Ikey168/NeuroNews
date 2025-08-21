@@ -128,8 +128,7 @@ class KnowledgeGraphPopulator:
             entities = await self._extract_entities(full_text)
 
             # Add article node
-                article_id, title, content, published_date
-            )
+            await self._add_article_node(article_id, title, content, published_date)
 
             # Add entity nodes and relationships
             entity_nodes = []
@@ -309,7 +308,7 @@ class KnowledgeGraphPopulator:
         try:
             # Simple co-occurrence based relationships
             for i, entity1 in enumerate(entities):
-                for entity2 in entities[i + 1 :]:
+                for entity2 in entities[i + 1:]:
                     # Skip if same entity
                     if entity1.normalized_form == entity2.normalized_form:
                         continue

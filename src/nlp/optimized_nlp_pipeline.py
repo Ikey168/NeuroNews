@@ -26,18 +26,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any, Dict, List, Optional
 
-import time
-from typing import Dict, List, Any, Optional, Tuple
-from datetime import datetime, timedelta
-import logging
-import gc
-import psutil
-import os
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass
-from enum import Enum
-
-# Core NLP imports
+# System monitoring
 import psutil
 
 # Optional imports with fallbacks
@@ -482,7 +471,7 @@ class OptimizedNLPPipeline:
             # Fixed batch size
             batch_size = self.current_batch_size
             return [
-                articles[i : i + batch_size]
+                articles[i: i + batch_size]
                 for i in range(0, len(articles), batch_size)
             ]
 

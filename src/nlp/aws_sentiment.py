@@ -159,7 +159,7 @@ class AWSComprehendSentimentAnalyzer:
             # AWS Comprehend batch API supports max 25 texts at a time
             batch_size = 25
             for batch_start in range(0, len(text_list), batch_size):
-                batch_texts = text_list[batch_start : batch_start + batch_size]
+                batch_texts = text_list[batch_start: batch_start + batch_size]
 
                 response = self.client.batch_detect_sentiment(
                     TextList=batch_texts, LanguageCode=language_code

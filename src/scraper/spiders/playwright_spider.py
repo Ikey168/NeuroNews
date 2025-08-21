@@ -91,7 +91,7 @@ class PlaywrightNewsSpider(scrapy.Spider):
 
             # Follow article links
             for article_url in article_links[
-                :10
+:10
             ]:  # Limit to 10 articles per source for testing
                 yield Request(
                     url=article_url,

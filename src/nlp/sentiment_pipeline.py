@@ -165,7 +165,7 @@ class SentimentPipeline:
                     "mixed_score": scores.get("mixed", 0.0),
                     "language_code": result.get("language_code", "en"),
                     "text_snippet": result.get("text", "")[
-                        :500
+:500
                     ],  # Store first 500 chars
                 }
                 sentiment_details.append(detail_record)

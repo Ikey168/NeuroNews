@@ -491,7 +491,7 @@ class AdvancedEntityExtractor:
 
                 for match in matches:
                     # Get the original case from the text
-                    original_text = text[match.start() : match.end()]
+                    original_text = text[match.start(): match.end()]
 
                     entity = EnhancedEntity(
                         text=original_text,
@@ -633,7 +633,7 @@ class AdvancedEntityExtractor:
         relationships = []
 
         for i, entity1 in enumerate(entities):
-            for entity2 in entities[i + 1 :]:
+            for entity2 in entities[i + 1:]:
                 distance = abs(entity1.start - entity2.start)
 
                 if distance <= self.max_entity_distance:
@@ -706,7 +706,7 @@ class AdvancedEntityExtractor:
                         # Create relationships between entities in this
                         # sentence
                         for i, entity1 in enumerate(sentence_entities):
-                            for entity2 in sentence_entities[i + 1 :]:
+                            for entity2 in sentence_entities[i + 1:]:
                                 if self._validate_relationship_types(
                                     entity1, entity2, relation_type
                                 ):

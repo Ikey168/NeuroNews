@@ -792,7 +792,7 @@ class AsyncNewsScraperEngine:
 
                         const getTextBySelector = (selector) => {{
                             const element = document.querySelector(selector);
-                            return element ? element.textContent.trim() : '';
+                            return element ? element.textContent.trim(): '';
                         }};
 
                         const getContentBySelector = (selector) => {{

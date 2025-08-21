@@ -368,7 +368,7 @@ class OptimizedEventClusterer:
             used_indices.add(i)
 
             # Find similar articles (simplified)
-            for j, other_embedding in enumerate(embeddings[i + 1 :], i + 1):
+            for j, other_embedding in enumerate(embeddings[i + 1:], i + 1):
                 if j in used_indices or not other_embedding:
                     continue
 

@@ -133,6 +133,8 @@ async def get_articles(
             conditions.append("category = %s")
             params.append(category)
 
+        # Build where clause
+        where_clause = " AND ".join(conditions) if conditions else "1=1"
 
         query = """
             SELECT id, title, url, publish_date, source, category,
@@ -140,7 +142,9 @@ async def get_articles(
             FROM news_articles
             WHERE {where_clause}
             ORDER BY publish_date DESC
-        """
+        """.format(
+            where_clause=where_clause
+        )
 
         results = await db.execute_query(query, params)
 

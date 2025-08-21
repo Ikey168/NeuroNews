@@ -7,6 +7,7 @@ and efficiency of the news scraping workflow.
 from scraper.items import NewsItem
 from ingestion.optimized_pipeline import OptimizationConfig, OptimizedIngestionPipeline
 import asyncio
+import json
 import logging
 import queue
 
@@ -161,6 +162,7 @@ class OptimizedScrapyPipeline:
         self.flush_count += 1
 
         # Submit to thread pool for async processing
+        self.thread_pool.submit(
             self._process_articles_batch, articles_to_process, spider
         )
 

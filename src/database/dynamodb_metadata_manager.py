@@ -16,7 +16,7 @@ Features:
 import hashlib
 import logging
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field_name
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -56,7 +56,7 @@ class ArticleMetadataIndex:
     title: str
     source: str
     published_date: str  # ISO format: YYYY-MM-DD
-    tags: List[str] = field(default_factory=list)
+    tags: List[str] = field_name(default_factory=list)
 
     # Extended metadata for comprehensive indexing
     url: str = ""
@@ -70,7 +70,7 @@ class ArticleMetadataIndex:
     processing_status: str = "indexed"
 
     # Search and analytics
-    title_tokens: List[str] = field(default_factory=list)  # For full-text search
+    title_tokens: List[str] = field_name(default_factory=list)  # For full-text search
     content_summary: str = ""  # Brief content excerpt for search
     word_count: int = 0
     sentiment_score: Optional[float] = None
@@ -187,7 +187,7 @@ class SearchQuery:
     """Full-text search query configuration."""
 
     query_text: str
-    fields: List[str] = field(default_factory=lambda: ["title", "content_summary"])
+    fields: List[str] = field_name(default_factory=lambda: ["title", "content_summary"])
     search_mode: SearchMode = SearchMode.CONTAINS
     limit: int = 50
     filters: Optional[Dict[str, Any]] = None
@@ -415,7 +415,7 @@ class DynamoDBMetadataManager:
         try:
             # Process in batches (DynamoDB limit is 25)
             for i in range(0, len(articles), self.config.batch_size):
-                batch = articles[i : i + self.config.batch_size]
+                batch = articles[i: i + self.config.batch_size]
                 batch_result = await self._process_batch(batch)
 
                 indexed_count += batch_result["indexed"]
@@ -872,28 +872,28 @@ class DynamoDBMetadataManager:
 
         field_filters = []
 
-        for field in search_query.fields:
+        for field_name in search_query.fields:
             field_token_filters = []
 
             for token in search_tokens:
                 if search_query.search_mode == SearchMode.EXACT:
-                    if field == "title":
+                    if field_name == "title":
                         field_token_filters.append(
                             Attr("title").eq(search_query.query_text)
                         )
                     else:
-                        field_token_filters.append(Attr(field).contains(token))
+                        field_token_filters.append(Attr(field_name).contains(token))
                 elif search_query.search_mode == SearchMode.CONTAINS:
-                    if field == "title":
+                    if field_name == "title":
                         field_token_filters.append(Attr("title").contains(token))
-                    elif field == "title_tokens":
+                    elif field_name == "title_tokens":
                         field_token_filters.append(Attr("title_tokens").contains(token))
                     else:
-                        field_token_filters.append(Attr(field).contains(token))
+                        field_token_filters.append(Attr(field_name).contains(token))
                 elif search_query.search_mode == SearchMode.STARTS_WITH:
-                    field_token_filters.append(Attr(field).begins_with(token))
+                    field_token_filters.append(Attr(field_name).begins_with(token))
 
-            # Combine tokens for this field (AND logic within field)
+            # Combine tokens for this field_name (AND logic within field_name)
             if field_token_filters:
                 field_filter = field_token_filters[0]
                 for token_filter in field_token_filters[1:]:
@@ -914,15 +914,15 @@ class DynamoDBMetadataManager:
         """Build additional filter expressions."""
         filter_expr = None
 
-        for field, value in filters.items():
+        for field_name, value in filters.items():
             if isinstance(value, list):
                 # Multiple values (OR logic)
-                value_filters = [Attr(field).eq(v) for v in value]
+                value_filters = [Attr(field_name).eq(v) for v in value]
                 value_filter = value_filters[0]
                 for vf in value_filters[1:]:
                     value_filter = value_filter | vf
             else:
-                value_filter = Attr(field).eq(value)
+                value_filter = Attr(field_name).eq(value)
 
             filter_expr = (
                 value_filter if filter_expr is None else filter_expr & value_filter
@@ -984,9 +984,9 @@ class DynamoDBMetadataManager:
             "author": 1.0,
         }
 
-        for field in search_fields:
-            weight = field_weights.get(field, 1.0)
-            field_value = getattr(item, field, "")
+        for field_name in search_fields:
+            weight = field_weights.get(field_name, 1.0)
+            field_value = getattr(item, field_name, "")
 
             if isinstance(field_value, list):
                 field_text = " ".join(field_value).lower()
@@ -1070,16 +1070,16 @@ class DynamoDBMetadataManager:
         """Update article metadata."""
         try:
             # Build update expression
-            update_expr = "SET last_updated = :timestamp"
+            update_expr = "SET last_updated =:timestamp"
             expr_values = {":timestamp": datetime.now(timezone.utc).isoformat()}
 
-            for field, value in updates.items():
-                if field not in [
+            for field_name, value in updates.items():
+                if field_name not in [
                     "article_id",
                     "indexed_date",
                 ]:  # Prevent updating primary key
-                    update_expr += ", {0} = :{1}".format(field, field)
-                    expr_values[":{0}".format(field)] = value
+                    update_expr += ", {0} =:{1}".format(field_name, field_name)
+                    expr_values[":{0}".format(field_name)] = value
 
             self.table.update_item(
                 Key={"article_id": article_id},

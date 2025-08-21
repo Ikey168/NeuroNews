@@ -666,7 +666,7 @@ async def _query_timeline_events(
         query = (
             "g.V().hasLabel('Article')"
             ".has('title', textContains('{0}'))"
-            ".order().by('published_date', desc)"
+            ".order().by('published_date', descending)"
             ".limit({1})"
             ".valueMap(true)"
         ).format(topic, max_events)
@@ -936,34 +936,35 @@ async def _search_entities(
 
         # Apply search terms (search in normalized_form)
         if search_terms:
-            term_filters = []
+            # Build search query as string
+            term_conditions = []
             for term in search_terms:
-                term_filters.append(f"has('normalized_form', containing('{term}'))")
+                term_conditions.append("textContains('{0}')".format(term))
 
-            # Combine with OR logic
-            search_query = base_query
-            for i, term in enumerate(search_terms):
-                if i == 0:
-                    search_query = search_query.has("normalized_form", containing(term))
-                else:
-                    search_query = search_query.or_(
-                        has("normalized_form", containing(term))
-                    )
+            search_conditions = " || ".join(term_conditions)
+            entity_type = filters.get("entity_type", "Entity")
+            base_query_str = (
+                "g.V().hasLabel('{0}')" ".has('normalized_form', {1})"
+            ).format(entity_type, search_conditions)
         else:
-            search_query = base_query
+            entity_type = filters.get("entity_type", "Entity")
+            base_query_str = "g.V().hasLabel('{0}')".format(entity_type)
 
         # Apply sorting
         if sort_by == "confidence":
-            search_query = search_query.order().by("confidence", desc)
+            sort_clause = ".order().by('confidence', desc)"
         elif sort_by == "date":
-            search_query = search_query.order().by("created_at", desc)
+            sort_clause = ".order().by('created_at', desc)"
         else:  # relevance (default)
-            search_query = search_query.order().by("mention_count", desc)
+            sort_clause = ".order().by('mention_count', desc)"
+
+        # Build final query
+        final_query = "{0}{1}.limit({2}).valueMap(true)".format(
+            base_query_str, sort_clause, limit
+        )
 
         # Execute query
-        results = await populator.graph_builder._execute_traversal(
-            search_query.limit(limit).valueMap(True)
-        )
+        results = await populator.graph_builder._execute_traversal(final_query)
 
         # Format results
         entities = []
@@ -1001,15 +1002,17 @@ async def _search_relationships(
     try:
         # This is a simplified implementation
         # In practice, you'd want more sophisticated relationship searching
-        results = await populator.graph_builder._execute_traversal(
-            populator.graph_builder.g.E()
-            .limit(limit)
-            .project("type", "source", "target", "properties")
-            .by(T.label)
-            .by(outV().valueMap("normalized_form"))
-            .by(inV().valueMap("normalized_form"))
-            .by(valueMap())
-        )
+        query = (
+            "g.E()"
+            ".limit({0})"
+            ".project('type', 'source', 'target', 'properties')"
+            ".by(label)"
+            ".by(outV().valueMap('normalized_form'))"
+            ".by(inV().valueMap('normalized_form'))"
+            ".by(valueMap())"
+        ).format(limit)
+
+        results = await populator.graph_builder._execute_traversal(query)
 
         relationships = []
         for rel in results:
@@ -1048,15 +1051,17 @@ async def _search_paths(
 
         # This is a simplified path search
         # In practice, you'd want more sophisticated path finding algorithms
-        results = await populator.graph_builder._execute_traversal(
-            populator.graph_builder.g.V()
-            .has("normalized_form", source_term)
-            .repeat(bothE().otherV().simplePath())
-            .until(has("normalized_form", target_term))
-            .limit(max_path_length)
-            .path()
-            .limit(limit)
-        )
+        query = (
+            "g.V()"
+            ".has('normalized_form', '{0}')"
+            ".repeat(bothE().otherV().simplePath())"
+            ".until(has('normalized_form', '{1}'))"
+            ".limit({2})"
+            ".path()"
+            ".limit({3})"
+        ).format(source_term, target_term, max_path_length, limit)
+
+        results = await populator.graph_builder._execute_traversal(query)
 
         paths = []
         for i, path in enumerate(results):
@@ -1141,18 +1146,21 @@ async def _get_centrality_analytics(
     """Get centrality analytics (most connected entities)."""
     try:
         # Get entities with highest degree centrality (most connections)
-        centrality_query = populator.graph_builder.g.V()
         if entity_type:
-            centrality_query = centrality_query.has("entity_type", entity_type)
+            base_query = "g.V().has('entity_type', '{0}')".format(entity_type)
+        else:
+            base_query = "g.V()"
 
-        results = await populator.graph_builder._execute_traversal(
-            centrality_query.project("entity", "degree")
-            .by(valueMap("normalized_form", "entity_type"))
-            .by(bothE().count())
-            .order()
-            .by(select("degree"), desc)
-            .limit(top_n)
-        )
+        query = (
+            "{0}"
+            ".project('entity', 'degree')"
+            ".by(valueMap('normalized_form', 'entity_type'))"
+            ".by(bothE().count())"
+            ".order().by(select('degree'), desc)"
+            ".limit({1})"
+        ).format(base_query, top_n)
+
+        results = await populator.graph_builder._execute_traversal(query)
 
         centrality_data = []
         for result in results:
@@ -1186,17 +1194,22 @@ async def _get_clustering_analytics(
         # algorithms
 
         # Get densely connected entity groups
-        results = await populator.graph_builder._execute_traversal(
-            populator.graph_builder.g.V().has("entity_type", entity_type)
-            if entity_type
-            else populator.graph_builder.g.V()
-            .bothE()
-            .groupCount()
-            .by(otherV().values("entity_type"))
-            .order(local)
-            .by(values, desc)
-            .limit(local, top_n)
-        )
+        if entity_type:
+            base_query = "g.V().has('entity_type', '{0}')".format(entity_type)
+        else:
+            base_query = "g.V()"
+
+        query = (
+            "{0}"
+            ".bothE()"
+            ".groupCount()"
+            ".by(otherV().values('entity_type'))"
+            ".order(local)"
+            ".by(values, desc)"
+            ".limit(local, {1})"
+        ).format(base_query, top_n)
+
+        results = await populator.graph_builder._execute_traversal(query)
 
         return {
             "entity_type_clusters": results[0] if results else {},

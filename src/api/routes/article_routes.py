@@ -107,7 +107,9 @@ async def list_articles(
         WHERE {0}
         ORDER BY created_at DESC
         LIMIT %s OFFSET %s
-    """.format(where_conditions)
+    """.format(
+        where_conditions
+    )
     params.extend([limit, offset])
 
     return await db.execute_query(query, params)

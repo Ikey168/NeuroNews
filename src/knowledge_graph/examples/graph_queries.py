@@ -27,8 +27,8 @@ class GraphQueries:
             "org_mentions": """
                 SELECT ?org (COUNT(?mention) as ?count)
                 WHERE {
-                    ?mention rdf:type :Mention .
-                    ?mention :mentionsOrganization ?org .
+                    ?mention rdf:type:Mention .
+                    ?mention:mentionsOrganization ?org .
                 }
                 GROUP BY ?org
                 ORDER BY DESC(?count)
@@ -36,8 +36,8 @@ class GraphQueries:
             "temporal_analysis": """
                 SELECT ?event ?date
                 WHERE {
-                    ?event rdf:type :Event .
-                    ?event :date ?date .
+                    ?event rdf:type:Event .
+                    ?event:date ?date .
                 }
                 ORDER BY ?date
             """,

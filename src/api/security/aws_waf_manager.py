@@ -130,7 +130,10 @@ class AWSWAFManager:
                 Name=self.web_acl_name,
                 Scope="REGIONAL",  # For API Gateway
                 DefaultAction={"Allow": {}},
-                Description="NeuroNews API Protection - Blocks SQL injection, XSS, and implements geofencing",
+                Description=(
+                    "NeuroNews API Protection - Blocks SQL injection, XSS, "
+                    "and implements geofencing"
+                ),
                 Rules=rules,
                 Tags=[
                     {"Key": "Application", "Value": "NeuroNews"},

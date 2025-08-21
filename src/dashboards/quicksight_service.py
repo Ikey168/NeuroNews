@@ -20,7 +20,6 @@ Dependencies:
 import logging
 import os
 from dataclasses import dataclass
-from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
@@ -220,6 +219,7 @@ class QuickSightDashboardService:
 
             # Check if data source already exists
             try:
+                self.quicksight_client.describe_data_source(
                     AwsAccountId=self.config.aws_account_id,
                     DataSourceId=self.config.data_source_id,
                 )
@@ -280,7 +280,7 @@ class QuickSightDashboardService:
 
                 # Check if dataset already exists
                 try:
-                    existing = self.quicksight_client.describe_data_set(
+                    self.quicksight_client.describe_data_set(
                         AwsAccountId=self.config.aws_account_id, DataSetId=dataset_id
                     )
                     logger.info("Dataset {0} already exists".format(dataset_id))
@@ -535,7 +535,7 @@ class QuickSightDashboardService:
 
                 # Check if analysis already exists
                 try:
-                    existing = self.quicksight_client.describe_analysis(
+                    self.quicksight_client.describe_analysis(
                         AwsAccountId=self.config.aws_account_id, AnalysisId=analysis_id
                     )
                     logger.info("Analysis {0} already exists".format(analysis_id))
@@ -830,7 +830,8 @@ class QuickSightDashboardService:
 
                 # Check if dashboard already exists
                 try:
-                    existing = self.quicksight_client.describe_dashboard(
+                    # existing = self.quicksight_client.describe_dashboard(  # unused variable
+                    self.quicksight_client.describe_dashboard(
                         AwsAccountId=self.config.aws_account_id,
                         DashboardId=dashboard_id,
                     )
@@ -1174,20 +1175,21 @@ class QuickSightDashboardService:
             for dataset_id in datasets:
                 try:
                     # Create refresh schedule for dataset
-                    schedule_id = "{0}_refresh_schedule".format(dataset_id)
+                    # schedule_id = "{0}_refresh_schedule".format(dataset_id)  # unused variable
 
-                    refresh_params = {
-                        "DataSetId": dataset_id,
-                        "AwsAccountId": self.config.aws_account_id,
-                        "Schedule": {
-                            "ScheduleId": schedule_id,
-                            "ScheduleFrequency": {
-                                "Interval": "HOURLY"  # Refresh every hour
-                            },
-                            "RefreshType": "INCREMENTAL_REFRESH",
-                            "StartAfterDateTime": datetime.now(),
-                        },
-                    }
+                    # Note: refresh_params would be used for actual QuickSight scheduling
+                    # refresh_params = {
+                    #     "DataSetId": dataset_id,
+                    #     "AwsAccountId": self.config.aws_account_id,
+                    #     "Schedule": {
+                    #         "ScheduleId": schedule_id,
+                    #         "ScheduleFrequency": {
+                    #             "Interval": "HOURLY"  # Refresh every hour
+                    #         },
+                    #         "RefreshType": "INCREMENTAL_REFRESH",
+                    #         "StartAfterDateTime": datetime.now(),
+                    #     },
+                    # }
 
                     # Note: This is a simplified implementation
                     # In practice, you would use QuickSight's ingestion

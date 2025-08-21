@@ -247,7 +247,10 @@ async def advanced_search(
         if not any([search_term, topic, keyword]):
             raise HTTPException(
                 status_code=400,
-                detail="At least one search parameter (search_term, topic, or keyword) must be provided",
+                detail=(
+                    "At least one search parameter (search_term, topic, or keyword) "
+                    "must be provided"
+                ),
             )
 
         results = await db.search_articles_by_content_and_topics(
@@ -351,7 +354,7 @@ async def get_trending_keywords(
         trending_keywords = sorted(
             keywords, key=lambda x: (x["frequency"], x["avg_score"]), reverse=True
         )[
-            :50
+:50
         ]  # Top 50 trending keywords
 
         return {

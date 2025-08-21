@@ -6,6 +6,7 @@ alerts, and analysis results from the sentiment trend analyzer.
 """
 
 import logging
+import psycopg2
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 

@@ -285,7 +285,7 @@ class DynamoDBFailureManager:
             # Query using GSI to find URLs ready for retry
             response = self.dynamodb.scan(
                 TableName=self.table_name,
-                FilterExpression="next_retry_time <= :current_time AND is_permanent_failure = :false",
+                FilterExpression="next_retry_time <=:current_time AND is_permanent_failure =:false",
                 ExpressionAttributeValues={
                     ":current_time": {"N": str(current_time)},
                     ":false": {"BOOL": False},
@@ -332,7 +332,7 @@ class DynamoDBFailureManager:
             self.dynamodb.update_item(
                 TableName=self.table_name,
                 Key={"url": {"S": url}},
-                UpdateExpression="SET is_permanent_failure = :true, next_retry_time = :zero",
+                UpdateExpression="SET is_permanent_failure =:true, next_retry_time =:zero",
                 ExpressionAttributeValues={
                     ":true": {"BOOL": True},
                     ":zero": {"N": "0"},
@@ -358,7 +358,7 @@ class DynamoDBFailureManager:
 
             response = self.dynamodb.scan(
                 TableName=self.table_name,
-                FilterExpression="last_failure_time >= :cutoff_time",
+                FilterExpression="last_failure_time >=:cutoff_time",
                 ExpressionAttributeValues={":cutoff_time": {"N": str(cutoff_time)}},
             )
 
@@ -416,7 +416,7 @@ class DynamoDBFailureManager:
             # Scan for old records
             response = self.dynamodb.scan(
                 TableName=self.table_name,
-                FilterExpression="first_failure_time < :cutoff_time",
+                FilterExpression="first_failure_time <:cutoff_time",
                 ExpressionAttributeValues={":cutoff_time": {"N": str(cutoff_time)}},
             )
 

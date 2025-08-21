@@ -373,7 +373,8 @@ class EventTimelineService:
                 query = (
                     "g.V().has('entity_type', 'ARTICLE')"
                     ".has('title', containing('{topic}'))"
-                    ".has('published_date', between('{start_date.isoformat()}', '{end_date.isoformat()}'))"
+                    ".has('published_date', "
+                    "between('{start_date.isoformat()}', '{end_date.isoformat()}'))"
                     ".limit(500)"
                 )
 
@@ -451,10 +452,7 @@ class EventTimelineService:
             event_time = start_date + (time_span * i / num_events)
 
             sample_event = {
-                "id": f"sample_event_{i}_{
-                    topic.replace(
-                        ' ',
-                        '_').lower()}",
+                "id": f"sample_event_{i}_{topic.replace(' ', '_').lower()}",
                 "title": "Sample Event {0} for {1}".format(i + 1, topic),
                 "content": (
                     "This is a sample event related to {0}. This demonstrates the event "
@@ -553,7 +551,7 @@ class EventTimelineService:
                 event.topic,
                 event.event_type,
                 event.confidence,
-                event.impact_score
+                event.impact_score,
             )
 
             if hasattr(self.graph_populator, "_execute_traversal"):

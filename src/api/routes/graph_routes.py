@@ -9,7 +9,6 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query
-from gremlin_python.process.graph_traversal import __  # GraphTraversalSource
 from gremlin_python.process.traversal import (  # Predicates and T tokens (like T.label)
     P,
     T,

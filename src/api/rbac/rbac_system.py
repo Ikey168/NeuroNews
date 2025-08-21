@@ -279,7 +279,7 @@ class DynamoDBPermissionStore:
         try:
             self.table.update_item(
                 Key={"user_id": user_id},
-                UpdateExpression="SET #role = :role, updated_at = :updated_at",
+                UpdateExpression="SET #role =:role, updated_at =:updated_at",
                 ExpressionAttributeNames={"#role": "role"},
                 ExpressionAttributeValues={
                     ":role": new_role.value,

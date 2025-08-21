@@ -485,7 +485,7 @@ class TFIDFKeywordExtractor:
 
                 # Get top words by frequency
                 top_words = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)[
-                    :top_k
+:top_k
                 ]
                 keywords = [
                     KeywordResult(

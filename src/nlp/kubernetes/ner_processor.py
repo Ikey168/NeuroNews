@@ -503,7 +503,7 @@ class KubernetesNERProcessor:
             with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
                 # Split articles into batches
                 article_batches = [
-                    articles[i : i + self.batch_size]
+                    articles[i: i + self.batch_size]
                     for i in range(0, len(articles), self.batch_size)
                 ]
 

@@ -608,7 +608,8 @@ async def get_event_detection_stats():
                     SELECT
                         COUNT(*) as total_assignments,
                         AVG(assignment_confidence) as avg_confidence,
-                        COUNT(CASE WHEN is_cluster_representative THEN 1 END) as representative_articles
+                        COUNT(CASE WHEN is_cluster_representative THEN 1 END)
+                        as representative_articles
                     FROM article_cluster_assignments
                     WHERE assigned_at >= CURRENT_DATE - INTERVAL '30 days'
                 """

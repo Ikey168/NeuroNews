@@ -390,8 +390,10 @@ async def get_veracity_statistics(
         distribution_query = """
         SELECT
             CASE
-                WHEN trustworthiness_score >= {FakeNewsConfig.HIGH_CONFIDENCE_THRESHOLD} THEN 'high'
-                WHEN trustworthiness_score >= {FakeNewsConfig.MEDIUM_CONFIDENCE_THRESHOLD} THEN 'medium'
+                WHEN trustworthiness_score >= {FakeNewsConfig.HIGH_CONFIDENCE_THRESHOLD}
+                    THEN 'high'
+                WHEN trustworthiness_score >= {FakeNewsConfig.MEDIUM_CONFIDENCE_THRESHOLD}
+                    THEN 'medium'
                 ELSE 'low'
             END as trust_level,
             COUNT(*) as count

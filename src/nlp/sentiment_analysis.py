@@ -12,7 +12,7 @@ def pipeline(*args: object, **kwargs: object):
 
     This exists so tests can monkeypatch it without importing the heavy
     ``transformers`` dependency when it's not installed.  If the library is not
-    available a :class:`RuntimeError` is raised.
+    available a:class:`RuntimeError` is raised.
     """
     try:
         transformers = import_module("transformers")

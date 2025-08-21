@@ -93,6 +93,8 @@ async def get_sentiment_trends(
         # Add condition to only include articles with sentiment data
         conditions.append("sentiment_label IS NOT NULL")
 
+        # Build the where clause
+        where_clause = " AND ".join(conditions)
 
         # Determine date grouping based on group_by parameter
         if group_by == "week":
@@ -115,7 +117,9 @@ async def get_sentiment_trends(
             WHERE {where_clause}
             GROUP BY {date_trunc}, sentiment_label
             ORDER BY period, sentiment_label
-        """
+        """.format(
+            date_trunc=date_trunc, where_clause=where_clause
+        )
 
         trends_results = await db.execute_query(trends_query, params)
 
@@ -230,7 +234,9 @@ async def get_sentiment_summary(
             WHERE {where_clause}
             GROUP BY sentiment_label
             ORDER BY count DESC
-        """
+        """.format(
+            where_clause=where_clause
+        )
 
         results = await db.execute_query(query, params)
 
