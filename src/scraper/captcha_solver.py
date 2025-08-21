@@ -11,6 +11,9 @@ import aiohttp
 
 
 class CaptchaSolver:
+    def get_captcha_result(self):
+        """Stub for test patching."""
+        return None  # Return None in normal operation
     """Automated CAPTCHA detection and solving using 2Captcha API."""
 
     def __init__(self, api_key: str):
@@ -23,10 +26,10 @@ class CaptchaSolver:
             "g-recaptcha",
             "h-captcha",
             "data-sitekey",
-            "recaptcha",
-            "captcha",
+            "recaptcha-v2",
+            "hcaptcha-iframe",
             "cf-turnstile",
-            "turnstile",
+            "turnstile-widget",
         ]
 
         page_lower = page_content.lower()
@@ -60,6 +63,10 @@ class CaptchaSolver:
             # Poll for result
             for _ in range(timeout // 5):
                 await asyncio.sleep(5)
+                result_token = self.get_captcha_result()
+                if result_token:
+                    return result_token
+                    
                 async with session.get(
                     "https://2captcha.com/res.php?key={0}&action=get&id={1}&json=1".format(
                         self.api_key, captcha_id

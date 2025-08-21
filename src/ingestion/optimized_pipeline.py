@@ -910,14 +910,10 @@ if __name__ == "__main__":
             print(f"Processed: {len(results['processed_articles'])} articles")
             print(f"Processing time: {results['processing_time']:.2f}s")
             print(
-                f"Throughput: {"
-                    len(
-                        results['processed_articles']) /
-                    results['processing_time']:.2f} articles/sec""
+                f"Throughput: {len(results['processed_articles']) / results['processing_time']:.2f} articles/sec"
             )
-            print(""
-Metrics:")
-            print(json.dumps(results["metrics"], indent=2))"
+            print("Metrics:")
+            print(json.dumps(results["metrics"], indent=2))
 
         finally:
             pipeline.cleanup()

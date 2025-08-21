@@ -45,7 +45,7 @@ class PerformanceDashboard:
             "total_articles": 0,
             "total_requests": 0,
             "successful_requests": 0,
-            f"ailed_requests": 0,
+            "failed_requests": 0,
             "concurrent_connections": 0,
             "active_threads": 0,
         }
@@ -186,7 +186,7 @@ class PerformanceDashboard:
         if success:
             self.counters["successful_requests"] += 1
         else:
-            self.counters[f"ailed_requests"] += 1
+            self.counters["failed_requests"] += 1
             self.source_metrics[source]["errors"] += 1
 
         if response_time is not None:
@@ -254,7 +254,7 @@ class PerformanceDashboard:
         """Get basic performance statistics for testing and monitoring."""
         total_requests = (
             self.counters["successful_requests"] +
-                self.counters[f"ailed_requests"]
+                self.counters["failed_requests"]
         )
 
         # Calculate average response time
@@ -275,7 +275,7 @@ class PerformanceDashboard:
             "total_articles": self.counters["total_articles"],
             "total_requests": total_requests,
             "successful_requests": self.counters["successful_requests"],
-            f"ailed_requests": self.counters[f"ailed_requests"],
+            "failed_requests": self.counters["failed_requests"],
             "avg_response_time": avg_response_time,
             "uptime_seconds": time.time() - self.start_time,
             "articles_per_second": self.counters["total_articles"]

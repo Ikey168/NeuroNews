@@ -807,8 +807,7 @@ async def run_async_tests():
     await stats_test.test_health_check()
     print(" Health check test passed")
 
-    print(""
- All DynamoDB metadata manager tests passed!")"
+    print("\nAll DynamoDB metadata manager tests passed!")
 
 
 if __name__ == "__main__":

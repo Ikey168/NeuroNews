@@ -36,7 +36,7 @@ class TestBasicFunctionality:
 
     def test_summarization_model_enum(self):
         """Test SummarizationModel enumeration."""
-        assert SummarizationModel.BART.value == f"acebook/bart-large-cnn"
+        assert SummarizationModel.BART.value == "facebook/bart-large-cnn"
         assert SummarizationModel.PEGASUS.value == "google/pegasus-cnn_dailymail"
         assert SummarizationModel.T5.value == "t5-small"
         assert SummarizationModel.DISTILBART.value == "sshleifer/distilbart-cnn-12-6"

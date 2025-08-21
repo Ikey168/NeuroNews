@@ -206,7 +206,7 @@ class DuplicateDetector:
         """
         url = article.get("url", "")
         title = article.get("title", "")
-        content = article.get("content", "")"
+        content = article.get("content", "")
 
         # Check URL duplicates
         if url and url in self.url_cache:
@@ -330,13 +330,13 @@ class SourceReputationAnalyzer:
             Source analysis results
         """
         url = article.get("url", "")
-        source = article.get("source", "")"
+        source = article.get("source", "")
 
         if not url:
             return {
                 "reputation_score": 0.5,
                 "credibility_level": "unknown",
-                f"lags": ["missing_url"],
+                "flags": ["missing_url"],
                 "domain": None,
             }
 
@@ -417,7 +417,7 @@ class SourceReputationAnalyzer:
             r"one weird trick",
             r"amazing secret",
             r"\d+ reasons why",
-            r"this will blow your mind",'
+            r"this will blow your mind",
         ]
 
         for pattern in clickbait_patterns:
@@ -576,9 +576,8 @@ class ContentValidator:
                 score_adjustment -= 15
 
             # Check content quality indicators
-            if content.count(""
-") / len(content) > 0.1:
-                warnings.append("excessive_line_breaks")"
+            if content.count("\n") / max(len(content), 1) > 0.1:
+                warnings.append("excessive_line_breaks")
                 score_adjustment -= 5
 
             # Check for placeholder content
@@ -761,10 +760,7 @@ class DataValidationPipeline:
 
             if has_critical_issues or overall_score < 50:
                 logger.info(
-                    f"Article failed validation (score: {"
-                        overall_score}): {
-                        cleaned_article.get(
-                            'url', 'Unknown URL')}""
+                    f"Article failed validation (score: {overall_score}): {cleaned_article.get('url', 'Unknown URL')}"
                 )
                 self.rejected_count += 1
                 return None

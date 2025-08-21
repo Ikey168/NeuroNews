@@ -1,6 +1,39 @@
 """
 This module provides optimized Scrapy pipelines and components that integrate
-with the high-performance ingestion pipeline to improve overall throughput
+with th             # G         #            stats = self.ingestion_pipeline.get_performance_stats()
+            spider.logger.info(
+                f"Optimized pipeline stats: {stats['metrics']['summary']}"
+            )
+
+            # Save performance report
+            report_path = "data/optimization_report_{0}_{1}.json".format(nal stats
+        if self.ingestion_pipeline:
+            stats = self.ingestion_pipeline.get_performance_stats()
+            spider.logger.info(
+                f"Optimized pipeline stats: {stats['metrics']['summary']}"
+            )
+
+            # Save performance report   spider.logger.info(
+                f"Optimized pipeline stats: {stats['metrics']['summary']}"
+            )
+
+            # Save performance reportnal stats
+        if self.ingestion_pipeline:
+            stats = self.ingestion_pipeline.get_performance_stats()
+            spider.logger.info(
+                f"Optimized pipeline stats: {stats['metrics']['summary']}"
+            )
+
+            # Save performance report
+            report_path = "data/optimization_report_{0}_{1}.json".format(  spider.logger.info(
+                f"Optimized pipeline stats: {stats['metrics']['summary']}"
+            )
+
+            # Save performance report   spider.logger.info(
+                f"Optimized pipeline stats: {stats['metrics']['summary']}"
+            )
+
+            # Save performance reporth-performance ingestion pipeline to improve overall throughput
 and efficiency of the news scraping workflow.
 """
 
@@ -88,57 +121,13 @@ class OptimizedScrapyPipeline:
         if self.ingestion_pipeline:
             stats = self.ingestion_pipeline.get_performance_stats()
             spider.logger.info(
-                f"Optimized pipeline stats: {stats['metrics']['summary'}}
+                f"Optimized pipeline stats: {stats['metrics']['summary']}"
             )
 
-            # Save performance report"
+            # Save performance report
             report_path = "data/optimization_report_{0}_{1}.json".format(
-                spider.name, int(time.time())
+                # ...existing code...
             )
-            asyncio.run(
-                self.ingestion_pipeline.save_performance_report(report_path))
-
-            # Cleanup
-            self.ingestion_pipeline.cleanup()
-
-        # Cleanup thread pool
-        self.thread_pool.shutdown(wait=True)
-
-        logger.info(
-            "Optimized pipeline closed for spider: {0}".format(spider.name))
-
-    def process_item(self, item: NewsItem, spider: Spider) -> NewsItem:
-        """Process item through the optimized pipeline."""
-        try:
-            # Convert item to dictionary
-except Exception:
-    pass
-            article_data = self._item_to_dict(item)
-
-            # Add to buffer
-            self.article_buffer.append(article_data)
-            self.items_buffered += 1
-
-            # Check if buffer should be flushed
-            current_time = time.time()
-            should_flush = (
-                len(self.article_buffer) >= self.buffer_size
-                or current_time - self.last_flush_time >= self.buffer_timeout
-            )
-
-            if should_flush:
-                self._flush_buffer_async(spider)
-
-            self.items_processed += 1
-
-            # Update item with optimization metadata
-            item["optimization_processed"] = True
-            item["buffer_size"] = len(self.article_buffer)
-            item["processed_count"] = self.items_processed
-
-            return item
-
-        except Exception as e:
             spider.logger.error("Error in optimized pipeline: {0}".format(e))
             raise DropItem("Optimization processing failed: {0}".format(e))
 
@@ -200,15 +189,13 @@ except Exception:
         """Process a batch of articles through the ingestion pipeline."""
         try:
             # Create new event loop for this thread
-except Exception:
-    pass
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
+        except Exception:
+            pass
 
             try:
                 # Process articles through optimized pipeline
-except Exception:
-    pass
                 results = loop.run_until_complete(
                     self.ingestion_pipeline.process_articles_async(articles)
                 )
@@ -216,6 +203,8 @@ except Exception:
                 # Log results
                 processed_count = len(results["processed_articles"])
                 processing_time = results["processing_time"]
+            except Exception:
+                pass
                 throughput = processed_count / max(processing_time, 0.1)
 
                 spider.logger.info(
@@ -272,11 +261,8 @@ class HighThroughputValidationPipeline:
     def process_item(self, item: NewsItem, spider: Spider) -> NewsItem:
         """Fast validation of scraped items."""
         start_time = time.time()
-
         try:
             # Fast duplicate check
-except Exception:
-    pass
             url = item.get("url", "")
             if url in self.url_seen:
                 self.items_failed += 1
@@ -288,8 +274,7 @@ except Exception:
             if not validation_result["is_valid"]:
                 self.items_failed += 1
                 raise DropItem(
-                    f"Validation failed: {"
-                        validation_result['reason'}}"
+                    f"Validation failed: {validation_result['reason']}"
                 )
 
             # Add to seen URLs
@@ -304,19 +289,22 @@ except Exception:
             # Add validation metadata
             item["validation_score"] = validation_result["score"]
             item["validation_time"] = time.time() - start_time
-            item[f"ast_validation] = True
+            item["fast_validation"] = True
 
             self.items_passed += 1
             self.items_validated += 1
 
             return item
-
-        except DropItem:
-            self.items_validated += 1
-            raise
         except Exception as e:
             self.items_failed += 1
-            self.items_validated += 1"
+            self.items_validated += 1
+            spider.logger.error("Fast validation error: {0}".format(e))
+            raise DropItem("Validation error: {0}".format(e))
+            return item
+
+        except Exception as e:
+            self.items_failed += 1
+            self.items_validated += 1
             spider.logger.error("Fast validation error: {0}".format(e))
             raise DropItem("Validation error: {0}".format(e))
 
@@ -341,49 +329,45 @@ except Exception:
 
         # Content validation
         content = item.get("content", "")
-        if not content:
-            return {"is_valid": False, "reason": "Missing content", "score": 0}
+        try:
+            # Fast duplicate check
+            url = item.get("url", "")
+            if url in self.url_seen:
+                self.items_failed += 1
+                raise DropItem("Duplicate URL: {0}".format(url))
 
-        if len(content) < self.min_content_length:
-            return {
-                "is_valid": False,
-                "reason": "Content too short: {0}".format(len(content)),
-                "score": 0,
-            }
+            # Fast validation checks
+            validation_result = self._fast_validate_item(item)
 
-        # URL validation
-        url = item.get("url", "")
-        if not url or not url.startswith(("http://", "https://")):
-            return {"is_valid": False, "reason": "Invalid URL", "score": 0}
-
-        # Source validation
-        source = item.get("source", "")
-        if not source:
-            score -= 15
-
-        # Author validation (optional)
-        if item.get("author"):
-            score += 5
-
-        # Publication date validation (optional)
-        if item.get("published_date"):
-            score += 5
-
-        return {
-            "is_valid": True,
-            "reason": "Passed validation",
-            "score": max(0.0, min(100.0, score)),
-        }
-
-    def close_spider(self, spider: Spider):
-        """Log validation statistics when spider closes."""
-        if self.items_validated > 0:
-            pass_rate = (self.items_passed / self.items_validated) * 100
-            spider.logger.info(
-                "Fast validation stats: {0}/{1} passed ({2:.1f}% pass rate), {3} cache hits".format(
-                    self.items_passed, self.items_validated, pass_rate, self.cache_hits
+            if not validation_result["is_valid"]:
+                self.items_failed += 1
+                raise DropItem(
+                    f"Validation failed: {validation_result['reason']}"
                 )
-            )
+
+            # Add to seen URLs
+            self.url_seen.add(url)
+
+            # Limit cache size to prevent memory issues
+            if len(self.url_seen) > self.cache_size_limit:
+                self.url_seen.clear()
+                spider.logger.debug(
+                    "Cleared URL cache to prevent memory overflow")
+
+            # Add validation metadata
+            item["validation_score"] = validation_result["score"]
+            item["validation_time"] = time.time() - start_time
+            item["fast_validation"] = True
+
+            self.items_passed += 1
+            self.items_validated += 1
+
+            return item
+        except Exception as e:
+            self.items_failed += 1
+            self.items_validated += 1
+            spider.logger.error("Fast validation error: {0}".format(e))
+            raise DropItem("Validation error: {0}".format(e))
 
 
 class AdaptiveRateLimitPipeline:
@@ -541,52 +525,9 @@ class OptimizedStoragePipeline:
             "word_count": item.get("word_count", 0),
             "content_length": item.get("content_length", 0),
             "processing_metadata": {
-                "optimized_pipeline": True,
-                "storage_time": time.time(),
-            },
+                "optimized_pipeline": True
+            }
         }
-
-    def _flush_storage_buffer(self, spider: Spider):
-        """Flush storage buffer to all backends."""
-        if not self.storage_buffer:
-            return
-
-        items_to_store = self.storage_buffer.copy()
-        self.storage_buffer.clear()
-        self.last_flush_time = time.time()
-
-        try:
-            # Execute all storage backends
-except Exception:
-    pass
-            for backend in self.storage_backends:
-                backend(items_to_store, spider)
-
-            self.items_stored += len(items_to_store)
-            self.batches_written += 1
-
-            spider.logger.debug(
-                "Storage batch written: {0} items".format(len(items_to_store))
-            )
-
-        except Exception as e:
-            self.storage_errors += 1
-            spider.logger.error("Storage batch failed: {0}".format(e))
-
-    def _write_to_file(self, items: List[Dict[str, Any]], spider: Spider):
-        """Write items to file (example storage backend)."""
-        output_path = "data/optimized_articles_{0}.jsonl".format(spider.name)
-
-        try:
-            with open(output_path, "a", encoding="utf-8") as f:
-except Exception:
-    pass
-                for item in items:
-                    f.write(json.dumps(item, ensure_ascii=False) + ""
-")"
-        except Exception as e:
-            logger.error("File write failed: {0}".format(e))
-            raise
 
 
     def close_spider(self, spider: Spider):
@@ -604,13 +545,11 @@ except Exception:
 
 # Settings integration for Scrapy
 
-
 def configure_optimized_settings(settings: Dict[str, Any]) -> Dict[str, Any]:
-    """Configure Scrapy settings for optimized performance."""
-    optimized_settings=settings.copy()
+    optimized_settings = settings.copy()
 
     # Pipeline configuration
-    optimized_settings["ITEM_PIPELINES"]={
+    optimized_settings["ITEM_PIPELINES"] = {
         "src.ingestion.scrapy_integration.HighThroughputValidationPipeline": 100,
         "src.ingestion.scrapy_integration.OptimizedScrapyPipeline": 200,
         "src.ingestion.scrapy_integration.AdaptiveRateLimitPipeline": 300,
@@ -618,26 +557,26 @@ def configure_optimized_settings(settings: Dict[str, Any]) -> Dict[str, Any]:
     }
 
     # Concurrency optimization
-    optimized_settings["CONCURRENT_REQUESTS"]=32
-    optimized_settings["CONCURRENT_REQUESTS_PER_DOMAIN"]=8
-    optimized_settings["DOWNLOAD_DELAY"]=0.5
-    optimized_settings["RANDOMIZE_DOWNLOAD_DELAY"]=True
+    optimized_settings["CONCURRENT_REQUESTS"] = 32
+    optimized_settings["CONCURRENT_REQUESTS_PER_DOMAIN"] = 8
+    optimized_settings["DOWNLOAD_DELAY"] = 0.5
+    optimized_settings["RANDOMIZE_DOWNLOAD_DELAY"] = True
 
     # Memory optimization
-    optimized_settings["REACTOR_THREADPOOL_MAXSIZE"]=20
+    optimized_settings["REACTOR_THREADPOOL_MAXSIZE"] = 20
 
     # Optimized pipeline settings
-    optimized_settings["OPTIMIZED_MAX_CONCURRENT_TASKS"]=30
-    optimized_settings["OPTIMIZED_BATCH_SIZE"]=50
-    optimized_settings["OPTIMIZED_MAX_MEMORY_MB"]=512.0
-    optimized_settings["OPTIMIZED_ADAPTIVE_BATCHING"]=True
-    optimized_settings["OPTIMIZED_FAST_VALIDATION"]=True
+    optimized_settings["OPTIMIZED_MAX_CONCURRENT_TASKS"] = 30
+    optimized_settings["OPTIMIZED_BATCH_SIZE"] = 50
+    optimized_settings["OPTIMIZED_MAX_MEMORY_MB"] = 512.0
+    optimized_settings["OPTIMIZED_ADAPTIVE_BATCHING"] = True
+    optimized_settings["OPTIMIZED_FAST_VALIDATION"] = True
 
     # AutoThrottle optimization
-    optimized_settings["AUTOTHROTTLE_ENABLED"]=True
-    optimized_settings["AUTOTHROTTLE_START_DELAY"]=0.1
-    optimized_settings["AUTOTHROTTLE_MAX_DELAY"]=3.0
-    optimized_settings["AUTOTHROTTLE_TARGET_CONCURRENCY"]=2.0
+    optimized_settings["AUTOTHROTTLE_ENABLED"] = True
+    optimized_settings["AUTOTHROTTLE_START_DELAY"] = 0.1
+    optimized_settings["AUTOTHROTTLE_MAX_DELAY"] = 3.0
+    optimized_settings["AUTOTHROTTLE_TARGET_CONCURRENCY"] = 2.0
 
     return optimized_settings
 

@@ -60,6 +60,7 @@ class UserAgentRotator:
         self.session_duration_range = (300, 1800)  # 5-30 minutes
         self.profile_usage_count = 0
         self.max_profile_usage = random.randint(50, 150)  # Random usage before rotation
+        self.requests_with_current_profile = 0
 
         self.logger = logging.getLogger(__name__)
 
@@ -68,6 +69,21 @@ class UserAgentRotator:
             self.load_config(config_file)
         else:
             self._initialize_default_profiles()
+
+    def get_user_agent(self) -> str:
+        """Return the User-Agent string from the current profile."""
+        # Force rotation every few requests for better variety
+        if self.requests_with_current_profile >= 3:
+            self._rotate_profile()
+        
+        profile = self.get_current_profile()
+        self.requests_with_current_profile += 1
+        if profile:
+            return profile.user_agent
+        # fallback to random profile
+        if self.browser_profiles:
+            return random.choice(self.browser_profiles).user_agent
+        return "Mozilla/5.0 (compatible; NeuroNewsBot/1.0)"
 
     def get_random_headers(self) -> Dict[str, str]:
         """Get headers from a random browser profile."""
@@ -105,6 +121,19 @@ class UserAgentRotator:
         """Rotate to a new browser profile."""
         if not self.browser_profiles:
             self._initialize_default_profiles()
+
+        # Select a different profile than current
+        available_profiles = [p for p in self.browser_profiles if p != self.current_profile]
+        if available_profiles:
+            self.current_profile = random.choice(available_profiles)
+        else:
+            self.current_profile = random.choice(self.browser_profiles)
+
+        # Reset counters
+        self.profile_usage_count = 0
+        self.requests_with_current_profile = 0
+        self.session_start_time = time.time()
+        self.max_profile_usage = random.randint(50, 150)
 
         # Select a different profile than current
         available_profiles = [

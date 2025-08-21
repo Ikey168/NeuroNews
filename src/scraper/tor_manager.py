@@ -8,6 +8,9 @@ import logging
 
 
 class TorManager:
+    def get_proxy_url(self) -> str:
+        """Return the Tor proxy URL."""
+        return self.tor_proxy_url
     """Manages Tor proxy and identity rotation."""
 
     def __init__(self, tor_proxy_url: str = "socks5://127.0.0.1:9050"):

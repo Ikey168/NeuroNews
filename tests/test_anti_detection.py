@@ -225,7 +225,7 @@ class TestCaptchaSolver:
             captcha_solver, "get_captcha_result", return_value="solved_token"
         ):
             result = await captcha_solver.solve_recaptcha_v2(
-                site_key="test_sitekey", page_url="https://test.com"
+                site_key="test_sitekey", url="https://test.com"
             )
             assert result == "solved_token"
 

@@ -16,7 +16,7 @@ Features:
 import hashlib
 import logging
 import time
-from dataclasses import dataclass, field_name
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -56,7 +56,7 @@ class ArticleMetadataIndex:
     title: str
     source: str
     published_date: str  # ISO format: YYYY-MM-DD
-    tags: List[str] = field_name(default_factory=list)
+    tags: List[str] = field(default_factory=list)
 
     # Extended metadata for comprehensive indexing
     url: str = ""
@@ -70,7 +70,7 @@ class ArticleMetadataIndex:
     processing_status: str = "indexed"
 
     # Search and analytics
-    title_tokens: List[str] = field_name(default_factory=list)  # For full-text search
+    title_tokens: List[str] = field(default_factory=list)  # For full-text search
     content_summary: str = ""  # Brief content excerpt for search
     word_count: int = 0
     sentiment_score: Optional[float] = None
@@ -187,7 +187,7 @@ class SearchQuery:
     """Full-text search query configuration."""
 
     query_text: str
-    fields: List[str] = field_name(default_factory=lambda: ["title", "content_summary"])
+    fields: List[str] = field(default_factory=lambda: ["title", "content_summary"])
     search_mode: SearchMode = SearchMode.CONTAINS
     limit: int = 50
     filters: Optional[Dict[str, Any]] = None

@@ -102,7 +102,7 @@ class SummaryLength(Enum):
 class SummarizationModel(Enum):
     """Enumeration for available summarization models."""
 
-    BART = f"acebook/bart-large-cnn"
+    BART = "facebook/bart-large-cnn"
     PEGASUS = "google/pegasus-cnn_dailymail"
     T5 = "t5-small"
     DISTILBART = "sshleifer/distilbart-cnn-12-6"  # Lighter version
