@@ -198,8 +198,7 @@ def test_demo_results():
             assert field in event, "Missing field in event: {0}".format(field)
 
     print(
-        f" Demo results validation passed: {"
-            clustering['events_detected']} events detected""
+        f"✅ Demo results validation passed: {clustering['events_detected']} events detected"
     )
 
 
@@ -316,27 +315,24 @@ def main():
     total = len(tests)
 
     for test_func in tests:
-        print(""
- Running {0}...".format(test_func.__name__))"
+        print("🧪 Running {0}...".format(test_func.__name__))
         try:
             test_func()
             passed += 1
         except Exception as e:
             print("❌ {0} failed: {1}".format(test_func.__name__, e))
 
-    print(""
-" + "=" * 50)
-    print(" VALIDATION SUMMARY: {0}/{1} tests passed".format(passed, total))"
+    print("\n" + "=" * 50)
+    print("📊 VALIDATION SUMMARY: {0}/{1} tests passed".format(passed, total))
 
     if passed == total:
-        print(" ALL SIMPLIFIED TESTS PASSED!")
-        print(""
- Issue #31 implementation is structurally complete")
-        print(" All required files present with substantial content")
-        print(" Configuration and schema properly defined")
-        print(" API endpoints correctly implemented")
-        print(" Demo results show successful event detection")
-        print(" Ready for deployment and further testing")"
+        print("🎉 ALL SIMPLIFIED TESTS PASSED!")
+        print("\n✅ Issue #31 implementation is structurally complete")
+        print("✅ All required files present with substantial content")
+        print("✅ Configuration and schema properly defined")
+        print("✅ API endpoints correctly implemented")
+        print("✅ Demo results show successful event detection")
+        print("✅ Ready for deployment and further testing")
         return True
     else:
         print("❌ {0} tests failed".format(total - passed))

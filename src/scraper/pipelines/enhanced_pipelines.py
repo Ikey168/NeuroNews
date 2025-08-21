@@ -57,7 +57,7 @@ class ValidationPipeline:
         if item.get("published_date"):
             try:
                 # Try to parse the date to ensure it's valid
-                if "T" in item["published_date"]: '
+                if "T" in item["published_date"]:
                     datetime.fromisoformat(
                         item["published_date"].replace("Z", "+00:00")
                     )
@@ -165,8 +165,7 @@ class EnhancedJsonWriterPipeline:
         if self.combined_first_item:
             self.combined_first_item = False
         else:
-            self.combined_file.write(","
-")"
+            self.combined_file.write(",\n")
         self.combined_file.write(line)
 
         # Write to source-specific file
@@ -183,8 +182,7 @@ class EnhancedJsonWriterPipeline:
         if self.source_first_items[source]:
             self.source_first_items[source] = False
         else:
-            self.source_files[source].write(","
-")"
+            self.source_files[source].write(",\n")
         self.source_files[source].write(line)
 
         return item

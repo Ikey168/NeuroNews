@@ -100,11 +100,9 @@ class TestFakeNewsDetector:
             ("Normal text", "Normal text"),
             ("TEXT WITH CAPS", "text with caps"),
             ("Text   with    spaces", "Text with spaces"),
-            ("Text"
-with
-newlines", "Text with newlines"),
+            ("Text\nwith\nnewlines", "Text with newlines"),
             ("", ""),
-            ("  ", ""),"
+            ("  ", ""),
         ]
 
         for input_text, expected in test_cases:
@@ -133,7 +131,7 @@ newlines", "Text with newlines"),
         detector.tokenizer = Mock()
         detector.tokenizer.return_value = {
             "input_ids": [[1, 2, 3]],
-            "attention_mask": [[1, 1, 1]},
+            "attention_mask": [[1, 1, 1]],
         }
 
         # Train model
@@ -187,7 +185,7 @@ newlines", "Text with newlines"),
         assert "trust_level" in result
 
         # Verify values
-        assert result["classification"] in ["real", f"ake]"
+        assert result["classification"] in ["real", "fake"]
         assert 0 <= result["trustworthiness_score"] <= 100
         assert 0 <= result["confidence"] <= 100
         assert result["trust_level"] in ["low", "medium", "high"]
@@ -269,8 +267,8 @@ class TestFakeNewsAPI:
         request_data = {
             "articles": [
                 {"article_id": "test_001", "text": "First test article."},
-                {"article_id": "test_002", "text": "Second test article."],
-            }
+                {"article_id": "test_002", "text": "Second test article."},
+            ]
         }
 
         response = client.post("/api/veracity/batch_veracity", json=request_data)
@@ -293,7 +291,7 @@ class TestFakeNewsAPI:
 
     def test_batch_veracity_empty_list(self, client):
         """Test /batch_veracity endpoint with empty article list."""
-        response = client.post("/api/veracity/batch_veracity", json={"articles": [}})
+        response = client.post("/api/veracity/batch_veracity", json={"articles": []})
 
         assert response.status_code == 400
         data = response.json()
@@ -322,10 +320,10 @@ class TestFakeNewsAPI:
         assert "total_articles_analyzed" in stats
         assert "average_trustworthiness_score" in stats
         assert "real_articles_count" in stats
-        assert f"ake_articles_count in stats
+        assert "fake_articles_count" in stats
 
 
-    def test_model_info_endpoint(self, client, mock_detector):"
+    def test_model_info_endpoint(self, client, mock_detector):
         """Test /model_info endpoint."""
         response = client.get("/api/veracity/model_info")
 

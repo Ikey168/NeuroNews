@@ -181,13 +181,7 @@ class NERArticleProcessor(ArticleProcessor):
 
             for article, sentiment_result in zip(articles, sentiment_results):
                 # Combine title and content for entity extraction
-                full_text = f"{
-                    article.get(
-                        'title',
-                        '')}. {
-                    article.get(
-                        'content',
-                        '')}"
+                full_text = f"{article.get('title', '')}. {article.get('content', '')}"
 
                 # Extract entities
                 entities = self.ner_processor.extract_entities(

@@ -690,9 +690,7 @@ class KnowledgeGraphPopulator:
 
                 except Exception as e:
                     logger.error(
-                        f"Failed to process article {
-                            article.get('id')}: {
-                            str(e)}"
+                        f"Failed to process article {article.get('id')}: {str(e)}"
                     )
                     failed_articles += 1
 
