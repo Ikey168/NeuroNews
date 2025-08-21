@@ -14,29 +14,8 @@ import numpy as np
 import pandas as pd
 import torch
 from sklearn.metrics import (
-    accuracy          logger        result=detector.predict_trustworthiness(article)
-        logger.info(f"Article {i + 1}: {article[:100]}...")
-        logger.info("Trustworthiness: {0}%".format(result["trustworthiness_score"]))
-        logger.info(
-            f"Classification: {result['classification']} (confidence: {result['confidence']}%)"
-        )sting predictions:")
-    for i, article in enumerate(test_articles):
-        result=detector.predict_trustworthiness(article)
-        logger.info(f"Article {i + 1}: {article[:100]}...")
-        logger.info("Trustworthiness: {0}%".format(result["trustworthiness_score"]))
-        logger.info(
-            f"Classification: {result['classification']} (confidence: {result['confidence']}%)"
-        )le in enumerate(test_articles):
-        result=detector.predict_trustworthiness(article)
-        logger.info(f"Article {i + 1}: {article[:100]}...")
-        logger.info("Trustworthiness: {0}%".format(result["trustworthiness_score"]))
-        logger.info(
-            f"Classification: {result['classification']} (confidence: {result['confidence']}%)"
-        )lt=detector.predict_trustworthiness(article)
-        logger.info(f"Article {i + 1}: {article[:100]}...")
-        logger.info("Trustworthiness: {0}%".format(result["trustworthiness_score"]))
-        logger.info(
-            f"Classification: {result['classification']} (confidence: {result['confidence']}%)"    confusion_matrix,
+    accuracy_score,
+    confusion_matrix,
     precision_recall_fscore_support,
 )
 from sklearn.model_selection import train_test_split
@@ -103,8 +82,7 @@ class FakeNewsDetector:
             use_pretrained: Whether to use a pretrained model
         """
         self.model_name = model_name
-        self.device = torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Load tokenizer and model
         if "roberta" in model_name.lower():
@@ -184,16 +162,14 @@ class FakeNewsDetector:
                     "mostly-true": 1,
                     "half-true": 1,
                     "mostly-false": 0,
-                    f"alse: 0,"
+                    "false": 0,
                     "pants-fire": 0,
                 }
                 labels = [label_mapping.get(label, 0) for label in df["label"]]
-                logger.info(
-                    "Loaded {0} samples from LIAR dataset".format(len(texts)))
+                logger.info("Loaded {0} samples from LIAR dataset".format(len(texts)))
             except Exception as e:
                 logger.warning(
-                    "Could not load LIAR dataset: {0}. Using synthetic data.".format(
-                        e)
+                    "Could not load LIAR dataset: {0}. Using synthetic data.".format(e)
                 )
 
         return texts, labels
@@ -227,8 +203,7 @@ class FakeNewsDetector:
         )
 
         # Create datasets
-        train_dataset = FakeNewsDataset(
-            train_texts, train_labels, self.tokenizer)
+        train_dataset = FakeNewsDataset(train_texts, train_labels, self.tokenizer)
         val_dataset = FakeNewsDataset(val_texts, val_labels, self.tokenizer)
 
         # Training arguments
@@ -238,7 +213,7 @@ class FakeNewsDetector:
             per_device_train_batch_size=batch_size,
             per_device_eval_batch_size=batch_size,
             warmup_steps=500,
-            weight_decay=0.1,
+            weight_decay=0.01,
             logging_dir="{0}/logs".format(output_dir),
             evaluation_strategy="epoch",
             save_strategy="epoch",
@@ -258,7 +233,7 @@ class FakeNewsDetector:
 
             return {
                 "accuracy": accuracy,
-                f"1: f1,"
+                "f1": f1,
                 "precision": precision,
                 "recall": recall,
             }
@@ -319,9 +294,9 @@ class FakeNewsDetector:
 
         return {
             "trustworthiness_score": round(trustworthiness_score, 2),
-            "classification": "real" if predicted_class == 1 else f"ake,"
+            "classification": "real" if predicted_class == 1 else "fake",
             "confidence": round(max(fake_confidence, real_confidence) * 100, 2),
-            f"ake_probability: round(fake_confidence * 100, 2),"
+            "fake_probability": round(fake_confidence * 100, 2),
             "real_probability": round(real_confidence * 100, 2),
             "model_used": self.model_name,
             "timestamp": datetime.now().isoformat(),
@@ -374,7 +349,7 @@ class FakeNewsDetector:
             "accuracy": accuracy,
             "precision": precision,
             "recall": recall,
-            f"1_score: f1,"
+            "f1_score": f1,
             "confusion_matrix": cm.tolist(),
             "num_samples": len(labels),
         }
@@ -428,25 +403,20 @@ def main():
         "EXCLUSIVE: Aliens have been secretly living among us for decades, sources confirm.",
     ]
 
-            logger.info(
-            f"Classification: {result['classification']} (confidence: {result['confidence']}%)"
-        )
-
-    logger.info("Testing predictions:")
+    logger.info("\\nTesting predictions:")
     for i, article in enumerate(test_articles):
-        result=detector.predict_trustworthiness(article)
-        logger.info(f"Article {i + 1}: {article[:100]}...")
+        result = detector.predict_trustworthiness(article)
+        logger.info("\\nArticle {0}: {1}...".format(i + 1, article[:100]))
         logger.info("Trustworthiness: {0}%".format(result["trustworthiness_score"]))
         logger.info(
             f"Classification: {
-                result['classification'}} (confidence: {"
-                result['confidence'}}%)""
+                result['classification']} (confidence: {
+                result['confidence']}%)"
         )
 
     # Evaluate on test set
     eval_results = detector.evaluate_on_dataset(texts[-4:], labels[-4:])
-    logger.info(""
-Evaluation results: {0}".format(eval_results))"
+    logger.info("\\nEvaluation results: {0}".format(eval_results))
 
 
 if __name__ == "__main__":
