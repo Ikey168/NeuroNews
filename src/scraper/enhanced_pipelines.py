@@ -210,7 +210,10 @@ class QualityFilterPipeline:
         if content_length < self.min_content_length:
             self.filtered_count += 1
             spider.logger.info(
-                f"Article filtered - short content ({content_length}): {item.get('url', 'Unknown URL')}"
+                f"Article filtered - short content ({content_length}): {
+                    item.get(
+                        'url',
+                        'Unknown URL')}"
             )
             raise DropItem(
                 "Article content length ({0}) below threshold ({1})".format(

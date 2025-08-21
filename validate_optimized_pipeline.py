@@ -5,6 +5,9 @@ This script validates the performance improvements of the optimized data ingesti
 pipeline by running benchmarks and comparing results with baseline performance.
 """
 
+from src.ingestion.optimized_pipeline import (
+    OptimizationConfig, OptimizedIngestionPipeline, create_optimized_pipeline,
+    create_performance_optimized_pipeline)
 import argparse
 import asyncio
 import json
@@ -19,9 +22,6 @@ from typing import Any, Dict, List, Tuple
 # Add project root to path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from src.ingestion.optimized_pipeline import (
-    OptimizationConfig, OptimizedIngestionPipeline, create_optimized_pipeline,
-    create_performance_optimized_pipeline)
 
 # Configure logging
 logging.basicConfig(
@@ -86,7 +86,7 @@ class PerformanceValidator:
                 "url": f"https://{template['source'].lower()}.com/article/{i}",
                 "content": template["content_base"] * content_multiplier,
                 "source": template["source"],
-                "published_date": "2024-01-{0}T{1}:00:00Z".format((i % 28) + 1:02d, (i % 24):02d),
+                "published_date": "2024-01-{0}T{1}:00:00Z".format((i % 28) + 1: 02d, (i % 24): 02d),
                 "author": f"{template['author_base']} {i % 10}",
                 "category": template["category"],
                 "scraped_date": time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -103,7 +103,8 @@ class PerformanceValidator:
         self, articles: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """Run baseline processing (simulated serial processing)."""
-        logger.info("Running baseline benchmark (simulated serial processing)...")
+        logger.info(
+            "Running baseline benchmark (simulated serial processing)...")
 
         start_time = time.time()
         processed_articles = []
@@ -180,7 +181,8 @@ class PerformanceValidator:
         comparison_results = {}
 
         for size in dataset_sizes:
-            logger.info(f"\n{'='*50}")
+            logger.info(f"
+{'='*50}")
             logger.info("Testing with {0} articles".format(size))
             logger.info(f"{'='*50}")
 
@@ -236,9 +238,10 @@ class PerformanceValidator:
 
     def _print_size_comparison(self, size: int, results: Dict[str, Any]):
         """Print comparison results for a specific dataset size."""
-        print("\nResults for {0} articles:".format(size))
+        print(""
+Results for {0} articles:".format(size))
         print(
-            f"{'Configuration':<20} {'Time (s)':<10} {'Throughput (art/s)':<18} {'Speedup':<10}"
+            f"{'Configuration':<20} {'Time (s)':<10} {'Throughput (art/s)':<18} {'Speedup':<10}""
         )
         print("-" * 70)
 
@@ -253,9 +256,11 @@ class PerformanceValidator:
                 "{0} {1} {2} {3}x".format(config_name:<20, time_taken:<10.3f, throughput:<18.1f, speedup:<10.2f)
             )
 
+
     async def run_stress_test(self, max_articles: int = 2000) -> Dict[str, Any]:
         """Run stress test with increasing load."""
-        logger.info("\nRunning stress test up to {0} articles...".format(max_articles))
+        logger.info(""
+Running stress test up to {0} articles...".format(max_articles))"
 
         stress_results = {}
         article_counts = [100, 250, 500, 750, 1000, 1500, 2000]
@@ -297,7 +302,8 @@ class PerformanceValidator:
 
     async def validate_memory_efficiency(self) -> Dict[str, Any]:
         """Validate memory efficiency of the pipeline."""
-        logger.info("\nValidating memory efficiency...")
+        logger.info(""
+Validating memory efficiency...")"
 
         # Test with different memory limits
         memory_configs = [
@@ -367,6 +373,7 @@ class PerformanceValidator:
 
         except Exception as e:
             logger.error("Failed to save results: {0}".format(e))
+
 
     def generate_performance_report(self, results: Dict[str, Any]) -> str:
         """Generate a comprehensive performance report."""
@@ -458,7 +465,8 @@ class PerformanceValidator:
             ]
         )
 
-        return "\n".join(report_lines)
+        return ""
+".join(report_lines)"
 
     def _analyze_best_configurations(
         self, comparison_results: Dict[str, Any]
@@ -527,27 +535,30 @@ async def main():
         logger.info("Test data generated: {0} articles".format(len(validator.test_data)))
 
         # Run performance comparison
-        logger.info("\n" + "=" * 50)
+        logger.info(""
+" + "=" * 50)
         logger.info("RUNNING PERFORMANCE COMPARISON")
-        logger.info("=" * 50)
+        logger.info("=" * 50)"
 
         comparison_results = await validator.run_performance_comparison(dataset_sizes)
         all_results["performance_comparison"] = comparison_results
 
         # Run stress test if requested
         if args.stress_test:
-            logger.info("\n" + "=" * 50)
+            logger.info(""
+" + "=" * 50)
             logger.info("RUNNING STRESS TEST")
-            logger.info("=" * 50)
+            logger.info("=" * 50)"
 
             stress_results = await validator.run_stress_test(max_stress_articles)
             all_results["stress_test"] = stress_results
 
         # Run memory efficiency test if requested
         if args.memory_test:
-            logger.info("\n" + "=" * 50)
+            logger.info(""
+" + "=" * 50)
             logger.info("RUNNING MEMORY EFFICIENCY TEST")
-            logger.info("=" * 50)
+            logger.info("=" * 50)"
 
             memory_results = await validator.validate_memory_efficiency()
             all_results["memory_efficiency"] = memory_results
@@ -557,7 +568,8 @@ async def main():
 
         # Generate and print report
         report = validator.generate_performance_report(all_results)
-        print("\n" + report)
+        print(""
+" + report)"
 
         # Save report to file
         if args.output:

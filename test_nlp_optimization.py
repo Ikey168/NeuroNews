@@ -26,9 +26,15 @@ logger = logging.getLogger(__name__)
 # Import modules to test
 try:
     from src.nlp.optimized_nlp_pipeline import (
-        CacheManager, MemoryManager, ModelManager, NLPConfig,
-        OptimizedNLPPipeline, create_high_performance_nlp_pipeline,
-        create_memory_optimized_nlp_pipeline, create_optimized_nlp_pipeline)
+        CacheManager,
+        MemoryManager,
+        ModelManager,
+        NLPConfig,
+        OptimizedNLPPipeline,
+        create_high_performance_nlp_pipeline,
+        create_memory_optimized_nlp_pipeline,
+        create_optimized_nlp_pipeline,
+    )
 
     OPTIMIZED_PIPELINE_AVAILABLE = True
 except ImportError as e:
@@ -36,13 +42,15 @@ except ImportError as e:
     OPTIMIZED_PIPELINE_AVAILABLE = False
 
 try:
-    from src.nlp.nlp_integration import (IntegratedNLPProcessor,
-                                         OptimizedArticleEmbedder,
-                                         OptimizedEventClusterer,
-                                         OptimizedSentimentAnalyzer,
-                                         create_balanced_nlp_processor,
-                                         create_high_performance_nlp_processor,
-                                         create_memory_efficient_nlp_processor)
+    from src.nlp.nlp_integration import (
+        IntegratedNLPProcessor,
+        OptimizedArticleEmbedder,
+        OptimizedEventClusterer,
+        OptimizedSentimentAnalyzer,
+        create_balanced_nlp_processor,
+        create_high_performance_nlp_processor,
+        create_memory_efficient_nlp_processor,
+    )
 
     INTEGRATION_AVAILABLE = True
 except ImportError as e:
@@ -101,7 +109,8 @@ class TestOptimizedNLPPipeline:
         cache_manager = CacheManager(test_config)
 
         # Test cache key generation
-        key = cache_manager._generate_cache_key("test content", "test_model", "test_op")
+        key = cache_manager._generate_cache_key(
+            "test content", "test_model", "test_op")
         assert isinstance(key, str)
         assert len(key) > 0
 
@@ -213,7 +222,7 @@ class TestOptimizedNLPPipeline:
             for result in results["results"]:
                 assert "article_id" in result
                 assert "processing_time" in result
-                # Sentiment might fail without proper models, that's ok for testing
+                # Sentiment might fail without proper models, that's ok for testing'
 
         finally:
             await pipeline.cleanup()
@@ -224,10 +233,11 @@ class TestOptimizedNLPPipeline:
     def test_factory_functions(self):
         """Test factory functions for pipeline creation."""
         # Test optimized pipeline
-        pipeline1 = create_optimized_nlp_pipeline(max_threads=2, enable_cache=False)
+        pipeline1 = create_optimized_nlp_pipeline(
+            max_threads=2, enable_cache=False)
         assert isinstance(pipeline1, OptimizedNLPPipeline)
         assert pipeline1.config.max_worker_threads == 2
-        assert pipeline1.config.enable_redis_cache == False
+        assert pipeline1.config.enable_redis_cache is False
 
         # Test high performance pipeline
         pipeline2 = create_high_performance_nlp_pipeline()
@@ -288,7 +298,8 @@ class TestNLPIntegration:
 
         except Exception as e:
             # Sentiment analysis might fail without proper models
-            logger.info("Sentiment analysis test failed (expected): {0}".format(e))
+            logger.info(
+                "Sentiment analysis test failed (expected): {0}".format(e))
 
     @pytest.mark.skipif(
         not INTEGRATION_AVAILABLE, reason="NLP integration not available"
@@ -311,7 +322,8 @@ class TestNLPIntegration:
 
         except Exception as e:
             # Embedding generation might fail without proper models
-            logger.info("Embedding generation test failed (expected): {0}".format(e))
+            logger.info(
+                "Embedding generation test failed (expected): {0}".format(e))
 
     @pytest.mark.skipif(
         not INTEGRATION_AVAILABLE, reason="NLP integration not available"
@@ -352,7 +364,8 @@ class TestNLPIntegration:
 
             # Test comprehensive processing with limited operations
             results = await processor.process_articles_comprehensive(
-                test_articles, operations=["keywords"]  # Use keywords as it's simplest
+                # Use keywords as it's simplest
+                test_articles, operations=["keywords"]'
             )
 
             assert isinstance(results, dict)
@@ -366,7 +379,8 @@ class TestNLPIntegration:
             assert "optimization_enabled" in stats
 
         except Exception as e:
-            logger.info("Integrated processor test failed (expected): {0}".format(e))
+            logger.info(
+                "Integrated processor test failed (expected): {0}".format(e))
         finally:
             await processor.cleanup()
 
@@ -399,14 +413,16 @@ class TestPerformanceOptimizations:
     )
     def test_adaptive_batching(self):
         """Test adaptive batching functionality."""
-        config = NLPConfig(adaptive_batching=True, batch_size=4, max_batch_size=16)
+        config = NLPConfig(adaptive_batching=True,
+                           batch_size=4, max_batch_size=16)
         pipeline = OptimizedNLPPipeline(config)
 
         # Create articles with varying complexity
         articles = [
             {"id": "short_{0}".format(i), "content": "Short content"} for i in range(5)
         ] + [
-            {"id": "long_{0}".format(i), "content": "Very long content " * 100} for i in range(3)
+            {"id": "long_{0}".format(i), "content": "Very long content " * 100}
+            for i in range(3)
         ]
 
         batches = pipeline._create_adaptive_batches(articles)
@@ -427,7 +443,8 @@ class TestPerformanceOptimizations:
         try:
             # Test that pipeline can handle concurrent operations
             articles = [
-                {"id": "test_{0}".format(i), "content": "Test content for concurrency"}
+                {"id": "test_{0}".format(
+                    i), "content": "Test content for concurrency"}
                 for i in range(4)
             ]
 
@@ -442,7 +459,8 @@ class TestPerformanceOptimizations:
             # Should not raise exceptions due to concurrency issues
             for result in results:
                 if isinstance(result, Exception):
-                    logger.info("Concurrent processing test result: {0}".format(result))
+                    logger.info(
+                        "Concurrent processing test result: {0}".format(result))
                 else:
                     assert isinstance(result, dict)
 
@@ -467,7 +485,8 @@ class TestPerformanceOptimizations:
 
         stats = memory_manager.get_stats()
         assert stats["current_usage_mb"] > 0
-        assert stats["usage_ratio"] >= 0  # Allow for any test environment variation
+        # Allow for any test environment variation
+        assert stats["usage_ratio"] >= 0
 
 
 class TestErrorHandlingAndFallbacks:
@@ -500,7 +519,8 @@ class TestErrorHandlingAndFallbacks:
     @pytest.mark.asyncio
     async def test_cache_failure_handling(self):
         """Test handling of cache failures."""
-        config = NLPConfig(enable_redis_cache=True, redis_host="nonexistent_host")
+        config = NLPConfig(enable_redis_cache=True,
+                           redis_host="nonexistent_host")
         cache_manager = CacheManager(config)
 
         # Should handle Redis connection failure gracefully
@@ -524,7 +544,8 @@ class TestErrorHandlingAndFallbacks:
 
         # Test with non-existent model
         try:
-            model = model_manager.get_model("nonexistent-model", "sentiment-analysis")
+            model = model_manager.get_model(
+                "nonexistent-model", "sentiment-analysis")
             # Should fail gracefully
             assert model is None or hasattr(model, "__call__")
         except Exception as e:
@@ -548,20 +569,21 @@ class TestAWSSageMakerIntegration:
 
         assert config.sagemaker_endpoint_name == "test-endpoint"
         assert config.sagemaker_model_name == "test-model"
-        assert config.enable_sagemaker_batch_transform == True
+        assert config.enable_sagemaker_batch_transform is True
 
     @pytest.mark.skipif(
         not OPTIMIZED_PIPELINE_AVAILABLE, reason="Optimized pipeline not available"
     )
     def test_model_quantization_config(self):
         """Test model quantization configuration for SageMaker deployment."""
-        config = NLPConfig(enable_model_quantization=True, use_gpu_if_available=True)
+        config = NLPConfig(enable_model_quantization=True,
+                           use_gpu_if_available=True)
 
         model_manager = ModelManager(config)
 
         # Test that quantization is enabled
-        assert config.enable_model_quantization == True
-        assert model_manager.config.enable_model_quantization == True
+        assert config.enable_model_quantization is True
+        assert model_manager.config.enable_model_quantization is True
 
 
 # Performance benchmark tests (marked slow)
@@ -602,9 +624,11 @@ class TestPerformanceBenchmarks:
             throughput = len(articles) / processing_time
 
             logger.info(
-                "Benchmark: {0} articles in {1}s".format(len(articles), processing_time:.2f)
+                "Benchmark: {0} articles in {1:.2f}s".format(
+                    len(articles), processing_time
+                )
             )
-            logger.info("Throughput: {0} articles/sec".format(throughput:.2f))
+            logger.info("Throughput: {0:.2f} articles/sec".format(throughput))
 
             # Assert reasonable performance (adjust thresholds as needed)
             assert throughput > 5.0  # At least 5 articles per second
@@ -647,8 +671,8 @@ class TestPerformanceBenchmarks:
             results2 = await pipeline.process_articles_async(articles, ["keywords"])
             second_run_time = time.time() - start_time
 
-            logger.info("First run: {0}s".format(first_run_time:.2f))
-            logger.info("Second run: {0}s".format(second_run_time:.2f))
+            logger.info("First run: {0:.2f}s".format(first_run_time))
+            logger.info("Second run: {0:.2f}s".format(second_run_time))
 
             # Second run should be faster due to caching
             # (Note: might not always be true due to test environment variability)
@@ -667,7 +691,8 @@ class TestPerformanceBenchmarks:
 def run_tests():
     """Run all optimization tests."""
     pytest.main(
-        [__file__, "-v", "--tb=short", "-m", "not slow"]  # Skip slow tests by default
+        # Skip slow tests by default
+        [__file__, "-v", "--tb=short", "-m", "not slow"]
     )
 
 
@@ -680,11 +705,13 @@ if __name__ == "__main__":
     print("Running NLP Pipeline Optimization Tests...")
     run_tests()
 
-    print("\nTo run performance benchmarks, use:")
-    print("python test_nlp_optimization.py --benchmark")
+    print(""
+To run performance benchmarks, use:")
+    print("python test_nlp_optimization.py --benchmark")"
 
     import sys
 
     if "--benchmark" in sys.argv:
-        print("\nRunning performance benchmarks...")
+        print(""
+Running performance benchmarks...")"
         run_performance_tests()

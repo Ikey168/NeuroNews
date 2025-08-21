@@ -188,7 +188,10 @@ async def get_user_permissions(
     # Users can only view their own permissions unless they're admin
     if current_user.get("sub") != user_id and current_user.get(
         "role", ""
-    ).lower() not in ["admin", "administrator"]:
+    ).lower() not in [
+        "admin",
+        "administrator",
+    ]:
         raise HTTPException(
             status_code=403, detail="Can only view your own permissions"
         )

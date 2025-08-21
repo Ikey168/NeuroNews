@@ -24,6 +24,8 @@ from typing import Any, Dict, List, Optional
 # Import optimized NLP components from Issue #35
 try:
     from src.nlp.nlp_integration import IntegratedNLPProcessor
+except Exception:
+    pass
     from src.nlp.optimized_nlp_pipeline import NLPConfig
 
     OPTIMIZED_NLP_AVAILABLE = True
@@ -33,6 +35,8 @@ except ImportError:
 # Import existing components
 try:
     from src.nlp.ner_processor import NERProcessor
+except Exception:
+    pass
 
     KNOWLEDGE_GRAPH_AVAILABLE = True
 except ImportError:
@@ -82,7 +86,8 @@ class EnhancedEntity:
 
         # Handle person names (capitalize properly)
         if self.label == "PERSON":
-            normalized = " ".join(word.capitalize() for word in normalized.split())
+            normalized = " ".join(word.capitalize()
+                                  for word in normalized.split())
 
         return normalized
 
@@ -136,7 +141,7 @@ class AdvancedEntityExtractor:
                 # Full names
                 r"\b[A-Z][a-z]+ [A-Z][a-z]+(?:\s+[A-Z][a-z]+)?\b",
                 r"\b(?:Dr\.|Prof\.|Mr\.|Ms\.|Mrs\.)\s+[A-Z][a-z]+\b",  # Titles
-            ],
+            },
         },
         "ORGANIZATION": {
             "neptune_label": "Organization",
@@ -145,7 +150,7 @@ class AdvancedEntityExtractor:
                 r"\b[A-Z][a-z]*(?:\s+[A-Z][a-z]*)*\s+(?:Inc\.?|LLC|Corp\.?|Ltd\.?|Co\.?)\b",
                 r"\b[A-Z][A-Z]+\b",  # Acronyms
                 r"\bGoogle|Microsoft|Apple|Amazon|Facebook|Meta|Tesla|Twitter|LinkedIn\b",
-            ],
+            },
         },
         "TECHNOLOGY": {
             "neptune_label": "Technology",
@@ -178,7 +183,7 @@ class AdvancedEntityExtractor:
                 "iot",
                 "5g",
                 "quantum computing",
-            ],
+            },
         },
         "POLICY": {
             "neptune_label": "Policy",
@@ -198,14 +203,14 @@ class AdvancedEntityExtractor:
                 "license",
                 "terms of service",
                 "user agreement",
-            ],
+            },
         },
         "LOCATION": {
             "neptune_label": "Location",
             "properties": ["locationName", "type", "country", "region"],
             "patterns": [
                 # City, State
-                r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*,\s*[A-Z]{2}\b",
+                r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*,\s*[A-Z}{2}\b",
                 # Silicon Valley, etc.
                 r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+Valley\b",
             ],
@@ -246,7 +251,7 @@ class AdvancedEntityExtractor:
         "LOCATED_IN": [
             r"(\w+(?:\s+\w+)*)\s+(?:(?:is\s+)?(?:located|based|headquartered)\s+in)\s+(\w+(?:\s+\w+)*)",
             # Company, Location
-            r"(\w+(?:\s+\w+)*),?\s+(\w+(?:\s+\w+)*(?:,\s*[A-Z]{2})?)",
+            r"(\w+(?:\s+\w+)*),?\s+(\w+(?:\s+\w+)*(?:,\s*[A-Z}{2})?)",
         ],
     }
 
@@ -258,7 +263,8 @@ class AdvancedEntityExtractor:
             config: Configuration dictionary for the extractor
         """
         self.config = config or {}
-        self.confidence_threshold = self.config.get("confidence_threshold", 0.7)
+        self.confidence_threshold = self.config.get(
+            "confidence_threshold", 0.7)
         self.max_entity_distance = self.config.get("max_entity_distance", 200)
         self.min_relationship_confidence = self.config.get(
             "min_relationship_confidence", 0.6
@@ -287,6 +293,8 @@ class AdvancedEntityExtractor:
         """Initialize NLP processing components."""
         try:
             # Try to use optimized NLP pipeline first
+except Exception:
+    pass
             if OPTIMIZED_NLP_AVAILABLE:
                 nlp_config = NLPConfig(
                     max_worker_threads=4,
@@ -295,7 +303,8 @@ class AdvancedEntityExtractor:
                     use_gpu_if_available=True,
                 )
                 self.nlp_pipeline = IntegratedNLPProcessor(nlp_config)
-                logger.info("Using optimized NLP pipeline for entity extraction")
+                logger.info(
+                    "Using optimized NLP pipeline for entity extraction")
 
             # Initialize NER processor
             self.ner_processor = NERProcessor(
@@ -329,9 +338,12 @@ class AdvancedEntityExtractor:
 
         try:
             full_text = "{0}. {1}".format(title, content)
+except Exception:
+    pass
 
             # Extract entities using NER processor
-            ner_entities = self.ner_processor.extract_entities(full_text, article_id)
+            ner_entities = self.ner_processor.extract_entities(
+                full_text, article_id)
 
             # Convert to enhanced entities
             enhanced_entities = []
@@ -365,7 +377,8 @@ class AdvancedEntityExtractor:
             enhanced_entities.extend(keyword_entities)
 
             # Deduplicate and merge similar entities
-            deduplicated_entities = self._deduplicate_entities(enhanced_entities)
+            deduplicated_entities = self._deduplicate_entities(
+                enhanced_entities)
 
             # Update statistics
             processing_time = (datetime.now() - start_time).total_seconds()
@@ -382,7 +395,8 @@ class AdvancedEntityExtractor:
 
         except Exception as e:
             logger.error(
-                "Error extracting entities from article {0}: {1}".format(article_id, e)
+                "Error extracting entities from article {0}: {1}".format(
+                    article_id, e)
             )
             return []
 
@@ -404,6 +418,8 @@ class AdvancedEntityExtractor:
 
         try:
             # Pattern-based relationship extraction
+except Exception:
+    pass
             pattern_relationships = await self._extract_relationships_by_patterns(
                 entities, text, article_id
             )
@@ -546,7 +562,7 @@ class AdvancedEntityExtractor:
                 "ai": ["artificial intelligence", "machine learning", "deep learning"],
                 "blockchain": ["blockchain", "cryptocurrency", "bitcoin"],
                 "cloud": ["cloud computing", "aws", "azure", "google cloud"],
-                "programming": ["python", "javascript", "java", "c++"],
+                "programming": ["python", "javascript", "java", "c++"},
             }
 
             entity_text_lower = entity.text.lower()
@@ -570,7 +586,8 @@ class AdvancedEntityExtractor:
                 # Merge with existing entity
                 existing = entity_map[key]
                 existing.mention_count += 1
-                existing.confidence = max(existing.confidence, entity.confidence)
+                existing.confidence = max(
+                    existing.confidence, entity.confidence)
 
                 # Merge properties
                 for prop_key, prop_value in entity.properties.items():
@@ -600,8 +617,10 @@ class AdvancedEntityExtractor:
                     target_text = match.group(2).strip()
 
                     # Find matching entities
-                    source_entity = self._find_matching_entity(source_text, entities)
-                    target_entity = self._find_matching_entity(target_text, entities)
+                    source_entity = self._find_matching_entity(
+                        source_text, entities)
+                    target_entity = self._find_matching_entity(
+                        target_text, entities)
 
                     if (
                         source_entity
@@ -609,7 +628,8 @@ class AdvancedEntityExtractor:
                         and source_entity != target_entity
                     ):
                         confidence = (
-                            min(source_entity.confidence, target_entity.confidence)
+                            min(source_entity.confidence,
+                                target_entity.confidence)
                             * 0.9
                         )
 
@@ -638,12 +658,14 @@ class AdvancedEntityExtractor:
 
                 if distance <= self.max_entity_distance:
                     # Determine relationship type based on entity types
-                    relation_type = self._infer_relationship_type(entity1, entity2)
+                    relation_type = self._infer_relationship_type(
+                        entity1, entity2)
 
                     if relation_type:
                         # Calculate confidence based on distance and entity
                         # confidence
-                        distance_factor = 1 - (distance / self.max_entity_distance)
+                        distance_factor = 1 - \
+                            (distance / self.max_entity_distance)
                         confidence = (
                             min(entity1.confidence, entity2.confidence)
                             * distance_factor
@@ -651,8 +673,10 @@ class AdvancedEntityExtractor:
                         )
 
                         # Extract context
-                        context_start = max(0, min(entity1.start, entity2.start) - 50)
-                        context_end = min(len(text), max(entity1.end, entity2.end) + 50)
+                        context_start = max(
+                            0, min(entity1.start, entity2.start) - 50)
+                        context_end = min(len(text), max(
+                            entity1.end, entity2.end) + 50)
                         context = text[context_start:context_end]
 
                         relationship = EnhancedRelationship(
@@ -696,7 +720,7 @@ class AdvancedEntityExtractor:
                     ],
                     "COMPETES_WITH": ["compete", "rival", "versus", "against"],
                     "DEVELOPS": ["develop", "create", "build", "design", "launch"],
-                    "USES_TECHNOLOGY": ["use", "implement", "adopt", "deploy"],
+                    "USES_TECHNOLOGY": ["use", "implement", "adopt", "deploy"},
                 }
 
                 sentence_lower = sentence.lower()
@@ -711,7 +735,8 @@ class AdvancedEntityExtractor:
                                     entity1, entity2, relation_type
                                 ):
                                     confidence = (
-                                        min(entity1.confidence, entity2.confidence)
+                                        min(entity1.confidence,
+                                            entity2.confidence)
                                         * 0.8
                                     )
 
@@ -781,7 +806,7 @@ class AdvancedEntityExtractor:
                 ("PERSON", "TECHNOLOGY"),
             ],
             "LOCATED_IN": [("ORGANIZATION", "LOCATION"), ("PERSON", "LOCATION")],
-            "REGULATES": [("POLICY", "TECHNOLOGY"), ("POLICY", "ORGANIZATION")],
+            "REGULATES": [("POLICY", "TECHNOLOGY"), ("POLICY", "ORGANIZATION")},
         }
 
         if relation_type not in valid_combinations:
@@ -802,13 +827,15 @@ class AdvancedEntityExtractor:
             "cache_hits": self.stats["cache_hits"],
             "total_processing_time": self.stats["processing_time"],
             "average_entities_per_article": (
-                self.stats["entities_extracted"] / self.stats["articles_processed"]
+                self.stats["entities_extracted"] /
+                    self.stats["articles_processed"]
                 if self.stats["articles_processed"] > 0
                 else 0
             ),
             "average_relationships_per_article": (
-                self.stats["relationships_found"] / self.stats["articles_processed"]
-                if self.stats["articles_processed"] > 0
+                self.stats["relationships_found"] /
+                    self.stats["articles_processed"]
+                if self.stats["articles_processed"} > 0
                 else 0
             ),
         }
@@ -851,6 +878,7 @@ def create_high_recall_entity_extractor() -> AdvancedEntityExtractor:
 
 if __name__ == "__main__":
     # Example usage and testing
+
     async def main():
         # Sample article for testing
         sample_article = {
@@ -869,7 +897,7 @@ if __name__ == "__main__":
 
             Both companies are headquartered in Silicon Valley and have been working on similar AI projects.
             The partnership is expected to influence future AI policies and help establish industry best practices.
-            """,
+            """, "
         }
 
         # Create entity extractor
@@ -877,11 +905,13 @@ if __name__ == "__main__":
 
         try:
             # Extract entities
+except Exception:
+    pass
             entities = await extractor.extract_entities_from_article(
                 sample_article["id"], sample_article["title"], sample_article["content"]
             )
 
-            print("🔍 Extracted Entities:")
+            print(" Extracted Entities:")
             for entity in entities:
                 print(
                     "  • {0} ({1}) - Confidence: {2}".format(
@@ -898,10 +928,11 @@ if __name__ == "__main__":
                 sample_article["id"],
             )
 
-            print("\n🔗 Extracted Relationships:")
+            print(""
+🔗 Extracted Relationships:")"
             for rel in relationships:
                 print(
-                    "  • {0} --[{1}]--> {2}".format(
+                    "  • {0} --[{1]}--> {2}".format(
                         rel.source_entity.text,
                         rel.relation_type,
                         rel.target_entity.text,
@@ -912,7 +943,8 @@ if __name__ == "__main__":
 
             # Get statistics
             stats = extractor.get_extraction_statistics()
-            print("\n📊 Extraction Statistics:")
+            print(""
+ Extraction Statistics:")"
             for key, value in stats.items():
                 print("  • {0}: {1}".format(key, value))
 

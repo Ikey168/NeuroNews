@@ -22,7 +22,7 @@ async def test_database_connection():
         async with get_async_connection(testing=True) as conn:
             result = await conn.fetchval("SELECT 1")
             assert result == 1
-            logger.info("✅ Database connection test passed")
+            logger.info(" Database connection test passed")
             return True
     except Exception as e:
         logger.error("❌ Database connection test failed: {0}".format(e))
@@ -46,7 +46,7 @@ async def test_redis_connection():
         await redis_client.delete("test_key")
         await redis_client.close()
 
-        logger.info("✅ Redis connection test passed")
+        logger.info(" Redis connection test passed")
         return True
     except Exception as e:
         logger.error("❌ Redis connection test failed: {0}".format(e))
@@ -78,9 +78,7 @@ async def test_s3_connection():
             s3_client.create_bucket(Bucket=bucket_name)
 
         # Test put/get object
-        s3_client.put_object(
-            Bucket=bucket_name, Key="test_object.txt", Body=b"test content"
-        )
+        s3_client.put_object(Bucket=bucket_name, Key="test_object.txt", Body=b"test content")
 
         response = s3_client.get_object(Bucket=bucket_name, Key="test_object.txt")
         content = response["Body"].read()
@@ -89,7 +87,7 @@ async def test_s3_connection():
         # Clean up
         s3_client.delete_object(Bucket=bucket_name, Key="test_object.txt")
 
-        logger.info("✅ S3/MinIO connection test passed")
+        logger.info(" S3/MinIO connection test passed")
         return True
     except Exception as e:
         logger.error("❌ S3/MinIO connection test failed: {0}".format(e))
@@ -98,7 +96,7 @@ async def test_s3_connection():
 
 async def run_simplified_tests():
     """Run simplified integration tests without complex mocking."""
-    logger.info("🚀 Starting simplified integration tests...")
+    logger.info(" Starting simplified integration tests...")
 
     # Test all service connections
     db_test = await test_database_connection()
@@ -108,10 +106,10 @@ async def run_simplified_tests():
     success_count = sum([db_test, redis_test, s3_test])
     total_tests = 3
 
-    logger.info("📊 Test Results: {0}/{1} passed".format(success_count, total_tests))
+    logger.info(" Test Results: {0}/{1} passed".format(success_count, total_tests))
 
     if success_count == total_tests:
-        logger.info("🎉 All integration tests passed!")
+        logger.info(" All integration tests passed!")
         return True
     else:
         logger.error("❌ Some integration tests failed")
@@ -129,7 +127,7 @@ def main():
     if not success:
         sys.exit(1)
 
-    logger.info("✅ All tests completed successfully")
+    logger.info(" All tests completed successfully")
 
 
 if __name__ == "__main__":

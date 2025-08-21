@@ -28,7 +28,8 @@ class TestNERProcessor(unittest.TestCase):
         self.mock_pipeline.return_value = self.mock_ner
 
         # Create processor instance
-        self.processor = NERProcessor(model_name="test-model", confidence_threshold=0.7)
+        self.processor = NERProcessor(
+            model_name="test-model", confidence_threshold=0.7)
 
     def tearDown(self):
         """Clean up after tests."""
@@ -97,7 +98,8 @@ class TestNERProcessor(unittest.TestCase):
         self.assertEqual(tim_entity["confidence"], 0.88)
 
         # Check third entity (Cupertino)
-        cupertino_entity = next(e for e in entities if e["text"] == "Cupertino")
+        cupertino_entity = next(
+            e for e in entities if e["text"] == "Cupertino")
         self.assertEqual(cupertino_entity["type"], "LOCATION")
         self.assertEqual(cupertino_entity["confidence"], 0.92)
 
@@ -134,7 +136,8 @@ class TestNERProcessor(unittest.TestCase):
         ]
         self.mock_ner.return_value = mock_entities
 
-        entities = self.processor.extract_entities("Test text", "test_article_filter")
+        entities = self.processor.extract_entities(
+            "Test text", "test_article_filter")
 
         # Only high-confidence entity should remain
         self.assertEqual(len(entities), 1)
@@ -167,8 +170,10 @@ class TestNERProcessor(unittest.TestCase):
         entities = self.processor.extract_entities(text, "test_tech")
 
         # Check that technology entities are properly classified
-        ai_entity = next(e for e in entities if "artificial intelligence" in e["text"])
-        ml_entity = next(e for e in entities if "machine learning" in e["text"])
+        ai_entity = next(
+            e for e in entities if "artificial intelligence" in e["text"])
+        ml_entity = next(
+            e for e in entities if "machine learning" in e["text"])
 
         self.assertEqual(ai_entity["type"], "TECHNOLOGY")
         self.assertEqual(ml_entity["type"], "TECHNOLOGY")
@@ -197,7 +202,8 @@ class TestNERProcessor(unittest.TestCase):
         entities = self.processor.extract_entities(text, "test_orgs")
 
         # Check that tech organizations are properly classified
-        microsoft_entity = next(e for e in entities if "Microsoft" in e["text"])
+        microsoft_entity = next(
+            e for e in entities if "Microsoft" in e["text"])
         google_entity = next(e for e in entities if "Google" in e["text"])
 
         self.assertEqual(microsoft_entity["type"], "TECHNOLOGY_ORGANIZATION")
@@ -207,13 +213,16 @@ class TestNERProcessor(unittest.TestCase):
         """Test text preprocessing functionality."""
         # Test with messy text
         messy_text = (
-            "This   is    a\n\n  messy    text   with   lots   of    whitespace"
+            "This   is    a"
+
+  messy    text with lots   of    whitespace""
         )
         cleaned = self.processor._preprocess_text(messy_text)
 
         # Should normalize whitespace
-        self.assertNotIn("\n", cleaned)
-        self.assertNotIn("  ", cleaned)  # No double spaces
+        self.assertNotIn(""
+", cleaned)
+        self.assertNotIn("  ", cleaned)  # No double spaces"
 
         # Test with very long text
         long_text = "This is a very long text. " * 1000
@@ -221,6 +230,7 @@ class TestNERProcessor(unittest.TestCase):
 
         # Should be truncated
         self.assertLess(len(cleaned_long), len(long_text))
+
 
     def test_text_splitting(self):
         """Test text splitting for long documents."""
@@ -237,6 +247,7 @@ class TestNERProcessor(unittest.TestCase):
         for chunk in chunks:
             estimated_tokens = len(chunk) // 4
             self.assertLessEqual(estimated_tokens, self.processor.max_length)
+
 
     def test_duplicate_entity_filtering(self):
         """Test that duplicate entities are filtered out."""
@@ -266,6 +277,7 @@ class TestNERProcessor(unittest.TestCase):
         self.assertEqual(len(entities), 1)
         self.assertEqual(entities[0]["text"], "Apple")
         self.assertEqual(entities[0]["confidence"], 0.9)
+
 
     def test_statistics_tracking(self):
         """Test statistics tracking functionality."""
@@ -309,6 +321,7 @@ class TestNERProcessor(unittest.TestCase):
         self.assertEqual(stats["entity_type_distribution"]["PERSON"], 1)
         self.assertEqual(stats["entity_type_distribution"]["ORGANIZATION"], 2)
 
+
     def test_reset_statistics(self):
         """Test statistics reset functionality."""
         # Process some text first
@@ -327,6 +340,7 @@ class TestNERProcessor(unittest.TestCase):
         self.assertEqual(self.processor.stats["total_texts_processed"], 0)
         self.assertEqual(self.processor.stats["total_entities_extracted"], 0)
 
+
     def test_create_ner_processor_factory(self):
         """Test the factory function for creating NER processors."""
         processor = create_ner_processor(
@@ -340,6 +354,7 @@ class TestNERProcessor(unittest.TestCase):
 
 class TestNERArticleProcessor(unittest.TestCase):
     """Test cases for the NERArticleProcessor class."""
+
 
     def setUp(self):
         """Set up test fixtures."""
@@ -384,12 +399,14 @@ class TestNERArticleProcessor(unittest.TestCase):
             "ner_enabled": True,
         }
 
+
     def tearDown(self):
         """Clean up after tests."""
         self.mock_sentiment_analyzer.stop()
         self.mock_ner_processor.stop()
         self.mock_psycopg2_ner.stop()
         self.mock_psycopg2_article.stop()
+
 
     def test_processor_initialization_with_ner(self):
         """Test processor initialization with NER enabled."""
@@ -398,6 +415,7 @@ class TestNERArticleProcessor(unittest.TestCase):
         self.assertTrue(processor.ner_enabled)
         self.assertIsNotNone(processor.ner_processor)
         self.mock_ner_create.assert_called_once()
+
 
     def test_processor_initialization_without_ner(self):
         """Test processor initialization with NER disabled."""
@@ -410,6 +428,7 @@ class TestNERArticleProcessor(unittest.TestCase):
         self.assertIsNone(processor.ner_processor)
 
     @patch("src.nlp.ner_article_processor.ArticleProcessor.process_articles")
+
     def test_process_articles_with_ner(self, mock_parent_process):
         """Test article processing with NER enabled."""
         # Mock parent class processing
@@ -469,6 +488,7 @@ class TestNERArticleProcessor(unittest.TestCase):
         self.mock_ner_instance.extract_entities.assert_called_once()
 
     @patch("src.nlp.ner_article_processor.ArticleProcessor.process_articles")
+
     def test_process_articles_without_ner(self, mock_parent_process):
         """Test article processing with NER disabled."""
         config = self.config.copy()
@@ -494,6 +514,7 @@ class TestNERArticleProcessor(unittest.TestCase):
         # Should return sentiment results without NER data
         self.assertEqual(results, mock_sentiment_results)
 
+
     def test_store_entities(self):
         """Test entity storage in database."""
         processor = NERArticleProcessor(**self.config)
@@ -515,6 +536,7 @@ class TestNERArticleProcessor(unittest.TestCase):
         self.mock_cursor.execute.assert_called()
         self.mock_conn.commit.assert_called()
 
+
     def test_update_articles_with_entities(self):
         """Test updating main articles table with entity JSON."""
         processor = NERArticleProcessor(**self.config)
@@ -533,6 +555,7 @@ class TestNERArticleProcessor(unittest.TestCase):
         # Verify database update was called
         self.mock_cursor.execute.assert_called()
         self.mock_conn.commit.assert_called()
+
 
     def test_entity_statistics(self):
         """Test entity statistics retrieval."""
@@ -563,6 +586,7 @@ class TestNERArticleProcessor(unittest.TestCase):
         self.assertEqual(entity_stats["count"], 10)
         self.assertEqual(entity_stats["avg_confidence"], 0.85)
 
+
     def test_search_entities(self):
         """Test entity search functionality."""
         processor = NERArticleProcessor(**self.config)
@@ -591,6 +615,7 @@ class TestNERArticleProcessor(unittest.TestCase):
         self.assertEqual(result["entity_type"], "ORGANIZATION")
         self.assertEqual(result["confidence"], 0.9)
 
+
     def test_create_ner_article_processor_factory(self):
         """Test the factory function for creating NER article processors."""
         processor = create_ner_article_processor(**self.config)
@@ -604,6 +629,8 @@ class TestNERIntegration(unittest.TestCase):
     @patch("src.nlp.ner_processor.pipeline")
     @patch("src.nlp.ner_article_processor.psycopg2")
     @patch("src.nlp.article_processor.psycopg2")
+
+
     def test_end_to_end_processing(
         self, mock_psycopg2_article, mock_psycopg2_ner, mock_pipeline
     ):

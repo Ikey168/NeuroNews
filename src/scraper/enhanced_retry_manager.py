@@ -417,6 +417,7 @@ class EnhancedRetryManager:
         self.logger.error("Permanent failure for {0}: {1}".format(url, error))
 
     # Circuit breaker implementation
+
     def _is_circuit_breaker_open(self, url: str) -> bool:
         """Check if circuit breaker is open for a URL."""
         domain = self._get_domain_from_url(url)

@@ -26,7 +26,7 @@ DEFAULT_CLOUDWATCH_LOG_LEVEL = "INFO"
 def setup_aws_credentials(profile_name, access_key, secret_key, region):
     """Set up AWS credentials in ~/.aws/credentials and ~/.aws/config."""
     # Create ~/.aws directory if it doesn't exist
-    aws_dir = Path.home() / ".aws"
+    aws_dir = Path.home() / ".aws"'
     aws_dir.mkdir(exist_ok=True)
 
     # Set up credentials file
@@ -78,7 +78,7 @@ def create_dev_config(
 ):
     """Create a configuration file for the dev environment."""
     # Create config directory if it doesn't exist
-    config_dir = Path("config")
+    config_dir = Path("config")'
     config_dir.mkdir(exist_ok=True)
 
     # Create dev config file
@@ -116,7 +116,8 @@ def check_aws_resources(profile_name, s3_bucket, cloudwatch_log_group):
         if result.returncode == 0:
             print(f"S3 bucket '{s3_bucket}' exists and is accessible")
         else:
-            print(f"S3 bucket '{s3_bucket}' does not exist or is not accessible")
+            print(
+                f"S3 bucket '{s3_bucket}' does not exist or is not accessible")
             print(f"Error: {result.stderr}")
 
             # Try to create the bucket
@@ -168,12 +169,12 @@ def check_aws_resources(profile_name, s3_bucket, cloudwatch_log_group):
                     f"CloudWatch log group '{cloudwatch_log_group}' exists and is accessible"
                 )
             else:
-                print(f"CloudWatch log group '{cloudwatch_log_group}' does not exist")
+                print(
+                    f"CloudWatch log group '{cloudwatch_log_group}' does not exist")
 
                 # Try to create the log group
                 create_log_group = input(
-                    f"Do you want to create the CloudWatch log group '{cloudwatch_log_group}'? (y/n): "
-                )
+                    f"Do you want to create the CloudWatch log group '{cloudwatch_log_group}'? (y/n): ")
                 if create_log_group.lower() == "y":
                     result = subprocess.run(
                         [
@@ -234,7 +235,7 @@ def generate_run_commands(
     )
 
     # Python code to run the scraper as a library
-    library_code = f"""
+    library_code = """
 # Python code to run the scraper as a library
 import os
 os.environ["AWS_PROFILE"] = "{profile_name}"
@@ -262,14 +263,19 @@ def main():
     )
 
     # AWS credentials options
-    parser.add_argument("--profile", default="neuronews-dev", help="AWS profile name")
-    parser.add_argument("--access-key", required=True, help="AWS access key ID")
-    parser.add_argument("--secret-key", required=True, help="AWS secret access key")
+    parser.add_argument("--profile", default="neuronews-dev",
+                        help="AWS profile name")
+    parser.add_argument("--access-key", required=True,
+                        help="AWS access key ID")
+    parser.add_argument("--secret-key", required=True,
+                        help="AWS secret access key")
     parser.add_argument("--region", default=DEFAULT_REGION, help="AWS region")
 
     # S3 options
-    parser.add_argument("--s3-bucket", default=DEFAULT_S3_BUCKET, help="S3 bucket name")
-    parser.add_argument("--s3-prefix", default=DEFAULT_S3_PREFIX, help="S3 key prefix")
+    parser.add_argument(
+        "--s3-bucket", default=DEFAULT_S3_BUCKET, help="S3 bucket name")
+    parser.add_argument(
+        "--s3-prefix", default=DEFAULT_S3_PREFIX, help="S3 key prefix")
 
     # CloudWatch options
     parser.add_argument(
@@ -325,16 +331,21 @@ def main():
 
     # Print run commands
     print(
-        "\nYou can now run the scraper with AWS integration using the following commands:"
+        ""
+You can now run the scraper with AWS integration using the following commands:""
     )
-    print("\n1. Run the scraper directly:")
+    print("
+1. Run the scraper directly:")
     print(f"   {commands['direct']}")
-    print("\n2. Run the scraper from the main application:")
+    print("
+2. Run the scraper from the main application:")
     print(f"   {commands['main']}")
-    print("\n3. Run the scraper as a library:")
-    print(commands["library"])
+    print(""
+3. Run the scraper as a library:")
+    print(commands["library"])"
 
-    print("\nAWS setup completed successfully!")
+    print(""
+AWS setup completed successfully!")"
 
 
 if __name__ == "__main__":

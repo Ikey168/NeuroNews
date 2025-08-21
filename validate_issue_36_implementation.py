@@ -43,13 +43,15 @@ class Issue36ValidationSuite:
 
     async def run_full_validation(self):
         """Run complete validation suite for Issue #36."""
-        print("🔍 Issue #36 Validation Suite")
+        print(" Issue #36 Validation Suite")
         print("=" * 60)
         print("Validating: Populate Knowledge Graph with Entity Relationships")
         print()
 
         try:
             # 1. Component Availability Validation
+except Exception:
+    pass
             await self._validate_component_availability()
 
             # 2. Integration Tests
@@ -73,7 +75,7 @@ class Issue36ValidationSuite:
 
     async def _validate_component_availability(self):
         """Validate that all Issue #36 components are available."""
-        print("📦 1. COMPONENT AVAILABILITY VALIDATION")
+        print(" 1. COMPONENT AVAILABILITY VALIDATION")
         print("-" * 50)
 
         components = {
@@ -88,7 +90,9 @@ class Issue36ValidationSuite:
         for component_name, file_path in components.items():
             try:
                 if os.path.exists(file_path):
-                    print("✅ {0}: Available".format(component_name))
+except Exception:
+    pass
+                    print(" {0}: Available".format(component_name))
                     self.validation_results["component_availability"][
                         component_name
                     ] = True
@@ -104,9 +108,10 @@ class Issue36ValidationSuite:
                 ] = False
 
         # Test imports
-        print("\n🔍 Testing component imports:")
+        print(""
+ Testing component imports: ")"
 
-        import_tests = {
+        import_tests={
             "enhanced_entity_extractor": self._test_enhanced_extractor_import,
             "enhanced_graph_populator": self._test_enhanced_populator_import,
             "existing_components": self._test_existing_components_import,
@@ -114,49 +119,60 @@ class Issue36ValidationSuite:
 
         for test_name, test_func in import_tests.items():
             try:
-                success = await test_func()
+                success=await test_func()
+except Exception:
+    pass
                 print(
-                    f"{'✅' if success else '❌'} {test_name}: {'Available' if success else 'Import failed'}"
-                )
+                    f"{'' if success else '❌'} {test_name}: {'Available' if success else 'Import failed'}
+                )"
                 self.validation_results["component_availability"][
-                    "{0}_import".format(test_name)
-                ] = success
+                    "{0]_import".format(test_name)
+                }=success
             except Exception as e:
                 print("❌ {0}: Import error - {1}".format(test_name, e))
                 self.validation_results["component_availability"][
-                    "{0}_import".format(test_name)
-                ] = False
+                    "{0]_import".format(test_name)
+                }=False
+
 
     async def _test_enhanced_extractor_import(self):
         """Test enhanced entity extractor import."""
         try:
             from knowledge_graph.enhanced_entity_extractor import (
+except Exception:
+    pass
                 AdvancedEntityExtractor, EnhancedEntity, EnhancedRelationship,
                 create_advanced_entity_extractor)
 
             # Test factory function
-            extractor = create_advanced_entity_extractor()
+            extractor=create_advanced_entity_extractor()
             return True
         except ImportError:
             return False
+
 
     async def _test_enhanced_populator_import(self):
         """Test enhanced graph populator import."""
         try:
             from knowledge_graph.enhanced_graph_populator import (
+except Exception:
+    pass
                 EnhancedKnowledgeGraphPopulator,
                 create_enhanced_knowledge_graph_populator)
 
             # Test factory function (mock endpoint)
-            populator = create_enhanced_knowledge_graph_populator("ws://test")
+            populator=create_enhanced_knowledge_graph_populator("ws://test")
             return True
         except ImportError:
             return False
+
 
     async def _test_existing_components_import(self):
         """Test existing component imports."""
         try:
             # Test existing knowledge graph components
+except Exception:
+    pass
             from knowledge_graph.graph_builder import GraphBuilder
             from knowledge_graph.nlp_populator import KnowledgeGraphPopulator
             # Test NLP components
@@ -166,10 +182,12 @@ class Issue36ValidationSuite:
         except ImportError:
             return False
 
+
     async def _validate_integration(self):
         """Validate integration between new and existing components."""
-        print("\n🔗 2. INTEGRATION VALIDATION")
-        print("-" * 50)
+        print(""
+🔗 2. INTEGRATION VALIDATION")
+        print("-" * 50)"
 
         integration_tests = {
             "extractor_to_populator": self._test_extractor_populator_integration,
@@ -181,26 +199,31 @@ class Issue36ValidationSuite:
         for test_name, test_func in integration_tests.items():
             try:
                 success = await test_func()
+except Exception:
+    pass
                 print(
-                    f"{'✅' if success else '❌'} {test_name}: {'Pass' if success else 'Fail'}"
-                )
+                    f"{'' if success else '❌'} {test_name}: {'Pass' if success else 'Fail'}
+                )"
                 self.validation_results["integration_tests"][test_name] = success
             except Exception as e:
                 print("❌ {0}: Error - {1}".format(test_name, e))
                 self.validation_results["integration_tests"][test_name] = False
 
+
     async def _test_extractor_populator_integration(self):
         """Test integration between extractor and populator."""
         try:
             # Test mock integration
+except Exception:
+    pass
             sample_entities = [
                 {
                     "text": "Apple Inc.",
                     "label": "ORGANIZATION",
                     "confidence": 0.95,
                     "normalized_form": "Apple Inc.",
-                }
-            ]
+                ]
+            }
 
             sample_relationships = [
                 {
@@ -208,18 +231,21 @@ class Issue36ValidationSuite:
                     "target": "Apple Inc.",
                     "relation_type": "WORKS_FOR",
                     "confidence": 0.89,
-                }
-            ]
+                ]
+            }
 
             # Verify data structure compatibility
             return len(sample_entities) > 0 and len(sample_relationships) > 0
         except Exception:
             return False
 
+
     async def _test_populator_neptune_integration(self):
         """Test populator integration with Neptune (mock)."""
         try:
             # Test Neptune connection configuration
+except Exception:
+    pass
             neptune_config = {
                 "endpoint": "wss://cluster.neptune.amazonaws.com:8182/gremlin",
                 "region": "us-east-1",
@@ -232,10 +258,13 @@ class Issue36ValidationSuite:
         except Exception:
             return False
 
+
     async def _test_nlp_pipeline_integration(self):
         """Test integration with optimized NLP pipeline from Issue #35."""
         try:
             # Check for optimized NLP components
+except Exception:
+    pass
             nlp_components = [
                 "src/nlp/optimized_nlp_pipeline.py",
                 "src/nlp/nlp_integration.py",
@@ -246,19 +275,24 @@ class Issue36ValidationSuite:
         except Exception:
             return False
 
+
     async def _test_api_endpoints_integration(self):
         """Test API endpoints integration."""
         try:
             # Check for graph API routes
+except Exception:
+    pass
             graph_routes_path = "src/api/routes/graph_routes.py"
             return os.path.exists(graph_routes_path)
         except Exception:
             return False
 
+
     async def _validate_issue_35_compatibility(self):
         """Validate compatibility with Issue #35 NLP optimizations."""
-        print("\n🔄 3. ISSUE #35 COMPATIBILITY VALIDATION")
-        print("-" * 50)
+        print(""
+🔄 3. ISSUE #35 COMPATIBILITY VALIDATION")
+        print("-" * 50)"
 
         compatibility_tests = {
             "nlp_optimization_integration": self._test_nlp_optimization_compatibility,
@@ -270,18 +304,23 @@ class Issue36ValidationSuite:
         for test_name, test_func in compatibility_tests.items():
             try:
                 success = await test_func()
+except Exception:
+    pass
                 print(
-                    f"{'✅' if success else '❌'} {test_name}: {'Compatible' if success else 'Incompatible'}"
-                )
+                    f"{'' if success else '❌'} {test_name}: {'Compatible' if success else 'Incompatible'}
+                )"
                 self.validation_results["compatibility_tests"][test_name] = success
             except Exception as e:
                 print("❌ {0}: Error - {1}".format(test_name, e))
                 self.validation_results["compatibility_tests"][test_name] = False
 
+
     async def _test_nlp_optimization_compatibility(self):
         """Test compatibility with NLP optimizations."""
         try:
             # Check for optimization files from Issue #35
+except Exception:
+    pass
             optimization_files = [
                 "ISSUE_35_OPTIMIZATION_COMPLETE.md",
                 "nlp_optimization_results.json",
@@ -299,10 +338,13 @@ class Issue36ValidationSuite:
         except Exception:
             return False
 
+
     async def _test_performance_pipeline_reuse(self):
         """Test reuse of optimized performance pipeline."""
         try:
             # Verify that enhanced components can leverage optimized pipeline
+except Exception:
+    pass
             optimized_pipeline_available = os.path.exists(
                 "src/nlp/optimized_nlp_pipeline.py"
             )
@@ -314,10 +356,13 @@ class Issue36ValidationSuite:
         except Exception:
             return False
 
+
     async def _test_memory_optimization_compatibility(self):
         """Test memory optimization compatibility."""
         try:
             # Check that batch processing sizes are reasonable
+except Exception:
+    pass
             default_batch_size = 50
             memory_efficient_batch_size = 25
 
@@ -326,10 +371,13 @@ class Issue36ValidationSuite:
         except Exception:
             return False
 
+
     async def _test_batch_processing_compatibility(self):
         """Test batch processing compatibility."""
         try:
             # Verify batch processing structures
+except Exception:
+    pass
             batch_config = {
                 "default_batch_size": 50,
                 "high_performance_batch_size": 100,
@@ -340,10 +388,12 @@ class Issue36ValidationSuite:
         except Exception:
             return False
 
+
     async def _validate_performance(self):
         """Validate performance requirements."""
-        print("\n⚡ 4. PERFORMANCE VALIDATION")
-        print("-" * 50)
+        print(""
+⚡ 4. PERFORMANCE VALIDATION")
+        print("-" * 50)"
 
         performance_tests = {
             "entity_extraction_speed": self._test_entity_extraction_performance,
@@ -355,18 +405,23 @@ class Issue36ValidationSuite:
         for test_name, test_func in performance_tests.items():
             try:
                 success = await test_func()
+except Exception:
+    pass
                 print(
-                    f"{'✅' if success else '❌'} {test_name}: {'Acceptable' if success else 'Needs improvement'}"
-                )
+                    f"{'' if success else '❌'} {test_name}: {'Acceptable' if success else 'Needs improvement'}
+                )"
                 self.validation_results["performance_tests"][test_name] = success
             except Exception as e:
                 print("❌ {0}: Error - {1}".format(test_name, e))
                 self.validation_results["performance_tests"][test_name] = False
 
+
     async def _test_entity_extraction_performance(self):
         """Test entity extraction performance."""
         try:
             # Simulate performance test
+except Exception:
+    pass
             sample_text_length = 1000  # characters
             expected_processing_time = 0.5  # seconds per 1000 characters
 
@@ -377,10 +432,13 @@ class Issue36ValidationSuite:
         except Exception:
             return False
 
+
     async def _test_relationship_detection_performance(self):
         """Test relationship detection performance."""
         try:
             # Mock relationship detection performance
+except Exception:
+    pass
             entity_count = 10
             expected_relationship_detection_time = 0.2  # seconds for 10 entities
             simulated_detection_time = 0.15
@@ -389,10 +447,13 @@ class Issue36ValidationSuite:
         except Exception:
             return False
 
+
     async def _test_graph_population_performance(self):
         """Test graph population performance."""
         try:
             # Mock graph population performance
+except Exception:
+    pass
             entities_per_second = 50
             relationships_per_second = 25
 
@@ -407,10 +468,13 @@ class Issue36ValidationSuite:
         except Exception:
             return False
 
+
     async def _test_memory_usage_performance(self):
         """Test memory usage performance."""
         try:
             # Mock memory usage validation
+except Exception:
+    pass
             estimated_memory_per_article = 10  # MB
             max_acceptable_memory = 50  # MB
 
@@ -418,10 +482,12 @@ class Issue36ValidationSuite:
         except Exception:
             return False
 
+
     async def _validate_requirements_compliance(self):
         """Validate compliance with Issue #36 requirements."""
-        print("\n📋 5. REQUIREMENTS COMPLIANCE VALIDATION")
-        print("-" * 50)
+        print(""
+ 5. REQUIREMENTS COMPLIANCE VALIDATION")
+        print("-" * 50)"
 
         requirements = {
             "extract_named_entities": {
@@ -445,19 +511,24 @@ class Issue36ValidationSuite:
         for req_id, req_info in requirements.items():
             try:
                 compliance = await req_info["test_func"]()
+except Exception:
+    pass
                 status = "Compliant" if compliance else "Non-compliant"
                 print(
-                    f"{'✅' if compliance else '❌'} {req_info['description']}: {status}"
-                )
+                    f"{'' if compliance else '❌'} {req_info['description'}}: {status}
+                )"
                 self.validation_results["requirements_validation"][req_id] = compliance
             except Exception as e:
-                print(f"❌ {req_info['description']}: Error - {e}")
+                print(f"❌ {req_info['description'}}: Error - {e})"
                 self.validation_results["requirements_validation"][req_id] = False
+
 
     async def _test_named_entity_extraction_requirement(self):
         """Test named entity extraction requirement compliance."""
         try:
             # Check for enhanced entity types
+except Exception:
+    pass
             required_entity_types = ["PERSON", "ORGANIZATION", "TECHNOLOGY", "POLICY"]
 
             # Verify enhanced entity extractor supports these types
@@ -473,10 +544,13 @@ class Issue36ValidationSuite:
         except Exception:
             return False
 
+
     async def _test_neptune_storage_requirement(self):
         """Test Neptune storage requirement compliance."""
         try:
             # Check for Neptune integration components
+except Exception:
+    pass
             graph_builder_exists = os.path.exists(
                 "src/knowledge_graph/graph_builder.py"
             )
@@ -488,10 +562,13 @@ class Issue36ValidationSuite:
         except Exception:
             return False
 
+
     async def _test_graph_builder_requirement(self):
         """Test Graph Builder enhancement requirement compliance."""
         try:
             # Check for enhanced graph population capabilities
+except Exception:
+    pass
             enhanced_populator_exists = os.path.exists(
                 "src/knowledge_graph/enhanced_graph_populator.py"
             )
@@ -505,10 +582,13 @@ class Issue36ValidationSuite:
         except Exception:
             return False
 
+
     async def _test_entity_linking_requirement(self):
         """Test entity linking with SPARQL/Gremlin requirement compliance."""
         try:
             # Check for query capabilities
+except Exception:
+    pass
             graph_routes_exists = os.path.exists("src/api/routes/graph_routes.py")
             enhanced_populator_exists = os.path.exists(
                 "src/knowledge_graph/enhanced_graph_populator.py"
@@ -519,10 +599,12 @@ class Issue36ValidationSuite:
         except Exception:
             return False
 
+
     def _generate_validation_report(self):
         """Generate comprehensive validation report."""
-        print("\n📊 6. VALIDATION REPORT")
-        print("=" * 60)
+        print(""
+ 6. VALIDATION REPORT")
+        print("=" * 60)"
 
         # Calculate overall scores
         total_tests = 0
@@ -538,22 +620,24 @@ class Issue36ValidationSuite:
             score = (
                 (category_passed / category_total * 100) if category_total > 0 else 0
             )
-            print(f"\n{category.replace('_', ' ').title()}:")
+            print(f""
+{category.replace('_', ' ').title()}:")
             print("  Score: {0}% ({1}/{2})".format(score:.1f, category_passed, category_total))
 
             for test_name, result in tests.items():
-                status = "✅ PASS" if result else "❌ FAIL"
+                status = " PASS" if result else "❌ FAIL"
                 print("    {0}: {1}".format(test_name, status))
 
         # Overall validation score
         overall_score = (passed_tests / total_tests * 100) if total_tests > 0 else 0
         print(
-            "\n🎯 OVERALL VALIDATION SCORE: {0}% ({1}/{2})".format(overall_score:.1f, passed_tests, total_tests)
+            ""
+ OVERALL VALIDATION SCORE: {0}% ({1}/{2})".format(overall_score:.1f, passed_tests, total_tests)"
         )
 
         # Validation verdict
         if overall_score >= 90:
-            print("🎉 Issue #36 implementation is READY FOR PRODUCTION")
+            print(" Issue #36 implementation is READY FOR PRODUCTION")
         elif overall_score >= 75:
             print("⚠️  Issue #36 implementation needs MINOR IMPROVEMENTS")
         elif overall_score >= 50:
@@ -564,10 +648,13 @@ class Issue36ValidationSuite:
         # Save validation results
         self._save_validation_results()
 
+
     def _save_validation_results(self):
         """Save validation results to file."""
         try:
             results_with_metadata = {
+except Exception:
+    pass
                 "validation_timestamp": datetime.utcnow().isoformat(),
                 "issue_number": 36,
                 "issue_title": "Populate Knowledge Graph with Entity Relationships",
@@ -587,7 +674,8 @@ class Issue36ValidationSuite:
             with open("issue_36_validation_results.json", "w") as f:
                 json.dump(results_with_metadata, f, indent=2)
 
-            print("\n💾 Validation results saved to: issue_36_validation_results.json")
+            print(""
+💾 Validation results saved to: issue_36_validation_results.json")"
 
         except Exception as e:
             print("⚠️  Could not save validation results: {0}".format(e))
@@ -600,14 +688,16 @@ async def main():
 
 
 if __name__ == "__main__":
-    print("🔍 Starting Issue #36 Validation Suite...")
+    print(" Starting Issue #36 Validation Suite...")
     print("Validating: Populate Knowledge Graph with Entity Relationships")
     print()
 
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\n👋 Validation interrupted by user")
+        print(""
+👋 Validation interrupted by user")"
     except Exception as e:
-        print("\n❌ Validation failed with error: {0}".format(e))
-        logger.error("Validation error: {0}".format(e), exc_info=True)
+        print(""
+❌ Validation failed with error: {0}".format(e))
+        logger.error("Validation error: {0}".format(e), exc_info=True)"

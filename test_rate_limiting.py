@@ -5,24 +5,28 @@ Tests all components of the rate limiting system including middleware,
 routes, AWS integration, and suspicious activity detection.
 """
 
-import asyncio
-import json
-import time
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-import redis
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.api.aws_rate_limiting import APIGatewayManager, CloudWatchMetrics
+from src.api.aws_rate_limiting import APIGatewayManager
+
 # Test imports
 from src.api.middleware.rate_limit_middleware import (
-    RateLimitConfig, RateLimitMiddleware, RateLimitStore, RequestMetrics,
-    SuspiciousActivityDetector)
+    RateLimitConfig,
+    RateLimitMiddleware,
+    RateLimitStore,
+    RequestMetrics,
+    SuspiciousActivityDetector,
+)
 from src.api.monitoring.suspicious_activity_monitor import (
-    AdvancedSuspiciousActivityDetector, AlertLevel, SuspiciousPatternType)
+    AdvancedSuspiciousActivityDetector,
+    AlertLevel,
+    SuspiciousPatternType,
+)
 from src.api.routes.auth_routes import router as auth_router
 from src.api.routes.rate_limit_routes import router as rate_limit_router
 
@@ -186,9 +190,7 @@ class TestRateLimitRoutes:
         async def mock_require_auth():
             return {"user_id": "test_user_123", "role": "admin", "tier": "free"}
 
-        monkeypatch.setattr(
-            "src.api.routes.rate_limit_routes.require_auth", mock_require_auth
-        )
+        monkeypatch.setattr("src.api.routes.rate_limit_routes.require_auth", mock_require_auth)
         return mock_require_auth
 
     def test_get_api_limits_unauthorized(self, test_client):
@@ -280,15 +282,11 @@ class TestSuspiciousActivityDetector:
                 }
             )
 
-        activities = await advanced_detector.analyze_user_activity(
-            user_id, rapid_requests
-        )
+        activities = await advanced_detector.analyze_user_activity(user_id, rapid_requests)
 
         # Should detect rapid requests
         rapid_alerts = [
-            a
-            for a in activities
-            if a.pattern_type == SuspiciousPatternType.RAPID_REQUESTS
+            a for a in activities if a.pattern_type == SuspiciousPatternType.RAPID_REQUESTS
         ]
         assert len(rapid_alerts) > 0
         assert rapid_alerts[0].alert_level == AlertLevel.HIGH
@@ -315,15 +313,11 @@ class TestSuspiciousActivityDetector:
                 }
             )
 
-        activities = await advanced_detector.analyze_user_activity(
-            user_id, multi_ip_requests
-        )
+        activities = await advanced_detector.analyze_user_activity(user_id, multi_ip_requests)
 
         # Should detect multiple IPs
         multi_ip_alerts = [
-            a
-            for a in activities
-            if a.pattern_type == SuspiciousPatternType.MULTIPLE_IPS
+            a for a in activities if a.pattern_type == SuspiciousPatternType.MULTIPLE_IPS
         ]
         assert len(multi_ip_alerts) > 0
 
@@ -340,8 +334,7 @@ class TestSuspiciousActivityDetector:
             bot_requests.append(
                 {
                     "user_id": user_id,
-                    "timestamp": now
-                    - timedelta(seconds=i * 10),  # Very regular intervals
+                    "timestamp": now - timedelta(seconds=i * 10),  # Very regular intervals
                     "ip_address": "192.168.1.1",  # Same IP
                     "endpoint": "/api/data",  # Same endpoint
                     "response_code": 200,
@@ -350,16 +343,10 @@ class TestSuspiciousActivityDetector:
                 }
             )
 
-        activities = await advanced_detector.analyze_user_activity(
-            user_id, bot_requests
-        )
+        activities = await advanced_detector.analyze_user_activity(user_id, bot_requests)
 
         # Should detect bot behavior
-        bot_alerts = [
-            a
-            for a in activities
-            if a.pattern_type == SuspiciousPatternType.BOT_BEHAVIOR
-        ]
+        bot_alerts = [a for a in activities if a.pattern_type == SuspiciousPatternType.BOT_BEHAVIOR]
         assert len(bot_alerts) > 0
 
     def test_user_risk_score_calculation(self, advanced_detector):
@@ -367,8 +354,7 @@ class TestSuspiciousActivityDetector:
         user_id = "risk_user"
 
         # Add some suspicious activities
-        from src.api.monitoring.suspicious_activity_monitor import \
-            SuspiciousActivity
+        from src.api.monitoring.suspicious_activity_monitor import SuspiciousActivity
 
         activity1 = SuspiciousActivity(
             user_id=user_id,
@@ -434,9 +420,7 @@ class TestAWSIntegration:
         api_manager.create_api_key_for_user = AsyncMock(return_value="key_456")
         api_manager.client.create_usage_plan_key.return_value = {}
 
-        result = await api_manager.assign_user_to_plan(
-            "user_123", "free", "api_key_789"
-        )
+        result = await api_manager.assign_user_to_plan("user_123", "free", "api_key_789")
 
         assert result is True
         api_manager.client.create_usage_plan_key.assert_called_once()
@@ -454,9 +438,7 @@ class TestAWSIntegration:
             "endDate": "2025-08-17",
         }
 
-        stats = await api_manager.get_usage_statistics(
-            "test_key", "2025-08-16", "2025-08-17"
-        )
+        stats = await api_manager.get_usage_statistics("test_key", "2025-08-16", "2025-08-17")
 
         assert "total_requests" in stats
         assert stats["total_requests"] == 250

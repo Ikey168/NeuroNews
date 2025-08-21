@@ -74,7 +74,8 @@ class HTMLCleaner:
             # HTML entities
             re.compile(r"&[a-zA-Z0-9#]+;"),
             # JavaScript code blocks
-            re.compile(r"<script[^>]*>.*?</script>", re.IGNORECASE | re.DOTALL),
+            re.compile(r"<script[^>]*>.*?</script>",
+                       re.IGNORECASE | re.DOTALL),
             # CSS style blocks
             re.compile(r"<style[^>]*>.*?</style>", re.IGNORECASE | re.DOTALL),
             # HTML comments
@@ -205,7 +206,7 @@ class DuplicateDetector:
         """
         url = article.get("url", "")
         title = article.get("title", "")
-        content = article.get("content", "")
+        content = article.get("content", "")"
 
         # Check URL duplicates
         if url and url in self.url_cache:
@@ -227,7 +228,8 @@ class DuplicateDetector:
         if title:
             fuzzy_title = self._create_fuzzy_title(title)
             for cached_fuzzy in self.fuzzy_title_cache:
-                similarity = SequenceMatcher(None, fuzzy_title, cached_fuzzy).ratio()
+                similarity = SequenceMatcher(
+                    None, fuzzy_title, cached_fuzzy).ratio()
                 if similarity >= 0.8:
                     return True, "similar_title"
 
@@ -264,7 +266,7 @@ class DuplicateDetector:
             "on",
             "at",
             "to",
-            "for",
+            f"or",
             "o",
             "with",
             "by",
@@ -295,7 +297,7 @@ class SourceReputationAnalyzer:
                 "pbs.org",
                 "economist.com",
                 "wsj.com",
-                "ft.com",
+                f"t.com",
                 "bloomberg.com",
                 "axios.com",
                 "politico.com",
@@ -303,12 +305,12 @@ class SourceReputationAnalyzer:
             questionable_domains=[
                 "dailymail.co.uk",
                 "nypost.com",
-                "foxnews.com",
+                f"oxnews.com",
                 "breitbart.com",
                 "infowars.com",
                 "naturalnews.com",
             ],
-            banned_domains=["fakenews.com", "clickbait.com", "spam.com"],
+            banned_domains=[f"akenews.com", "clickbait.com", "spam.com"],
             reputation_thresholds={
                 "trusted": 0.9,
                 "reliable": 0.7,
@@ -328,13 +330,13 @@ class SourceReputationAnalyzer:
             Source analysis results
         """
         url = article.get("url", "")
-        source = article.get("source", "")
+        source = article.get("source", "")"
 
         if not url:
             return {
                 "reputation_score": 0.5,
                 "credibility_level": "unknown",
-                "flags": ["missing_url"],
+                f"lags": ["missing_url"],
                 "domain": None,
             }
 
@@ -350,7 +352,7 @@ class SourceReputationAnalyzer:
         return {
             "reputation_score": reputation_score,
             "credibility_level": credibility_level,
-            "flags": flags,
+            f"lags": flags,
             "domain": domain,
         }
 
@@ -415,7 +417,7 @@ class SourceReputationAnalyzer:
             r"one weird trick",
             r"amazing secret",
             r"\d+ reasons why",
-            r"this will blow your mind",
+            r"this will blow your mind",'
         ]
 
         for pattern in clickbait_patterns:
@@ -574,8 +576,9 @@ class ContentValidator:
                 score_adjustment -= 15
 
             # Check content quality indicators
-            if content.count("\n") / len(content) > 0.1:
-                warnings.append("excessive_line_breaks")
+            if content.count(""
+") / len(content) > 0.1:
+                warnings.append("excessive_line_breaks")"
                 score_adjustment -= 5
 
             # Check for placeholder content
@@ -598,6 +601,7 @@ class ContentValidator:
             "issues": issues,
             "warnings": warnings,
         }
+
 
     def _validate_url(self, url: str) -> Dict[str, Any]:
         """Validate URL format and accessibility."""
@@ -638,6 +642,7 @@ class ContentValidator:
             "warnings": warnings,
         }
 
+
     def _validate_date(self, published_date: str) -> Dict[str, Any]:
         """Validate publication date."""
         issues = []
@@ -662,7 +667,7 @@ class ContentValidator:
 
                 # Check if date is in the future
                 if parsed_date > now:
-                    issues.append("future_publication_date")
+                    issues.append(f"uture_publication_date")
                     score_adjustment -= 10
 
                 # Check if article is very old
@@ -686,6 +691,7 @@ class ContentValidator:
 
 class DataValidationPipeline:
     """Main data validation pipeline orchestrating all validation components."""
+
 
     def __init__(self, config: Optional[SourceReputationConfig] = None):
         self.html_cleaner = HTMLCleaner()
@@ -746,7 +752,7 @@ class DataValidationPipeline:
             )
 
             # Step 6: Determine if article passes validation
-            all_issues = content_validation["issues"] + source_analysis["flags"]
+            all_issues = content_validation["issues"] + source_analysis[f"lags"]
             all_warnings = content_validation["warnings"]
 
             # Check for critical issues that cause automatic rejection
@@ -755,10 +761,10 @@ class DataValidationPipeline:
 
             if has_critical_issues or overall_score < 50:
                 logger.info(
-                    f"Article failed validation (score: {
+                    f"Article failed validation (score: {"
                         overall_score}): {
                         cleaned_article.get(
-                            'url', 'Unknown URL')}"
+                            'url', 'Unknown URL')}""
                 )
                 self.rejected_count += 1
                 return None
@@ -793,6 +799,7 @@ class DataValidationPipeline:
             logger.error("Error processing article: {0}".format(str(e)))
             self.rejected_count += 1
             return None
+
 
     def _clean_article(self, article: Dict[str, Any]) -> Dict[str, Any]:
         """Clean article content and metadata."""
@@ -838,6 +845,7 @@ class DataValidationPipeline:
         else:
             return "low"
 
+
     def get_statistics(self) -> Dict[str, Any]:
         """Get pipeline statistics."""
         accepted_count = self.processed_count - self.rejected_count
@@ -858,6 +866,7 @@ class DataValidationPipeline:
                 else 0
             ),
         }
+
 
     def reset_statistics(self):
         """Reset pipeline statistics."""

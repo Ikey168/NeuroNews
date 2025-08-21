@@ -278,7 +278,7 @@ def main():
     col1, col2 = st.columns([1, 1])
 
     with col1:
-        st.subheader("📈 News Trends")
+        st.subheader(" News Trends")
 
         # Fetch and display news trends
         if topic_input:
@@ -336,7 +336,7 @@ def main():
 
     # Full width section for event clusters
     st.markdown("---")
-    st.subheader("🎯 Event Clusters")
+    st.subheader(" Event Clusters")
 
     # Fetch breaking news/events
     events = api.get_breaking_news(hours_back, 20)
@@ -355,7 +355,7 @@ def main():
                 events, key=lambda x: x.get("impact_score", 0), reverse=True
             )[:5]
             for event in sorted_events:
-                with st.expander(f"🎯 {event.get('cluster_name', 'Unknown Event')}"):
+                with st.expander(f" {event.get('cluster_name', 'Unknown Event')}"):
                     st.write(f"**Type:** {event.get('event_type', 'Unknown')}")
                     st.write(f"**Impact Score:** {event.get('impact_score', 0):.2f}")
                     st.write(f"**Articles:** {event.get('cluster_size', 0)}")
@@ -369,7 +369,7 @@ def main():
                 events, key=lambda x: x.get("trending_score", 0), reverse=True
             )[:5]
             for event in trending_events:
-                with st.expander(f"📈 {event.get('cluster_name', 'Unknown Event')}"):
+                with st.expander(f" {event.get('cluster_name', 'Unknown Event')}"):
                     st.write(f"**Type:** {event.get('event_type', 'Unknown')}")
                     st.write(
                         f"**Trending Score:** {event.get('trending_score', 0):.2f}"

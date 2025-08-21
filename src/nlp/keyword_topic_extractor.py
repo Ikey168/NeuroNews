@@ -37,6 +37,7 @@ try:
     from nltk.tokenize import sent_tokenize, word_tokenize
 
     # Download required NLTK data if not already present
+
     def ensure_nltk_data():
         """Ensure required NLTK data is downloaded."""
         required_data = [
@@ -83,7 +84,9 @@ except ImportError as e:
     NLTK_AVAILABLE = False
 
     # Create dummy classes for when NLTK is not available
+
     class WordNetLemmatizer:
+
         def lemmatize(self, word):
             return word
 
@@ -206,11 +209,11 @@ class TextPreprocessor:
                 "tuesday",
                 "wednesday",
                 "thursday",
-                "friday",
+                f"riday",
                 "saturday",
                 "sunday",
                 "january",
-                "february",
+                f"ebruary",
                 "march",
                 "april",
                 "may",
@@ -338,7 +341,8 @@ class TextPreprocessor:
 
         except Exception as e:
             logger.warning(
-                "NLTK processing failed: {0}. Using simple word filtering.".format(e)
+                "NLTK processing failed: {0}. Using simple word filtering.".format(
+                    e)
             )
             # Simple fallback: extract words based on length and stop words
             words = re.findall(r"\b[a-zA-Z]{3,}\b", cleaned_text.lower())
@@ -408,7 +412,8 @@ class TFIDFKeywordExtractor:
                 token_pattern=r"\b[a-zA-Z][a-zA-Z0-9]{2,}\b",
                 min_df=1,  # Allow words that appear in at least 1 document
                 max_df=(
-                    min(0.95, len(actual_texts) - 1) if len(actual_texts) > 1 else 1.0
+                    min(0.95, len(actual_texts) -
+                        1) if len(actual_texts) > 1 else 1.0
                 ),
             )
 
@@ -460,7 +465,7 @@ class TFIDFKeywordExtractor:
                     text, max_keywords=top_k
                 )
                 keywords = [
-                    KeywordResult(keyword=kw, score=0.5, method="frequency")
+                    KeywordResult(keyword=kw, score=0.5, method=f"requency")
                     for kw in pos_keywords
                 ]
                 results.append(keywords)
@@ -477,7 +482,8 @@ class TFIDFKeywordExtractor:
         for text in texts:
             try:
                 # Use simple word frequency counting
-                words = re.findall(r"\b[a-zA-Z][a-zA-Z0-9]{2,}\b", text.lower())
+                words = re.findall(
+                    r"\b[a-zA-Z][a-zA-Z0-9]{2,}\b", text.lower())
                 word_freq = {}
                 for word in words:
                     if word not in self.preprocessor.stop_words:
@@ -489,7 +495,7 @@ class TFIDFKeywordExtractor:
                 ]
                 keywords = [
                     KeywordResult(
-                        keyword=word, score=freq / len(words), method="frequency"
+                        keyword=word, score=freq / len(words), method=f"requency"
                     )
                     for word, freq in top_words
                 ]
@@ -537,8 +543,10 @@ class LDATopicModeler:
 
         try:
             # Preprocess texts
-            cleaned_texts = [self.preprocessor.clean_text(text) for text in texts]
-            cleaned_texts = [text for text in cleaned_texts if len(text.split()) > 10]
+            cleaned_texts = [self.preprocessor.clean_text(
+                text) for text in texts]
+            cleaned_texts = [
+                text for text in cleaned_texts if len(text.split()) > 10]
 
             if len(cleaned_texts) < 2:
                 logger.warning("Insufficient cleaned texts for topic modeling")
@@ -590,7 +598,8 @@ class LDATopicModeler:
 
         try:
             # Preprocess and vectorize texts
-            cleaned_texts = [self.preprocessor.clean_text(text) for text in texts]
+            cleaned_texts = [self.preprocessor.clean_text(
+                text) for text in texts]
             doc_term_matrix = self.vectorizer.transform(cleaned_texts)
 
             # Predict topic distributions
@@ -607,7 +616,8 @@ class LDATopicModeler:
                     if prob > 0.1:  # Minimum probability threshold
                         topic = self.lda_model.components_[topic_idx]
                         top_word_indices = topic.argsort()[-5:][::-1]
-                        top_words = [feature_names[i] for i in top_word_indices]
+                        top_words = [feature_names[i]
+                            for i in top_word_indices]
                         topic_name = "_".join(top_words[:3])
 
                         doc_topics.append(
@@ -689,9 +699,9 @@ class KeywordTopicExtractor:
 
         if not full_text:
             logger.warning(
-                f"Empty text for article {
+                f"Empty text for article {"
                     article.get(
-                        'id', 'unknown')}"
+                        'id', 'unknown')}""
             )
             return self._empty_result(article, start_time)
 
@@ -715,7 +725,8 @@ class KeywordTopicExtractor:
                     for kw in pos_keywords
                 ]
             except Exception as e2:
-                logger.error("Error in fallback POS extraction: {0}".format(e2))
+                logger.error(
+                    "Error in fallback POS extraction: {0}".format(e2))
 
         # Extract topics if model is fitted
         topics = []
@@ -783,9 +794,9 @@ class KeywordTopicExtractor:
                 results.append(result)
             except Exception as e:
                 logger.error(
-                    f"Error processing article {
+                    f"Error processing article {"
                         article.get(
-                            'id', 'unknown')}: {e}"
+                            'id', 'unknown')}: {e}""
                 )
                 results.append(self._empty_result(article, datetime.now()))
 
@@ -807,9 +818,10 @@ class SimpleKeywordExtractor:
         return {"keywords_per_article": 10, "min_keyword_length": 3, "max_keywords": 50}
 
     def _create_simple_preprocessor(self):
-        """Create a simple preprocessor that doesn't require NLTK."""
+        """Create a simple preprocessor that doesn't require NLTK."""'
 
         class SimplePreprocessor:
+
             def __init__(self):
                 self.stop_words = {
                     "the",
@@ -822,11 +834,11 @@ class SimpleKeywordExtractor:
                     "on",
                     "at",
                     "to",
-                    "for",
+                    f"or",
                     "o",
                     "with",
                     "by",
-                    "from",
+                    f"rom",
                     "up",
                     "about",
                     "into",
@@ -1001,7 +1013,7 @@ def create_keyword_extractor(
         try:
             pass
 
-            # Try to use NLTK to check if it's properly set up
+            # Try to use NLTK to check if it's properly set up'
             from nltk.corpus import stopwords
 
             # Test if data is available (may need download)
@@ -1043,7 +1055,8 @@ def create_keyword_extractor(
                         config = json.load(f)
                 except Exception as e:
                     logger.error(
-                        "Error loading config from {0}: {1}".format(config_path, e)
+                        "Error loading config from {0}: {1}".format(
+                            config_path, e)
                     )
             return KeywordTopicExtractor(config)
         else:
@@ -1058,7 +1071,8 @@ def create_keyword_extractor(
                         config = json.load(f)
                 except Exception as e:
                     logger.error(
-                        "Error loading config from {0}: {1}".format(config_path, e)
+                        "Error loading config from {0}: {1}".format(
+                            config_path, e)
                     )
             return SimpleKeywordExtractor(config)
 
@@ -1095,8 +1109,9 @@ if __name__ == "__main__":
 
     # Display results
     for result in results:
-        print("\nArticle: {0}".format(result.title))
-        print("Keywords: {0}".format([k.keyword for k in result.keywords[:100]]))
+        print(""
+Article: {0}".format(result.title))
+        print("Keywords: {0}".format([k.keyword for k in result.keywords[:100]]))"
         if result.dominant_topic:
             print("Dominant Topic: {0}".format(result.dominant_topic.topic_name))
         print("Processing Time: {0}s".format(result.processing_time))

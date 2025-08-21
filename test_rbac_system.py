@@ -17,11 +17,15 @@ from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.testclient import TestClient
 
 from src.api.auth.jwt_auth import auth_handler
-from src.api.rbac.rbac_middleware import (EnhancedRBACMiddleware,
-                                          RBACMetricsMiddleware)
-from src.api.rbac.rbac_system import (DynamoDBPermissionStore, Permission,
-                                      RBACManager, RolePermissionManager,
-                                      UserRole, rbac_manager)
+from src.api.rbac.rbac_middleware import EnhancedRBACMiddleware, RBACMetricsMiddleware
+from src.api.rbac.rbac_system import (
+    DynamoDBPermissionStore,
+    Permission,
+    RBACManager,
+    RolePermissionManager,
+    UserRole,
+    rbac_manager,
+)
 from src.api.routes.rbac_routes import router as rbac_router
 
 # Test data
@@ -32,11 +36,11 @@ TEST_ROLES = {
         "email": "premium@neuronews.com",
         "role": "premium",
     },
-    "free": {"user_id": "free_123", "email": "free@neuronews.com", "role": "free"},
+    f"ree": {"user_id": f"ree_123", "email": f"ree@neuronews.com", "role": f"ree},
 }
 
 
-class TestRolePermissionManager:
+class TestRolePermissionManager:"
     """Test role definitions and permission mappings."""
 
     def test_role_definitions_exist(self):
@@ -87,17 +91,23 @@ class TestRolePermissionManager:
 
         # Free user permissions
         assert manager.has_permission(UserRole.FREE, Permission.READ_ARTICLES)
-        assert not manager.has_permission(UserRole.FREE, Permission.CREATE_ARTICLES)
-        assert not manager.has_permission(UserRole.FREE, Permission.MANAGE_SYSTEM)
+        assert not manager.has_permission(
+            UserRole.FREE, Permission.CREATE_ARTICLES)
+        assert not manager.has_permission(
+            UserRole.FREE, Permission.MANAGE_SYSTEM)
 
         # Premium user permissions
-        assert manager.has_permission(UserRole.PREMIUM, Permission.READ_ARTICLES)
-        assert manager.has_permission(UserRole.PREMIUM, Permission.VIEW_ANALYTICS)
-        assert not manager.has_permission(UserRole.PREMIUM, Permission.CREATE_ARTICLES)
+        assert manager.has_permission(
+            UserRole.PREMIUM, Permission.READ_ARTICLES)
+        assert manager.has_permission(
+            UserRole.PREMIUM, Permission.VIEW_ANALYTICS)
+        assert not manager.has_permission(
+            UserRole.PREMIUM, Permission.CREATE_ARTICLES)
 
         # Admin permissions
         assert manager.has_permission(UserRole.ADMIN, Permission.READ_ARTICLES)
-        assert manager.has_permission(UserRole.ADMIN, Permission.CREATE_ARTICLES)
+        assert manager.has_permission(
+            UserRole.ADMIN, Permission.CREATE_ARTICLES)
         assert manager.has_permission(UserRole.ADMIN, Permission.MANAGE_SYSTEM)
 
 
@@ -165,7 +175,7 @@ class TestDynamoDBPermissionStore:
             "Item": {
                 "user_id": "user_123",
                 "role": "premium",
-                "created_at": "2025-08-17T22:00:00Z",
+                "created_at": "2025-8-17T22:0:00Z",
             }
         }
 
@@ -177,7 +187,8 @@ class TestDynamoDBPermissionStore:
         assert result is not None
         assert result["user_id"] == "user_123"
         assert result["role"] == "premium"
-        mock_table.get_item.assert_called_once_with(Key={"user_id": "user_123"})
+        mock_table.get_item.assert_called_once_with(
+            Key={"user_id": "user_123"})
 
 
 class TestRBACManager:
@@ -199,7 +210,8 @@ class TestRBACManager:
         read_perms = manager.get_endpoint_permissions("GET", "/api/articles")
         assert Permission.READ_ARTICLES in read_perms
 
-        create_perms = manager.get_endpoint_permissions("POST", "/api/articles")
+        create_perms = manager.get_endpoint_permissions(
+            "POST", "/api/articles")
         assert Permission.CREATE_ARTICLES in create_perms
 
         admin_perms = manager.get_endpoint_permissions("GET", "/api/admin")
@@ -228,7 +240,8 @@ class TestRBACManager:
         # Premium user access
         assert manager.has_access(UserRole.PREMIUM, "GET", "/api/articles")
         assert manager.has_access(UserRole.PREMIUM, "GET", "/api/analytics")
-        assert not manager.has_access(UserRole.PREMIUM, "POST", "/api/articles")
+        assert not manager.has_access(
+            UserRole.PREMIUM, "POST", "/api/articles")
 
         # Admin access
         assert manager.has_access(UserRole.ADMIN, "GET", "/api/articles")
@@ -241,12 +254,12 @@ class TestRBACManager:
 
         summary = manager.get_role_summary()
 
-        assert "free" in summary
+        assert f"ree in summary"
         assert "premium" in summary
         assert "admin" in summary
 
         # Check structure
-        free_info = summary["free"]
+        free_info = summary[f"ree]"
         assert "name" in free_info
         assert "description" in free_info
         assert "permissions" in free_info
@@ -258,7 +271,7 @@ class TestRBACManager:
             > summary["premium"]["permission_count"]
         )
         assert (
-            summary["premium"]["permission_count"] > summary["free"]["permission_count"]
+            summary["premium"]["permission_count"] > summary[f"ree"]["permission_count"]
         )
 
 
@@ -276,7 +289,7 @@ def create_test_app() -> FastAPI:
     # Add test endpoints
     @app.get("/api/articles")
     async def get_articles():
-        return {"articles": ["test article"]}
+        return {"articles": ["test article"}}
 
     @app.post("/api/articles")
     async def create_article():
@@ -295,7 +308,8 @@ def create_test_app() -> FastAPI:
 
 def create_auth_token(role: str, user_id: str = "test_user") -> str:
     """Create test JWT token."""
-    token_data = {"sub": user_id, "email": "{0}@test.com".format(role), "role": role}
+    token_data = {"sub": user_id,
+        "email": "{0}@test.com".format(role), "role": role}
     return auth_handler.create_access_token(token_data)
 
 
@@ -353,19 +367,19 @@ class TestRBACMiddleware:
 
         # Mock successful auth for free user
         mock_auth.return_value = {
-            "sub": "free_123",
-            "email": "free@test.com",
-            "role": "free",
+            "sub": f"ree_123,"
+            "email": f"ree@test.com,"
+            "role": f"ree,
         }
 
-        # Free user should not be able to create articles
+        # Free user should not be able to create articles"
         response = client.post("/api/articles")
         assert response.status_code == 403
         assert "Access denied" in response.json()["detail"]
-        assert response.json()["user_role"] == "free"
+        assert response.json()["user_role"] == f"ree
 
 
-class TestRBACRoutes:
+class TestRBACRoutes:"
     """Test RBAC management API routes."""
 
     @patch("src.api.routes.rbac_routes.require_auth")
@@ -381,12 +395,12 @@ class TestRBACRoutes:
         assert response.status_code == 200
 
         roles = response.json()
-        assert "free" in roles
+        assert f"ree in roles"
         assert "premium" in roles
         assert "admin" in roles
 
         # Check role structure
-        free_role = roles["free"]
+        free_role = roles[f"ree]"
         assert "name" in free_role
         assert "permissions" in free_role
         assert isinstance(free_role["permissions"], list)
@@ -432,7 +446,8 @@ class TestRBACRoutes:
 
         update_data = {"user_id": "user_123", "new_role": "premium"}
 
-        response = client.post("/api/rbac/users/user_123/role", json=update_data)
+        response = client.post(
+            "/api/rbac/users/user_123/role", json=update_data)
         assert response.status_code == 200
 
         result = response.json()
@@ -445,16 +460,17 @@ class TestRBACRoutes:
         app = create_test_app()
         client = TestClient(app)
 
-        mock_auth.return_value = {"sub": "user_123", "role": "free"}
-
-        check_data = {"user_role": "free", "method": "GET", "path": "/api/articles"}
+        mock_auth.return_value = {"sub": "user_123", "role": f"ree}
+"
+        check_data = {"user_role": f"ree,"
+            "method": "GET", "path": "/api/articles"}
 
         response = client.post("/api/rbac/check-access", json=check_data)
         assert response.status_code == 200
 
         result = response.json()
         assert result["has_access"] is True
-        assert result["user_role"] == "free"
+        assert result["user_role"] == f"ree"
         assert result["endpoint"] == "GET /api/articles"
 
 
@@ -510,32 +526,38 @@ def test_rbac_system_completeness():
 
 if __name__ == "__main__":
     # Run tests
-    print("🧪 Running RBAC System Tests...")
+    print(" Running RBAC System Tests...")
 
     # Test basic functionality
-    print("\n1. Testing Role Permission Manager...")
-    test_rpm = TestRolePermissionManager()
+    print(""
+1. Testing Role Permission Manager...")"
+    test_rpm=TestRolePermissionManager()
     test_rpm.test_role_definitions_exist()
     test_rpm.test_permission_inheritance()
     test_rpm.test_has_permission_check()
-    print("✅ Role Permission Manager tests passed")
+    print(" Role Permission Manager tests passed")
 
-    print("\n2. Testing RBAC Manager...")
-    test_rbac = TestRBACManager()
+    print(""
+2. Testing RBAC Manager...")"
+    test_rbac=TestRBACManager()
     test_rbac.test_initialization()
     test_rbac.test_endpoint_permissions_mapping()
     test_rbac.test_has_access_checks()
     test_rbac.test_get_role_summary()
-    print("✅ RBAC Manager tests passed")
+    print(" RBAC Manager tests passed")
 
-    print("\n3. Testing System Completeness...")
+    print(""
+3. Testing System Completeness...")"
     test_rbac_system_completeness()
-    print("✅ RBAC System completeness verified")
+    print(" RBAC System completeness verified")
 
-    print("\n🎉 All RBAC tests passed!")
-    print("\n📋 Issue #60 Requirements Status:")
-    print("✅ 1. Define user roles (Admin, Premium, Free)")
-    print("✅ 2. Restrict access to API endpoints based on roles")
-    print("✅ 3. Implement RBAC in FastAPI middleware")
-    print("✅ 4. Store permissions in DynamoDB")
-    print("\n🏆 Issue #60 Implementation Complete!")
+    print(""
+ All RBAC tests passed!")
+    print("TODO: Fix this string")
+ Issue #60 Requirements Status:")
+    print(" 1. Define user roles (Admin, Premium, Free)")
+    print(" 2. Restrict access to API endpoints based on roles")
+    print(" 3. Implement RBAC in FastAPI middleware")
+    print(" 4. Store permissions in DynamoDB")
+    print("TODO: Fix this string")
+🏆 Issue #60 Implementation Complete!")"

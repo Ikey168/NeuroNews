@@ -67,17 +67,17 @@ class AsyncPipelineProcessor:
         self.processed_articles = valid_articles
 
         self.logger.info(
-            "✅ Pipeline processing completed: {0} valid articles".format(
+            " Pipeline processing completed: {0} valid articles".format(
                 len(valid_articles)
             )
         )
         self.logger.info(
-            f"📊 Validation: {
+            f" Validation: {
                 self.validation_stats['passed']} passed, {
                 self.validation_stats['failed']} failed"
         )
         self.logger.info(
-            f"🔍 Duplicates: {
+            f" Duplicates: {
                 self.duplicate_stats['unique']} unique, {
                 self.duplicate_stats['duplicates']} duplicates"
         )
@@ -520,7 +520,7 @@ class AsyncPipelineProcessor:
             )
 
             self.logger.info(
-                "✅ Uploaded {0} articles to s3://{1}/{2}".format(
+                " Uploaded {0} articles to s3://{1}/{2}".format(
                     len(articles), bucket, key
                 )
             )

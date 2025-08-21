@@ -174,7 +174,5 @@ async def test_delete_article(loader, mock_cursor, mock_conn):
     success = await loader.delete_article("article1")
 
     assert success is True
-    mock_cursor.execute.assert_called_with(
-        "DELETE FROM news_articles WHERE id = %s", ["article1"]
-    )
+    mock_cursor.execute.assert_called_with("DELETE FROM news_articles WHERE id = %s", ["article1"])
     mock_conn.commit.assert_called_once()

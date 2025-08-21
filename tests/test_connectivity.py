@@ -10,9 +10,7 @@ import sys
 import time
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -30,7 +28,7 @@ def wait_for_service(host, port, timeout=30):
             sock.close()
 
             if result == 0:
-                logger.info("✅ Service {0}:{1} is ready".format(host, port))
+                logger.info(" Service {0}:{1} is ready".format(host, port))
                 return True
 
         except Exception as e:
@@ -38,11 +36,7 @@ def wait_for_service(host, port, timeout=30):
 
         time.sleep(1)
 
-    logger.error(
-        "❌ Service {0}:{1} did not become ready within {2}s".format(
-            host, port, timeout
-        )
-    )
+    logger.error("❌ Service {0}:{1} did not become ready within {2}s".format(host, port, timeout))
     return False
 
 
@@ -67,7 +61,7 @@ def test_database_basic():
         conn.close()
 
         assert result[0] == 1
-        logger.info("✅ Database connection test passed")
+        logger.info(" Database connection test passed")
         return True
 
     except Exception as e:
@@ -92,7 +86,7 @@ def test_redis_basic():
         r.delete("test_key")
 
         assert value == "test_value"
-        logger.info("✅ Redis connection test passed")
+        logger.info(" Redis connection test passed")
         return True
 
     except Exception as e:
@@ -125,13 +119,13 @@ def test_environment():
         logger.error("❌ Missing environment variables: {0}".format(missing_vars))
         return False
 
-    logger.info("✅ All required environment variables are set")
+    logger.info(" All required environment variables are set")
     return True
 
 
 def run_basic_tests():
     """Run basic connectivity tests."""
-    logger.info("🚀 Starting lightweight connectivity tests...")
+    logger.info(" Starting lightweight connectivity tests...")
 
     # Test environment
     env_test = test_environment()
@@ -161,10 +155,10 @@ def run_basic_tests():
     total_tests = len(tests_passed) + 1  # +1 for env test
     passed_tests = sum(tests_passed) + (1 if env_test else 0)
 
-    logger.info("📊 Test Results: {0}/{1} passed".format(passed_tests, total_tests))
+    logger.info(" Test Results: {0}/{1} passed".format(passed_tests, total_tests))
 
     if passed_tests == total_tests:
-        logger.info("🎉 All basic tests passed!")
+        logger.info(" All basic tests passed!")
         return True
     else:
         logger.error("❌ {0} tests failed".format(total_tests - passed_tests))
@@ -178,7 +172,7 @@ def main():
     if not success:
         sys.exit(1)
 
-    logger.info("✅ Basic connectivity tests completed successfully")
+    logger.info(" Basic connectivity tests completed successfully")
 
 
 if __name__ == "__main__":

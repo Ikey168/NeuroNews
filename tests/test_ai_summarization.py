@@ -124,9 +124,7 @@ class TestAIArticleSummarizer:
 
             # Mock tokenizer methods
             mock_tokenizer.encode.return_value = torch.tensor([[1, 2, 3, 4, 5]])
-            mock_tokenizer.decode.return_value = (
-                "AI transforms industries through automation."
-            )
+            mock_tokenizer.decode.return_value = "AI transforms industries through automation."
 
             # Mock model generation
             mock_model.generate.return_value = torch.tensor([[6, 7, 8, 9]])
@@ -363,9 +361,7 @@ class TestIntegration:
     async def test_end_to_end_workflow(self, sample_articles):
         """Test complete end-to-end summarization workflow."""
         # This test requires actual models, so we'll mock the heavy parts
-        with patch(
-            "src.nlp.ai_summarizer.AutoTokenizer"
-        ) as mock_tokenizer_class, patch(
+        with patch("src.nlp.ai_summarizer.AutoTokenizer") as mock_tokenizer_class, patch(
             "src.nlp.ai_summarizer.AutoModelForSeq2SeqLM"
         ) as mock_model_class:
 
@@ -461,10 +457,7 @@ class TestPerformance:
             start_time = time.time()
 
             # Process concurrently
-            tasks = [
-                summarizer.summarize_article(text, SummaryLength.MEDIUM)
-                for text in texts
-            ]
+            tasks = [summarizer.summarize_article(text, SummaryLength.MEDIUM) for text in texts]
 
             # Note: This will actually fail due to mocking, but we're testing
             # the structure

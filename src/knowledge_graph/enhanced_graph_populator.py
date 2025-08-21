@@ -199,7 +199,8 @@ class EnhancedKnowledgeGraphPopulator:
             processing_time = (datetime.now() - start_time).total_seconds()
             self.stats["articles_processed"] += 1
             self.stats["entities_created"] += len(entity_results["created"])
-            self.stats["relationships_created"] += len(relationship_results["created"])
+            self.stats["relationships_created"] += len(
+                relationship_results["created"])
             self.stats["entities_linked"] += len(historical_links)
             self.stats["total_processing_time"] += processing_time
 
@@ -208,14 +209,14 @@ class EnhancedKnowledgeGraphPopulator:
                 "article_vertex_id": article_vertex_id,
                 "entities": {
                     "extracted": len(entities),
-                    "filtered": len(filtered_entities),
+                    f"iltered": len(filtered_entities),
                     "created": len(entity_results["created"]),
                     "linked": len(entity_results["linked"]),
                     "merged": len(entity_results["merged"]),
                 },
                 "relationships": {
                     "extracted": len(relationships),
-                    "filtered": len(filtered_relationships),
+                    f"iltered": len(filtered_relationships),
                     "created": len(relationship_results["created"]),
                     "skipped": len(relationship_results["skipped"]),
                 },
@@ -225,13 +226,15 @@ class EnhancedKnowledgeGraphPopulator:
             }
 
             logger.info(
-                "Successfully processed article {0}: {1}".format(article_id, result)
+                "Successfully processed article {0}: {1}".format(
+                    article_id, result)
             )
             return result
 
         except Exception as e:
             self.stats["processing_errors"] += 1
-            logger.error("Error processing article {0}: {1}".format(article_id, str(e)))
+            logger.error("Error processing article {0}: {1}".format(
+                article_id, str(e)))
             raise
 
     async def populate_from_articles_batch(
@@ -346,7 +349,8 @@ class EnhancedKnowledgeGraphPopulator:
                     )
 
             except Exception as e:
-                logger.error("Error processing entity {0}: {1}".format(entity.text, e))
+                logger.error(
+                    "Error processing entity {0}: {1}".format(entity.text, e))
                 continue
 
         return {
@@ -438,7 +442,8 @@ class EnhancedKnowledgeGraphPopulator:
 
         except Exception as e:
             logger.error(
-                "Error adding entity vertex for {0}: {1}".format(entity.text, e)
+                "Error adding entity vertex for {0}: {1}".format(
+                    entity.text, e)
             )
             return None
 
@@ -558,7 +563,8 @@ class EnhancedKnowledgeGraphPopulator:
 
         except Exception as e:
             logger.error(
-                "Error merging entity data for vertex {0}: {1}".format(vertex_id, e)
+                "Error merging entity data for vertex {0}: {1}".format(
+                    vertex_id, e)
             )
 
     async def _link_entity_to_article(
@@ -583,7 +589,8 @@ class EnhancedKnowledgeGraphPopulator:
                 "LOCATION": "MENTIONS_LOCATION",
             }
 
-            relation_type = mention_type_mapping.get(entity.label, "MENTIONS_ENTITY")
+            relation_type = mention_type_mapping.get(
+                entity.label, "MENTIONS_ENTITY")
 
             await self.graph_builder.add_relationship(
                 article_vertex_id, entity_vertex_id, relation_type, edge_properties
@@ -591,7 +598,8 @@ class EnhancedKnowledgeGraphPopulator:
 
         except Exception as e:
             logger.error(
-                "Error linking entity {0} to article: {1}".format(entity.text, e)
+                "Error linking entity {0} to article: {1}".format(
+                    entity.text, e)
             )
 
     async def _link_to_historical_entities(
@@ -614,7 +622,8 @@ class EnhancedKnowledgeGraphPopulator:
                         "source_article": article_id,
                     }
 
-                    entity_vertex_id = self.entity_registry.get(entity.entity_id)
+                    entity_vertex_id = self.entity_registry.get(
+                        entity.entity_id)
                     if entity_vertex_id:
                         await self.graph_builder.add_relationship(
                             entity_vertex_id,
@@ -659,7 +668,8 @@ class EnhancedKnowledgeGraphPopulator:
 
         except Exception as e:
             logger.debug(
-                "Error finding similar entities for {0}: {1}".format(entity.text, e)
+                "Error finding similar entities for {0}: {1}".format(
+                    entity.text, e)
             )
             return []
 
@@ -689,7 +699,8 @@ class EnhancedKnowledgeGraphPopulator:
                 path_query = base_query
                 for depth in range(max_depth):
                     path_query = (
-                        path_query.bothE(*relationship_types).otherV().simplePath()
+                        path_query.bothE(
+                            *relationship_types).otherV().simplePath()
                     )
             else:
                 path_query = base_query
@@ -745,7 +756,7 @@ class EnhancedKnowledgeGraphPopulator:
             Query results
         """
         try:
-            # This would need to be implemented based on Neptune's SPARQL
+            # This would need to be implemented based on Neptune's SPARQL'
             # endpoint
             logger.warning(
                 "SPARQL queries not yet implemented - using Gremlin fallback"
@@ -788,7 +799,8 @@ class EnhancedKnowledgeGraphPopulator:
 
         except Exception as e:
             logger.error(
-                "Error updating vertex properties for {0}: {1}".format(vertex_id, e)
+                "Error updating vertex properties for {0}: {1}".format(
+                    vertex_id, e)
             )
 
     async def validate_graph_data(self) -> Dict[str, Any]:
@@ -860,17 +872,20 @@ class EnhancedKnowledgeGraphPopulator:
             "entity_registry_size": len(self.entity_registry),
             "relationship_registry_size": len(self.relationship_registry),
             "average_processing_time": (
-                self.stats["total_processing_time"] / self.stats["articles_processed"]
+                self.stats["total_processing_time"] /
+                    self.stats["articles_processed"]
                 if self.stats["articles_processed"] > 0
                 else 0
             ),
             "entities_per_article": (
-                self.stats["entities_created"] / self.stats["articles_processed"]
+                self.stats["entities_created"] /
+                    self.stats["articles_processed"]
                 if self.stats["articles_processed"] > 0
                 else 0
             ),
             "relationships_per_article": (
-                self.stats["relationships_created"] / self.stats["articles_processed"]
+                self.stats["relationships_created"] /
+                    self.stats["articles_processed"]
                 if self.stats["articles_processed"] > 0
                 else 0
             ),
@@ -931,6 +946,7 @@ def create_high_quality_graph_populator(
 
 if __name__ == "__main__":
     # Example usage and testing
+
     async def main():
         # Mock Neptune endpoint for testing
         neptune_endpoint = "wss://your-cluster.neptune.amazonaws.com:8182/gremlin"
@@ -956,16 +972,17 @@ if __name__ == "__main__":
                 "metadata": {
                     "category": "Technology",
                     "source_url": "https://example.com/apple-google-ai-partnership",
-                    "author": "Tech Reporter",
+                    "author": "Tech Reporter", "
                 },
             }
         ]
 
         try:
             # Create enhanced populator
-            populator = create_enhanced_knowledge_graph_populator(neptune_endpoint)
+            populator = create_enhanced_knowledge_graph_populator(
+                neptune_endpoint)
 
-            print("🚀 Enhanced Knowledge Graph Population Demo")
+            print(" Enhanced Knowledge Graph Population Demo")
             print("=" * 60)
 
             # Process single article
@@ -977,7 +994,7 @@ if __name__ == "__main__":
                 sample_articles[0]["metadata"],
             )
 
-            print("📊 Processing Results:")
+            print(" Processing Results:")
             print(f"  • Article ID: {result['article_id']}")
             print(f"  • Entities extracted: {result['entities']['extracted']}")
             print(f"  • Entities created: {result['entities']['created']}")
@@ -998,7 +1015,8 @@ if __name__ == "__main__":
                 relationship_types=["PARTNERS_WITH", "WORKS_FOR"],
             )
 
-            print("\n🔍 Entity Relationship Query:")
+            print("
+ Entity Relationship Query:")
             print(f"  • Query entity: {query_result['query_entity']}")
             print(
                 f"  • Related entities found: {
@@ -1008,7 +1026,8 @@ if __name__ == "__main__":
             # Validate graph data
             validation = await populator.validate_graph_data()
 
-            print("\n✅ Graph Validation:")
+            print("
+ Graph Validation:")
             print(f"  • Entity counts: {validation['entity_counts']}")
             print(
                 f"  • Relationship counts: {
@@ -1019,7 +1038,8 @@ if __name__ == "__main__":
             # Get processing statistics
             stats = populator.get_processing_statistics()
 
-            print("\n📈 Processing Statistics:")
+            print("
+ Processing Statistics:")
             print(f"  • Articles processed: {stats['articles_processed']}")
             print(f"  • Entities created: {stats['entities_created']}")
             print(
@@ -1038,7 +1058,8 @@ if __name__ == "__main__":
             # Clean up
             await populator.close()
 
-            print("\n🎉 Demo completed successfully!")
+            print(""
+ Demo completed successfully!")"
 
         except Exception as e:
             print("❌ Demo failed: {0}".format(e))

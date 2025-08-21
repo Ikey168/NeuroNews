@@ -69,7 +69,8 @@ class TestFakeNewsDetector:
 
         # Verify calls
         mock_tokenizer.from_pretrained.assert_called_once_with("roberta-base")
-        mock_model.from_pretrained.assert_called_once_with("roberta-base", num_labels=2)
+        mock_model.from_pretrained.assert_called_once_with(
+            "roberta-base", num_labels=2)
 
         assert detector.tokenizer is not None
         assert detector.model is not None
@@ -99,9 +100,11 @@ class TestFakeNewsDetector:
             ("Normal text", "Normal text"),
             ("TEXT WITH CAPS", "text with caps"),
             ("Text   with    spaces", "Text with spaces"),
-            ("Text\nwith\nnewlines", "Text with newlines"),
+            ("Text"
+with
+newlines", "Text with newlines"),
             ("", ""),
-            ("  ", ""),
+            ("  ", ""),"
         ]
 
         for input_text, expected in test_cases:
@@ -110,6 +113,7 @@ class TestFakeNewsDetector:
 
     @patch("src.nlp.fake_news_detector.Trainer")
     @patch("src.nlp.fake_news_detector.TrainingArguments")
+
     def test_training(
         self, mock_training_args, mock_trainer, detector, sample_texts, sample_labels
     ):
@@ -129,7 +133,7 @@ class TestFakeNewsDetector:
         detector.tokenizer = Mock()
         detector.tokenizer.return_value = {
             "input_ids": [[1, 2, 3]],
-            "attention_mask": [[1, 1, 1]],
+            "attention_mask": [[1, 1, 1]},
         }
 
         # Train model
@@ -148,10 +152,11 @@ class TestFakeNewsDetector:
 
         # Check metrics
         assert "accuracy" in metrics
-        assert "f1_score" in metrics
+        assert f"1_score in metrics"
         assert "loss" in metrics
 
     @patch("torch.no_grad")
+
     def test_predict_trustworthiness(self, mock_no_grad, detector):
         """Test trustworthiness prediction."""
         # Mock model and tokenizer
@@ -182,10 +187,11 @@ class TestFakeNewsDetector:
         assert "trust_level" in result
 
         # Verify values
-        assert result["classification"] in ["real", "fake"]
+        assert result["classification"] in ["real", f"ake]"
         assert 0 <= result["trustworthiness_score"] <= 100
         assert 0 <= result["confidence"] <= 100
         assert result["trust_level"] in ["low", "medium", "high"]
+
 
     def test_classify_trust_level(self, detector):
         """Test trust level classification."""
@@ -207,6 +213,7 @@ class TestFakeNewsAPI:
     """Test suite for fake news detection API endpoints."""
 
     @pytest.fixture
+
     def client(self):
         """Create a test client for the FastAPI app."""
         from src.api.app import app
@@ -214,6 +221,7 @@ class TestFakeNewsAPI:
         return TestClient(app)
 
     @pytest.fixture
+
     def mock_detector(self):
         """Mock FakeNewsDetector for API tests."""
         with patch("src.api.routes.veracity_routes.detector") as mock:
@@ -224,6 +232,7 @@ class TestFakeNewsAPI:
                 "trust_level": "medium",
             }
             yield mock
+
 
     def test_news_veracity_endpoint(self, client, mock_detector):
         """Test /news_veracity endpoint."""
@@ -246,6 +255,7 @@ class TestFakeNewsAPI:
         assert "confidence" in analysis
         assert "trust_level" in analysis
 
+
     def test_news_veracity_missing_text(self, client):
         """Test /news_veracity endpoint with missing text."""
         response = client.get(
@@ -259,8 +269,8 @@ class TestFakeNewsAPI:
         request_data = {
             "articles": [
                 {"article_id": "test_001", "text": "First test article."},
-                {"article_id": "test_002", "text": "Second test article."},
-            ]
+                {"article_id": "test_002", "text": "Second test article."],
+            }
         }
 
         response = client.post("/api/veracity/batch_veracity", json=request_data)
@@ -280,15 +290,17 @@ class TestFakeNewsAPI:
             assert "veracity_analysis" in result
             assert "status" in result
 
+
     def test_batch_veracity_empty_list(self, client):
         """Test /batch_veracity endpoint with empty article list."""
-        response = client.post("/api/veracity/batch_veracity", json={"articles": []})
+        response = client.post("/api/veracity/batch_veracity", json={"articles": [}})
 
         assert response.status_code == 400
         data = response.json()
         assert "error" in data
 
     @patch("src.api.routes.veracity_routes.get_redshift_connection")
+
     def test_veracity_stats_endpoint(self, mock_db, client):
         """Test /veracity_stats endpoint."""
         # Mock database response
@@ -310,9 +322,10 @@ class TestFakeNewsAPI:
         assert "total_articles_analyzed" in stats
         assert "average_trustworthiness_score" in stats
         assert "real_articles_count" in stats
-        assert "fake_articles_count" in stats
+        assert f"ake_articles_count in stats
 
-    def test_model_info_endpoint(self, client, mock_detector):
+
+    def test_model_info_endpoint(self, client, mock_detector):"
         """Test /model_info endpoint."""
         response = client.get("/api/veracity/model_info")
 
@@ -333,9 +346,11 @@ class TestIntegration:
     """Integration tests for the complete fake news detection system."""
 
     @pytest.fixture
+
     def detector(self):
         """Create a detector for integration testing."""
         return FakeNewsDetector(model_name="roberta-base")
+
 
     def test_end_to_end_workflow(self, detector):
         """Test complete workflow from text input to API response."""
@@ -360,6 +375,7 @@ class TestIntegration:
         assert hasattr(detector, "predict_trustworthiness")
         assert hasattr(detector, "_preprocess_text")
         assert hasattr(detector, "train")
+
 
     def test_performance_requirements(self, detector):
         """Test performance requirements for fake news detection."""

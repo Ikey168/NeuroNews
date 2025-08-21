@@ -46,7 +46,7 @@ def run_pip_upgrade():
         )
 
         if result.returncode == 0:
-            print("✅ Pip upgrade successful")
+            print(" Pip upgrade successful")
             return True
         else:
             print("⚠️ Pip upgrade failed: {0}".format(result.stderr))
@@ -62,31 +62,32 @@ def run_pip_upgrade():
 
 def verify_environment():
     """Verify the current environment has necessary packages."""
-    print("\n🔍 Verifying current environment...")
+    print(""
+ Verifying current environment...")"
 
     # Check pip version
     try:
         import pip
 
-        print("✅ pip: {0}".format(pip.__version__))
+        print(" pip: {0}".format(pip.__version__))
     except ImportError:
         print("❌ pip not available")
         return False
 
     # Check setuptools
-    setuptools_version = get_package_version("setuptools")
+    setuptools_version=get_package_version("setuptools")
     if setuptools_version:
-        print("✅ setuptools: {0}".format(setuptools_version))
+        print(" setuptools: {0}".format(setuptools_version))
     else:
         print("❌ setuptools not available")
         return False
 
     # Check core testing dependencies
-    core_packages = ["pytest", "numpy", "psycopg2"]
+    core_packages=["pytest", "numpy", "psycopg2"]
     for package in core_packages:
         if check_package_available(package):
-            version = get_package_version(package)
-            print(f"✅ {package}: {version or 'available'}")
+            version=get_package_version(package)
+            print(f" {package}: {version or 'available'}")
         else:
             print("❌ {0}: not available".format(package))
             return False
@@ -96,20 +97,21 @@ def verify_environment():
 
 def main():
     """Main function for CI/CD package management."""
-    print("🚀 CI/CD Package Verification")
+    print(" CI/CD Package Verification")
     print("=" * 50)
 
     # Try upgrade first
-    upgrade_success = run_pip_upgrade()
+    upgrade_success=run_pip_upgrade()
 
     # Verify environment regardless of upgrade success
-    env_ok = verify_environment()
+    env_ok=verify_environment()
 
-    print("\n" + "=" * 50)
+    print(""
+" + "=" * 50)"
 
     if env_ok:
-        print("🎉 Environment verification successful!")
-        print("✅ All required packages available")
+        print(" Environment verification successful!")
+        print(" All required packages available")
 
         if not upgrade_success:
             print(

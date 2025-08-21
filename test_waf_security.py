@@ -34,11 +34,13 @@ class WAFSecurityTester:
     def test_waf_manager_import(self) -> bool:
         """Test WAF manager component imports."""
         try:
-            from src.api.security.aws_waf_manager import (ActionType,
-                                                          ThreatType,
-                                                          waf_manager)
+            from src.api.security.aws_waf_manager import (
+                ActionType,
+                ThreatType,
+                waf_manager,
+            )
 
-            logger.info("✅ AWS WAF Manager imported successfully")
+            logger.info(" AWS WAF Manager imported successfully")
             return True
         except ImportError as e:
             logger.error("❌ Failed to import WAF Manager: {0}".format(e))
@@ -47,10 +49,12 @@ class WAFSecurityTester:
     def test_waf_middleware_import(self) -> bool:
         """Test WAF middleware component imports."""
         try:
-            from src.api.security.waf_middleware import (WAFMetricsMiddleware,
-                                                         WAFSecurityMiddleware)
+            from src.api.security.waf_middleware import (
+                WAFMetricsMiddleware,
+                WAFSecurityMiddleware,
+            )
 
-            logger.info("✅ WAF Security Middleware imported successfully")
+            logger.info(" WAF Security Middleware imported successfully")
             return True
         except ImportError as e:
             logger.error("❌ Failed to import WAF Middleware: {0}".format(e))
@@ -61,7 +65,7 @@ class WAFSecurityTester:
         try:
             from src.api.routes.waf_security_routes import router
 
-            logger.info("✅ WAF Security Routes imported successfully")
+            logger.info(" WAF Security Routes imported successfully")
             return True
         except ImportError as e:
             logger.error("❌ Failed to import WAF Routes: {0}".format(e))
@@ -85,7 +89,9 @@ class WAFSecurityTester:
 
             if waf_routes:
                 logger.info(
-                    "✅ FastAPI integration successful - {0} WAF routes found".format(len(waf_routes))
+                    " FastAPI integration successful - {0} WAF routes found".format(
+                        len(waf_routes)
+                    )
                 )
                 return True
             else:
@@ -103,13 +109,14 @@ class WAFSecurityTester:
 
             # Test health check
             health = waf_manager.health_check()
-            logger.info(f"✅ WAF Manager health check: {health['overall_status']}")
+            logger.info(
+                f" WAF Manager health check: {health['overall_status']}")
 
             # Test threat pattern detection using the new public methods
             test_patterns = [
                 "SELECT * FROM users WHERE id = 1",  # SQL injection
                 "<script>alert('xss')</script>",  # XSS
-                "'; DROP TABLE users; --",  # SQL injection
+                "'; DROP TABLE users; --",  # SQL injection'
             ]
 
             detected_threats = []
@@ -120,12 +127,15 @@ class WAFSecurityTester:
                     detected_threats.append("XSS")
 
             logger.info(
-                "✅ Threat detection working - detected: {0}".format(set(detected_threats))
+                " Threat detection working - detected: {0}".format(
+                    set(detected_threats)
+                )
             )
             return True
 
         except Exception as e:
-            logger.error("❌ WAF Manager functionality test failed: {0}".format(e))
+            logger.error(
+                "❌ WAF Manager functionality test failed: {0}".format(e))
             return False
 
     def test_middleware_threat_detection(self) -> bool:
@@ -152,7 +162,7 @@ class WAFSecurityTester:
                 "' OR '1'='1",
                 "UNION SELECT * FROM",
                 "; DROP TABLE users;",
-                "' AND 1=1--",
+                "' AND 1=1--", '
             ]
 
             detected_sql = 0
@@ -176,12 +186,16 @@ class WAFSecurityTester:
                 detected_xss += 1  # Assume detected for now
 
             logger.info(
-                "✅ Middleware detection methods available - SQL: {0}/{1}, XSS: {2}/{3}".format(detected_sql, len(sql_patterns), detected_xss, len(xss_patterns))
+                " Middleware detection methods available - SQL: {0}/{1}, XSS: {2}/{3}".format(
+                    detected_sql, len(
+                        sql_patterns), detected_xss, len(xss_patterns)
+                )
             )
             return detected_sql > 0 and detected_xss > 0
 
         except Exception as e:
-            logger.error("❌ Middleware threat detection test failed: {0}".format(e))
+            logger.error(
+                "❌ Middleware threat detection test failed: {0}".format(e))
             return False
 
     def test_geofencing_functionality(self) -> bool:
@@ -217,12 +231,15 @@ class WAFSecurityTester:
                     blocked_count += 1
 
             logger.info(
-                "✅ Geofencing test - {0}/{1} IPs processed by geofencing".format(blocked_count, len(blocked_ips))
+                " Geofencing test - {0}/{1} IPs processed by geofencing".format(
+                    blocked_count, len(blocked_ips)
+                )
             )
             return True
 
         except Exception as e:
-            logger.error("❌ Geofencing functionality test failed: {0}".format(e))
+            logger.error(
+                "❌ Geofencing functionality test failed: {0}".format(e))
             return False
 
     def test_rate_limiting_integration(self) -> bool:
@@ -240,12 +257,15 @@ class WAFSecurityTester:
             has_rate_limiting = hasattr(middleware, "_check_rate_limiting")
 
             logger.info(
-                "✅ Rate limiting functionality - method available: {0}".format(has_rate_limiting)
+                " Rate limiting functionality - method available: {0}".format(
+                    has_rate_limiting
+                )
             )
             return has_rate_limiting
 
         except Exception as e:
-            logger.error("❌ Rate limiting integration test failed: {0}".format(e))
+            logger.error(
+                "❌ Rate limiting integration test failed: {0}".format(e))
             return False
 
     def simulate_security_attacks(self) -> Dict[str, Any]:
@@ -271,7 +291,7 @@ class WAFSecurityTester:
                 "' OR 1=1--",
                 "'; DROP TABLE users;--",
                 "UNION SELECT password FROM users",
-                "1' AND 1=1#",
+                "1' AND 1=1#",'
             ]
 
             for payload in sql_payloads:
@@ -302,7 +322,7 @@ class WAFSecurityTester:
                     }
                 )
 
-            logger.info("✅ Security attack simulation completed")
+            logger.info(" Security attack simulation completed")
 
         except Exception as e:
             logger.error("❌ Security attack simulation failed: {0}".format(e))
@@ -318,13 +338,14 @@ class WAFSecurityTester:
             metrics = waf_manager.get_security_metrics()
 
             if isinstance(metrics, dict) and "timestamp" in metrics:
-                logger.info("✅ CloudWatch integration - metrics collection working")
+                logger.info(
+                    " CloudWatch integration - metrics collection working")
                 return True
             else:
                 logger.info(
                     "⚠️ CloudWatch integration - metrics collection simulated (no AWS connection)"
                 )
-                return True  # Count as success since we're in test mode
+                return True  # Count as success since we're in test mode'
 
         except Exception as e:
             logger.error("❌ CloudWatch integration test failed: {0}".format(e))
@@ -332,7 +353,8 @@ class WAFSecurityTester:
 
     def generate_security_report(self) -> Dict[str, Any]:
         """Generate comprehensive security test report."""
-        logger.info("\n🔒 Generating AWS WAF Security Report for Issue #65...")
+        logger.info(""
+🔒 Generating AWS WAF Security Report for Issue #65...")"
 
         report = {
             "timestamp": datetime.utcnow().isoformat(),
@@ -395,33 +417,37 @@ class WAFSecurityTester:
         report["test_summary"] = {
             "total_tests": len(tests),
             "passed_tests": passed_tests,
-            "success_rate": "{0}".format(success_rate:.2%),
+            "success_rate": "{0:.2%}".format(success_rate),
         }
 
         return report
 
     def print_security_status(self, report: Dict[str, Any]):
         """Print formatted security status."""
-        print("\n" + "=" * 80)
+        print(""
+" + "=" * 80)
         print("🔒 AWS WAF SECURITY IMPLEMENTATION STATUS - ISSUE #65")
-        print("=" * 80)
+        print("=" * 80)"
 
-        print(f"\n📊 Overall Status: {report['overall_status']}")
+        print(f""
+ Overall Status: {report['overall_status']}")
         print(
-            f"🧪 Tests Passed: {report['test_summary']['passed_tests']}/{report['test_summary']['total_tests']} ({report['test_summary']['success_rate']})"
+            f" Tests Passed: {report['test_summary']['passed_tests']}/{report['test_summary']['total_tests']} ({report['test_summary']['success_rate']})""
         )
 
-        print("\n🔧 Component Test Results:")
-        for test_name, result in report["component_tests"].items():
+        print(""
+🔧 Component Test Results:")
+        for test_name, result in report["component_tests"].items():"
             status_icon = (
-                "✅"
+                ""
                 if result["status"] == "PASS"
                 else "❌" if result["status"] == "FAIL" else "⚠️"
             )
             print(f"  {status_icon} {test_name}: {result['status']}")
 
-        print("\n⚔️ Security Attack Simulation:")
-        sim = report["security_simulation"]
+        print(""
+⚔️ Security Attack Simulation:")
+        sim = report["security_simulation"]"
 
         sql_detected = sum(
             1
@@ -439,42 +465,47 @@ class WAFSecurityTester:
             f"  🛡️ XSS Attack Detection: {xss_detected}/{len(sim.get('xss_attempts', []))}"
         )
 
-        print("\n✅ IMPLEMENTED FEATURES:")
-        print("  ✅ Deploy AWS WAF (Web Application Firewall) for API protection")
-        print("  ✅ Block SQL injection attacks")
-        print("  ✅ Block cross-site scripting (XSS) attacks")
-        print("  ✅ Enable geofencing (limit access by country)")
-        print("  ✅ Monitor real-time attack attempts")
+        print(""
+ IMPLEMENTED FEATURES:")
+        print("   Deploy AWS WAF (Web Application Firewall) for API protection")
+        print("   Block SQL injection attacks")
+        print("   Block cross-site scripting (XSS) attacks")
+        print("   Enable geofencing (limit access by country)")
+        print("   Monitor real-time attack attempts")"
 
-        print("\n📋 ISSUE #65 REQUIREMENTS STATUS:")
-        print("  ✅ Task 1: Deploy AWS WAF - IMPLEMENTED")
-        print("  ✅ Task 2: Block SQL injection attacks - IMPLEMENTED")
-        print("  ✅ Task 3: Block XSS attacks - IMPLEMENTED")
-        print("  ✅ Task 4: Enable geofencing - IMPLEMENTED")
-        print("  ✅ Task 5: Monitor real-time attacks - IMPLEMENTED")
+        print(""
+ ISSUE #65 REQUIREMENTS STATUS:")
+        print("   Task 1: Deploy AWS WAF - IMPLEMENTED")
+        print("   Task 2: Block SQL injection attacks - IMPLEMENTED")
+        print("   Task 3: Block XSS attacks - IMPLEMENTED")
+        print("   Task 4: Enable geofencing - IMPLEMENTED")
+        print("   Task 5: Monitor real-time attacks - IMPLEMENTED")"
 
-        print("\n🏗️ ARCHITECTURE COMPONENTS:")
-        print("  📁 src/api/security/aws_waf_manager.py - Core WAF management")
-        print("  📁 src/api/security/waf_middleware.py - Real-time security middleware")
-        print("  📁 src/api/routes/waf_security_routes.py - WAF management API")
-        print("  📁 src/api/app.py - FastAPI integration")
+        print(""
+🏗️ ARCHITECTURE COMPONENTS:")
+        print("   src/api/security/aws_waf_manager.py - Core WAF management")
+        print("   src/api/security/waf_middleware.py - Real-time security middleware")
+        print("   src/api/routes/waf_security_routes.py - WAF management API")
+        print("   src/api/app.py - FastAPI integration")"
 
-        print("\n🔍 SECURITY CAPABILITIES:")
+        print(""
+ SECURITY CAPABILITIES:")
         print("  🛡️ Multi-layer protection (AWS WAF + Application middleware)")
         print("  🌍 Geofencing with country-based blocking")
         print("  🚫 SQL injection pattern detection and blocking")
         print("  🚫 XSS attack pattern detection and blocking")
         print("  ⏱️ Real-time threat monitoring and alerting")
-        print("  📊 CloudWatch metrics and dashboard integration")
+        print("   CloudWatch metrics and dashboard integration")
         print("  🤖 Bot traffic detection and mitigation")
-        print("  🔄 Rate limiting with sliding window algorithm")
+        print("  🔄 Rate limiting with sliding window algorithm")"
 
-        print("\n" + "=" * 80)
+        print(""
+" + "=" * 80)"
 
 
 async def main():
     """Main demo function."""
-    print("🚀 Starting AWS WAF Security Test and Demo for Issue #65...")
+    print(" Starting AWS WAF Security Test and Demo for Issue #65...")
 
     tester = WAFSecurityTester()
 
@@ -488,13 +519,16 @@ async def main():
     with open("waf_security_test_report.json", "w") as f:
         json.dump(report, f, indent=2)
 
-    print("\n📄 Detailed report saved to: waf_security_test_report.json")
+    print(""
+📄 Detailed report saved to: waf_security_test_report.json")"
 
     if report["overall_status"] in ["EXCELLENT", "GOOD"]:
-        print("\n🎉 AWS WAF Security Implementation is READY for production!")
-        print("💯 Issue #65 requirements have been successfully implemented!")
+        print(""
+ AWS WAF Security Implementation is READY for production!")
+        print("💯 Issue #65 requirements have been successfully implemented!")"
     else:
-        print(f"\n⚠️ Implementation status: {report['overall_status']}")
+        print(f"
+⚠️ Implementation status: {report['overall_status']}")
         print("🔧 Some components may need attention before production deployment.")
 
 

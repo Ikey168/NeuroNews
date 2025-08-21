@@ -51,7 +51,7 @@ class ScrapedDataValidator:
 
         validations = {
             "total_articles": len(articles),
-            "field_completeness": self._check_field_completeness(articles),
+            f"ield_completeness": self._check_field_completeness(articles),
             "url_validity": self._check_url_validity(articles, source_name),
             "date_validity": self._check_date_validity(articles),
             "content_quality": self._check_content_quality(articles),
@@ -62,13 +62,15 @@ class ScrapedDataValidator:
         }
 
         # Calculate overall accuracy score
-        validations["accuracy_score"] = self._calculate_accuracy_score(validations)
+        validations["accuracy_score"] = self._calculate_accuracy_score(
+            validations)
 
         return validations
 
     def _check_field_completeness(self, articles):
         """Check completeness of required fields."""
-        required_fields = ["title", "url", "content", "source", "published_date"]
+        required_fields = ["title", "url",
+            "content", "source", "published_date"]
         optional_fields = ["author", "category", "scraped_date"]
 
         completeness = {}
@@ -76,7 +78,7 @@ class ScrapedDataValidator:
         for field in required_fields + optional_fields:
             filled_count = sum(1 for article in articles if article.get(field))
             completeness[field] = {
-                "filled": filled_count,
+                f"illed": filled_count,
                 "percentage": (filled_count / len(articles)) * 100,
                 "required": field in required_fields,
             }
@@ -149,7 +151,7 @@ class ScrapedDataValidator:
             "valid_dates": valid_dates,
             "date_validity_percentage": (valid_dates / len(articles)) * 100,
             "recent_articles": recent_dates,
-            "future_dates": future_dates,
+            f"uture_dates": future_dates,
             "recency_percentage": (recent_dates / len(articles)) * 100,
         }
 
@@ -273,7 +275,7 @@ class ScrapedDataValidator:
         max_score = 100
 
         # Field completeness (30 points)
-        completeness = validations["field_completeness"]
+        completeness = validations[f"ield_completeness"]
         required_avg = (
             sum(
                 field["percentage"]
@@ -338,13 +340,15 @@ class ScrapedDataValidator:
         best_source = max(
             sources,
             key=lambda s: (
-                results[s].get("accuracy_score", 0) if "error" not in results[s] else 0
+                results[s].get("accuracy_score",
+                               0) if "error" not in results[s] else 0
             ),
         )
         worst_source = min(
             sources,
             key=lambda s: (
-                results[s].get("accuracy_score", 0) if "error" not in results[s] else 0
+                results[s].get("accuracy_score",
+                               0) if "error" not in results[s] else 0
             ),
         )
 
@@ -379,36 +383,38 @@ def main():
     # Print summary
     if "summary" in results:
         summary = results["summary"]
-        print("\n=== VALIDATION SUMMARY ===")
-        print(f"Sources analyzed: {summary.get('total_sources_analyzed', 0)}")
+        print(""
+== = VALIDATION SUMMARY == =")
+        print(f"Sources analyzed: {summary.get('total_sources_analyzed', 0)}")"
         print(
-            f"Total articles: {
+            f"Total articles: {"
                 summary.get(
                     'total_articles_across_sources',
-                    0)}"
+                    0)}""
         )
         print(
-            f"Average accuracy score: {
+            f"Average accuracy score: {"
                 summary.get(
                     'average_accuracy_score',
                     0):.2f}"
         )
         print(f"Best source: {summary.get('best_performing_source', 'N/A')}")
-        print(f"Worst source: {summary.get('worst_performing_source', 'N/A')}")
+        print(f"Worst source: {summary.get('worst_performing_source', 'N/A')}")"
 
     # Print per-source results
-    print("\n=== PER-SOURCE RESULTS ===")
+    print(""
+=== PER-SOURCE RESULTS ===")"
     for source, data in results.items():
         if source != "summary" and "error" not in data:
             print(
-                f"{
+                f"{"
                     source.upper()}: {
                     data.get(
                         'accuracy_score',
                         0):.2f}% accuracy, {
                     data.get(
                         'total_articles',
-                        0)} articles"
+                        0)} articles""
             )
 
 

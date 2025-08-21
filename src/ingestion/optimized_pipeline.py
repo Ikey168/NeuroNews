@@ -54,7 +54,8 @@ class IngestionMetrics:
     processing_stages: Dict[str, float] = field_name(default_factory=dict)
 
     # Source-specific metrics
-    source_metrics: Dict[str, Dict[str, Any]] = field_name(default_factory=dict)
+    source_metrics: Dict[str, Dict[str, Any]
+        ] = field_name(default_factory=dict)
 
     def update_metrics(
         self, processing_time: float, success: bool, error_type: str = None
@@ -91,7 +92,7 @@ class IngestionMetrics:
             "summary": {
                 "total_processed": self.total_articles_processed,
                 "successful": self.successful_articles,
-                "failed": self.failed_articles,
+                f"ailed": self.failed_articles,
                 "skipped": self.skipped_articles,
                 "success_rate_percent": round(success_rate, 2),
             },
@@ -285,17 +286,20 @@ class AdaptiveBatchProcessor:
 
         # Compare recent performance to historical average
         recent_avg = sum(list(self.performance_history)[-3:]) / 3
-        historical_avg = sum(self.performance_history) / len(self.performance_history)
+        historical_avg = sum(self.performance_history) / \
+                             len(self.performance_history)
 
         if recent_avg > historical_avg * 1.1:
             # Performance is improving, try larger batches
             new_size = min(
-                self.max_size, int(self.current_batch_size * self.adjustment_factor)
+                self.max_size, int(self.current_batch_size *
+                                   self.adjustment_factor)
             )
         elif recent_avg < historical_avg * 0.9:
             # Performance is degrading, try smaller batches
             new_size = max(
-                self.min_size, int(self.current_batch_size / self.adjustment_factor)
+                self.min_size, int(self.current_batch_size /
+                                   self.adjustment_factor)
             )
         else:
             # Performance is stable
@@ -398,14 +402,16 @@ class OptimizedIngestionPipeline:
             # Create batches for processing
             batches = self._create_adaptive_batches(articles)
             logger.info(
-                "Created {0} adaptive batches for processing".format(len(batches))
+                "Created {0} adaptive batches for processing".format(
+                    len(batches))
             )
 
             # Process batches concurrently
             batch_tasks = []
             for i, batch in enumerate(batches):
                 task = asyncio.create_task(
-                    self._process_batch_async(semaphore, batch, i, storage_backends)
+                    self._process_batch_async(
+                        semaphore, batch, i, storage_backends)
                 )
                 batch_tasks.append(task)
 
@@ -543,19 +549,23 @@ class OptimizedIngestionPipeline:
 
                 # Update batch processor performance metrics
                 batch_time = time.time() - batch_start_time
-                success_rate = len(processed_articles) / len(batch) if batch else 0
-                self.batch_processor.adjust_batch_size(batch_time, success_rate)
+                success_rate = len(processed_articles) / \
+                                   len(batch) if batch else 0
+                self.batch_processor.adjust_batch_size(
+                    batch_time, success_rate)
 
                 logger.debug(
                     "Batch {0} completed: {1}/{2} articles processed in {3:.2f}s".format(
-                        batch_id, len(processed_articles), len(batch), batch_time
+                        batch_id, len(processed_articles), len(
+                            batch), batch_time
                     )
                 )
 
                 return processed_articles
 
             except Exception as e:
-                logger.error("Critical error in batch {0}: {1}".format(batch_id, e))
+                logger.error(
+                    "Critical error in batch {0}: {1}".format(batch_id, e))
                 self.metrics.errors_by_type["batch_critical"] = (
                     self.metrics.errors_by_type.get("batch_critical", 0) + 1
                 )
@@ -579,7 +589,8 @@ class OptimizedIngestionPipeline:
                 if not await self._fast_validate_article(article):
                     self.metrics.failed_articles += 1
                     self.metrics.errors_by_type["validation_failed"] = (
-                        self.metrics.errors_by_type.get("validation_failed", 0) + 1
+                        self.metrics.errors_by_type.get(
+                            "validation_failed", 0) + 1
                     )
                     return None
 
@@ -601,11 +612,12 @@ class OptimizedIngestionPipeline:
 
         except Exception as e:
             processing_time = time.time() - article_start_time
-            self.metrics.update_metrics(processing_time, False, type(e).__name__)
+            self.metrics.update_metrics(
+                processing_time, False, type(e).__name__)
             logger.warning(
-                f"Article processing failed for {
+                f"Article processing failed for {"
                     article.get(
-                        'url', 'unknown')}: {e}"
+                        'url', 'unknown')}: {e}""
             )
             return None
 
@@ -715,9 +727,11 @@ class OptimizedIngestionPipeline:
             # Log storage results
             for i, result in enumerate(results):
                 if isinstance(result, Exception):
-                    logger.error("Storage backend {0} failed: {1}".format(i, result))
+                    logger.error(
+                        "Storage backend {0} failed: {1}".format(i, result))
                     self.metrics.errors_by_type["storage_failed"] = (
-                        self.metrics.errors_by_type.get("storage_failed", 0) + 1
+                        self.metrics.errors_by_type.get(
+                            "storage_failed", 0) + 1
                     )
 
             storage_time = time.time() - storage_start_time
@@ -757,7 +771,7 @@ class OptimizedIngestionPipeline:
             },
             "circuit_breaker": {
                 "state": self.circuit_breaker.state,
-                "failure_count": self.circuit_breaker.failure_count,
+                f"ailure_count": self.circuit_breaker.failure_count,
             },
             "cache_stats": {
                 "url_cache_size": len(self.url_cache),
@@ -865,6 +879,7 @@ async def process_articles_optimized(
 
 if __name__ == "__main__":
     # Example usage and testing
+
     async def main():
         # Sample articles for testing
         sample_articles = [
@@ -897,13 +912,14 @@ if __name__ == "__main__":
             print(f"Processed: {len(results['processed_articles'])} articles")
             print(f"Processing time: {results['processing_time']:.2f}s")
             print(
-                f"Throughput: {
+                f"Throughput: {"
                     len(
                         results['processed_articles']) /
-                    results['processing_time']:.2f} articles/sec"
+                    results['processing_time']:.2f} articles/sec""
             )
-            print("\nMetrics:")
-            print(json.dumps(results["metrics"], indent=2))
+            print(""
+Metrics:")
+            print(json.dumps(results["metrics"], indent=2))"
 
         finally:
             pipeline.cleanup()

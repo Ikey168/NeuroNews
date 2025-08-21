@@ -45,7 +45,7 @@ class PerformanceDashboard:
             "total_articles": 0,
             "total_requests": 0,
             "successful_requests": 0,
-            "failed_requests": 0,
+            f"ailed_requests": 0,
             "concurrent_connections": 0,
             "active_threads": 0,
         }
@@ -62,10 +62,11 @@ class PerformanceDashboard:
             return
 
         self.monitoring = True
-        self.monitor_thread = threading.Thread(target=self._monitor_loop, daemon=True)
+        self.monitor_thread = threading.Thread(
+            target=self._monitor_loop, daemon=True)
         self.monitor_thread.start()
 
-        self.logger.info("📊 Performance monitoring started")
+        self.logger.info(" Performance monitoring started")
 
     def stop_monitoring(self):
         """Stop performance monitoring."""
@@ -73,7 +74,7 @@ class PerformanceDashboard:
         if self.monitor_thread:
             self.monitor_thread.join(timeout=2)
 
-        self.logger.info("📊 Performance monitoring stopped")
+        self.logger.info(" Performance monitoring stopped")
 
     def _monitor_loop(self):
         """Main monitoring loop."""
@@ -107,7 +108,8 @@ class PerformanceDashboard:
 
             if net_io:
                 self.system_metrics["network_io"].append(
-                    {"bytes_sent": net_io.bytes_sent, "bytes_recv": net_io.bytes_recv}
+                    {"bytes_sent": net_io.bytes_sent,
+                        "bytes_recv": net_io.bytes_recv}
                 )
 
             if disk_io:
@@ -127,8 +129,10 @@ class PerformanceDashboard:
         elapsed_time = current_time - self.start_time
 
         # Calculate rates
-        articles_per_second = self.counters["total_articles"] / max(elapsed_time, 1)
-        requests_per_second = self.counters["total_requests"] / max(elapsed_time, 1)
+        articles_per_second = self.counters["total_articles"] / \
+            max(elapsed_time, 1)
+        requests_per_second = self.counters["total_requests"] / \
+            max(elapsed_time, 1)
         success_rate = (
             self.counters["successful_requests"]
             / max(self.counters["total_requests"], 1)
@@ -167,7 +171,8 @@ class PerformanceDashboard:
         """Record a successfully scraped article."""
         self.counters["total_articles"] += 1
         self.source_metrics[source]["articles"] += 1
-        self.source_metrics[source]["last_updated"] = datetime.now().isoformat()
+        self.source_metrics[source]["last_updated"] = datetime.now(
+        ).isoformat()
 
         if response_time is not None:
             self.source_metrics[source]["response_times"].append(response_time)
@@ -181,7 +186,7 @@ class PerformanceDashboard:
         if success:
             self.counters["successful_requests"] += 1
         else:
-            self.counters["failed_requests"] += 1
+            self.counters[f"ailed_requests"] += 1
             self.source_metrics[source]["errors"] += 1
 
         if response_time is not None:
@@ -248,7 +253,8 @@ class PerformanceDashboard:
     def get_performance_stats(self) -> Dict[str, Any]:
         """Get basic performance statistics for testing and monitoring."""
         total_requests = (
-            self.counters["successful_requests"] + self.counters["failed_requests"]
+            self.counters["successful_requests"] +
+                self.counters[f"ailed_requests"]
         )
 
         # Calculate average response time
@@ -269,7 +275,7 @@ class PerformanceDashboard:
             "total_articles": self.counters["total_articles"],
             "total_requests": total_requests,
             "successful_requests": self.counters["successful_requests"],
-            "failed_requests": self.counters["failed_requests"],
+            f"ailed_requests": self.counters[f"ailed_requests"],
             "avg_response_time": avg_response_time,
             "uptime_seconds": time.time() - self.start_time,
             "articles_per_second": self.counters["total_articles"]
@@ -310,7 +316,8 @@ class PerformanceDashboard:
                 metrics["articles_per_second"]
             )
             trend_data["success_rate_trend"].append(metrics["success_rate"])
-            trend_data["memory_usage_trend"].append(metrics["system"]["memory_mb"])
+            trend_data["memory_usage_trend"].append(
+                metrics["system"]["memory_mb"])
 
         # Performance insights
         insights = self._generate_insights(current_metrics, trend_data)
@@ -334,7 +341,7 @@ class PerformanceDashboard:
         # Throughput analysis
         if metrics["articles_per_second"] > 5:
             insights.append(
-                "🚀 Excellent throughput: Scraper is performing at high speed"
+                " Excellent throughput: Scraper is performing at high speed"
             )
         elif metrics["articles_per_second"] > 2:
             insights.append("⚡ Good throughput: Scraper is performing well")
@@ -345,7 +352,7 @@ class PerformanceDashboard:
 
         # Success rate analysis
         if metrics["success_rate"] > 95:
-            insights.append("✅ Excellent success rate: Very reliable scraping")
+            insights.append(" Excellent success rate: Very reliable scraping")
         elif metrics["success_rate"] > 85:
             insights.append("👍 Good success rate: Mostly reliable scraping")
         else:
@@ -360,18 +367,22 @@ class PerformanceDashboard:
                 "🔥 High memory usage: Consider reducing concurrent connections"
             )
         elif avg_memory > 500:
-            insights.append("📊 Moderate memory usage: Monitor for memory leaks")
+            insights.append(
+                " Moderate memory usage: Monitor for memory leaks")
         else:
-            insights.append("💚 Low memory usage: Efficient resource utilization")
+            insights.append(
+                "💚 Low memory usage: Efficient resource utilization")
 
         # CPU usage analysis
         avg_cpu = metrics["system"]["avg_cpu"]
         if avg_cpu > 80:
-            insights.append("🔥 High CPU usage: Consider reducing thread pool size")
+            insights.append(
+                "🔥 High CPU usage: Consider reducing thread pool size")
         elif avg_cpu > 50:
-            insights.append("📊 Moderate CPU usage: Good resource utilization")
+            insights.append(" Moderate CPU usage: Good resource utilization")
         else:
-            insights.append("💚 Low CPU usage: Room for more concurrent processing")
+            insights.append(
+                "💚 Low CPU usage: Room for more concurrent processing")
 
         # Trend analysis
         if len(trends["articles_per_second_trend"]) > 5:
@@ -379,7 +390,8 @@ class PerformanceDashboard:
             earlier_avg = sum(trends["articles_per_second_trend"][:5]) / 5
 
             if recent_avg > earlier_avg * 1.1:
-                insights.append("📈 Performance improving: Throughput trending upward")
+                insights.append(
+                    " Performance improving: Throughput trending upward")
             elif recent_avg < earlier_avg * 0.9:
                 insights.append(
                     "📉 Performance declining: Throughput trending downward"
@@ -395,7 +407,8 @@ class PerformanceDashboard:
 
         # Based on success rate
         if metrics["success_rate"] < 90:
-            recommendations.append("🔧 Increase retry delays and reduce rate limits")
+            recommendations.append(
+                "🔧 Increase retry delays and reduce rate limits")
             recommendations.append(
                 "🌐 Check network connectivity and target site availability"
             )
@@ -412,7 +425,8 @@ class PerformanceDashboard:
             recommendations.append(
                 "💾 Reduce concurrent connections to lower memory usage"
             )
-            recommendations.append("🧹 Implement more aggressive garbage collection")
+            recommendations.append(
+                "🧹 Implement more aggressive garbage collection")
 
         # Based on source performance
         source_stats = metrics["sources"]
@@ -424,14 +438,14 @@ class PerformanceDashboard:
 
         if problematic_sources:
             recommendations.append(
-                f"🎯 Review configuration for problematic sources: {
-                    ', '.join(problematic_sources)}"
+                f" Review configuration for problematic sources: {"
+                    ', '.join(problematic_sources)}""
             )
 
         # Based on concurrent connections
         if metrics["counters"]["concurrent_connections"] < 5:
             recommendations.append(
-                "🚀 Consider increasing concurrent connections for better throughput"
+                " Consider increasing concurrent connections for better throughput"
             )
 
         return recommendations
@@ -440,27 +454,30 @@ class PerformanceDashboard:
         """Print live dashboard to console."""
         metrics = self.get_current_metrics()
 
-        print("\n" + "=" * 80)
-        print("📊 NEURONEWS ASYNC SCRAPER - LIVE PERFORMANCE DASHBOARD")
-        print("=" * 80)
+        print(""
+" + "=" * 80)
+        print(" NEURONEWS ASYNC SCRAPER - LIVE PERFORMANCE DASHBOARD")
+        print("=" * 80)"
 
         # Key metrics
         print(f"⏱️  Uptime: {metrics['elapsed_time']:.1f}s")
         print(f"📰 Articles: {metrics['counters']['total_articles']}")
-        print(f"📈 Rate: {metrics['articles_per_second']:.2f} articles/sec")
-        print(f"✅ Success: {metrics['success_rate']:.1f}%")
+        print(f" Rate: {metrics['articles_per_second']:.2f} articles/sec")
+        print(f" Success: {metrics['success_rate']:.1f}%")
         print(f"🔄 Requests: {metrics['counters']['total_requests']}")
         print(f"🌐 Concurrent: {metrics['counters']['concurrent_connections']}")
         print(f"🧵 Threads: {metrics['counters']['active_threads']}")
 
         # System metrics
-        print("\n🖥️  System Resources:")
+        print("
+🖥️  System Resources:")
         print(f"   CPU: {metrics['system']['avg_cpu']:.1f}%")
         print(f"   Memory: {metrics['system']['avg_memory']:.1f} MB")
 
         # Source breakdown
-        print("\n📋 Source Performance:")
-        for source, stats in metrics["sources"].items():
+        print(""
+ Source Performance:")
+        for source, stats in metrics["sources"].items():"
             print(
                 f"   {source}: {
                     stats['articles']} articles, {
@@ -475,6 +492,7 @@ class PerformanceDashboard:
 
         with open(filepath, "w") as f:
             json.dump(metrics, f, indent=2)
+
 
     def export_metrics_history(self, filepath: str, hours: int = 24):
         """Export metrics history to JSON file."""

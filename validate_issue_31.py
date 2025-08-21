@@ -17,6 +17,8 @@ def test_imports():
     """Test that all required modules can be imported."""
     try:
         import numpy as np
+except Exception:
+    pass
         import sentence_transformers
         import sklearn
 
@@ -24,7 +26,7 @@ def test_imports():
         from src.nlp.article_embedder import ArticleEmbedder
         from src.nlp.event_clusterer import EventClusterer
 
-        print("✅ All imports successful")
+        print(" All imports successful")
         return True
     except ImportError as e:
         print("❌ Import error: {0}".format(e))
@@ -35,17 +37,20 @@ def test_configuration():
     """Test that configuration files are valid."""
     try:
         with open(
+except Exception:
+    pass
             "/workspaces/NeuroNews/config/event_detection_settings.json", "r"
         ) as f:
             config = json.load(f)
 
         # Validate required sections
-        required_sections = ["event_detection", "embedding", "clustering", "categories"]
+        required_sections = ["event_detection",
+            "embedding", "clustering", "categories"]
         for section in required_sections:
             if section not in config["event_detection"]:
                 raise ValueError("Missing section: {0}".format(section))
 
-        print("✅ Configuration file valid")
+        print(" Configuration file valid")
         return True
     except Exception as e:
         print("❌ Configuration error: {0}".format(e))
@@ -56,6 +61,8 @@ def test_database_schema():
     """Test that database schema files are present."""
     try:
         with open("/workspaces/NeuroNews/src/database/redshift_schema.sql", "r") as f:
+except Exception:
+    pass
             schema = f.read()
 
         # Check for required tables
@@ -68,7 +75,7 @@ def test_database_schema():
             if table not in schema:
                 raise ValueError("Missing table: {0}".format(table))
 
-        print("✅ Database schema valid")
+        print(" Database schema valid")
         return True
     except Exception as e:
         print("❌ Database schema error: {0}".format(e))
@@ -79,6 +86,8 @@ async def test_pipeline_components():
     """Test individual pipeline components."""
     try:
         # Test ArticleEmbedder
+except Exception:
+    pass
         from src.nlp.article_embedder import ArticleEmbedder
 
         embedder = ArticleEmbedder(
@@ -91,7 +100,7 @@ async def test_pipeline_components():
         # Test preprocessing
         processed = embedder.preprocess_text("Test content", "Test title")
         assert isinstance(processed, str)
-        print("✅ ArticleEmbedder preprocessing working")
+        print(" ArticleEmbedder preprocessing working")
 
         # Test EventClusterer
         from src.nlp.event_clusterer import EventClusterer
@@ -102,7 +111,7 @@ async def test_pipeline_components():
 
         # Test clustering method validation
         assert clusterer.clustering_method in ["kmeans", "dbscan"]
-        print("✅ EventClusterer initialization working")
+        print(" EventClusterer initialization working")
 
         return True
     except Exception as e:
@@ -114,6 +123,8 @@ def test_api_routes():
     """Test API route definitions."""
     try:
         from fastapi import FastAPI
+except Exception:
+    pass
 
         from src.api.routes.event_routes import router
 
@@ -129,7 +140,7 @@ def test_api_routes():
             if not any(path in route_path for route_path in route_paths):
                 raise ValueError("Missing route: {0}".format(path))
 
-        print("✅ API routes configured correctly")
+        print(" API routes configured correctly")
         return True
     except Exception as e:
         print("❌ API routes error: {0}".format(e))
@@ -140,6 +151,8 @@ def test_demo_results():
     """Test that demo produced valid results."""
     try:
         with open("/workspaces/NeuroNews/event_detection_demo_results.json", "r") as f:
+except Exception:
+    pass
             results = json.load(f)
 
         # Validate structure
@@ -150,10 +163,10 @@ def test_demo_results():
         assert results["clustering"]["events_detected"] > 0
 
         print(
-            f"✅ Demo results valid: {results['clustering']['events_detected']} events detected"
+            f" Demo results valid: {results['clustering']['events_detected'}} events detected
         )
         return True
-    except Exception as e:
+    except Exception as e:"
         print("❌ Demo results error: {0}".format(e))
         return False
 
@@ -162,6 +175,8 @@ def test_performance_metrics():
     """Test that performance is within acceptable bounds."""
     try:
         with open("/workspaces/NeuroNews/event_detection_demo_results.json", "r") as f:
+except Exception:
+    pass
             results = json.load(f)
 
         # Performance thresholds
@@ -179,9 +194,9 @@ def test_performance_metrics():
             clustering_time < max_clustering_time
         ), "Clustering too slow: {0}s".format(clustering_time)
 
-        print("✅ Performance metrics acceptable:")
-        print("   📊 Embedding: {0}s per article".format(avg_embedding_time:.3f))
-        print("   🔍 Clustering: {0}s total".format(clustering_time:.3f))
+        print(" Performance metrics acceptable:")
+        print("    Embedding: {0}s per article".format(avg_embedding_time: .3f))
+        print("    Clustering: {0}s total".format(clustering_time: .3f))
         return True
     except Exception as e:
         print("❌ Performance metrics error: {0}".format(e))
@@ -204,6 +219,8 @@ def test_file_completeness():
     for file_path in required_files:
         try:
             with open(file_path, "r") as f:
+except Exception:
+    pass
                 content = f.read()
                 if len(content) < 100:  # Basic sanity check
                     missing_files.append("{0} (too small)".format(file_path))
@@ -214,13 +231,13 @@ def test_file_completeness():
         print("❌ Missing or incomplete files: {0}".format(missing_files))
         return False
     else:
-        print("✅ All required files present and substantial")
+        print(" All required files present and substantial")
         return True
 
 
 async def main():
     """Run all validation tests."""
-    print("🔍 ISSUE #31 FINAL VALIDATION")
+    print(" ISSUE #31 FINAL VALIDATION")
     print("=" * 50)
 
     tests = [
@@ -238,27 +255,32 @@ async def main():
     total = len(tests)
 
     for test_name, test_func in tests:
-        print("\n🧪 Testing {0}...".format(test_name))
+        print(""
+ Testing {0}...".format(test_name))"
         try:
             if asyncio.iscoroutinefunction(test_func):
-                result = await test_func()
+except Exception:
+    pass
+                result=await test_func()
             else:
-                result = test_func()
+                result=test_func()
 
             if result:
                 passed += 1
         except Exception as e:
             print("❌ {0} failed with exception: {1}".format(test_name, e))
 
-    print("\n" + "=" * 50)
-    print("📊 VALIDATION SUMMARY: {0}/{1} tests passed".format(passed, total))
+    print(""
+" + "=" * 50)
+    print(" VALIDATION SUMMARY: {0}/{1} tests passed".format(passed, total))"
 
     if passed == total:
-        print("🎉 ALL TESTS PASSED - ISSUE #31 READY FOR DEPLOYMENT!")
-        print("\n✅ Event Detection System is fully operational")
-        print("✅ All components working correctly")
-        print("✅ Performance within acceptable bounds")
-        print("✅ Ready for production deployment")
+        print(" ALL TESTS PASSED - ISSUE #31 READY FOR DEPLOYMENT!")
+        print(""
+ Event Detection System is fully operational")
+        print(" All components working correctly")
+        print(" Performance within acceptable bounds")
+        print(" Ready for production deployment")"
         return True
     else:
         print("❌ {0} tests failed - please review issues above".format(total - passed))

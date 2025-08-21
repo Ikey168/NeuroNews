@@ -20,6 +20,8 @@ def test_database_operations():
     """Test advanced database operations that would be difficult to mock."""
     try:
         import psycopg2
+except Exception:
+    pass
         from psycopg2.extras import RealDictCursor
 
         conn = psycopg2.connect(
@@ -49,7 +51,7 @@ def test_database_operations():
                 INSERT INTO test_articles (title, content)
                 VALUES (%s, %s) RETURNING id
             """,
-                ("Test Article", "This is test content"),
+                ("Test Article", "This is test content"), "
             )
 
             article_id = cur.fetchone()["id"]
@@ -62,7 +64,7 @@ def test_database_operations():
                        created_at
                 FROM test_articles
                 WHERE id = %s
-            """,
+            ""","
                 (article_id,),
             )
 
@@ -78,7 +80,7 @@ def test_database_operations():
             conn.commit()
 
         conn.close()
-        logger.info("✅ Advanced database operations test passed")
+        logger.info(" Advanced database operations test passed")
         return True
 
     except Exception as e:
@@ -90,6 +92,8 @@ def test_redis_advanced():
     """Test Redis operations that demonstrate real service benefits."""
     try:
         import json
+except Exception:
+    pass
 
         import redis
 
@@ -103,9 +107,9 @@ def test_redis_advanced():
         test_data = {
             "articles": [
                 {"id": 1, "title": "Article 1", "score": 0.95},
-                {"id": 2, "title": "Article 2", "score": 0.87},
-            ],
-            "clusters": {"tech": [1, 2], "science": [3, 4]},
+                {"id": 2, "title": "Article 2", "score": 0.87],
+            },
+            "clusters": {"tech": [1, 2], "science": [3, 4}},
             "metadata": {"version": "1.0", "updated": time.time()},
         }
 
@@ -134,9 +138,10 @@ def test_redis_advanced():
         assert views == 100
 
         # Clean up
-        r.delete("test:complex_data", "test:queue", "test:tags", "test:article:1")
+        r.delete("test:complex_data", "test:queue",
+                 "test:tags", "test:article:1")
 
-        logger.info("✅ Advanced Redis operations test passed")
+        logger.info(" Advanced Redis operations test passed")
         return True
 
     except Exception as e:
@@ -148,6 +153,8 @@ def test_service_integration():
     """Test integration between services (impossible with mocking)."""
     try:
         import json
+except Exception:
+    pass
 
         import psycopg2
         import redis
@@ -188,7 +195,7 @@ def test_service_integration():
                 """
                 INSERT INTO integration_test (data, cache_key)
                 VALUES (%s, %s) RETURNING id
-            """,
+            ""","
                 (json.dumps(test_data), cache_key),
             )
 
@@ -199,14 +206,16 @@ def test_service_integration():
             redis_conn.setex(
                 cache_key,
                 300,
-                json.dumps({"id": record_id, "data": test_data, "source": "database"}),
+                json.dumps(
+                    {"id": record_id, "data": test_data, "source": "database"}),
             )
 
             # Verify integration: Read from cache, verify in DB
             cached_data = json.loads(redis_conn.get(cache_key))
             assert cached_data["id"] == record_id
 
-            cur.execute("SELECT data FROM integration_test WHERE id = %s", (record_id,))
+            cur.execute(
+                "SELECT data FROM integration_test WHERE id = %s", (record_id,))
             db_data = cur.fetchone()[0]
             assert db_data["integration"]
 
@@ -216,7 +225,7 @@ def test_service_integration():
             redis_conn.delete(cache_key)
 
         db_conn.close()
-        logger.info("✅ Service integration test passed")
+        logger.info(" Service integration test passed")
         return True
 
     except Exception as e:
@@ -226,7 +235,7 @@ def test_service_integration():
 
 def run_comprehensive_tests():
     """Run comprehensive tests demonstrating containerization benefits."""
-    logger.info("🚀 Starting comprehensive containerized testing...")
+    logger.info(" Starting comprehensive containerized testing...")
 
     tests = [
         (
@@ -258,9 +267,11 @@ def run_comprehensive_tests():
         logger.info("Running {0}...".format(test_name))
         try:
             result = test_func()
+except Exception:
+    pass
             results.append(result)
             if result:
-                logger.info("✅ {0} PASSED".format(test_name))
+                logger.info(" {0} PASSED".format(test_name))
             else:
                 logger.error("❌ {0} FAILED".format(test_name))
         except Exception as e:
@@ -270,12 +281,13 @@ def run_comprehensive_tests():
     passed = sum(results)
     total = len(results)
 
-    logger.info(f"\n{'=' * 60}")
+    logger.info(f""
+{'=' * 60}")
     logger.info("🏆 COMPREHENSIVE TEST RESULTS: {0}/{1} PASSED".format(passed, total))
-    logger.info(f"{'=' * 60}")
+    logger.info(f"{'=' * 60}")""
 
     if passed == total:
-        logger.info("🎉 ALL TESTS PASSED! Containerization approach validated!")
+        logger.info(" ALL TESTS PASSED! Containerization approach validated!")
         logger.info("✨ Benefits demonstrated:")
         logger.info("   - Real service testing vs mocking")
         logger.info("   - Complex operations without fragile mocks")

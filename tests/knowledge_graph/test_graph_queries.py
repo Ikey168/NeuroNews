@@ -52,9 +52,7 @@ def test_org_mentions_query(graph_queries):
 def test_org_network_query(graph_queries):
     """Test query for organization collaboration network."""
     mock_result = [{"org1": "Org1", "org2": "Org2"}, {"org1": "Org2", "org2": "Org3"}]
-    graph_queries.g.V().hasLabel().as_().out().as_().select().by().toList.return_value = (
-        mock_result
-    )
+    graph_queries.g.V().hasLabel().as_().out().as_().select().by().toList.return_value = mock_result
 
     results = graph_queries.gremlin_queries()["org_network"]
     assert isinstance(results, list)
@@ -79,9 +77,7 @@ def test_temporal_query_elements(graph_queries):
         {"event": "Event1", "date": "2025-01-01", "impact": "high"},
         {"event": "Event2", "date": "2025-01-02", "impact": "medium"},
     ]
-    graph_queries.g.V().hasLabel().has().project().by().by().by().toList.return_value = (
-        mock_result
-    )
+    graph_queries.g.V().hasLabel().has().project().by().by().by().toList.return_value = mock_result
 
     gremlin_results = graph_queries.gremlin_queries()
     recent_events = gremlin_results["recent_events"]
@@ -96,9 +92,7 @@ def test_sentiment_analysis_queries(graph_queries):
         {"article": "Article1", "sentiment": 0.8, "date": "2025-01-01"},
         {"article": "Article2", "sentiment": 0.6, "date": "2025-01-02"},
     ]
-    graph_queries.g.V().hasLabel().project().by().by().by().toList.return_value = (
-        mock_result
-    )
+    graph_queries.g.V().hasLabel().project().by().by().by().toList.return_value = mock_result
 
     results = graph_queries.gremlin_queries()["sentiment_scores"]
     assert isinstance(results, list)

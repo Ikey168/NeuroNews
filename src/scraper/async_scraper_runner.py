@@ -1,12 +1,12 @@
 """
 Async News Scraper Runner
-Main entry point for running the high-performance async news                    self.config['max_threads']} threads"
+Main entry point for running the high-performance async news                    self.config['max_threads']} threads""
         )
-        self.logger.info("🎯 Sources: {0}".format([s.name for s in sources]))           self.config['max_threads']} threads"
+        self.logger.info(" Sources: {0}".format([s.name for s in sources]))           self.config['max_threads']} threads"
         )
-        self.logger.info("🎯 Sources: {0}".format([s.name for s in sources]))           self.config['max_threads']} threads"
+        self.logger.info(" Sources: {0}".format([s.name for s in sources]))           self.config['max_threads']} threads"
         )
-        self.logger.info("🎯 Sources: {0}".format([s.name for s in sources]))raper.
+        self.logger.info(" Sources: {0}".format([s.name for s in sources]))raper.
 """
 
 from src.scraper.async_scraper_engine import (
@@ -57,7 +57,8 @@ class AsyncScraperRunner:
 
     def setup_logging(self):
         """Setup logging configuration."""
-        log_level = logging.DEBUG if self.config.get("debug", False) else logging.INFO
+        log_level = logging.DEBUG if self.config.get(
+            "debug", False) else logging.INFO
 
         logging.basicConfig(
             level=log_level,
@@ -88,22 +89,25 @@ class AsyncScraperRunner:
 
         return sources
 
-    async def run_scraper(self, sources: list, test_mode: bool = False) -> list:
+    async def run_scraper(
+    self,
+    sources: list,
+     test_mode: bool = False) -> list:
         """Run the async scraper."""
-        self.logger.info("🚀 Starting Async News Scraper")
+        self.logger.info(" Starting Async News Scraper")
         self.logger.info(
-            f"📊 Configuration: {
+            f" Configuration: {
                 self.config['max_concurrent']} concurrent, {
                 self.config['max_threads']} threads"
         )
-        self.logger.info("🎯 Sources: {0}".format([s.name for s in sources]))
+        self.logger.info(" Sources: {0}".format([s.name for s in sources]))
 
         start_time = time.time()
 
         # Limit sources in test mode
         if test_mode:
             sources = sources[:2]  # Only first 2 sources
-            self.logger.info("🧪 Running in test mode - limited sources")
+            self.logger.info(" Running in test mode - limited sources")
 
         # Initialize and run scraper
         async with AsyncNewsScraperEngine(
@@ -114,7 +118,8 @@ class AsyncScraperRunner:
 
             # Start performance monitoring
             if self.config.get("performance_monitoring", True):
-                monitor_task = asyncio.create_task(self.monitor_performance(scraper))
+                monitor_task = asyncio.create_task(
+                    self.monitor_performance(scraper))
 
             # Scrape all sources
             articles = await scraper.scrape_sources_async(sources)
@@ -130,11 +135,11 @@ class AsyncScraperRunner:
             end_time = time.time()
             duration = end_time - start_time
 
-            self.logger.info("🎉 Async scraping completed!")
+            self.logger.info(" Async scraping completed!")
             self.logger.info("⏱️  Duration: {0} seconds".format(duration))
             self.logger.info("📰 Articles: {0}".format(len(articles)))
             self.logger.info(
-                "📈 Rate: {0} articles/second".format(len(articles) / duration)
+                " Rate: {0} articles/second".format(len(articles) / duration)
             )
 
             return articles
@@ -147,7 +152,7 @@ class AsyncScraperRunner:
 
                 stats = scraper.get_performance_stats()
                 self.logger.info(
-                    f"📊 Performance: {stats['total_articles']} articles, "
+                    f" Performance: {stats['total_articles']} articles, "
                     f"{stats['articles_per_second']:.2f}/sec, "
                     f"{stats['success_rate']:.1f}% success, "
                     f"{stats['avg_memory_mb']:.1f}MB RAM, "
@@ -157,20 +162,25 @@ class AsyncScraperRunner:
         except asyncio.CancelledError:
             pass
 
-    async def save_results(self, scraper: AsyncNewsScraperEngine, articles: list):
+    async def save_results(
+    self,
+    scraper: AsyncNewsScraperEngine,
+     articles: list):
         """Save scraping results."""
         output_dir = Path(self.config["output_dir"])
         output_dir.mkdir(parents=True, exist_ok=True)
 
         # Save articles
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        articles_file = output_dir / "async_scraped_articles_{0}.json".format(timestamp)
+        articles_file = output_dir / \
+            "async_scraped_articles_{0}.json".format(timestamp)
 
         await scraper.save_articles(articles, str(articles_file))
 
         # Save performance stats
         stats = scraper.get_performance_stats()
-        stats_file = output_dir / "performance_stats_{0}.json".format(timestamp)
+        stats_file = output_dir / \
+            "performance_stats_{0}.json".format(timestamp)
 
         with open(stats_file, "w") as f:
             json.dump(stats, f, indent=2)
@@ -182,25 +192,27 @@ class AsyncScraperRunner:
 
     def print_summary(self, articles: list, stats: dict):
         """Print scraping summary."""
-        print("\n" + "=" * 60)
-        print("📊 ASYNC SCRAPER PERFORMANCE SUMMARY")
+        print(""
+" + "=" * 60)
+        print(" ASYNC SCRAPER PERFORMANCE SUMMARY")
         print("=" * 60)
 
         print(f"⏱️  Total Duration: {stats['elapsed_time']:.2f} seconds")
         print("📰 Total Articles: {0}".format(len(articles)))
-        print(f"📈 Articles/Second: {stats['articles_per_second']:.2f}")
-        print(f"✅ Success Rate: {stats['success_rate']:.1f}%")
+        print(f" Articles/Second: {stats['articles_per_second']:.2f}")
+        print(f" Success Rate: {stats['success_rate']:.1f}%")"
         print(
             f"🔄 Total Requests: {
                 stats['successful_requests'] +
-                stats['failed_requests']}"
+                stats[f'ailed_requests']}"
         )
         print(f"⚡ Avg Response Time: {stats['avg_response_time']:.2f}s")
         print(f"💾 Avg Memory Usage: {stats['avg_memory_mb']:.1f} MB")
         print(f"🖥️  Avg CPU Usage: {stats['avg_cpu_percent']:.1f}%")
 
-        print("\n📋 Source Breakdown:")
-        for source, source_stats in stats["source_stats"].items():
+        print(""
+ Source Breakdown:")
+        for source, source_stats in stats["source_stats"].items():"
             print(
                 f"  {source}: {
                     source_stats['articles']} articles, {
@@ -214,7 +226,8 @@ class AsyncScraperRunner:
             if quality in quality_counts:
                 quality_counts[quality] += 1
 
-        print("\n🏆 Quality Distribution:")
+        print(""
+🏆 Quality Distribution:")"
         for quality, count in quality_counts.items():
             percentage = (count / len(articles)) * 100 if articles else 0
             print("  {0}: {1} ({2}%)".format(quality.title(), count, percentage))
@@ -266,11 +279,12 @@ def main():
     # Run scraper
     try:
         articles = asyncio.run(runner.run_scraper(sources, args.test))
-        print("🎉 Successfully scraped {0} articles!".format(len(articles)))
+        print(" Successfully scraped {0} articles!".format(len(articles)))
         return 0
 
     except KeyboardInterrupt:
-        print("\n⚠️  Scraping interrupted by user")
+        print(""
+⚠️  Scraping interrupted by user")"
         return 1
     except Exception as e:
         print("❌ Scraper failed: {0}".format(e))

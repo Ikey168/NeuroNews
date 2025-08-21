@@ -354,7 +354,7 @@ async def get_trending_keywords(
         trending_keywords = sorted(
             keywords, key=lambda x: (x["frequency"], x["avg_score"]), reverse=True
         )[
-:50
+            :50
         ]  # Top 50 trending keywords
 
         return {

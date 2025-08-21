@@ -196,6 +196,7 @@ class GraphBuilder:
             logger.info("No active Gremlin client connection to close.")
 
     # Context manager support
+
     async def __aenter__(self):
         await self.connect()
         return self

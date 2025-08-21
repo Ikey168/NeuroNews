@@ -5,10 +5,7 @@ Focuses on core functionality without heavy ML dependencies.
 """
 
 import json
-import os
 import sys
-from datetime import datetime
-from typing import Any, Dict, List
 
 
 def test_file_completeness():
@@ -37,7 +34,7 @@ def test_file_completeness():
         print(f"❌ Missing or incomplete files: {missing_files}")
         return False
     else:
-        print("✅ All required files present and substantial")
+        print(" All required files present and substantial")
         return True
 
 
@@ -50,12 +47,13 @@ def test_configuration():
             config = json.load(f)
 
         # Validate required sections
-        required_sections = ["event_detection", "embedding", "clustering", "categories"]
+        required_sections = ["event_detection",
+            "embedding", "clustering", "categories"]
         for section in required_sections:
             if section not in config["event_detection"]:
                 raise ValueError(f"Missing section: {section}")
 
-        print("✅ Configuration file valid")
+        print(" Configuration file valid")
         return True
     except Exception as e:
         print(f"❌ Configuration error: {e}")
@@ -78,7 +76,7 @@ def test_database_schema():
             if table not in schema:
                 raise ValueError(f"Missing table: {table}")
 
-        print("✅ Database schema valid")
+        print(" Database schema valid")
         return True
     except Exception as e:
         print(f"❌ Database schema error: {e}")
@@ -93,7 +91,8 @@ def test_api_structure():
             api_content = f.read()
 
         # Check for required endpoints
-        required_endpoints = ["/breaking_news", "/events/clusters", "/events/detect"]
+        required_endpoints = ["/breaking_news",
+            "/events/clusters", "/events/detect"]
 
         for endpoint in required_endpoints:
             if endpoint not in api_content:
@@ -110,7 +109,7 @@ def test_api_structure():
             if model not in api_content:
                 raise ValueError(f"Missing model: {model}")
 
-        print("✅ API structure valid")
+        print(" API structure valid")
         return True
     except Exception as e:
         print(f"❌ API structure error: {e}")
@@ -131,7 +130,8 @@ def test_demo_results():
         assert results["clustering"]["events_detected"] > 0
 
         print(
-            f"✅ Demo results valid: {results['clustering']['events_detected']} events detected"
+            f" Demo results valid: {
+    results['clustering']['events_detected']} events detected"
         )
         return True
     except Exception as e:
@@ -160,9 +160,9 @@ def test_performance_metrics():
             clustering_time < max_clustering_time
         ), f"Clustering too slow: {clustering_time}s"
 
-        print(f"✅ Performance metrics acceptable:")
-        print(f"   📊 Embedding: {avg_embedding_time:.3f}s per article")
-        print(f"   🔍 Clustering: {clustering_time:.3f}s total")
+        print(" Performance metrics acceptable:")
+        print(f"    Embedding: {avg_embedding_time:.3f}s per article")
+        print(f"    Clustering: {clustering_time:.3f}s total")
         return True
     except Exception as e:
         print(f"❌ Performance metrics error: {e}")
@@ -185,7 +185,7 @@ def test_code_quality():
                 lines = len(f.readlines())
                 total_lines += lines
 
-        print(f"✅ Code quality: {total_lines} total lines across core files")
+        print(f" Code quality: {total_lines} total lines across core files")
 
         # Check for key components in embedder
         with open("/workspaces/NeuroNews/src/nlp/article_embedder.py", "r") as f:
@@ -225,7 +225,7 @@ def test_code_quality():
 
 def main():
     """Run lightweight validation tests."""
-    print("🔍 ISSUE #31 LIGHTWEIGHT VALIDATION")
+    print(" ISSUE #31 LIGHTWEIGHT VALIDATION")
     print("=" * 50)
 
     tests = [
@@ -242,23 +242,26 @@ def main():
     total = len(tests)
 
     for test_name, test_func in tests:
-        print(f"\n🧪 Testing {test_name}...")
+        print(f""
+ Testing {test_name}...")"
         try:
-            result = test_func()
+            result=test_func()
             if result:
                 passed += 1
         except Exception as e:
             print(f"❌ {test_name} failed with exception: {e}")
 
-    print("\n" + "=" * 50)
-    print(f"📊 VALIDATION SUMMARY: {passed}/{total} tests passed")
+    print(""
+" + "=" * 50)
+    print(f" VALIDATION SUMMARY: {passed}/{total} tests passed")"
 
     if passed == total:
-        print("🎉 ALL TESTS PASSED - ISSUE #31 IMPLEMENTATION VALIDATED!")
-        print("\n✅ Event Detection System is properly implemented")
-        print("✅ All required files present with substantial content")
-        print("✅ Performance metrics within acceptable bounds")
-        print("✅ Ready for further testing and deployment")
+        print(" ALL TESTS PASSED - ISSUE #31 IMPLEMENTATION VALIDATED!")
+        print(""
+ Event Detection System is properly implemented")
+        print(" All required files present with substantial content")
+        print(" Performance metrics within acceptable bounds")
+        print(" Ready for further testing and deployment")"
         return True
     else:
         print(f"❌ {total - passed} tests failed - please review issues above")

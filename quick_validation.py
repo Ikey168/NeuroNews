@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 def test_basic_functionality():
     """Test basic functionality of the optimized pipeline."""
-    print("🚀 Testing Optimized Data Ingestion Pipeline")
+    print(" Testing Optimized Data Ingestion Pipeline")
     print("=" * 50)
 
     try:
@@ -23,23 +23,24 @@ def test_basic_functionality():
             OptimizationConfig, OptimizedIngestionPipeline,
             create_optimized_pipeline)
 
-        print("✅ Successfully imported optimized pipeline modules")
+        print(" Successfully imported optimized pipeline modules")
 
         # Test configuration creation
         config = OptimizationConfig(
             max_concurrent_tasks=5, batch_size=10, adaptive_batching=True
         )
         print(
-            "✅ Created optimization config: {0} concurrent tasks".format(config.max_concurrent_tasks)
+            " Created optimization config: {0} concurrent tasks".format(
+                config.max_concurrent_tasks)
         )
 
         # Test pipeline creation
         pipeline = OptimizedIngestionPipeline(config)
-        print("✅ Successfully created optimized pipeline instance")
+        print(" Successfully created optimized pipeline instance")
 
         # Test factory function
         factory_pipeline = create_optimized_pipeline()
-        print("✅ Successfully created pipeline using factory function")
+        print(" Successfully created pipeline using factory function")
 
         # Create test data
         test_articles = [
@@ -52,9 +53,10 @@ def test_basic_functionality():
             }
             for i in range(10)
         ]
-        print("✅ Generated {0} test articles".format(len(test_articles)))
+        print(" Generated {0} test articles".format(len(test_articles)))
 
         # Test async processing
+
         async def test_processing():
             try:
                 start_time = time.time()
@@ -66,7 +68,8 @@ def test_basic_functionality():
                     "processing_time": processing_time,
                     "articles_processed": len(results.get("processed_articles", [])),
                     "throughput": (
-                        len(results.get("processed_articles", [])) / processing_time
+                        len(results.get("processed_articles", [])) /
+                            processing_time
                         if processing_time > 0
                         else 0
                     ),
@@ -78,9 +81,11 @@ def test_basic_functionality():
         result = asyncio.run(test_processing())
 
         if result["success"]:
-            print(f"✅ Successfully processed {result['articles_processed']} articles")
-            print(f"✅ Processing time: {result['processing_time']:.2f} seconds")
-            print(f"✅ Throughput: {result['throughput']:.1f} articles/second")
+            print(
+                f" Successfully processed {result['articles_processed']} articles")
+            print(
+                f" Processing time: {result['processing_time']:.2f} seconds")
+            print(f" Throughput: {result['throughput']:.1f} articles/second")
         else:
             print(f"❌ Processing failed: {result['error']}")
             return False
@@ -88,16 +93,18 @@ def test_basic_functionality():
         # Test performance stats
         try:
             stats = pipeline.get_performance_stats()
-            print("✅ Retrieved performance stats: {0} metrics".format(len(stats)))
+            print(
+                " Retrieved performance stats: {0} metrics".format(len(stats)))
         except Exception as e:
             print("⚠️  Could not retrieve stats: {0}".format(e))
 
         # Cleanup
         pipeline.cleanup()
         factory_pipeline.cleanup()
-        print("✅ Successfully cleaned up pipelines")
+        print(" Successfully cleaned up pipelines")
 
-        print("\n🎉 All tests passed! Optimized pipeline is working correctly.")
+        print(""
+ All tests passed! Optimized pipeline is working correctly.")"
         return True
 
     except ImportError as e:
@@ -114,25 +121,26 @@ def test_basic_functionality():
 
 def test_scrapy_integration():
     """Test Scrapy integration components."""
-    print("\n🔧 Testing Scrapy Integration")
-    print("=" * 30)
+    print(""
+🔧 Testing Scrapy Integration")
+    print("=" * 30)"
 
     try:
         from src.ingestion.scrapy_integration import (
             HighThroughputValidationPipeline, OptimizedScrapyPipeline,
             configure_optimized_settings)
 
-        print("✅ Successfully imported Scrapy integration modules")
+        print(" Successfully imported Scrapy integration modules")
 
         # Test pipeline creation
         scrapy_pipeline = OptimizedScrapyPipeline()
         validation_pipeline = HighThroughputValidationPipeline()
-        print("✅ Successfully created Scrapy pipeline instances")
+        print(" Successfully created Scrapy pipeline instances")
 
         # Test settings configuration
         test_settings = {"TEST_SETTING": "test_value"}
         optimized_settings = configure_optimized_settings(test_settings)
-        print("✅ Generated optimized settings with {0} options".format(len(optimized_settings)))
+        print(" Generated optimized settings with {0} options".format(len(optimized_settings)))
 
         # Verify key settings
         required_settings = [
@@ -144,11 +152,11 @@ def test_scrapy_integration():
 
         for setting in required_settings:
             if setting in optimized_settings:
-                print("✅ Found required setting: {0}".format(setting))
+                print(" Found required setting: {0}".format(setting))
             else:
                 print("⚠️  Missing setting: {0}".format(setting))
 
-        print("✅ Scrapy integration test completed successfully")
+        print(" Scrapy integration test completed successfully")
         return True
 
     except ImportError as e:
@@ -161,7 +169,7 @@ def test_scrapy_integration():
 
 def main():
     """Main test function."""
-    print("🧪 OPTIMIZED DATA INGESTION PIPELINE - QUICK VALIDATION")
+    print(" OPTIMIZED DATA INGESTION PIPELINE - QUICK VALIDATION")
     print("=" * 65)
 
     success = True
@@ -174,10 +182,12 @@ def main():
     if not test_scrapy_integration():
         success = False
 
-    print("\n" + "=" * 65)
+    print(""
+" + "=" * 65)"
     if success:
-        print("🎉 ALL TESTS PASSED - Optimized pipeline is ready for use!")
-        print("\nNext steps:")
+        print(" ALL TESTS PASSED - Optimized pipeline is ready for use!")
+        print(""
+Next steps:")"
         print(
             "1. Run full test suite: python -m pytest tests/test_optimized_pipeline.py"
         )
@@ -185,10 +195,11 @@ def main():
         print("3. Deploy to production environment")
     else:
         print("❌ SOME TESTS FAILED - Please check the errors above")
-        print("\nTroubleshooting:")
+        print(""
+Troubleshooting:")
         print("1. Ensure all dependencies are installed")
         print("2. Check Python path configuration")
-        print("3. Verify file permissions and accessibility")
+        print("3. Verify file permissions and accessibility")"
 
     print("=" * 65)
     return success

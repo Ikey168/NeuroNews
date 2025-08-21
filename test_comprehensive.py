@@ -4,12 +4,10 @@ Comprehensive containerized test demonstrating the superiority of this approach.
 This replaces complex mocking with real service integration.
 """
 
-import asyncio
 import logging
 import os
 import sys
 import time
-from typing import Any, Dict
 
 # Configure logging
 logging.basicConfig(
@@ -48,10 +46,10 @@ def test_database_operations():
             # Insert test data
             cur.execute(
                 """
-                INSERT INTO test_articles (title, content) 
+                INSERT INTO test_articles (title, content)
                 VALUES (%s, %s) RETURNING id
             """,
-                ("Test Article", "This is test content"),
+                ("Test Article", "This is test content"), "
             )
 
             article_id = cur.fetchone()["id"]
@@ -59,12 +57,12 @@ def test_database_operations():
             # Query with complex operations
             cur.execute(
                 """
-                SELECT id, title, 
+                SELECT id, title,
                        length(content) as content_length,
                        created_at
-                FROM test_articles 
+                FROM test_articles
                 WHERE id = %s
-            """,
+            ""","
                 (article_id,),
             )
 
@@ -80,7 +78,7 @@ def test_database_operations():
             conn.commit()
 
         conn.close()
-        logger.info("✅ Advanced database operations test passed")
+        logger.info(" Advanced database operations test passed")
         return True
 
     except Exception as e:
@@ -136,9 +134,10 @@ def test_redis_advanced():
         assert views == 100
 
         # Clean up
-        r.delete("test:complex_data", "test:queue", "test:tags", "test:article:1")
+        r.delete("test:complex_data", "test:queue",
+                 "test:tags", "test:article:1")
 
-        logger.info("✅ Advanced Redis operations test passed")
+        logger.info(" Advanced Redis operations test passed")
         return True
 
     except Exception as e:
@@ -188,9 +187,9 @@ def test_service_integration():
 
             cur.execute(
                 """
-                INSERT INTO integration_test (data, cache_key) 
+                INSERT INTO integration_test (data, cache_key)
                 VALUES (%s, %s) RETURNING id
-            """,
+            ""","
                 (json.dumps(test_data), cache_key),
             )
 
@@ -201,16 +200,18 @@ def test_service_integration():
             redis_conn.setex(
                 cache_key,
                 300,
-                json.dumps({"id": record_id, "data": test_data, "source": "database"}),
+                json.dumps(
+                    {"id": record_id, "data": test_data, "source": "database"}),
             )
 
             # Verify integration: Read from cache, verify in DB
             cached_data = json.loads(redis_conn.get(cache_key))
             assert cached_data["id"] == record_id
 
-            cur.execute("SELECT data FROM integration_test WHERE id = %s", (record_id,))
+            cur.execute(
+                "SELECT data FROM integration_test WHERE id = %s", (record_id,))
             db_data = cur.fetchone()[0]
-            assert db_data["integration"] == True
+            assert db_data["integration"] is True
 
             # Clean up
             cur.execute("DROP TABLE integration_test")
@@ -218,7 +219,7 @@ def test_service_integration():
             redis_conn.delete(cache_key)
 
         db_conn.close()
-        logger.info("✅ Service integration test passed")
+        logger.info(" Service integration test passed")
         return True
 
     except Exception as e:
@@ -228,7 +229,7 @@ def test_service_integration():
 
 def run_comprehensive_tests():
     """Run comprehensive tests demonstrating containerization benefits."""
-    logger.info("🚀 Starting comprehensive containerized testing...")
+    logger.info(" Starting comprehensive containerized testing...")
 
     tests = [
         (
@@ -262,7 +263,7 @@ def run_comprehensive_tests():
             result = test_func()
             results.append(result)
             if result:
-                logger.info("✅ {0} PASSED".format(test_name))
+                logger.info(" {0} PASSED".format(test_name))
             else:
                 logger.error("❌ {0} FAILED".format(test_name))
         except Exception as e:
@@ -272,12 +273,13 @@ def run_comprehensive_tests():
     passed = sum(results)
     total = len(results)
 
-    logger.info(f"\n{'='*60}")
+    logger.info(f""
+{'=' * 60}")
     logger.info("🏆 COMPREHENSIVE TEST RESULTS: {0}/{1} PASSED".format(passed, total))
-    logger.info(f"{'='*60}")
+    logger.info(f"{'=' * 60}")"
 
     if passed == total:
-        logger.info("🎉 ALL TESTS PASSED! Containerization approach validated!")
+        logger.info(" ALL TESTS PASSED! Containerization approach validated!")
         logger.info("✨ Benefits demonstrated:")
         logger.info("   - Real service testing vs mocking")
         logger.info("   - Complex operations without fragile mocks")

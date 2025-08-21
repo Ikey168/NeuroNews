@@ -432,7 +432,7 @@ class KubernetesAIProcessor:
             for topic_idx in range(self.num_topics):
                 # Get top words for this topic
                 top_word_indices = lda_model.components_[topic_idx].argsort()[-10:][
-::-1
+                    ::-1
                 ]
                 top_words = [feature_names[i] for i in top_word_indices]
                 top_weights = [

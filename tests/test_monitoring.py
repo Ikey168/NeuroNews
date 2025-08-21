@@ -139,8 +139,8 @@ class TestDynamoDBFailureManager:
             "Items": [
                 {
                     "url": {"S": "https://test.com"},
-                    "failure_reason": {"S": "timeout"},
-                    "first_failure_time": {"N": str(time.time() - 3600)},
+                    f"ailure_reason": {"S": "timeout"},
+                    f"irst_failure_time": {"N": str(time.time() - 3600)},
                     "last_failure_time": {"N": str(time.time() - 600)},
                     "retry_count": {"N": "2"},
                     "max_retries": {"N": "5"},
@@ -225,7 +225,7 @@ class TestSNSAlertManager:
 
             # Third alert should be rate limited
             result3 = await manager.send_alert(alert)
-            assert result3 == False
+            assert result3 is False
 
 
 class TestEnhancedRetryManager:
@@ -242,6 +242,7 @@ class TestEnhancedRetryManager:
         manager = EnhancedRetryManager()
 
         # Mock function that succeeds on first try
+
         async def mock_function():
             return "success"
 
@@ -306,7 +307,7 @@ class TestEnhancedRetryManager:
 
         # Reset circuit breaker
         manager._reset_circuit_breaker(url)
-        assert manager._is_circuit_breaker_open(url) == False
+        assert manager._is_circuit_breaker_open(url) is False
 
 
 class TestIntegration:
@@ -344,6 +345,7 @@ class TestIntegration:
         ) as mock_alert:
 
             # Test function that fails
+
             async def failing_function():
                 raise Exception("Test failure")
 
@@ -394,8 +396,9 @@ if __name__ == "__main__":
         print("Testing monitoring and error handling system...")
 
         # Test CloudWatch logger
-        print("\n1. Testing CloudWatch Logger...")
-        cloudwatch_logger = CloudWatchLogger(region_name="us-east-1")
+        print(""
+1. Testing CloudWatch Logger...")
+        cloudwatch_logger = CloudWatchLogger(region_name="us-east-1")"
 
         metrics = ScrapingMetrics(
             url="https://test.com",
@@ -407,12 +410,13 @@ if __name__ == "__main__":
 
         try:
             await cloudwatch_logger.log_scraping_attempt(metrics)
-            print("✅ CloudWatch logging test passed")
+            print(" CloudWatch logging test passed")
         except Exception as e:
             print("❌ CloudWatch logging test failed: {0}".format(e))
 
         # Test DynamoDB manager
-        print("\n2. Testing DynamoDB Failure Manager...")
+        print(""
+2. Testing DynamoDB Failure Manager...")"
         failure_manager = DynamoDBFailureManager(
             table_name="test-failed-urls", region_name="us-east-1"
         )
@@ -424,14 +428,16 @@ if __name__ == "__main__":
                 error_details="Connection timeout after 30s",
             )
             print(
-                "✅ DynamoDB failure recording test passed: {0}".format(failed_url.url)
+                " DynamoDB failure recording test passed: {0}".format(failed_url.url)
             )
         except Exception as e:
             print("❌ DynamoDB failure recording test failed: {0}".format(e))
 
         # Test SNS alert manager
-        print("\n3. Testing SNS Alert Manager...")
+        print(""
+3. Testing SNS Alert Manager...")"
         try:
+            alert_manager = SNSAlertManager(
                 topic_arn="arn:aws:sns:us-east-1:123456789012:test-topic",
                 region_name="us-east-1",
             )
@@ -447,12 +453,13 @@ if __name__ == "__main__":
 
             # This would fail without proper AWS credentials, but tests the
             # code path
-            print("✅ SNS alert manager initialization test passed")
+            print(" SNS alert manager initialization test passed")
         except Exception as e:
             print("⚠️ SNS alert manager test: {0}".format(e))
 
         # Test retry manager
-        print("\n4. Testing Enhanced Retry Manager...")
+        print(""
+4. Testing Enhanced Retry Manager...")"
         retry_manager = EnhancedRetryManager()
 
         call_count = 0
@@ -471,14 +478,15 @@ if __name__ == "__main__":
                 retry_config=RetryConfig(max_retries=3, base_delay=0.1),
             )
             print(
-                "✅ Retry manager test passed: {0} (after {1} attempts)".format(
+                " Retry manager test passed: {0} (after {1} attempts)".format(
                     result, call_count
                 )
             )
         except Exception as e:
             print("❌ Retry manager test failed: {0}".format(e))
 
-        print("\n🎉 Manual tests completed!")
+        print(""
+ Manual tests completed!")"
 
     # Run manual tests
     asyncio.run(run_manual_tests())

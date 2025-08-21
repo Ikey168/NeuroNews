@@ -12,6 +12,10 @@ and topic modeling system, including:
 Run this script to validate the implementation and see sample results.
 """
 
+from src.nlp.keyword_topic_extractor import (KeywordTopicExtractor,
+                                             create_keyword_extractor)
+from src.nlp.keyword_topic_database import (KeywordTopicDatabase,
+                                            create_keyword_topic_db)
 import asyncio
 import json
 import logging
@@ -23,10 +27,6 @@ from typing import Any, Dict, List
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.nlp.keyword_topic_database import (KeywordTopicDatabase,
-                                            create_keyword_topic_db)
-from src.nlp.keyword_topic_extractor import (KeywordTopicExtractor,
-                                             create_keyword_extractor)
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -59,7 +59,7 @@ class KeywordTopicDemo:
                 optimization techniques and shows remarkable generalization capabilities.
                 """,
                 "source": "TechNews Daily",
-                "published_date": datetime(2025, 8, 10),
+                "published_date": datetime(2025, 8, 10), "
             },
             {
                 "id": "demo_climate_1",
@@ -76,7 +76,7 @@ class KeywordTopicDemo:
                 comprehensive climate action and sustainable development practices.
                 """,
                 "source": "Environmental Science Journal",
-                "published_date": datetime(2025, 8, 11),
+                "published_date": datetime(2025, 8, 11),"
             },
             {
                 "id": "demo_healthcare_1",
@@ -92,7 +92,7 @@ class KeywordTopicDemo:
                 Medical technology advances in DNA sequencing and gene editing show promise for treating previously incurable conditions.
                 """,
                 "source": "Medical Innovation Weekly",
-                "published_date": datetime(2025, 8, 12),
+                "published_date": datetime(2025, 8, 12),"
             },
             {
                 "id": "demo_finance_1",
@@ -108,7 +108,7 @@ class KeywordTopicDemo:
                 assets continue evolving as governments establish legal frameworks for blockchain-based financial instruments.
                 """,
                 "source": "Financial Times",
-                "published_date": datetime(2025, 8, 13),
+                "published_date": datetime(2025, 8, 13),"
             },
             {
                 "id": "demo_space_1",
@@ -125,7 +125,7 @@ class KeywordTopicDemo:
                 to search for signs of past or present life beyond Earth.
                 """,
                 "source": "Space Science Today",
-                "published_date": datetime(2025, 8, 14),
+                "published_date": datetime(2025, 8, 14),"
             },
             {
                 "id": "demo_education_1",
@@ -141,13 +141,14 @@ class KeywordTopicDemo:
                 Educational data analytics provide insights into learning patterns and academic performance optimization.
                 """,
                 "source": "Education Technology Review",
-                "published_date": datetime(2025, 8, 15),
+                "published_date": datetime(2025, 8, 15),"
             },
         ]
 
     async def initialize_components(self):
         """Initialize the keyword extractor and database components."""
-        logger.info("Initializing keyword extraction and topic modeling components...")
+        logger.info(
+            "Initializing keyword extraction and topic modeling components...")
 
         # Load configuration
         config_path = "config/keyword_topic_settings.json"
@@ -158,15 +159,16 @@ class KeywordTopicDemo:
 
         # Initialize extractor
         self.extractor = create_keyword_extractor(config_path)
-        logger.info("✅ Keyword extractor initialized")
+        logger.info(" Keyword extractor initialized")
 
         # Initialize database (for demo purposes, we'll skip actual DB connection)
-        logger.info("✅ Database components ready")
+        logger.info(" Database components ready")'
 
     def demonstrate_keyword_extraction(self) -> Dict[str, Any]:
         """Demonstrate keyword extraction functionality."""
-        logger.info("\n🔍 DEMONSTRATING KEYWORD EXTRACTION")
-        logger.info("=" * 50)
+        logger.info(""
+ DEMONSTRATING KEYWORD EXTRACTION")
+        logger.info("=" * 50)"
 
         # Process sample articles
         results = self.extractor.process_batch(self.sample_articles)
@@ -186,7 +188,8 @@ class KeywordTopicDemo:
                 extraction_summary["total_topics"] += len(result.topics)
 
                 # Display sample result
-                logger.info(f"\n📄 Article: {result.title[:60]}...")
+                logger.info(f""
+📄 Article: {result.title[:60]}...")"
                 logger.info(
                     f"   Keywords ({len(result.keywords)}): {[kw.keyword for kw in result.keywords[:5]]}"
                 )
@@ -219,20 +222,22 @@ class KeywordTopicDemo:
 
     def demonstrate_topic_modeling(self) -> Dict[str, Any]:
         """Demonstrate topic modeling functionality."""
-        logger.info("\n📊 DEMONSTRATING TOPIC MODELING")
-        logger.info("=" * 50)
+        logger.info(""
+ DEMONSTRATING TOPIC MODELING")
+        logger.info("=" * 50)"
 
         # Fit topic model on all articles
         topic_info = self.extractor.fit_corpus(self.sample_articles)
 
         if topic_info["model_fitted"]:
             logger.info(
-                f"✅ LDA Model fitted successfully on {topic_info['n_texts']} articles"
+                f" LDA Model fitted successfully on {topic_info['n_texts']} articles"
             )
             logger.info(f"   Model Perplexity: {topic_info.get('perplexity', 'N/A')}")
 
             # Display discovered topics
-            logger.info(f"\n🏷️  DISCOVERED TOPICS ({len(topic_info['topics'])})")
+            logger.info(f"
+🏷️  DISCOVERED TOPICS ({len(topic_info['topics'])})")
             for i, topic in enumerate(topic_info["topics"][:5]):  # Show top 5 topics
                 logger.info(f"   Topic {i+1}: {topic['topic_name']}")
                 logger.info(f"   Top Words: {', '.join(topic['topic_words'][:5])}")
@@ -243,8 +248,9 @@ class KeywordTopicDemo:
 
     def demonstrate_search_functionality(self):
         """Demonstrate search functionality (simulated)."""
-        logger.info("\n🔎 DEMONSTRATING SEARCH FUNCTIONALITY")
-        logger.info("=" * 50)
+        logger.info(""
+🔎 DEMONSTRATING SEARCH FUNCTIONALITY")
+        logger.info("=" * 50)"
 
         # Simulate API queries
         search_examples = [
@@ -266,7 +272,8 @@ class KeywordTopicDemo:
         ]
 
         for example in search_examples:
-            logger.info(f"\n🔍 {example['description']}:")
+            logger.info(f"
+ {example['description']}:")
             logger.info(f"   Query Type: {example['type']}")
             logger.info(f"   Query: {example['query']}")
             logger.info(
@@ -274,10 +281,12 @@ class KeywordTopicDemo:
             )
             logger.info(f"   Expected Results: Articles matching '{example['query']}'")
 
+
     def analyze_extraction_quality(self, results: List) -> Dict[str, Any]:
         """Analyze the quality of extraction results."""
-        logger.info("\n📈 EXTRACTION QUALITY ANALYSIS")
-        logger.info("=" * 50)
+        logger.info(""
+ EXTRACTION QUALITY ANALYSIS")
+        logger.info("=" * 50)"
 
         quality_metrics = {
             "articles_with_keywords": 0,
@@ -321,7 +330,7 @@ class KeywordTopicDemo:
         quality_metrics["topic_coverage"] = len(all_topics)
 
         # Display quality metrics
-        logger.info(f"📊 Quality Metrics:")
+        logger.info(" Quality Metrics:")
         logger.info(
             f"   Articles with Keywords: {quality_metrics['articles_with_keywords']}/{total_articles}"
         )
@@ -348,7 +357,7 @@ class KeywordTopicDemo:
 
     async def run_complete_demo(self):
         """Run the complete demonstration."""
-        logger.info("🚀 STARTING KEYWORD EXTRACTION & TOPIC MODELING DEMO")
+        logger.info(" STARTING KEYWORD EXTRACTION & TOPIC MODELING DEMO")
         logger.info("=" * 60)
 
         try:
@@ -365,11 +374,12 @@ class KeywordTopicDemo:
             quality_metrics = self.analyze_extraction_quality(processing_results)
 
             # Final summary
-            logger.info("\n✅ DEMO COMPLETED SUCCESSFULLY")
+            logger.info(""
+ DEMO COMPLETED SUCCESSFULLY")
             logger.info("=" * 60)
-            logger.info(f"📊 Summary:")
+            logger.info(" Summary:")
             logger.info(
-                f"   Total Articles Processed: {extraction_results['total_articles']}"
+                f"   Total Articles Processed: {extraction_results['total_articles']}""
             )
             logger.info(
                 f"   Successful Extractions: {extraction_results['successful_extractions']}"
@@ -397,7 +407,7 @@ class KeywordTopicDemo:
             with open("keyword_topic_demo_results.json", "w") as f:
                 json.dump(demo_results, f, indent=2, default=str)
 
-            logger.info(f"📁 Results saved to: keyword_topic_demo_results.json")
+            logger.info(" Results saved to: keyword_topic_demo_results.json")
 
             return demo_results
 

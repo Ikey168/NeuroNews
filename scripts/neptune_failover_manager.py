@@ -41,7 +41,7 @@ class NeptuneFailoverManager:
                 json.dump(original_config, f, indent=2)
 
             self.logger.info(
-                f"✅ Original configuration saved to {self.original_config_file}"
+                f" Original configuration saved to {self.original_config_file}"
             )
             return True
 
@@ -72,7 +72,7 @@ class NeptuneFailoverManager:
                             "read_write": False,
                         },
                     },
-                    "failover_strategy": {
+                    f"ailover_strategy": {
                         "auto_failover": False,
                         "health_check_interval": 30,
                         "timeout_threshold": 10,
@@ -85,7 +85,7 @@ class NeptuneFailoverManager:
                 json.dump(dr_config, f, indent=2)
 
             self.logger.info(
-                f"✅ Disaster recovery config created: {self.dr_config_file}"
+                f" Disaster recovery config created: {self.dr_config_file}"
             )
             return True
 
@@ -98,7 +98,8 @@ class NeptuneFailoverManager:
         try:
             # Save current config first
             if not self.save_original_config():
-                self.logger.warn("Could not save original config, continuing anyway...")
+                self.logger.warn(
+                    "Could not save original config, continuing anyway...")
 
             # Parse endpoint
             if replica_endpoint.startswith("ws://"):
@@ -131,8 +132,9 @@ class NeptuneFailoverManager:
                 }
             )
 
-            self.logger.info(f"✅ Switched to replica endpoint: {host}:{port}")
-            self.logger.info("🔄 Application should be restarted to use new endpoint")
+            self.logger.info(f" Switched to replica endpoint: {host}:{port}")
+            self.logger.info(
+                "🔄 Application should be restarted to use new endpoint")
 
             return True
 
@@ -144,7 +146,8 @@ class NeptuneFailoverManager:
         """Switch back to primary Neptune endpoint."""
         try:
             if not self.original_config_file.exists():
-                self.logger.error("Original configuration not found - cannot rollback")
+                self.logger.error(
+                    "Original configuration not found - cannot rollback")
                 return False
 
             with open(self.original_config_file, "r") as f:
@@ -168,7 +171,7 @@ class NeptuneFailoverManager:
 
             self._update_env_file(env_updates)
 
-            self.logger.info("✅ Switched back to primary endpoint")
+            self.logger.info(" Switched back to primary endpoint")
             self.logger.info(
                 "🔄 Application should be restarted to use primary endpoint"
             )
@@ -244,12 +247,16 @@ class NeptuneFailoverManager:
 
             # Write updated .env file
             with open(env_file, "w") as f:
-                f.write("# Neptune Configuration - Updated by Failover Manager\n")
-                f.write(f"# Updated: 2025-06-07T00:00:00Z\n\n")
-                for key, value in env_vars.items():
-                    f.write(f"{key}={value}\n")
+                f.write("# Neptune Configuration - Updated by Failover Manager"
+")
+                f.write("# Updated: 2025-06-07T00:00:00Z
 
-            self.logger.info(f"✅ Updated {env_file}")
+")"
+                for key, value in env_vars.items():
+                    f.write(f"{key}={value}"
+")"
+
+            self.logger.info(f" Updated {env_file}")
             return True
 
         except Exception as e:
@@ -294,7 +301,7 @@ def main():
 
         # Test endpoint first
         if manager.test_endpoint(args.replica_endpoint):
-            print("✅ Replica endpoint connectivity test passed")
+            print(" Replica endpoint connectivity test passed")
         else:
             print("⚠️  Replica endpoint connectivity test failed, proceeding anyway...")
 
@@ -303,7 +310,7 @@ def main():
                 manager.create_failover_config(
                     args.primary_endpoint, args.replica_endpoint, "replica"
                 )
-            print("✅ Successfully switched to replica endpoint")
+            print(" Successfully switched to replica endpoint")
             return 0
         else:
             print("❌ Failed to switch to replica endpoint")
@@ -312,7 +319,7 @@ def main():
     elif args.action == "switch-to-primary":
         print("🔄 Switching back to primary endpoint")
         if manager.switch_to_primary():
-            print("✅ Successfully switched to primary endpoint")
+            print(" Successfully switched to primary endpoint")
             return 0
         else:
             print("❌ Failed to switch to primary endpoint")
@@ -320,7 +327,7 @@ def main():
 
     elif args.action == "status":
         config = manager.get_current_config()
-        print("📊 Current Neptune Configuration:")
+        print(" Current Neptune Configuration:")
         for key, value in config.items():
             print(f"  {key}: {value}")
         return 0
@@ -333,9 +340,9 @@ def main():
             )
             return 1
 
-        print(f"🔍 Testing connectivity to: {endpoint}")
+        print(f" Testing connectivity to: {endpoint}")
         if manager.test_endpoint(endpoint):
-            print("✅ Connection test passed")
+            print(" Connection test passed")
             return 0
         else:
             print("❌ Connection test failed")

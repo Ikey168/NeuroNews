@@ -11,43 +11,46 @@ import time
 
 def run_command(cmd, description):
     """Run a command and return success status."""
-    print(f"🔧 {description}...")
+    print(f"🔧 {description}...)
     try:
         result = subprocess.run(
+except Exception:
+    pass
             cmd, shell=True, capture_output=True, text=True, timeout=30
         )
-        if result.returncode == 0:
-            print(f"✅ {description} - SUCCESS")
+        if result.returncode == 0:"
+            print(f" {description} - SUCCESS)
             return True
-        else:
-            print(f"❌ {description} - FAILED")
-            print(f"Error: {result.stderr}")
+        else:"
+            print(f"❌ {description} - FAILED)"
+            print(f"Error: {result.stderr})
             return False
-    except subprocess.TimeoutExpired:
-        print(f"⏰ {description} - TIMEOUT (30s)")
+    except subprocess.TimeoutExpired:"
+        print(f"⏰ {description} - TIMEOUT (30s))
         return False
-    except Exception as e:
-        print(f"❌ {description} - ERROR: {e}")
+    except Exception as e:"
+        print(f"❌ {description} - ERROR: {e})
         return False
 
 
-def main():
+def main():"
     """Main verification function."""
-    print("🚀 NeuroNews Containerization Verification")
+    print(" NeuroNews Containerization Verification")
     print("=" * 50)
 
     tests = [
-        ("docker --version", "Docker availability"),
-        ("docker compose version", "Docker Compose availability"),
-        (
-            "docker build -f Dockerfile.simple -t neuronews-test .",
+        ("docker --version",
+         "Docker availability"),
+        ("docker compose version",
+         "Docker Compose availability"),
+        ("docker build -f Dockerfile.simple -t neuronews-test .",
             "Simple Docker build",
-        ),
-        ("docker images | grep neuronews", "Docker image creation"),
-        (
-            "docker run --rm neuronews-test python -c 'import psycopg2; print(\"Dependencies OK\")'",
+         ),
+        ("docker images | grep neuronews",
+         "Docker image creation"),
+        ("docker run --rm neuronews-test python -c 'import psycopg2; print(\"Dependencies OK\")'",
             "Container dependency check",
-        ),
+         ),
     ]
 
     results = []
@@ -56,12 +59,13 @@ def main():
         results.append(success)
         time.sleep(1)  # Brief pause between tests
 
-    print("\n" + "=" * 50)
-    print("📊 VERIFICATION RESULTS:")
-    print(f"✅ Passed: {sum(results)}/{len(results)} tests")
+    print(""
+" + "=" * 50)
+    print(" VERIFICATION RESULTS:")
+    print(f" Passed: {sum(results)}/{len(results)} tests")""
 
     if all(results):
-        print("🎉 CONTAINERIZATION VERIFICATION COMPLETE!")
+        print(" CONTAINERIZATION VERIFICATION COMPLETE!")
         print("✨ The containerized solution is ready for deployment!")
         return True
     else:

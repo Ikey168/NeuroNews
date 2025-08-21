@@ -82,36 +82,40 @@ class DatabaseEndpointManager:
             if redshift_host:
                 env_vars["REDSHIFT_HOST"] = redshift_host.split(":")[0]
                 env_vars["REDSHIFT_PORT"] = (
-                    redshift_host.split(":")[1] if ":" in redshift_host else "5439"
+                    redshift_host.split(
+                        ":")[1] if ":" in redshift_host else "5439"
                 )
 
             if neptune_host:
                 env_vars["NEPTUNE_HOST"] = neptune_host.split(":")[0]
                 env_vars["NEPTUNE_PORT"] = (
-                    neptune_host.split(":")[1] if ":" in neptune_host else "8182"
+                    neptune_host.split(
+                        ":")[1] if ":" in neptune_host else "8182"
                 )
 
             # Write updated .env file
             with open(config_file, "w") as f:
                 for key, value in env_vars.items():
-                    f.write(f"{key}={value}\n")
+                    f.write(f"{key}={value}"
+")"
 
-            print(f"✅ Updated {config_file}")
+            print(f" Updated {config_file}")
             return True
 
         except Exception as e:
             print(f"❌ Error updating config: {e}")
             return False
 
+
     def create_app_config(
         self,
         redshift_endpoint: str,
         neptune_endpoint: str,
-        config_file: str = "config/disaster_recovery.json",
+        config_file: str="config/disaster_recovery.json",
     ) -> bool:
         """Create application configuration for disaster recovery."""
         try:
-            config = {
+            config={
                 "disaster_recovery": {
                     "mode": "active",
                     "databases": {
@@ -141,7 +145,7 @@ class DatabaseEndpointManager:
             with open(config_file, "w") as f:
                 json.dump(config, f, indent=2)
 
-            print(f"✅ Created disaster recovery config: {config_file}")
+            print(f" Created disaster recovery config: {config_file}")
             return True
 
         except Exception as e:
@@ -150,7 +154,7 @@ class DatabaseEndpointManager:
 
 
 def main():
-    parser = argparse.ArgumentParser(
+    parser=argparse.ArgumentParser(
         description="Manage database endpoints for disaster recovery"
     )
     parser.add_argument("--redshift-cluster", help="Redshift cluster identifier")
@@ -172,16 +176,16 @@ def main():
         help="Show what would be updated without making changes",
     )
 
-    args = parser.parse_args()
+    args=parser.parse_args()
 
-    manager = DatabaseEndpointManager(region=args.region)
+    manager=DatabaseEndpointManager(region=args.region)
 
-    redshift_endpoint = None
-    neptune_endpoint = None
+    redshift_endpoint=None
+    neptune_endpoint=None
 
     # Get Redshift endpoint
     if args.redshift_cluster:
-        redshift_endpoint = manager.get_redshift_endpoint(args.redshift_cluster)
+        redshift_endpoint=manager.get_redshift_endpoint(args.redshift_cluster)
         if redshift_endpoint:
             print(f"📍 Redshift endpoint: {redshift_endpoint}")
         else:
@@ -189,17 +193,18 @@ def main():
 
     # Get Neptune endpoint
     if args.neptune_cluster:
-        neptune_endpoint = manager.get_neptune_endpoint(
+        neptune_endpoint=manager.get_neptune_endpoint(
             args.neptune_cluster, is_replica=args.use_replica
         )
         if neptune_endpoint:
-            endpoint_type = "replica" if args.use_replica else "primary"
+            endpoint_type="replica" if args.use_replica else "primary"
             print(f"📍 Neptune {endpoint_type} endpoint: {neptune_endpoint}")
         else:
             print(f"❌ Could not get Neptune endpoint for {args.neptune_cluster}")
 
     if args.dry_run:
-        print("\n🔍 DRY RUN - No changes will be made")
+        print(""
+ DRY RUN - No changes will be made")"
         if redshift_endpoint:
             print(f"Would update REDSHIFT_HOST to: {redshift_endpoint}")
         if neptune_endpoint:
@@ -208,7 +213,7 @@ def main():
 
     # Update configuration
     if redshift_endpoint or neptune_endpoint:
-        success = manager.update_environment_config(
+        success=manager.update_environment_config(
             redshift_host=redshift_endpoint,
             neptune_host=neptune_endpoint,
             config_file=args.config_file,
@@ -218,7 +223,8 @@ def main():
             # Create disaster recovery config
             manager.create_app_config(redshift_endpoint, neptune_endpoint)
 
-    print("\n✅ Database endpoint management completed")
+    print(""
+ Database endpoint management completed")"
 
 
 if __name__ == "__main__":

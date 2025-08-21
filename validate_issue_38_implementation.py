@@ -23,24 +23,24 @@ from unittest.mock import AsyncMock, Mock
 # Test imports and basic functionality
 def test_imports():
     """Test that all required components can be imported."""
-    print("🔍 Testing imports...")
+    print(" Testing imports...")
 
     try:
         from src.api.routes.event_timeline_routes import (
             EventTimelineResponse, EventTrackingRequest,
             TimelineVisualizationRequest, get_event_timeline_service, router)
 
-        print("✅ Event timeline routes imported successfully")
+        print(" Event timeline routes imported successfully")
 
         from src.api.event_timeline_service import (EventTimelineService,
                                                     HistoricalEvent,
                                                     TimelineVisualizationData)
 
-        print("✅ Event timeline service imported successfully")
+        print(" Event timeline service imported successfully")
 
         from src.api.app import app
 
-        print("✅ FastAPI app imported successfully")
+        print(" FastAPI app imported successfully")
 
         return True
     except ImportError as e:
@@ -50,18 +50,19 @@ def test_imports():
 
 def test_service_functionality():
     """Test EventTimelineService functionality."""
-    print("\n🔍 Testing service functionality...")
+    print(""
+ Testing service functionality...")"
 
     try:
         from src.api.event_timeline_service import (EventTimelineService,
                                                     HistoricalEvent)
 
         # Test service creation
-        service = EventTimelineService()
-        print("✅ EventTimelineService created successfully")
+        service=EventTimelineService()
+        print(" EventTimelineService created successfully")
 
         # Test HistoricalEvent model
-        event = HistoricalEvent(
+        event=HistoricalEvent(
             event_id="test_001",
             title="Test Event for Validation",
             description="A test event to validate the HistoricalEvent model",
@@ -72,25 +73,25 @@ def test_service_functionality():
             confidence=0.95,
             impact_score=0.8,
         )
-        print("✅ HistoricalEvent model working correctly")
+        print(" HistoricalEvent model working correctly")
         print("   Event: {0}".format(event.title))
         print("   Topic: {0}".format(event.topic))
         print("   Impact Score: {0}".format(event.impact_score))
 
         # Test event clustering
-        sample_events = [event]
-        clusters = service._generate_event_clusters(sample_events)
-        print("✅ Event clustering functionality working")
+        sample_events=[event]
+        clusters=service._generate_event_clusters(sample_events)
+        print(" Event clustering functionality working")
         print(f"   Generated {clusters.get('total_clusters', 0)} clusters")
 
         # Test impact analysis
-        impact_analysis = service._generate_impact_analysis(sample_events)
-        print("✅ Impact analysis functionality working")
+        impact_analysis=service._generate_impact_analysis(sample_events)
+        print(" Impact analysis functionality working")
         print(f"   Analyzed {impact_analysis.get('total_events', 0)} events")
 
         # Test entity involvement chart
-        entity_chart = service._generate_entity_involvement_chart(sample_events)
-        print("✅ Entity involvement chart functionality working")
+        entity_chart=service._generate_entity_involvement_chart(sample_events)
+        print(" Entity involvement chart functionality working")
         print(f"   Chart type: {entity_chart.get('type', 'unknown')}")
 
         return True
@@ -102,7 +103,8 @@ def test_service_functionality():
 
 def test_api_models():
     """Test API request/response models."""
-    print("\n🔍 Testing API models...")
+    print(""
+ Testing API models...")"
 
     try:
         from src.api.routes.event_timeline_routes import (
@@ -110,7 +112,7 @@ def test_api_models():
             TimelineVisualizationRequest)
 
         # Test EventTrackingRequest
-        tracking_request = EventTrackingRequest(
+        tracking_request=EventTrackingRequest(
             topic="Machine Learning",
             start_date=datetime(2025, 8, 1),
             end_date=datetime(2025, 8, 31),
@@ -118,24 +120,24 @@ def test_api_models():
             include_related=True,
             store_in_neptune=True,
         )
-        print("✅ EventTrackingRequest validation successful")
+        print(" EventTrackingRequest validation successful")
         print("   Topic: {0}".format(tracking_request.topic))
         print("   Max Events: {0}".format(tracking_request.max_events))
 
         # Test TimelineVisualizationRequest
-        viz_request = TimelineVisualizationRequest(
+        viz_request=TimelineVisualizationRequest(
             theme="default",
             chart_type="timeline",
             include_clusters=True,
             include_impact_analysis=True,
         )
-        print("✅ TimelineVisualizationRequest validation successful")
+        print(" TimelineVisualizationRequest validation successful")
         print("   Theme: {0}".format(viz_request.theme))
         print("   Chart Type: {0}".format(viz_request.chart_type))
 
         # Test invalid values
         try:
-            invalid_request = EventTrackingRequest(
+            invalid_request=EventTrackingRequest(
                 topic="Test",
                 start_date=datetime(2025, 8, 31),
                 end_date=datetime(2025, 8, 1),  # Invalid: end before start
@@ -143,16 +145,16 @@ def test_api_models():
             print("❌ EventTrackingRequest should have failed validation")
             return False
         except ValueError:
-            print("✅ EventTrackingRequest correctly rejected invalid dates")
+            print(" EventTrackingRequest correctly rejected invalid dates")
 
         try:
-            invalid_viz = TimelineVisualizationRequest(
+            invalid_viz=TimelineVisualizationRequest(
                 theme="invalid_theme", chart_type="timeline"
             )
             print("❌ TimelineVisualizationRequest should have failed validation")
             return False
         except ValueError:
-            print("✅ TimelineVisualizationRequest correctly rejected invalid theme")
+            print(" TimelineVisualizationRequest correctly rejected invalid theme")
 
         return True
 
@@ -163,16 +165,18 @@ def test_api_models():
 
 def test_fastapi_integration():
     """Test FastAPI integration."""
-    print("\n🔍 Testing FastAPI integration...")
+    print(""
+ Testing FastAPI integration...")"
 
     try:
         from src.api.app import app
 
         # Check routes
-        routes = [route.path for route in app.routes]
-        event_timeline_routes = [route for route in routes if "event-timeline" in route]
+        routes=[route.path for route in app.routes]
+        event_timeline_routes=[
+    route for route in routes if "event-timeline" in route]
 
-        expected_routes = [
+        expected_routes=[
             "/api/v1/event-timeline/{topic}",
             "/api/v1/event-timeline/track",
             "/api/v1/event-timeline/{topic}/visualization",
@@ -181,19 +185,22 @@ def test_fastapi_integration():
             "/api/v1/event-timeline/health",
         ]
 
-        found_routes = set(event_timeline_routes)
-        expected_routes_set = set(expected_routes)
+        found_routes=set(event_timeline_routes)
+        expected_routes_set=set(expected_routes)
 
         if expected_routes_set.issubset(found_routes):
-            print("✅ All expected routes found ({0} total)".format(len(event_timeline_routes)))
+            print(
+    " All expected routes found ({0} total)".format(
+        len(event_timeline_routes)))
             for route in expected_routes:
                 print("   ✓ {0}".format(route))
         else:
-            missing = expected_routes_set - found_routes
+            missing=expected_routes_set - found_routes
             print("❌ Missing routes: {0}".format(missing))
             return False
 
-        print("✅ FastAPI integration successful - {0} total routes".format(len(routes)))
+        print(
+            " FastAPI integration successful - {0} total routes".format(len(routes)))
         return True
 
     except Exception as e:
@@ -203,7 +210,8 @@ def test_fastapi_integration():
 
 async def test_mock_endpoints():
     """Test API endpoints with mocked dependencies."""
-    print("\n🔍 Testing API endpoints with mocks...")
+    print(""
+ Testing API endpoints with mocks...")"
 
     try:
         from fastapi import FastAPI
@@ -213,14 +221,14 @@ async def test_mock_endpoints():
             get_event_timeline_service, router)
 
         # Create test app
-        test_app = FastAPI()
+        test_app=FastAPI()
         test_app.include_router(router)
 
         # Create mock service
-        mock_service = Mock()
+        mock_service=Mock()
 
         # Mock timeline response
-        mock_timeline_response = {
+        mock_timeline_response={
             "topic": "Artificial Intelligence",
             "timeline_span": {
                 "start_date": "2025-08-01T00:00:00",
@@ -255,23 +263,23 @@ async def test_mock_endpoints():
             },
         }
 
-        mock_service.generate_timeline_api_response = AsyncMock(
+        mock_service.generate_timeline_api_response=AsyncMock(
             return_value=mock_timeline_response
         )
 
         # Mock tracking response
-        mock_tracking_response = {
+        mock_tracking_response={
             "events_stored": 2,
             "relationships_created": 4,
             "errors": [],
         }
-        mock_service.track_historical_events = AsyncMock(return_value=[])
-        mock_service.store_event_relationships = AsyncMock(
+        mock_service.track_historical_events=AsyncMock(return_value=[])
+        mock_service.store_event_relationships=AsyncMock(
             return_value=mock_tracking_response
         )
 
         # Mock visualization response
-        mock_viz_response = {
+        mock_viz_response={
             "timeline_chart": {
                 "type": "timeline",
                 "data": {
@@ -283,22 +291,23 @@ async def test_mock_endpoints():
             "impact_analysis": {"total_events": 2, "impact_statistics": {}},
             "theme": {"primary_color": "#1f77b4"},
         }
-        mock_service.generate_visualization_data = AsyncMock(
+        mock_service.generate_visualization_data=AsyncMock(
             return_value=mock_viz_response
         )
 
         # Create mock dependency function
+
         async def mock_get_service():
             return mock_service
 
         # Override dependency
-        test_app.dependency_overrides[get_event_timeline_service] = mock_get_service
+        test_app.dependency_overrides[get_event_timeline_service]=mock_get_service
 
         # Create test client
-        client = TestClient(test_app)
+        client=TestClient(test_app)
 
         # Test 1: Enhanced timeline endpoint
-        response = client.get(
+        response=client.get(
             "/api/v1/event-timeline/Artificial%20Intelligence",
             params={
                 "start_date": "2025-08-01",
@@ -309,20 +318,26 @@ async def test_mock_endpoints():
         )
 
         if response.status_code == 200:
-            print("✅ Enhanced timeline endpoint working")
-            data = response.json()
+            print(" Enhanced timeline endpoint working")
+            data=response.json()
             if "topic" in data and "events" in data:
                 print(
-                    f"   ✓ Response structure correct - {data['total_events']} events"
+                    f"   ✓ Response structure correct - {
+    data['total_events']} events"
                 )
             else:
-                print("   ❌ Unexpected response structure: {0}".format(list(data.keys())))
+                print(
+    "   ❌ Unexpected response structure: {0}".format(
+        list(
+            data.keys())))
         else:
-            print("❌ Enhanced timeline endpoint failed: {0}".format(response.status_code))
+            print(
+    "❌ Enhanced timeline endpoint failed: {0}".format(
+        response.status_code))
             return False
 
         # Test 2: Event tracking endpoint
-        tracking_request = {
+        tracking_request={
             "topic": "Machine Learning",
             "start_date": "2025-08-01T00:00:00",
             "end_date": "2025-08-31T23:59:59",
@@ -331,59 +346,72 @@ async def test_mock_endpoints():
             "store_in_neptune": True,
         }
 
-        response = client.post("/api/v1/event-timeline/track", json=tracking_request)
+        response=client.post(
+    "/api/v1/event-timeline/track",
+     json=tracking_request)
 
         if response.status_code == 200:
-            print("✅ Event tracking endpoint working")
-            data = response.json()
+            print(" Event tracking endpoint working")
+            data=response.json()
             if "events_tracked" in data and "processing_time" in data:
                 print("   ✓ Tracking response structure correct")
             else:
-                print("   ❌ Unexpected tracking response: {0}".format(list(data.keys())))
+                print(
+    "   ❌ Unexpected tracking response: {0}".format(
+        list(
+            data.keys())))
         else:
-            print("❌ Event tracking endpoint failed: {0}".format(response.status_code))
+            print(
+    "❌ Event tracking endpoint failed: {0}".format(
+        response.status_code))
             return False
 
         # Test 3: Visualization endpoint
-        response = client.get(
+        response=client.get(
             "/api/v1/event-timeline/AI%20Technology/visualization",
             params={"theme": "default", "chart_type": "timeline"},
         )
 
         if response.status_code == 200:
-            print("✅ Visualization endpoint working")
-            data = response.json()
+            print(" Visualization endpoint working")
+            data=response.json()
             if "chart_data" in data and "theme" in data:
                 print("   ✓ Visualization response structure correct")
             else:
-                print("   ❌ Unexpected visualization response: {0}".format(list(data.keys())))
+                print(
+    "   ❌ Unexpected visualization response: {0}".format(
+        list(
+            data.keys())))
         else:
-            print("❌ Visualization endpoint failed: {0}".format(response.status_code))
+            print(
+    "❌ Visualization endpoint failed: {0}".format(
+        response.status_code))
             return False
 
         # Test 4: Export endpoint (JSON)
-        response = client.get(
-            "/api/v1/event-timeline/Test%20Topic/export", params={"format": "json"}
+        response=client.get(
+            "/api/v1/event-timeline/Test%20Topic/export", params={f"ormat": "json"}
         )
 
         if response.status_code == 200:
-            print("✅ Export endpoint working")
+            print(" Export endpoint working")
             if response.headers.get("content-type") == "application/json":
                 print("   ✓ JSON export format correct")
             else:
                 print(
-                    f"   ❌ Unexpected content type: {response.headers.get('content-type')}"
+                    f"   ❌ Unexpected content type: {
+    response.headers.get('content-type')}"
                 )
         else:
             print("❌ Export endpoint failed: {0}".format(response.status_code))
             return False
 
         # Test 5: Health check
-        response = client.get("/api/v1/event-timeline/health")
+        response=client.get("/api/v1/event-timeline/health")
 
         if response.status_code == 200:
-            print("✅ Health check endpoint working")
-            data = response.json()
+            print(" Health check endpoint working")
+            data=response.json()
             if data.get("service") == "event-timeline-api":
                 print("   ✓ Health check response correct")
             else:
@@ -395,7 +423,7 @@ async def test_mock_endpoints():
         # Clean up
         test_app.dependency_overrides.clear()
 
-        print("✅ All mocked API endpoints working correctly")
+        print(" All mocked API endpoints working correctly")
         return True
 
     except Exception as e:
@@ -408,9 +436,10 @@ async def test_mock_endpoints():
 
 def test_issue_38_requirements():
     """Test that Issue #38 requirements are met."""
-    print("\n🔍 Validating Issue #38 requirements...")
+    print(""
+ Validating Issue  # 38 requirements...")"
 
-    requirements = {
+    requirements={
         "track_historical_events": False,
         "store_event_relationships": False,
         "implement_api_endpoint": False,
@@ -421,36 +450,38 @@ def test_issue_38_requirements():
         # Requirement 1: Track historical events related to a topic
         from src.api.event_timeline_service import EventTimelineService
 
-        service = EventTimelineService()
+        service=EventTimelineService()
         if hasattr(service, "track_historical_events"):
-            requirements["track_historical_events"] = True
-            print("✅ Track historical events - Method implemented")
+            requirements["track_historical_events"]=True
+            print(" Track historical events - Method implemented")
 
         # Requirement 2: Store event timestamps & relationships in Neptune
         if hasattr(service, "store_event_relationships"):
-            requirements["store_event_relationships"] = True
-            print("✅ Store event relationships in Neptune - Method implemented")
+            requirements["store_event_relationships"]=True
+            print(" Store event relationships in Neptune - Method implemented")
 
-        # Requirement 3: Implement API /event_timeline?topic=Artificial Intelligence
+        # Requirement 3: Implement API /event_timeline?topic=Artificial
+        # Intelligence
         from src.api.app import app
 
-        routes = [route.path for route in app.routes]
-        timeline_routes = [
+        routes=[route.path for route in app.routes]
+        timeline_routes=[
             r for r in routes if "event-timeline" in r and "{topic}" in r
         ]
         if timeline_routes:
-            requirements["implement_api_endpoint"] = True
-            print("✅ Event timeline API endpoint implemented")
+            requirements["implement_api_endpoint"]=True
+            print(" Event timeline API endpoint implemented")
             print("   Route: {0}".format(timeline_routes[0]))
 
         # Requirement 4: Generate visualizations of event evolution
         if hasattr(service, "generate_visualization_data"):
-            requirements["generate_visualizations"] = True
-            print("✅ Visualization generation - Method implemented")
+            requirements["generate_visualizations"]=True
+            print(" Visualization generation - Method implemented")
 
-        print("\n📊 Issue #38 Requirements Status:")
-        all_met = True
-        requirement_descriptions = {
+        print(""
+ Issue  # 38 Requirements Status:")"
+        all_met=True
+        requirement_descriptions={
             "track_historical_events": "Track historical events related to a topic",
             "store_event_relationships": "Store event timestamps & relationships in Neptune",
             "implement_api_endpoint": "Implement API /event_timeline?topic=Artificial Intelligence",
@@ -458,11 +489,11 @@ def test_issue_38_requirements():
         }
 
         for req, status in requirements.items():
-            status_icon = "✅" if status else "❌"
-            desc = requirement_descriptions[req]
+            status_icon="" if status else "❌"
+            desc=requirement_descriptions[req]
             print("   {0} {1}".format(status_icon, desc))
             if not status:
-                all_met = False
+                all_met=False
 
         return all_met
 
@@ -473,10 +504,10 @@ def test_issue_38_requirements():
 
 async def main():
     """Run all validation tests."""
-    print("🚀 Event Timeline API Validation - Issue #38")
+    print(" Event Timeline API Validation - Issue #38")
     print("=" * 60)
 
-    tests = [
+    tests=[
         ("Import Tests", test_imports),
         ("Service Functionality", test_service_functionality),
         ("API Models", test_api_models),
@@ -485,10 +516,11 @@ async def main():
         ("Issue #38 Requirements", test_issue_38_requirements),
     ]
 
-    results = []
+    results=[]
 
     for test_name, test_func in tests:
-        print(f"\n{'=' * 20} {test_name} {'=' * 20}")
+        print(f"
+{'=' * 20} {test_name} {'=' * 20}")
 
         try:
             if asyncio.iscoroutinefunction(test_func):
@@ -501,27 +533,30 @@ async def main():
             results.append((test_name, False))
 
     # Summary
-    print(f"\n{'=' * 20} VALIDATION SUMMARY {'=' * 20}")
+    print(f"
+{'=' * 20} VALIDATION SUMMARY {'=' * 20}")
 
     passed = sum(1 for _, result in results if result)
     total = len(results)
 
     for test_name, result in results:
-        status = "✅ PASS" if result else "❌ FAIL"
+        status = " PASS" if result else "❌ FAIL"
         print("{0} {1}".format(status, test_name))
 
-    print("\n📊 Overall Result: {0}/{1} tests passed".format(passed, total))
+    print(""
+ Overall Result: {0}/{1} tests passed".format(passed, total))"
 
     if passed == total:
-        print("🎉 All validation tests PASSED!")
-        print("✅ Issue #38 implementation is ready for review")
-        print("\n🚀 Key Features Implemented:")
+        print(" All validation tests PASSED!")
+        print(" Issue #38 implementation is ready for review")
+        print(""
+ Key Features Implemented:")
         print("  • Enhanced event timeline service with historical tracking")
         print("  • Neptune storage for events and relationships")
         print("  • Advanced API endpoints with visualization support")
         print("  • Multiple export formats (JSON, CSV, HTML)")
         print("  • Event clustering and impact analysis")
-        print("  • Comprehensive validation and error handling")
+        print("  • Comprehensive validation and error handling")"
         return True
     else:
         print("❌ Some validation tests FAILED")
@@ -534,10 +569,12 @@ if __name__ == "__main__":
         result = asyncio.run(main())
         sys.exit(0 if result else 1)
     except KeyboardInterrupt:
-        print("\n⚠️  Validation interrupted by user")
+        print(""
+⚠️  Validation interrupted by user")"
         sys.exit(1)
     except Exception as e:
-        print("\n💥 Validation failed with error: {0}".format(e))
+        print(""
+💥 Validation failed with error: {0}".format(e))"
         import traceback
 
         traceback.print_exc()

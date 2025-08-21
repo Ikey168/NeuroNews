@@ -13,19 +13,19 @@ Test Coverage:
 - Complete integration testing
 """
 
-import asyncio
-import json
 from datetime import datetime
-from typing import Any, Dict, List
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 
 from src.api.app import app
-from src.dashboards.quicksight_service import (DashboardType, QuickSightConfig,
-                                               QuickSightDashboardService,
-                                               QuickSightResourceType)
+from src.dashboards.quicksight_service import (
+    DashboardType,
+    QuickSightConfig,
+    QuickSightDashboardService,
+    QuickSightResourceType,
+)
 
 
 class TestQuickSightService:
@@ -149,7 +149,7 @@ class TestQuickSightService:
         """Test Redshift data source creation."""
         result = await service._create_redshift_data_source()
 
-        assert result["success"] == True
+        assert result["success"] is True
         assert result["action"] == "created"
         assert result["data_source_id"] == "neuronews-redshift-ds"
 
@@ -253,9 +253,7 @@ class TestQuickSightService:
 
     def test_entity_relationships_visuals(self, service):
         """Test entity relationships visual generation."""
-        visuals = service._get_entity_relationships_visuals(
-            "entity_relationships_dataset"
-        )
+        visuals = service._get_entity_relationships_visuals("entity_relationships_dataset")
 
         assert len(visuals) == 1
         assert visuals[0]["VisualId"] == "entity_network"
@@ -275,7 +273,7 @@ class TestQuickSightService:
         results = await service._create_dashboards()
 
         assert len(results) == 1
-        assert results[0]["success"] == True
+        assert results[0]["success"] is True
         assert results[0]["id"] == "neuronews_comprehensive_dashboard"
 
         mock_quicksight_client.create_dashboard.assert_called_once()
@@ -293,9 +291,7 @@ class TestQuickSightService:
         date_filter = next(f for f in filters if f["FilterId"] == "date_filter")
         assert "DateTimePickerFilter" in date_filter
 
-        sentiment_filter = next(
-            f for f in filters if f["FilterId"] == "sentiment_filter"
-        )
+        sentiment_filter = next(f for f in filters if f["FilterId"] == "sentiment_filter")
         assert "CategoryFilter" in sentiment_filter
 
     @pytest.mark.asyncio
@@ -303,7 +299,7 @@ class TestQuickSightService:
         """Test specific dashboard layout creation."""
         result = await service.create_dashboard_layout(DashboardType.SENTIMENT_TRENDS)
 
-        assert result["success"] == True
+        assert result["success"] is True
         assert "dashboard_id" in result
         assert "dashboard_url" in result
 
@@ -314,7 +310,7 @@ class TestQuickSightService:
         """Test real-time update setup."""
         result = await service.setup_real_time_updates()
 
-        assert result["success"] == True
+        assert result["success"] is True
         assert "refresh_schedules" in result
         assert result["update_frequency"] == "hourly"
         assert len(result["refresh_schedules"]) == 3
@@ -324,7 +320,7 @@ class TestQuickSightService:
         """Test complete QuickSight resource setup."""
         result = await service.setup_quicksight_resources()
 
-        assert result["data_source_created"] == True
+        assert result["data_source_created"] is True
         assert len(result["datasets_created"]) >= 2
         assert len(result["analyses_created"]) >= 2
         assert len(result["dashboards_created"]) >= 1
@@ -351,7 +347,7 @@ class TestQuickSightService:
 
         result = await service.get_dashboard_info("test_dashboard")
 
-        assert result["success"] == True
+        assert result["success"] is True
         assert result["dashboard"]["id"] == "test_dashboard"
         assert result["dashboard"]["name"] == "Test Dashboard"
 
@@ -360,7 +356,7 @@ class TestQuickSightService:
         """Test getting dashboard list."""
         result = await service.get_dashboard_info()
 
-        assert result["success"] == True
+        assert result["success"] is True
         assert "dashboards" in result
         assert result["total_count"] >= 1
 
@@ -377,11 +373,11 @@ class TestQuickSightService:
 
         result = await service.validate_setup()
 
-        assert result["data_source_valid"] == True
+        assert result["data_source_valid"] is True
         assert len(result["datasets_valid"]) == 3
         assert len(result["analyses_valid"]) == 3
         assert len(result["dashboards_valid"]) == 1
-        assert result["overall_valid"] == True
+        assert result["overall_valid"] is True
 
 
 class TestQuickSightAPI:
@@ -434,7 +430,7 @@ class TestQuickSightAPI:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["data_source_created"] == True
+        assert data["data_source_created"] is True
         assert len(data["datasets_created"]) >= 1
 
     @patch("src.api.routes.quicksight_routes.get_quicksight_service")
@@ -460,7 +456,7 @@ class TestQuickSightAPI:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["success"] == True
+        assert data["success"] is True
         assert len(data["dashboards"]) == 1
 
     @patch("src.api.routes.quicksight_routes.get_quicksight_service")
@@ -478,7 +474,7 @@ class TestQuickSightAPI:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["success"] == True
+        assert data["success"] is True
         assert "dashboard_id" in data
 
     @patch("src.api.routes.quicksight_routes.get_quicksight_service")
@@ -507,7 +503,7 @@ class TestQuickSightAPI:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["success"] == True
+        assert data["success"] is True
         assert data["update_frequency"] == "hourly"
 
     @patch("src.api.routes.quicksight_routes.get_quicksight_service")
@@ -529,8 +525,8 @@ class TestQuickSightAPI:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["overall_valid"] == True
-        assert data["data_source_valid"] == True
+        assert data["overall_valid"] is True
+        assert data["data_source_valid"] is True
 
     @patch("src.api.routes.quicksight_routes.get_quicksight_service")
     def test_get_dashboard_info(self, mock_get_service, client):
@@ -553,7 +549,7 @@ class TestQuickSightAPI:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["success"] == True
+        assert data["success"] is True
         assert data["dashboard"]["id"] == "test_dashboard"
 
 
@@ -581,18 +577,18 @@ class TestIntegration:
         # This test verifies that the implementation addresses all requirements
 
         # Requirement 1: Set up AWS QuickSight for interactive visualization
-        # ✅ Covered by QuickSightDashboardService.setup_quicksight_resources()
+        #  Covered by QuickSightDashboardService.setup_quicksight_resources()
 
         # Requirement 2: Create dashboard layout for trending topics by sentiment,
         # knowledge graph entity relationships, event timeline analysis
-        # ✅ Covered by QuickSightDashboardService.create_dashboard_layout()
-        # ✅ Supported layouts: sentiment_trends, entity_relationships, event_timeline
+        #  Covered by QuickSightDashboardService.create_dashboard_layout()
+        #  Supported layouts: sentiment_trends, entity_relationships, event_timeline
 
         # Requirement 3: Enable filtering by date, entity, and sentiment
-        # ✅ Covered by _get_dashboard_filters() method
+        #  Covered by _get_dashboard_filters() method
 
         # Requirement 4: Implement real-time updates from Redshift
-        # ✅ Covered by QuickSightDashboardService.setup_real_time_updates()
+        #  Covered by QuickSightDashboardService.setup_real_time_updates()
 
         requirements_covered = [
             "setup_quicksight_resources",  # Requirement 1
@@ -602,8 +598,7 @@ class TestIntegration:
         ]
 
         # Check that all required methods exist in the service class
-        from src.dashboards.quicksight_service import \
-            QuickSightDashboardService
+        from src.dashboards.quicksight_service import QuickSightDashboardService
 
         service_methods = [
             method
@@ -627,7 +622,7 @@ class TestIntegration:
         for layout in required_layouts:
             assert layout in supported_layouts
 
-        print("✅ All Issue #49 requirements are covered in the implementation")
+        print(" All Issue #49 requirements are covered in the implementation")
 
 
 if __name__ == "__main__":

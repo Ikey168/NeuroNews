@@ -20,9 +20,7 @@ class TestTFIDFKeywordExtractorMinimal:
 
     def test_extract_keywords_single_text(self):
         """Test keyword extraction from single text."""
-        texts = [
-            "Machine learning and artificial intelligence are transforming technology"
-        ]
+        texts = ["Machine learning and artificial intelligence are transforming technology"]
         results = self.extractor.extract_keywords(texts, top_k=5)
 
         assert len(results) == 1

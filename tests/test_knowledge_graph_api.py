@@ -127,9 +127,7 @@ class TestKnowledgeGraphAPIRoutes:
             mock_get_populator.return_value = mock_populator
 
             response = client.get(
-                "/api/v1/related_entities"
-                "?entity_name=Test Entity"
-                "&include_confidence=false"
+                "/api/v1/related_entities" "?entity_name=Test Entity" "&include_confidence=false"
             )
 
             assert response.status_code == 200
@@ -156,9 +154,7 @@ class TestKnowledgeGraphAPIRoutes:
             mock_populator.close = AsyncMock()
             mock_get_populator.return_value = mock_populator
 
-            response = client.get(
-                "/api/v1/related_entities?entity_name=Nonexistent Entity"
-            )
+            response = client.get("/api/v1/related_entities?entity_name=Nonexistent Entity")
 
             assert response.status_code == 200
             data = response.json()
@@ -406,27 +402,19 @@ class TestAPIParameterValidation:
             mock_get_populator.return_value = mock_populator
 
             # Test minimum max_results
-            response = client.get(
-                "/api/v1/related_entities?entity_name=Test&max_results=1"
-            )
+            response = client.get("/api/v1/related_entities?entity_name=Test&max_results=1")
             assert response.status_code == 200
 
             # Test maximum max_results
-            response = client.get(
-                "/api/v1/related_entities?entity_name=Test&max_results=100"
-            )
+            response = client.get("/api/v1/related_entities?entity_name=Test&max_results=100")
             assert response.status_code == 200
 
             # Test below minimum
-            response = client.get(
-                "/api/v1/related_entities?entity_name=Test&max_results=0"
-            )
+            response = client.get("/api/v1/related_entities?entity_name=Test&max_results=0")
             assert response.status_code == 422  # Validation error
 
             # Test above maximum
-            response = client.get(
-                "/api/v1/related_entities?entity_name=Test&max_results=101"
-            )
+            response = client.get("/api/v1/related_entities?entity_name=Test&max_results=101")
             assert response.status_code == 422  # Validation error
 
     def test_confidence_parameter_bounds(self, client):
@@ -440,25 +428,17 @@ class TestAPIParameterValidation:
             mock_get_populator.return_value = mock_populator
 
             # Valid confidence values
-            response = client.get(
-                "/api/v1/related_entities?entity_name=Test&min_confidence=0.0"
-            )
+            response = client.get("/api/v1/related_entities?entity_name=Test&min_confidence=0.0")
             assert response.status_code == 200
 
-            response = client.get(
-                "/api/v1/related_entities?entity_name=Test&min_confidence=1.0"
-            )
+            response = client.get("/api/v1/related_entities?entity_name=Test&min_confidence=1.0")
             assert response.status_code == 200
 
             # Invalid confidence values
-            response = client.get(
-                "/api/v1/related_entities?entity_name=Test&min_confidence=-0.1"
-            )
+            response = client.get("/api/v1/related_entities?entity_name=Test&min_confidence=-0.1")
             assert response.status_code == 422
 
-            response = client.get(
-                "/api/v1/related_entities?entity_name=Test&min_confidence=1.1"
-            )
+            response = client.get("/api/v1/related_entities?entity_name=Test&min_confidence=1.1")
             assert response.status_code == 422
 
 
@@ -502,9 +482,7 @@ class TestAPIIntegration:
             mock_get_populator.return_value = mock_populator
 
             # Step 1: Populate article
-            populate_response = client.post(
-                "/api/v1/populate_article", json=article_data
-            )
+            populate_response = client.post("/api/v1/populate_article", json=article_data)
             assert populate_response.status_code == 200
 
             # Step 2: Query related entities

@@ -226,12 +226,8 @@ async def test_graph_management_operations(mocked_graph: GraphBuilder):
     """Test graph management operations like clearing."""
 
     # Add some data first
-    await mocked_graph.add_vertex(
-        "Organization", {"id": str(uuid.uuid4()), "orgName": "TestCorp"}
-    )
-    await mocked_graph.add_vertex(
-        "Person", {"id": str(uuid.uuid4()), "name": "Test Person"}
-    )
+    await mocked_graph.add_vertex("Organization", {"id": str(uuid.uuid4()), "orgName": "TestCorp"})
+    await mocked_graph.add_vertex("Person", {"id": str(uuid.uuid4()), "name": "Test Person"})
 
     # Test graph clearing
     try:
@@ -255,9 +251,7 @@ async def test_vertex_retrieval_operations(mocked_graph: GraphBuilder):
 
     # Add a vertex first
     vertex_id = str(uuid.uuid4())
-    await mocked_graph.add_vertex(
-        "Organization", {"id": vertex_id, "orgName": "RetrievalTest"}
-    )
+    await mocked_graph.add_vertex("Organization", {"id": vertex_id, "orgName": "RetrievalTest"})
 
     # Test vertex retrieval methods
     try:
@@ -347,9 +341,7 @@ async def test_complex_entity_scenario(mocked_graph: GraphBuilder):
 
     for from_id, to_id, relationship, props in relationships:
         if props:
-            result = await mocked_graph.add_relationship(
-                from_id, to_id, relationship, props
-            )
+            result = await mocked_graph.add_relationship(from_id, to_id, relationship, props)
         else:
             result = await mocked_graph.add_relationship(from_id, to_id, relationship)
         assert result is not None
@@ -363,7 +355,7 @@ async def test_complex_entity_scenario(mocked_graph: GraphBuilder):
     assert len(edge_ops) >= 4  # 4 relationships
 
     print(
-        "✅ Complex scenario test completed: {0} vertices, {1} edges created".format(
+        " Complex scenario test completed: {0} vertices, {1} edges created".format(
             len(vertex_ops), len(edge_ops)
         )
     )

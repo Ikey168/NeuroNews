@@ -6,6 +6,10 @@ This script demonstrates the comprehensive S3 storage capabilities
 for raw and processed articles with proper organization and integrity verification.
 """
 
+from src.database.s3_storage import (ArticleType, S3ArticleStorage,
+                                     S3StorageConfig,
+                                     ingest_scraped_articles_to_s3,
+                                     verify_s3_data_consistency)
 import asyncio
 import json
 import os
@@ -16,21 +20,17 @@ from typing import Any, Dict, List
 # Add the project root to the path
 sys.path.append("/workspaces/NeuroNews")
 
-from src.database.s3_storage import (ArticleType, S3ArticleStorage,
-                                     S3StorageConfig,
-                                     ingest_scraped_articles_to_s3,
-                                     verify_s3_data_consistency)
 
 # Sample news articles for demonstration
 SAMPLE_ARTICLES = [
     {
         "title": "AI Revolution in Healthcare: New Breakthrough in Medical Diagnosis",
         "content": """
-        Artificial Intelligence continues to transform healthcare with a groundbreaking 
-        new system that can diagnose rare diseases with 95% accuracy. Researchers at 
-        leading medical institutions have developed an AI model that analyzes medical 
-        images and patient data to identify conditions that traditionally take weeks 
-        to diagnose. This advancement could revolutionize patient care and reduce 
+        Artificial Intelligence continues to transform healthcare with a groundbreaking
+        new system that can diagnose rare diseases with 95% accuracy. Researchers at
+        leading medical institutions have developed an AI model that analyzes medical
+        images and patient data to identify conditions that traditionally take weeks
+        to diagnose. This advancement could revolutionize patient care and reduce
         diagnostic delays significantly.
         """.strip(),
         "url": "https://newsexample.com/ai-healthcare-breakthrough-2025",
@@ -38,16 +38,16 @@ SAMPLE_ARTICLES = [
         "published_date": "2025-08-13",
         "author": "Dr. Sarah Johnson",
         "tags": ["AI", "Healthcare", "Medical Technology", "Diagnosis"],
-        "category": "Technology",
+        "category": "Technology", "
     },
     {
         "title": "Climate Change: New Carbon Capture Technology Shows Promise",
         "content": """
-        Scientists have unveiled a revolutionary carbon capture technology that could 
-        remove millions of tons of CO2 from the atmosphere annually. The new system 
-        uses advanced materials and renewable energy to capture carbon dioxide directly 
-        from the air and convert it into useful products. Early trials show the 
-        technology is both cost-effective and scalable, offering hope in the fight 
+        Scientists have unveiled a revolutionary carbon capture technology that could
+        remove millions of tons of CO2 from the atmosphere annually. The new system
+        uses advanced materials and renewable energy to capture carbon dioxide directly
+        from the air and convert it into useful products. Early trials show the
+        technology is both cost-effective and scalable, offering hope in the fight
         against climate change.
         """.strip(),
         "url": "https://newsexample.com/carbon-capture-breakthrough-2025",
@@ -55,15 +55,15 @@ SAMPLE_ARTICLES = [
         "published_date": "2025-08-13",
         "author": "Prof. Michael Chen",
         "tags": ["Climate Change", "Carbon Capture", "Environment", "Technology"],
-        "category": "Environment",
+        "category": "Environment","
     },
     {
         "title": "Space Exploration: Mars Mission Discovers Signs of Ancient Water",
         "content": """
-        NASA's latest Mars rover has uncovered compelling evidence of ancient water 
-        systems on the Red Planet. The discovery includes mineral formations and 
-        geological structures that could only have formed in the presence of flowing 
-        water. This finding significantly strengthens the case for past life on Mars 
+        NASA's latest Mars rover has uncovered compelling evidence of ancient water'
+        systems on the Red Planet. The discovery includes mineral formations and
+        geological structures that could only have formed in the presence of flowing
+        water. This finding significantly strengthens the case for past life on Mars
         and provides valuable insights for future human missions to the planet.
         """.strip(),
         "url": "https://newsexample.com/mars-water-discovery-2025",
@@ -71,15 +71,15 @@ SAMPLE_ARTICLES = [
         "published_date": "2025-08-13",
         "author": "Dr. Emily Rodriguez",
         "tags": ["Mars", "Space Exploration", "NASA", "Astrobiology"],
-        "category": "Science",
+        "category": "Science","
     },
     {
         "title": "Renewable Energy: Solar Efficiency Reaches New Heights",
         "content": """
-        A breakthrough in solar panel technology has achieved record-breaking efficiency 
-        rates of over 50%, marking a significant milestone in renewable energy. The new 
-        perovskite-silicon tandem cells promise to make solar power more affordable and 
-        accessible worldwide. This advancement could accelerate the global transition 
+        A breakthrough in solar panel technology has achieved record-breaking efficiency
+        rates of over 50%, marking a significant milestone in renewable energy. The new
+        perovskite-silicon tandem cells promise to make solar power more affordable and
+        accessible worldwide. This advancement could accelerate the global transition
         to clean energy and help nations meet their climate goals.
         """.strip(),
         "url": "https://newsexample.com/solar-efficiency-record-2025",
@@ -90,17 +90,17 @@ SAMPLE_ARTICLES = [
             "Solar Energy",
             "Renewable Energy",
             "Clean Technology",
-            "Sustainability",
+            "Sustainability","
         ],
         "category": "Energy",
     },
     {
         "title": "Cybersecurity: New AI-Powered Defense System Launched",
         "content": """
-        A new AI-powered cybersecurity system has been deployed by major corporations 
-        to defend against increasingly sophisticated cyber attacks. The system uses 
-        machine learning to detect and respond to threats in real-time, adapting to 
-        new attack patterns automatically. Early results show a 90% reduction in 
+        A new AI-powered cybersecurity system has been deployed by major corporations
+        to defend against increasingly sophisticated cyber attacks. The system uses
+        machine learning to detect and respond to threats in real-time, adapting to
+        new attack patterns automatically. Early results show a 90% reduction in
         successful cyber attacks among early adopters.
         """.strip(),
         "url": "https://newsexample.com/ai-cybersecurity-system-2025",
@@ -108,7 +108,7 @@ SAMPLE_ARTICLES = [
         "published_date": "2025-08-13",
         "author": "Alex Thompson",
         "tags": ["Cybersecurity", "AI", "Machine Learning", "Defense"],
-        "category": "Technology",
+        "category": "Technology","
     },
 ]
 
@@ -171,7 +171,7 @@ class S3StorageDemo:
         try:
             self.storage = S3ArticleStorage(self.s3_config)
             if self.storage.s3_client:
-                print("✅ S3 storage initialized successfully")
+                print(" S3 storage initialized successfully")
                 return True
             else:
                 print("⚠️  S3 client not available (missing credentials)")
@@ -182,9 +182,10 @@ class S3StorageDemo:
 
     async def demo_basic_functionality(self):
         """Demonstrate basic S3 storage functionality."""
-        print("\n" + "=" * 60)
+        print(""
+" + "=" * 60)
         print("🔧 DEMO: Basic S3 Storage Functionality")
-        print("=" * 60)
+        print("=" * 60)"
 
         if not self.storage or not self.storage.s3_client:
             print("⚠️  Demonstrating functionality without AWS credentials...")
@@ -193,24 +194,27 @@ class S3StorageDemo:
 
         try:
             # Demo 1: Store raw article
-            print("\n📥 Demo 1: Storing Raw Article")
+            print(""
+📥 Demo 1: Storing Raw Article")"
             sample_article = SAMPLE_ARTICLES[0]
             metadata = await self.storage.store_raw_article(sample_article)
-            print("✅ Stored raw article: {0}".format(metadata.s3_key))
+            print(" Stored raw article: {0}".format(metadata.s3_key))
             print("   Article ID: {0}".format(metadata.article_id))
             print("   Content Hash: {0}...".format(metadata.content_hash[:16]))
             print("   File Size: {0} bytes".format(metadata.file_size))
 
             # Demo 2: Retrieve and verify article
-            print("\n📤 Demo 2: Retrieving and Verifying Article")
+            print(""
+📤 Demo 2: Retrieving and Verifying Article")
             retrieved_article = await self.storage.retrieve_article(metadata.s3_key)
-            print(f"✅ Retrieved article: {retrieved_article['title']}")
+            print(f" Retrieved article: {retrieved_article['title']}")"
 
             is_valid = await self.storage.verify_article_integrity(metadata.s3_key)
-            print("✅ Article integrity verified: {0}".format(is_valid))
+            print(" Article integrity verified: {0}".format(is_valid))
 
             # Demo 3: Store processed article
-            print("\n⚙️  Demo 3: Storing Processed Article")
+            print(""
+⚙️  Demo 3: Storing Processed Article")"
             processed_article = {
                 **sample_article,
                 "nlp_processed": True,
@@ -228,14 +232,16 @@ class S3StorageDemo:
             processed_metadata = await self.storage.store_processed_article(
                 processed_article, processing_metadata
             )
-            print("✅ Stored processed article: {0}".format(processed_metadata.s3_key))
+            print(" Stored processed article: {0}".format(processed_metadata.s3_key))
 
         except Exception as e:
             print("❌ Error in basic functionality demo: {0}".format(e))
 
+
     def _demo_functionality_without_aws(self):
         """Demo functionality without actual AWS connection."""
-        print("\n📝 Demonstrating S3 key generation and structure...")
+        print(""
+📝 Demonstrating S3 key generation and structure...")"
 
         sample_article = SAMPLE_ARTICLES[0]
 
@@ -245,39 +251,42 @@ class S3StorageDemo:
             sample_article, ArticleType.PROCESSED
         )
 
-        print("✅ Raw article S3 key: {0}".format(raw_key))
-        print("✅ Processed article S3 key: {0}".format(processed_key))
+        print(" Raw article S3 key: {0}".format(raw_key))
+        print(" Processed article S3 key: {0}".format(processed_key))
 
         # Test content hash
         content_hash = self.storage._calculate_content_hash(sample_article["content"])
-        print("✅ Content hash: {0}...".format(content_hash[:16]))
+        print(" Content hash: {0}...".format(content_hash[:16]))
 
         # Test article ID generation
         article_id = self.storage._generate_article_id(sample_article)
-        print("✅ Article ID: {0}".format(article_id))
+        print(" Article ID: {0}".format(article_id))
+
 
     async def demo_batch_ingestion(self):
         """Demonstrate batch article ingestion."""
-        print("\n" + "=" * 60)
-        print("📦 DEMO: Batch Article Ingestion")
-        print("=" * 60)
+        print(""
+" + "=" * 60)
+        print(" DEMO: Batch Article Ingestion")
+        print("=" * 60)"
 
         if not self.storage or not self.storage.s3_client:
             print("⚠️  Skipping batch ingestion demo (no AWS credentials)")
             return
 
         try:
-            print("\n📥 Ingesting {0} articles...".format(len(SAMPLE_ARTICLES)))
+            print(""
+📥 Ingesting {0} articles...".format(len(SAMPLE_ARTICLES)))"
 
             # Use the ingestion function
             result = await ingest_scraped_articles_to_s3(
                 SAMPLE_ARTICLES, self.s3_config
             )
 
-            print(f"✅ Ingestion Status: {result['status']}")
+            print(f" Ingestion Status: {result['status']}")
             print(f"   Total Articles: {result['total_articles']}")
             print(f"   Stored Successfully: {result['stored_articles']}")
-            print(f"   Failed: {result['failed_articles']}")
+            print(f"   Failed: {result[f'ailed_articles']}")
 
             if result["errors"]:
                 print(f"   Errors: {len(result['errors'])}")
@@ -285,20 +294,24 @@ class S3StorageDemo:
                     print("     - {0}".format(error))
 
             if result["stored_keys"]:
-                print("\n📁 Sample stored keys:")
+                print(""
+ Sample stored keys:")
                 for key in result["stored_keys"][:3]:  # Show first 3 keys
-                    print("   - {0}".format(key))
+                    print("   - {0}".format(key))"
 
         except Exception as e:
             print("❌ Error in batch ingestion demo: {0}".format(e))
 
+
     async def demo_data_organization(self):
         """Demonstrate S3 data organization structure."""
-        print("\n" + "=" * 60)
-        print("📁 DEMO: S3 Data Organization Structure")
-        print("=" * 60)
+        print(""
+" + "=" * 60)
+        print(" DEMO: S3 Data Organization Structure")
+        print("=" * 60)"
 
-        print("\n🗂️  Expected S3 bucket structure:")
+        print(""
+🗂️  Expected S3 bucket structure:")
         print("neuronews-articles/")
         print("├── raw_articles/")
         print("│   └── 2025/")
@@ -313,17 +326,19 @@ class S3StorageDemo:
         print("            └── 13/")
         print("                ├── article1.json")
         print("                ├── article2.json")
-        print("                └── ...")
+        print("                └── ...")"
 
         if not self.storage or not self.storage.s3_client:
-            print("\n⚠️  Would demonstrate actual S3 structure with AWS credentials")
+            print(""
+⚠️  Would demonstrate actual S3 structure with AWS credentials")"
             return
 
         try:
             # List articles by date
             today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-            print("\n📋 Listing articles for {0}:".format(today))
+            print(""
+ Listing articles for {0}:".format(today))"
 
             raw_articles = await self.storage.list_articles_by_date(
                 today, ArticleType.RAW
@@ -343,22 +358,25 @@ class S3StorageDemo:
         except Exception as e:
             print("❌ Error demonstrating data organization: {0}".format(e))
 
+
     async def demo_data_consistency_verification(self):
         """Demonstrate data consistency and integrity verification."""
-        print("\n" + "=" * 60)
-        print("🔍 DEMO: Data Consistency & Integrity Verification")
-        print("=" * 60)
+        print(""
+" + "=" * 60)
+        print(" DEMO: Data Consistency & Integrity Verification")
+        print("=" * 60)"
 
         if not self.storage or not self.storage.s3_client:
             print("⚠️  Skipping verification demo (no AWS credentials)")
             return
 
         try:
-            print("\n🔐 Running data consistency verification...")
+            print(""
+🔐 Running data consistency verification...")"
 
             result = await verify_s3_data_consistency(self.s3_config, sample_size=50)
 
-            print(f"✅ Verification Status: {result['status']}")
+            print(f" Verification Status: {result['status']}")
             print(f"   Total Articles Checked: {result['total_checked']}")
             print(f"   Valid Articles: {result['valid_articles']}")
             print(f"   Invalid Articles: {result['invalid_articles']}")
@@ -367,14 +385,16 @@ class S3StorageDemo:
                 print(f"   Integrity Rate: {result['integrity_rate']:.1f}%")
 
             if result["errors"]:
-                print("\n⚠️  Integrity Issues Found:")
+                print(""
+⚠️  Integrity Issues Found:")
                 for error in result["errors"][:5]:  # Show first 5 errors
-                    print("     - {0}".format(error))
+                    print("     - {0}".format(error))"
 
             # Storage statistics
             if "storage_statistics" in result:
                 stats = result["storage_statistics"]
-                print("\n📊 Storage Statistics:")
+                print("
+ Storage Statistics:")
                 print(f"   Total Articles: {stats.get('total_count', 0)}")
                 print(
                     f"   Raw Articles: {stats.get('raw_articles', {}).get('count', 0)}"
@@ -386,18 +406,21 @@ class S3StorageDemo:
         except Exception as e:
             print("❌ Error in data consistency verification: {0}".format(e))
 
+
     async def demo_storage_statistics(self):
         """Demonstrate storage statistics and monitoring."""
-        print("\n" + "=" * 60)
-        print("📊 DEMO: Storage Statistics & Monitoring")
-        print("=" * 60)
+        print(""
+" + "=" * 60)
+        print(" DEMO: Storage Statistics & Monitoring")
+        print("=" * 60)"
 
         if not self.storage or not self.storage.s3_client:
             print("⚠️  Skipping statistics demo (no AWS credentials)")
             return
 
         try:
-            print("\n📈 Retrieving storage statistics...")
+            print(""
+ Retrieving storage statistics...")"
 
             stats = await self.storage.get_storage_statistics()
 
@@ -405,28 +428,33 @@ class S3StorageDemo:
                 print(f"❌ Error retrieving statistics: {stats['error']}")
                 return
 
-            print("✅ Storage Statistics:")
+            print(" Storage Statistics:")
             print(f"   Total Articles: {stats['total_count']}")
             print(f"   Total Size: {stats['total_size']:,} bytes")
 
-            print("\n📁 Raw Articles:")
+            print("
+ Raw Articles:")
             print(f"   Count: {stats['raw_articles']['count']}")
             print(f"   Size: {stats['raw_articles']['total_size']:,} bytes")
 
-            print("\n⚙️  Processed Articles:")
+            print("
+⚙️  Processed Articles:")
             print(f"   Count: {stats['processed_articles']['count']}")
             print(f"   Size: {stats['processed_articles']['total_size']:,} bytes")
 
-            print(f"\n🕒 Last Updated: {stats['last_updated']}")
+            print(f"
+🕒 Last Updated: {stats['last_updated']}")
 
         except Exception as e:
             print("❌ Error retrieving storage statistics: {0}".format(e))
 
+
     async def demo_cleanup_operations(self):
         """Demonstrate cleanup and maintenance operations."""
-        print("\n" + "=" * 60)
+        print(""
+" + "=" * 60)
         print("🧹 DEMO: Cleanup & Maintenance Operations")
-        print("=" * 60)
+        print("=" * 60)"
 
         if not self.storage or not self.storage.s3_client:
             print("⚠️  Demonstrating cleanup concepts without AWS...")
@@ -439,7 +467,8 @@ class S3StorageDemo:
 
         try:
             print(
-                "\n🧹 Note: This is a demonstration. No actual cleanup will be performed."
+                ""
+🧹 Note: This is a demonstration. No actual cleanup will be performed.""
             )
             print("   In production, cleanup operations would:")
             print("   - Remove articles older than retention period")
@@ -448,7 +477,8 @@ class S3StorageDemo:
 
             # Demonstrate what cleanup would do (without actually doing it)
             print(
-                "\n📅 Simulating cleanup for articles older than {0} days...".format(self.s3_config.lifecycle_days)
+                ""
+📅 Simulating cleanup for articles older than {0} days...".format(self.s3_config.lifecycle_days)"
             )
 
             # Get current statistics
@@ -456,20 +486,22 @@ class S3StorageDemo:
             print(f"   Current total articles: {stats.get('total_count', 0)}")
 
             # In a real scenario, this would clean up old articles
-            print("   ✅ Cleanup simulation completed")
+            print("    Cleanup simulation completed")
 
         except Exception as e:
             print("❌ Error in cleanup demonstration: {0}".format(e))
 
+
     def print_configuration_summary(self):
         """Print configuration summary."""
-        print("\n" + "=" * 60)
+        print(""
+" + "=" * 60)
         print("⚙️  S3 STORAGE CONFIGURATION SUMMARY")
-        print("=" * 60)
+        print("=" * 60)"
 
         print("🪣 Bucket: {0}".format(self.s3_config.bucket_name))
         print("🌍 Region: {0}".format(self.s3_config.region))
-        print("📁 Raw Prefix: {0}".format(self.s3_config.raw_prefix))
+        print(" Raw Prefix: {0}".format(self.s3_config.raw_prefix))
         print("⚙️  Processed Prefix: {0}".format(self.s3_config.processed_prefix))
         print(
             f"🔒 Encryption: {'Enabled' if self.s3_config.enable_encryption else 'Disabled'}"
@@ -481,12 +513,13 @@ class S3StorageDemo:
         print("🗓️  Lifecycle: {0} days".format(self.s3_config.lifecycle_days))
         print("📏 Max File Size: {0} MB".format(self.s3_config.max_file_size_mb))
 
+
     async def run_complete_demo(self):
         """Run complete S3 storage demonstration."""
-        print("🚀 NeuroNews S3 Article Storage Demo")
+        print(" NeuroNews S3 Article Storage Demo")
         print("=" * 60)
         print("This demo showcases comprehensive S3 storage capabilities")
-        print("for organizing and managing scraped news articles.")
+        print(f"or organizing and managing scraped news articles.")
 
         # Initialize storage
         storage_available = await self.initialize_storage()
@@ -503,27 +536,30 @@ class S3StorageDemo:
         await self.demo_cleanup_operations()
 
         # Summary
-        print("\n" + "=" * 60)
+        print(""
+" + "=" * 60)
         print("✨ DEMO SUMMARY")
-        print("=" * 60)
+        print("=" * 60)"
 
-        print("🎯 Demonstrated Features:")
-        print("   ✅ Raw article storage with proper S3 organization")
-        print("   ✅ Processed article storage with metadata")
-        print("   ✅ Batch ingestion capabilities")
-        print("   ✅ Data integrity verification")
-        print("   ✅ Storage statistics and monitoring")
-        print("   ✅ Structured S3 organization (YYYY/MM/DD)")
-        print("   ✅ Cleanup and maintenance operations")
+        print(" Demonstrated Features:")
+        print("    Raw article storage with proper S3 organization")
+        print("    Processed article storage with metadata")
+        print("    Batch ingestion capabilities")
+        print("    Data integrity verification")
+        print("    Storage statistics and monitoring")
+        print("    Structured S3 organization (YYYY/MM/DD)")
+        print("    Cleanup and maintenance operations")
 
         if not storage_available:
-            print("\n⚠️  Note: This demo ran without AWS credentials.")
+            print(""
+⚠️  Note: This demo ran without AWS credentials.")"
             print(
                 "   To see full functionality, configure AWS credentials and run again."
             )
             print("   See AWS_DEPLOYMENT_GUIDE.md for setup instructions.")
 
-        print("\n🚀 S3 Article Storage is ready for production use!")
+        print(""
+ S3 Article Storage is ready for production use!")"
 
 
 async def main():
@@ -537,11 +573,16 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\n\n⏹️  Demo interrupted by user")
+        print(""
+
+⏹️  Demo interrupted by user")"
     except Exception as e:
-        print("\n\n❌ Demo failed with error: {0}".format(e))
+        print(""
+
+❌ Demo failed with error: {0}".format(e))"
         import traceback
 
         traceback.print_exc()
 
-    print("\nDemo completed. Thank you for exploring NeuroNews S3 Storage! 🎉")
+    print(""
+Demo completed. Thank you for exploring NeuroNews S3 Storage! ")"

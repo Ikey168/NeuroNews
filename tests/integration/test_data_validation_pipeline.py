@@ -161,9 +161,7 @@ class TestDataValidationPipeline(unittest.TestCase):
         trusted_article["source"] = "reuters.com"
         # Unique URL
         trusted_article["url"] = "https://reuters.com/trusted-article"
-        trusted_article["title"] = (
-            "Trusted Source Article: AI Development"  # Unique title
-        )
+        trusted_article["title"] = "Trusted Source Article: AI Development"  # Unique title
         result = pipeline1.process_article(trusted_article)
         self.assertEqual(result.cleaned_data["source_credibility"], "trusted")
 
@@ -199,12 +197,8 @@ class TestDataValidationPipeline(unittest.TestCase):
         pipeline3 = DataValidationPipeline(self.config)
         unknown_article = self.valid_article.copy()
         unknown_article["source"] = "unknown-news.com"
-        unknown_article["url"] = (
-            "https://unknown-news.com/unknown-article"  # Unique URL
-        )
-        unknown_article["title"] = (
-            "Unknown Source Article: Research Update"  # Unique title
-        )
+        unknown_article["url"] = "https://unknown-news.com/unknown-article"  # Unique URL
+        unknown_article["title"] = "Unknown Source Article: Research Update"  # Unique title
         result = pipeline3.process_article(unknown_article)
         self.assertIsNotNone(result)
         # Unknown sources are classified as 'questionable' in the
@@ -236,9 +230,7 @@ class TestDataValidationPipeline(unittest.TestCase):
 
         # Test old article
         old_article = self.valid_article.copy()
-        old_article["published_date"] = (
-            datetime.now() - timedelta(days=60)
-        ).isoformat()
+        old_article["published_date"] = (datetime.now() - timedelta(days=60)).isoformat()
         old_article["url"] = "https://reuters.com/old-article"
 
         result = self.pipeline.process_article(old_article)
@@ -348,9 +340,7 @@ class TestDataValidationPipeline(unittest.TestCase):
 
         # Verify performance
         self.assertGreater(processed_count, 0)
-        self.assertLess(
-            processing_time, 10.0
-        )  # Should process 50 articles in under 10 seconds
+        self.assertLess(processing_time, 10.0)  # Should process 50 articles in under 10 seconds
 
         # Check statistics
         stats = self.pipeline.get_statistics()

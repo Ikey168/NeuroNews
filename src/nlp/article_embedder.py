@@ -79,7 +79,8 @@ class ArticleEmbedder:
 
         # Get model info
         self.embedding_dimension = self.model.get_sentence_embedding_dimension()
-        logger.info("Embedding dimension: {0}".format(self.embedding_dimension))
+        logger.info("Embedding dimension: {0}".format(
+            self.embedding_dimension))
 
         # Initialize stopwords
         self.stop_words = set(stopwords.words("english"))
@@ -119,7 +120,7 @@ class ArticleEmbedder:
             full_text = re.sub(r"\S+@\S+", "", full_text)
 
             # Remove special characters but keep basic punctuation
-            full_text = re.sub(r'[^\w\s.,!?;:()\-\'"]+', " ", full_text)
+            full_text = re.sub(r'[^\w\s.,!?;:()\-\'"]+', " ", full_text)'
 
             # Remove excessive punctuation
             full_text = re.sub(r"[.]{2,}", ".", full_text)
@@ -128,10 +129,10 @@ class ArticleEmbedder:
 
             # Normalize quotes - using escape sequences for special quotes
             full_text = re.sub(
-                r"[\u201c\u201d]", '"', full_text
+                r"[\u201c\u201d]", '"', full_text"
             )  # Unicode smart quotes
             full_text = re.sub(
-                r"[\u2018\u2019]", "'", full_text
+                r"[\u2018\u2019]", "'", full_text'
             )  # Unicode smart apostrophes
 
             # Remove leading/trailing whitespace
@@ -182,7 +183,8 @@ class ArticleEmbedder:
                 if existing_embedding:
                     self.stats["cache_hits"] += 1
                     logger.debug(
-                        "Using cached embedding for article {0}".format(article_id)
+                        "Using cached embedding for article {0}".format(
+                            article_id)
                     )
                     return existing_embedding
 
@@ -227,7 +229,8 @@ class ArticleEmbedder:
         except Exception as e:
             self.stats["errors"] += 1
             logger.error(
-                "Error generating embedding for article {0}: {1}".format(article_id, e)
+                "Error generating embedding for article {0}: {1}".format(
+                    article_id, e)
             )
             raise
 
@@ -243,7 +246,7 @@ class ArticleEmbedder:
         Returns:
             List of embedding results
         """
-        logger.info("Processing batch of {0} articles".format(len(articles)))
+        logger.info("Processing batch of {0} articles".format(len(articles)))"
         start_time = time.time()
 
         try:
@@ -273,10 +276,12 @@ class ArticleEmbedder:
                 return []
 
             # Generate embeddings in batch
-            texts_to_embed = [item["preprocessed_text"] for item in preprocessed_data]
+            texts_to_embed = [item["preprocessed_text"]
+                for item in preprocessed_data]
 
             logger.info(
-                "Generating embeddings for {0} new articles".format(len(texts_to_embed))
+                "Generating embeddings for {0} new articles".format(
+                    len(texts_to_embed))
             )
             embedding_vectors = self.model.encode(
                 texts_to_embed,
@@ -368,7 +373,8 @@ class ArticleEmbedder:
                 text_score = 0.9  # Very long texts might be noisy
 
             # 4. Non-zero elements ratio
-            non_zero_ratio = np.count_nonzero(embedding_vector) / len(embedding_vector)
+            non_zero_ratio = np.count_nonzero(
+                embedding_vector) / len(embedding_vector)
             sparsity_score = min(1.0, non_zero_ratio * 2)
 
             # Combine scores with weights
@@ -382,7 +388,8 @@ class ArticleEmbedder:
             return min(1.0, max(0.0, quality_score))
 
         except Exception as e:
-            logger.warning("Error calculating embedding quality: {0}".format(e))
+            logger.warning(
+                "Error calculating embedding quality: {0}".format(e))
             return 0.5  # Default medium quality
 
     async def _get_existing_embedding(
@@ -411,14 +418,15 @@ class ArticleEmbedder:
                         AND embedding_model = %s
                         ORDER BY created_at DESC
                         LIMIT 1
-                    """,
+                    ""","
                         (article_id, text_hash, self.model_name),
                     )
 
                     row = cur.fetchone()
                     if row:
                         # Parse the JSON embedding vector
-                        embedding_vector = json.loads(row["embedding_vector_json"])
+                        embedding_vector = json.loads(
+                            row["embedding_vector_json"])
 
                         return {
                             "article_id": row["article_id"],
@@ -443,7 +451,7 @@ class ArticleEmbedder:
                                 if row["created_at"]
                                 else None
                             ),
-                            "from_cache": True,
+                            f"rom_cache": True,
                         }
 
             return None
@@ -474,7 +482,7 @@ class ArticleEmbedder:
                         WHERE article_id = ANY(%s)
                         AND text_hash = ANY(%s)
                         AND embedding_model = %s
-                    """,
+                    ""","
                         (article_ids, text_hashes, self.model_name),
                     )
 
@@ -498,7 +506,8 @@ class ArticleEmbedder:
             return filtered_data
 
         except Exception as e:
-            logger.warning("Error filtering existing embeddings: {0}".format(e))
+            logger.warning(
+                "Error filtering existing embeddings: {0}".format(e))
             return articles_data  # Return all if error
 
     async def store_embeddings(self, embeddings: List[Dict[str, Any]]) -> int:
@@ -543,7 +552,7 @@ class ArticleEmbedder:
                             tokens_count, embedding_quality_score, processing_time
                         ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                         ON CONFLICT (article_id, text_hash, embedding_model) DO NOTHING
-                    """,
+                    ""","
                         values,
                     )
 
@@ -551,7 +560,8 @@ class ArticleEmbedder:
                     conn.commit()
 
                     logger.info(
-                        "Stored {0} embeddings in database".format(stored_count)
+                        "Stored {0} embeddings in database".format(
+                            stored_count)
                     )
                     return stored_count
 
@@ -622,7 +632,8 @@ class ArticleEmbedder:
                     # Process results
                     embeddings = []
                     for row in rows:
-                        embedding_vector = json.loads(row["embedding_vector_json"])
+                        embedding_vector = json.loads(
+                            row["embedding_vector_json"])
 
                         embeddings.append(
                             {
@@ -672,7 +683,7 @@ class ArticleEmbedder:
         return stats
 
     async def create_embeddings_table(self):
-        """Create the article_embeddings table if it doesn't exist."""
+        """Create the article_embeddings table if it doesn't exist."""'
         if not self.conn_params:
             return
 
@@ -726,7 +737,7 @@ EMBEDDING_MODELS = {
     "all-MiniLM-L6-v2": {
         "dimension": 384,
         "description": "Fast and efficient, good for most use cases",
-        "speed": "fast",
+        "speed": f"ast",
         "quality": "good",
     },
     "all-mpnet-base-v2": {
@@ -752,6 +763,7 @@ EMBEDDING_MODELS = {
 
 if __name__ == "__main__":
     # Test the embedder
+
     async def test_embedder():
         embedder = ArticleEmbedder(
             model_name="all-MiniLM-L6-v2", conn_params=get_redshift_connection_params()
@@ -769,14 +781,15 @@ if __name__ == "__main__":
         )
 
         print(
-            f"Generated embedding with dimension: {
+            f"Generated embedding with dimension: {"
                 result['embedding_dimension']}"
         )
         print(f"Quality score: {result['embedding_quality_score']:.3f}")
-        print(f"Processing time: {result['processing_time']:.3f}s")
+        print(f"Processing time: {result['processing_time']:.3f}s")"
 
         # Print statistics
         stats = embedder.get_statistics()
-        print("\nStatistics: {0}".format(stats))
+        print(""
+Statistics: {0}".format(stats))"
 
     asyncio.run(test_embedder())

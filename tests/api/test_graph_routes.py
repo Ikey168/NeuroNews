@@ -58,9 +58,7 @@ def mock_graph_builder_methods(app_for_test: FastAPI):
         "id",
     ]
     for method_name in methods_to_mock_on_traversal:
-        setattr(
-            mock_traversal_obj, method_name, MagicMock(return_value=mock_traversal_obj)
-        )
+        setattr(mock_traversal_obj, method_name, MagicMock(return_value=mock_traversal_obj))
 
     mock_g.V.return_value = mock_traversal_obj
     mock_g.E.return_value = mock_traversal_obj
@@ -79,9 +77,7 @@ def mock_graph_builder_methods(app_for_test: FastAPI):
     # submit_async should return a mock ResultSet or an awaitable that yields one.
     # For simplicity, if _execute_traversal is correctly mocked, this won't be hit.
     # If it IS hit, it means _execute_traversal mock isn't working as expected.
-    mock_internal_client.submit_async = AsyncMock(
-        return_value=AsyncMock(spec=ResultSet)
-    )
+    mock_internal_client.submit_async = AsyncMock(return_value=AsyncMock(spec=ResultSet))
     mock_gb_instance.client = mock_internal_client
     mock_gb_instance.is_connected = True
 
@@ -97,9 +93,7 @@ def mock_graph_builder_methods(app_for_test: FastAPI):
     app_for_test.dependency_overrides.clear()
 
 
-def test_get_related_entities(
-    app_for_test: FastAPI, mock_graph_builder_methods: AsyncMock
-):
+def test_get_related_entities(app_for_test: FastAPI, mock_graph_builder_methods: AsyncMock):
     mock_graph_builder_methods._execute_traversal.return_value = [
         {T.id: "testco1", T.label: "Organization", "name": ["TestCo"]}
     ]
@@ -131,9 +125,7 @@ def test_get_related_entities_validation(app_for_test: FastAPI):
         assert "Input should be a valid integer" in data["detail"][0]["msg"]
 
 
-def test_get_event_timeline(
-    app_for_test: FastAPI, mock_graph_builder_methods: AsyncMock
-):
+def test_get_event_timeline(app_for_test: FastAPI, mock_graph_builder_methods: AsyncMock):
     mock_graph_builder_methods._execute_traversal.return_value = [
         {
             "event_name": "AI Con",
@@ -250,9 +242,7 @@ def test_error_handling(
             if not neptune_connect_fails:
                 mock_builder_instance_for_lifespan._execute_traversal.assert_called_once()
                 # Test another route that uses get_graph
-                response_related = temp_client.get(
-                    "/graph/related_entities?entity=Test"
-                )
+                response_related = temp_client.get("/graph/related_entities?entity=Test")
                 assert response_related.status_code == 200, response_related.json()
 
     if original_env_neptune is None:
@@ -265,9 +255,7 @@ def test_error_handling(
 def test_health_check(app_for_test: FastAPI, mock_graph_builder_methods: AsyncMock):
     # mock_graph_builder_methods has already overridden get_graph for
     # app_for_test
-    mock_graph_builder_methods._execute_traversal.return_value = [
-        {"some_vertex_data": True}
-    ]
+    mock_graph_builder_methods._execute_traversal.return_value = [{"some_vertex_data": True}]
 
     with TestClient(app_for_test) as client:
         response = client.get("/graph/health")

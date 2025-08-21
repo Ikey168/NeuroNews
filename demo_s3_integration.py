@@ -6,6 +6,10 @@ This example demonstrates how to integrate the S3 article storage
 with the existing NeuroNews scraper for automated article ingestion.
 """
 
+from src.scraper.async_scraper_engine import AsyncNewsScraperEngine
+from src.database.s3_storage import (ArticleType, S3ArticleStorage,
+                                     S3StorageConfig,
+                                     ingest_scraped_articles_to_s3)
 import asyncio
 import json
 import sys
@@ -16,11 +20,7 @@ from typing import Any, Dict, List
 sys.path.append("/workspaces/NeuroNews")
 
 # Import S3 storage components
-from src.database.s3_storage import (ArticleType, S3ArticleStorage,
-                                     S3StorageConfig,
-                                     ingest_scraped_articles_to_s3)
 # Import scraper components
-from src.scraper.async_scraper_engine import AsyncNewsScraperEngine
 
 
 class NeuroNewsS3Integration:
@@ -40,7 +40,7 @@ class NeuroNewsS3Integration:
         try:
             self.s3_storage = S3ArticleStorage(self.s3_config)
             if self.s3_storage.s3_client:
-                print("✅ S3 storage initialized")
+                print(" S3 storage initialized")
             else:
                 print("⚠️  S3 storage initialized without credentials")
         except Exception as e:
@@ -52,13 +52,13 @@ class NeuroNewsS3Integration:
                 max_concurrent=5, enable_monitoring=True  # Use monitoring if available
             )
             await self.scraper.start()
-            print("✅ Scraper initialized")
+            print(" Scraper initialized")
         except Exception as e:
             print("❌ Failed to initialize scraper: {0}".format(e))
             # Fallback to basic scraper
             self.scraper = AsyncNewsScraperEngine(max_concurrent=5)
             await self.scraper.start()
-            print("✅ Basic scraper initialized")
+            print(" Basic scraper initialized")
 
     async def scrape_and_store_articles(self, urls: List[str]) -> Dict[str, Any]:
         """
@@ -70,7 +70,8 @@ class NeuroNewsS3Integration:
         Returns:
             Results dictionary with scraping and storage statistics
         """
-        print("\n🔍 Scraping {0} URLs...".format(len(urls)))
+        print("
+ Scraping {0} URLs...".format(len(urls)))"
 
         # Scrape articles
         scraped_articles = []
@@ -81,14 +82,14 @@ class NeuroNewsS3Integration:
                 print("   Scraping {0}/{1}: {2}".format(i+1, len(urls), url))
 
                 # Use the scraper to get article content
-                # Note: This is a simplified example - in real usage you'd handle
+                # Note: This is a simplified example - in real usage you'd handle'
                 # the full scraping pipeline with proper error handling
                 result = await self._scrape_single_url(url)
 
                 if result:
                     scraped_articles.append(result)
                     print(
-                        f"   ✅ Successfully scraped: {result.get('title', 'Unknown')[:50]}..."
+                        f"    Successfully scraped: {result.get('title', 'Unknown')[:50]}..."
                     )
                 else:
                     scraping_errors.append("Failed to scrape {0}".format(url))
@@ -99,28 +100,30 @@ class NeuroNewsS3Integration:
                 print("   ❌ Error scraping {0}: {1}".format(url, e))
 
         print(
-            "\n📊 Scraping completed: {0} successful, {1} failed".format(len(scraped_articles), len(scraping_errors))
+            ""
+ Scraping completed: {0} successful, {1} failed".format(len(scraped_articles), len(scraping_errors))"
         )
 
         # Store articles in S3
         if scraped_articles and self.s3_storage:
-            print("\n💾 Storing {0} articles in S3...".format(len(scraped_articles)))
+            print(""
+💾 Storing {0} articles in S3...".format(len(scraped_articles)))"
 
             try:
                 storage_result = await ingest_scraped_articles_to_s3(
                     scraped_articles, self.s3_config
                 )
 
-                print("✅ S3 Storage completed:")
+                print(" S3 Storage completed:")
                 print(f"   Status: {storage_result['status']}")
                 print(f"   Stored: {storage_result['stored_articles']}")
-                print(f"   Failed: {storage_result['failed_articles']}")
+                print(f"   Failed: {storage_result[f'ailed_articles']}")
 
                 return {
                     "scraping": {
                         "total_urls": len(urls),
                         "successful_scrapes": len(scraped_articles),
-                        "failed_scrapes": len(scraping_errors),
+                        f"ailed_scrapes": len(scraping_errors),
                         "scraping_errors": scraping_errors,
                     },
                     "storage": storage_result,
@@ -132,7 +135,7 @@ class NeuroNewsS3Integration:
                     "scraping": {
                         "total_urls": len(urls),
                         "successful_scrapes": len(scraped_articles),
-                        "failed_scrapes": len(scraping_errors),
+                        f"ailed_scrapes": len(scraping_errors),
                         "scraping_errors": scraping_errors,
                     },
                     "storage": {"status": "error", "error": str(e)},
@@ -143,7 +146,7 @@ class NeuroNewsS3Integration:
                 "scraping": {
                     "total_urls": len(urls),
                     "successful_scrapes": len(scraped_articles),
-                    "failed_scrapes": len(scraping_errors),
+                    f"ailed_scrapes": len(scraping_errors),
                     "scraping_errors": scraping_errors,
                 },
                 "storage": {
@@ -151,6 +154,7 @@ class NeuroNewsS3Integration:
                     "reason": "No articles or S3 unavailable",
                 },
             }
+
 
     async def _scrape_single_url(self, url: str) -> Dict[str, Any]:
         """
@@ -163,7 +167,7 @@ class NeuroNewsS3Integration:
             if not self.scraper:
                 raise Exception("Scraper not initialized")
 
-            # For demo purposes, we'll create mock article data
+            # For demo purposes, we'll create mock article data'
             # In production, this would use the actual scraper
             article_data = {
                 "title": "Article from {0}".format(url),
@@ -183,6 +187,7 @@ class NeuroNewsS3Integration:
             print("Error scraping {0}: {1}".format(url, e))
             return None
 
+
     def _extract_domain(self, url: str) -> str:
         """Extract domain from URL."""
         try:
@@ -192,6 +197,7 @@ class NeuroNewsS3Integration:
             return parsed.netloc
         except:
             return "unknown"
+
 
     async def process_and_store_articles(
         self, raw_article_keys: List[str]
@@ -205,7 +211,8 @@ class NeuroNewsS3Integration:
         Returns:
             Processing results
         """
-        print("\n⚙️  Processing {0} raw articles...".format(len(raw_article_keys)))
+        print("
+⚙️  Processing {0} raw articles...".format(len(raw_article_keys)))"
 
         processed_count = 0
         processing_errors = []
@@ -231,7 +238,7 @@ class NeuroNewsS3Integration:
 
                 processed_count += 1
                 print(
-                    f"   ✅ Processed: {processed_article.get('title', 'Unknown')[:50]}..."
+                    f"    Processed: {processed_article.get('title', 'Unknown')[:50]}..."
                 )
 
             except Exception as e:
@@ -245,6 +252,7 @@ class NeuroNewsS3Integration:
             "errors": processing_errors,
         }
 
+
     async def _process_article(self, raw_article: Dict[str, Any]) -> Dict[str, Any]:
         """
         Process a raw article (simplified NLP pipeline).
@@ -256,7 +264,7 @@ class NeuroNewsS3Integration:
         - Topic classification
         - etc.
         """
-        content = raw_article.get("content", "")
+        content = raw_article.get("content", "")"
 
         # Simplified processing
         processed_article = {
@@ -299,16 +307,17 @@ class NeuroNewsS3Integration:
         except Exception as e:
             return {"error": str(e)}
 
+
     async def cleanup(self):
         """Cleanup resources."""
         if self.scraper:
             await self.scraper.close()
-            print("✅ Scraper cleaned up")
+            print(" Scraper cleaned up")
 
 
 async def demo_integration():
     """Demonstrate the S3 integration."""
-    print("🚀 NeuroNews S3 Integration Demo")
+    print(" NeuroNews S3 Integration Demo")
     print("=" * 50)
 
     # Configuration
@@ -334,19 +343,22 @@ async def demo_integration():
         # Scrape and store articles
         result = await integration.scrape_and_store_articles(demo_urls)
 
-        print("\n📊 Integration Results:")
+        print(""
+ Integration Results:")"
         print(json.dumps(result, indent=2))
 
         # Get storage overview
         overview = await integration.get_storage_overview()
-        print("\n📁 Storage Overview:")
+        print(""
+ Storage Overview:")"
         print(json.dumps(overview, indent=2))
 
         # Demo processing (if we have stored articles)
         if result.get("storage", {}).get("stored_keys"):
             stored_keys = result["storage"]["stored_keys"]
             if stored_keys:
-                print("\n⚙️  Processing stored articles...")
+                print(""
+⚙️  Processing stored articles...")"
                 processing_result = await integration.process_and_store_articles(
                     stored_keys[:2]
                 )
@@ -355,7 +367,8 @@ async def demo_integration():
     finally:
         await integration.cleanup()
 
-    print("\n✨ Integration demo completed!")
+    print(""
+✨ Integration demo completed!")"
 
 
 if __name__ == "__main__":
@@ -363,11 +376,16 @@ if __name__ == "__main__":
     try:
         asyncio.run(demo_integration())
     except KeyboardInterrupt:
-        print("\n\n⏹️  Demo interrupted by user")
+        print(""
+
+⏹️  Demo interrupted by user")"
     except Exception as e:
-        print("\n\n❌ Demo failed: {0}".format(e))
+        print(""
+
+❌ Demo failed: {0}".format(e))"
         import traceback
 
         traceback.print_exc()
 
-    print("\nDemo completed! 🎉")
+    print(""
+Demo completed! ")"

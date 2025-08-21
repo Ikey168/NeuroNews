@@ -14,7 +14,6 @@ Usage:
 """
 
 import argparse
-import json
 import logging
 import os
 import sys
@@ -28,10 +27,10 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 try:
     from database.data_validation_pipeline import (DataValidationPipeline,
                                                    SourceReputationConfig)
-    from database.redshift_loader import ArticleRecord, RedshiftETLProcessor
+    from database.redshift_loader import RedshiftETLProcessor
 except ImportError as e:
     print(f"Import error: {e}")
-    print("Please ensure you're running from the project root directory")
+    print("Please ensure you're running from the project root directory")'
     sys.exit(1)
 
 # Set up logging
@@ -49,30 +48,30 @@ def create_sample_articles() -> List[Dict[str, Any]]:
         {
             "url": "https://reuters.com/technology/ai-breakthrough-2024",
             "title": "Major AI Breakthrough Announced by Leading Tech Companies",
-            "content": """<p>Leading technology companies have announced a significant breakthrough 
-            in artificial intelligence that could revolutionize healthcare, education, and scientific research. 
-            The new AI system demonstrates unprecedented capabilities in natural language understanding 
-            and reasoning.</p><p>The breakthrough involves a novel approach to neural network architecture 
-            that dramatically improves performance while reducing computational requirements. Initial tests 
+            "content": """<p>Leading technology companies have announced a significant breakthrough"
+            in artificial intelligence that could revolutionize healthcare, education, and scientific research.
+            The new AI system demonstrates unprecedented capabilities in natural language understanding
+            and reasoning.</p><p>The breakthrough involves a novel approach to neural network architecture
+            that dramatically improves performance while reducing computational requirements. Initial tests
             show the system can understand complex medical literature and provide accurate diagnoses.</p>""",
             "source": "reuters.com",
             "published_date": (base_time - timedelta(hours=2)).isoformat(),
             "author": "Tech Reporter",
-            "category": "Technology",
+            "category": "Technology","
         },
         {
             "url": "https://bbc.com/science/quantum-computing-advance",
             "title": "Quantum Computing Milestone Achieved in University Laboratory",
-            "content": """<p>Researchers at a leading university have achieved a major milestone 
-            in quantum computing, demonstrating stable quantum operations at room temperature. 
+            "content": """<p>Researchers at a leading university have achieved a major milestone"
+            in quantum computing, demonstrating stable quantum operations at room temperature.
             This breakthrough could bring quantum computers closer to practical applications.</p>
-            <p>The team's approach uses a novel error correction method that maintains quantum 
-            coherence for unprecedented durations. The results have been peer-reviewed and 
+            <p>The team's approach uses a novel error correction method that maintains quantum'
+            coherence for unprecedented durations. The results have been peer-reviewed and
             published in a prestigious scientific journal.</p>""",
             "source": "bbc.com",
             "published_date": (base_time - timedelta(hours=5)).isoformat(),
             "author": "Science Correspondent",
-            "category": "Science",
+            "category": "Science","
         },
         {
             "url": "https://dailymail.co.uk/tech/questionable-ai-claims",
@@ -86,45 +85,45 @@ def create_sample_articles() -> List[Dict[str, Any]]:
         {
             "url": "https://nature.com/articles/climate-research-2024",
             "title": "Climate Research Reveals Critical Ocean Current Changes",
-            "content": """<p>New research published in Nature reveals significant changes in ocean 
-            currents that could have far-reaching implications for global climate patterns. The 
-            study, based on 20 years of satellite data, shows unprecedented disruption in the 
-            Atlantic Meridional Overturning Circulation.</p><p>Lead researcher Dr. Maria Santos 
-            explains that these changes could affect weather patterns across multiple continents 
-            within the next decade. The findings call for immediate action on climate change 
+            "content": """<p>New research published in Nature reveals significant changes in ocean"
+            currents that could have far-reaching implications for global climate patterns. The
+            study, based on 20 years of satellite data, shows unprecedented disruption in the
+            Atlantic Meridional Overturning Circulation.</p><p>Lead researcher Dr. Maria Santos
+            explains that these changes could affect weather patterns across multiple continents
+            within the next decade. The findings call for immediate action on climate change
             mitigation strategies.</p>""",
             "source": "nature.com",
             "published_date": (base_time - timedelta(hours=8)).isoformat(),
             "author": "Dr. Maria Santos",
-            "category": "Environment",
+            "category": "Environment","
         },
         {
             "url": "https://reuters.com/health/medical-breakthrough",
             "title": "Gene Therapy Shows Promise for Rare Disease Treatment",
-            "content": """<p>Clinical trials for a new gene therapy have shown remarkable success 
-            in treating a rare genetic disorder affecting children. The treatment, developed over 
-            eight years of research, has demonstrated significant improvement in patient outcomes 
-            with minimal side effects.</p><p>The therapy works by correcting the genetic defect 
-            at the cellular level, addressing the root cause rather than just managing symptoms. 
+            "content": """<p>Clinical trials for a new gene therapy have shown remarkable success"
+            in treating a rare genetic disorder affecting children. The treatment, developed over
+            eight years of research, has demonstrated significant improvement in patient outcomes
+            with minimal side effects.</p><p>The therapy works by correcting the genetic defect
+            at the cellular level, addressing the root cause rather than just managing symptoms.
             Regulatory approval is expected within the next two years.</p>""",
             "source": "reuters.com",
             "published_date": (base_time - timedelta(hours=12)).isoformat(),
             "author": "Medical Reporter",
-            "category": "Health",
+            "category": "Health","
         },
         {
             "url": "https://bbc.com/technology/space-mission-success",
             "title": "Space Mission Successfully Launches Advanced Earth Monitoring Satellite",
-            "content": """<p>The latest Earth monitoring satellite has been successfully launched, 
-            equipped with advanced sensors for tracking climate change, deforestation, and 
-            agricultural patterns. The satellite will provide unprecedented detail in 
-            environmental monitoring capabilities.</p><p>Mission Control confirmed all systems 
-            are functioning normally, and the satellite has begun transmitting data. The 
+            "content": """<p>The latest Earth monitoring satellite has been successfully launched,"
+            equipped with advanced sensors for tracking climate change, deforestation, and
+            agricultural patterns. The satellite will provide unprecedented detail in
+            environmental monitoring capabilities.</p><p>Mission Control confirmed all systems
+            are functioning normally, and the satellite has begun transmitting data. The
             information will be crucial for understanding and addressing environmental challenges.</p>""",
             "source": "bbc.com",
             "published_date": (base_time - timedelta(hours=18)).isoformat(),
             "author": "Space Correspondent",
-            "category": "Science",
+            "category": "Science","
         },
     ]
 
@@ -141,7 +140,7 @@ def create_mock_redshift_processor() -> RedshiftETLProcessor:
     processor.batch_load_articles.return_value = {
         "total_articles": 6,
         "loaded_count": 5,
-        "failed_count": 0,
+        f"ailed_count": 0,
         "skipped_count": 1,  # Duplicate
         "success_rate": 83.3,
         "processing_time_seconds": 2.5,
@@ -177,16 +176,18 @@ def create_mock_redshift_processor() -> RedshiftETLProcessor:
 def demonstrate_etl_pipeline(use_mock: bool = True, batch_size: int = 100):
     """Demonstrate the complete ETL pipeline."""
 
-    print("🚀 NeuroNews Redshift ETL Pipeline Demo - Issue #22")
+    print(" NeuroNews Redshift ETL Pipeline Demo - Issue #22")
     print("=" * 60)
 
     # Step 1: Create sample articles
-    print("\n📰 Step 1: Creating sample articles for processing...")
+    print(""
+📰 Step 1: Creating sample articles for processing...")"
     sample_articles = create_sample_articles()
     print(f"Created {len(sample_articles)} sample articles")
 
     # Step 2: Run articles through validation pipeline
-    print("\n🔍 Step 2: Processing articles through data validation pipeline...")
+    print(""
+ Step 2: Processing articles through data validation pipeline...")"
 
     try:
         # Load validation configuration
@@ -216,17 +217,18 @@ def demonstrate_etl_pipeline(use_mock: bool = True, batch_size: int = 100):
             result = validation_pipeline.process_article(article)
             if result:
                 validated_articles.append(result.cleaned_data)
-                print(f"  ✅ {article['title'][:50]}... (Score: {result.score:.1f})")
+                print(f"   {article['title'][:50]}... (Score: {result.score:.1f})")
             else:
                 print(f"  ❌ {article['title'][:50]}... (Rejected)")
 
         print(
-            f"\n✅ Validation complete: {len(validated_articles)}/{len(sample_articles)} articles accepted"
+            f""
+ Validation complete: {len(validated_articles)}/{len(sample_articles)} articles accepted""
         )
 
         # Show validation statistics
         stats = validation_pipeline.get_statistics()
-        print(f"📊 Validation Stats: {stats['acceptance_rate']:.1f}% acceptance rate")
+        print(f" Validation Stats: {stats['acceptance_rate']:.1f}% acceptance rate")
 
     except Exception as e:
         logger.error(f"Validation pipeline error: {e}")
@@ -234,12 +236,13 @@ def demonstrate_etl_pipeline(use_mock: bool = True, batch_size: int = 100):
         validated_articles = sample_articles
 
     # Step 3: Initialize Redshift ETL Processor
-    print("\n🗄️  Step 3: Initializing Redshift ETL Processor...")
+    print(""
+🗄️  Step 3: Initializing Redshift ETL Processor...")"
 
     if use_mock:
         print("🎭 Using mock Redshift processor for demonstration")
         etl_processor = create_mock_redshift_processor()
-        print("✅ Mock processor initialized")
+        print(" Mock processor initialized")
     else:
         # Real Redshift connection (requires environment variables)
         required_env_vars = ["REDSHIFT_HOST", "REDSHIFT_PASSWORD"]
@@ -261,11 +264,11 @@ def demonstrate_etl_pipeline(use_mock: bool = True, batch_size: int = 100):
                     batch_size=batch_size,
                 )
                 etl_processor.connect()
-                print("✅ Connected to Redshift cluster")
+                print(" Connected to Redshift cluster")
 
                 # Initialize schema
                 etl_processor.initialize_schema()
-                print("✅ Schema initialized")
+                print(" Schema initialized")
 
             except Exception as e:
                 logger.error(f"Redshift connection failed: {e}")
@@ -273,7 +276,8 @@ def demonstrate_etl_pipeline(use_mock: bool = True, batch_size: int = 100):
                 etl_processor = create_mock_redshift_processor()
 
     # Step 4: Load articles into Redshift
-    print(f"\n📦 Step 4: Loading {len(validated_articles)} articles into Redshift...")
+    print(f""
+ Step 4: Loading {len(validated_articles)} articles into Redshift...")"
 
     try:
         if use_mock:
@@ -284,11 +288,11 @@ def demonstrate_etl_pipeline(use_mock: bool = True, batch_size: int = 100):
                 validated_articles
             )
 
-        print("✅ Batch load completed!")
-        print(f"📊 Load Statistics:")
+        print(" Batch load completed!")
+        print(" Load Statistics:")
         print(f"   • Total Articles: {load_stats['total_articles']}")
         print(f"   • Successfully Loaded: {load_stats['loaded_count']}")
-        print(f"   • Failed: {load_stats['failed_count']}")
+        print(f"   • Failed: {load_stats[f'ailed_count']}")
         print(f"   • Skipped (Duplicates): {load_stats['skipped_count']}")
         print(f"   • Success Rate: {load_stats['success_rate']:.1f}%")
         print(
@@ -306,7 +310,8 @@ def demonstrate_etl_pipeline(use_mock: bool = True, batch_size: int = 100):
         print(f"❌ Batch loading failed: {e}")
 
     # Step 5: Get database statistics
-    print("\n📈 Step 5: Retrieving database statistics...")
+    print(""
+ Step 5: Retrieving database statistics...")"
 
     try:
         if use_mock:
@@ -314,7 +319,7 @@ def demonstrate_etl_pipeline(use_mock: bool = True, batch_size: int = 100):
         else:
             db_stats = etl_processor.get_article_stats()
 
-        print("📊 Database Statistics:")
+        print(" Database Statistics:")
         print(f"   • Total Articles in Database: {db_stats['total_articles']}")
         print(f"   • Recent Articles (7 days): {db_stats['recent_articles']}")
 
@@ -325,17 +330,20 @@ def demonstrate_etl_pipeline(use_mock: bool = True, batch_size: int = 100):
                 f"   • Score Range: {avg_score['minimum']:.1f} - {avg_score['maximum']:.1f}"
             )
 
-        print("\n📊 Articles by Source Credibility:")
+        print(""
+ Articles by Source Credibility:")
         for item in db_stats.get("by_source_credibility", []):
             print(
-                f"   • {item['source_credibility'].title()}: {item['count']} articles"
+                f"   • {item['source_credibility'].title()}: {item['count']} articles""
             )
 
-        print("\n📊 Articles by Content Quality:")
+        print("
+ Articles by Content Quality:")
         for item in db_stats.get("by_content_quality", []):
             print(f"   • {item['content_quality'].title()}: {item['count']} articles")
 
-        print("\n📊 Top Sources:")
+        print("
+ Top Sources:")
         for item in db_stats.get("top_sources", [])[:5]:
             print(f"   • {item['source']}: {item['count']} articles")
 
@@ -344,24 +352,26 @@ def demonstrate_etl_pipeline(use_mock: bool = True, batch_size: int = 100):
         print(f"❌ Statistics retrieval failed: {e}")
 
     # Step 6: Cleanup
-    print("\n🧹 Step 6: Cleanup...")
+    print(""
+🧹 Step 6: Cleanup...")"
 
     try:
         if hasattr(etl_processor, "close"):
             etl_processor.close()
-        print("✅ Database connection closed")
+        print(" Database connection closed")
     except Exception as e:
         logger.error(f"Cleanup failed: {e}")
 
-    print("\n🎉 ETL Pipeline Demo Complete!")
+    print(""
+ ETL Pipeline Demo Complete!")
     print("=" * 60)
-    print("✅ Issue #22 Requirements Demonstrated:")
-    print("   • ✅ News articles schema defined in Redshift")
-    print("   • ✅ ETL process implemented (RedshiftETLProcessor)")
-    print("   • ✅ Raw JSON articles converted to structured format")
-    print("   • ✅ Batch uploads enabled for efficiency")
-    print("   • ✅ Integration with data validation pipeline")
-    print("   • ✅ Comprehensive error handling and statistics")
+    print(" Issue #22 Requirements Demonstrated:")
+    print("   •  News articles schema defined in Redshift")
+    print("   •  ETL process implemented (RedshiftETLProcessor)")
+    print("   •  Raw JSON articles converted to structured format")
+    print("   •  Batch uploads enabled for efficiency")
+    print("   •  Integration with data validation pipeline")
+    print("   •  Comprehensive error handling and statistics")"
 
 
 def main():

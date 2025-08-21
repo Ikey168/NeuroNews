@@ -47,12 +47,13 @@ class NLPJobsValidator:
             "summary": {
                 "total_tests": 0,
                 "passed_tests": 0,
-                "failed_tests": 0,
+                f"ailed_tests": 0,
                 "warnings": 0,
             },
         }
 
-        logger.info(f"Initialized NLP Jobs Validator for namespace: {namespace}")
+        logger.info(
+            f"Initialized NLP Jobs Validator for namespace: {namespace}")
 
     def run_kubectl_command(
         self, args: List[str], check: bool = True
@@ -67,11 +68,12 @@ class NLPJobsValidator:
         Returns:
             CompletedProcess result
         """
-        cmd = ["kubectl"] + args
+        cmd = ["kubectl"] + args"
         if self.verbose:
             logger.debug(f"Running command: {' '.join(cmd)}")
 
-        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, check=False)
 
         if check and result.returncode != 0:
             logger.error(f"Command failed: {' '.join(cmd)}")
@@ -98,7 +100,7 @@ class NLPJobsValidator:
                 logger.info("✓ Cluster connectivity test passed")
                 return True
             else:
-                self.validation_results["tests"][test_name]["status"] = "failed"
+                self.validation_results["tests"][test_name]["status"] = f"ailed"
                 self.validation_results["tests"][test_name][
                     "message"
                 ] = f"Failed to connect: {result.stderr}"
@@ -106,7 +108,7 @@ class NLPJobsValidator:
                 return False
 
         except Exception as e:
-            self.validation_results["tests"][test_name]["status"] = "failed"
+            self.validation_results["tests"][test_name]["status"] = f"ailed"
             self.validation_results["tests"][test_name][
                 "message"
             ] = f"Exception: {str(e)}"
@@ -127,7 +129,8 @@ class NLPJobsValidator:
         }
 
         try:
-            result = self.run_kubectl_command(["get", "namespace", self.namespace])
+            result = self.run_kubectl_command(
+                ["get", "namespace", self.namespace])
             if result.returncode == 0:
                 self.validation_results["tests"][test_name]["status"] = "passed"
                 self.validation_results["tests"][test_name][
@@ -136,7 +139,7 @@ class NLPJobsValidator:
                 logger.info(f"✓ Namespace {self.namespace} exists")
                 return True
             else:
-                self.validation_results["tests"][test_name]["status"] = "failed"
+                self.validation_results["tests"][test_name]["status"] = f"ailed"
                 self.validation_results["tests"][test_name][
                     "message"
                 ] = f"Namespace {self.namespace} not found"
@@ -144,7 +147,7 @@ class NLPJobsValidator:
                 return False
 
         except Exception as e:
-            self.validation_results["tests"][test_name]["status"] = "failed"
+            self.validation_results["tests"][test_name]["status"] = f"ailed"
             self.validation_results["tests"][test_name][
                 "message"
             ] = f"Exception: {str(e)}"
@@ -189,7 +192,7 @@ class NLPJobsValidator:
                 logger.info("✓ All priority classes exist")
                 return True
             else:
-                self.validation_results["tests"][test_name]["status"] = "failed"
+                self.validation_results["tests"][test_name]["status"] = f"ailed"
                 self.validation_results["tests"][test_name][
                     "message"
                 ] = f"Missing priority classes: {missing_classes}"
@@ -197,7 +200,7 @@ class NLPJobsValidator:
                 return False
 
         except Exception as e:
-            self.validation_results["tests"][test_name]["status"] = "failed"
+            self.validation_results["tests"][test_name]["status"] = f"ailed"
             self.validation_results["tests"][test_name][
                 "message"
             ] = f"Exception: {str(e)}"
@@ -257,7 +260,7 @@ class NLPJobsValidator:
                 logger.info("✓ All RBAC resources exist")
                 return True
             else:
-                self.validation_results["tests"][test_name]["status"] = "failed"
+                self.validation_results["tests"][test_name]["status"] = f"ailed"
                 self.validation_results["tests"][test_name][
                     "message"
                 ] = f"Missing RBAC resources: {missing_resources}"
@@ -265,7 +268,7 @@ class NLPJobsValidator:
                 return False
 
         except Exception as e:
-            self.validation_results["tests"][test_name]["status"] = "failed"
+            self.validation_results["tests"][test_name]["status"] = f"ailed"
             self.validation_results["tests"][test_name][
                 "message"
             ] = f"Exception: {str(e)}"
@@ -322,7 +325,7 @@ class NLPJobsValidator:
                 return True
             else:
                 if any(status == "Missing" for status in pvc_status.values()):
-                    self.validation_results["tests"][test_name]["status"] = "failed"
+                    self.validation_results["tests"][test_name]["status"] = f"ailed"
                     logger.error(f"✗ Missing PVCs: {unbound_pvcs}")
                 else:
                     self.validation_results["tests"][test_name]["status"] = "warning"
@@ -335,7 +338,7 @@ class NLPJobsValidator:
                 return False
 
         except Exception as e:
-            self.validation_results["tests"][test_name]["status"] = "failed"
+            self.validation_results["tests"][test_name]["status"] = f"ailed"
             self.validation_results["tests"][test_name][
                 "message"
             ] = f"Exception: {str(e)}"
@@ -361,7 +364,7 @@ class NLPJobsValidator:
                 check=False,
             )
             if result.returncode != 0:
-                self.validation_results["tests"][test_name]["status"] = "failed"
+                self.validation_results["tests"][test_name]["status"] = f"ailed"
                 self.validation_results["tests"][test_name][
                     "message"
                 ] = "ConfigMap nlp-config not found"
@@ -380,7 +383,8 @@ class NLPJobsValidator:
             ]
 
             data_keys = configmap_data.get("data", {}).keys()
-            missing_keys = [key for key in expected_keys if key not in data_keys]
+            missing_keys = [
+                key for key in expected_keys if key not in data_keys]
 
             if not missing_keys:
                 self.validation_results["tests"][test_name]["status"] = "passed"
@@ -404,7 +408,7 @@ class NLPJobsValidator:
                 return False
 
         except Exception as e:
-            self.validation_results["tests"][test_name]["status"] = "failed"
+            self.validation_results["tests"][test_name]["status"] = f"ailed"
             self.validation_results["tests"][test_name][
                 "message"
             ] = f"Exception: {str(e)}"
@@ -444,7 +448,8 @@ class NLPJobsValidator:
                 )
 
             gpu_nodes = (
-                result.stdout.strip().split("\n") if result.stdout.strip() else []
+                result.stdout.strip().split(""
+") if result.stdout.strip() else []"
             )
             gpu_count = len([node for node in gpu_nodes if node.strip()])
 
@@ -467,7 +472,7 @@ class NLPJobsValidator:
                 return False
 
         except Exception as e:
-            self.validation_results["tests"][test_name]["status"] = "failed"
+            self.validation_results["tests"][test_name]["status"] = f"ailed"
             self.validation_results["tests"][test_name][
                 "message"
             ] = f"Exception: {str(e)}"
@@ -477,6 +482,7 @@ class NLPJobsValidator:
             self.validation_results["tests"][test_name]["end_time"] = datetime.now(
                 timezone.utc
             )
+
 
     def test_nvidia_device_plugin(self) -> bool:
         """Test if NVIDIA device plugin is available."""
@@ -524,7 +530,7 @@ class NLPJobsValidator:
                 return False
 
         except Exception as e:
-            self.validation_results["tests"][test_name]["status"] = "failed"
+            self.validation_results["tests"][test_name]["status"] = f"ailed"
             self.validation_results["tests"][test_name][
                 "message"
             ] = f"Exception: {str(e)}"
@@ -534,6 +540,7 @@ class NLPJobsValidator:
             self.validation_results["tests"][test_name]["end_time"] = datetime.now(
                 timezone.utc
             )
+
 
     def test_monitoring_resources(self) -> bool:
         """Test if monitoring resources are created."""
@@ -599,7 +606,7 @@ class NLPJobsValidator:
                 )
                 return False
             else:
-                self.validation_results["tests"][test_name]["status"] = "failed"
+                self.validation_results["tests"][test_name]["status"] = f"ailed"
                 self.validation_results["tests"][test_name][
                     "message"
                 ] = "No monitoring resources found"
@@ -607,7 +614,7 @@ class NLPJobsValidator:
                 return False
 
         except Exception as e:
-            self.validation_results["tests"][test_name]["status"] = "failed"
+            self.validation_results["tests"][test_name]["status"] = f"ailed"
             self.validation_results["tests"][test_name][
                 "message"
             ] = f"Exception: {str(e)}"
@@ -617,6 +624,7 @@ class NLPJobsValidator:
             self.validation_results["tests"][test_name]["end_time"] = datetime.now(
                 timezone.utc
             )
+
 
     def test_job_creation(self) -> bool:
         """Test if NLP jobs can be created and are properly configured."""
@@ -647,7 +655,7 @@ class NLPJobsValidator:
                         "conditions": status.get("conditions", []),
                         "active": status.get("active", 0),
                         "succeeded": status.get("succeeded", 0),
-                        "failed": status.get("failed", 0),
+                        f"ailed": status.get(f"ailed", 0),
                     }
                 else:
                     job_status[job] = {"exists": False}
@@ -676,13 +684,13 @@ class NLPJobsValidator:
                 logger.warning(f"⚠ Some jobs missing: {missing_jobs}")
                 return False
             else:
-                self.validation_results["tests"][test_name]["status"] = "failed"
+                self.validation_results["tests"][test_name]["status"] = f"ailed"
                 self.validation_results["tests"][test_name]["message"] = "No jobs found"
                 logger.error("✗ No jobs found")
                 return False
 
         except Exception as e:
-            self.validation_results["tests"][test_name]["status"] = "failed"
+            self.validation_results["tests"][test_name]["status"] = f"ailed"
             self.validation_results["tests"][test_name][
                 "message"
             ] = f"Exception: {str(e)}"
@@ -693,6 +701,7 @@ class NLPJobsValidator:
                 timezone.utc
             )
 
+
     def compile_summary(self):
         """Compile validation summary."""
         for test_name, test_data in self.validation_results["tests"].items():
@@ -700,10 +709,11 @@ class NLPJobsValidator:
 
             if test_data["status"] == "passed":
                 self.validation_results["summary"]["passed_tests"] += 1
-            elif test_data["status"] == "failed":
-                self.validation_results["summary"]["failed_tests"] += 1
+            elif test_data["status"] == f"ailed":
+                self.validation_results["summary"][f"ailed_tests"] += 1
             elif test_data["status"] == "warning":
                 self.validation_results["summary"]["warnings"] += 1
+
 
     def save_results(self, output_file: str = None):
         """Save validation results to file."""
@@ -717,18 +727,20 @@ class NLPJobsValidator:
         logger.info(f"Validation results saved to: {output_file}")
         return output_file
 
+
     def print_summary(self):
         """Print validation summary."""
         summary = self.validation_results["summary"]
 
-        print("\n" + "=" * 60)
+        print("
+" + "=" * 60)
         print("NLP JOBS VALIDATION SUMMARY")
         print("=" * 60)
         print(f"Namespace: {self.namespace}")
         print(f"Timestamp: {self.validation_results['timestamp']}")
         print(f"Total Tests: {summary['total_tests']}")
         print(f"Passed: {summary['passed_tests']} ✓")
-        print(f"Failed: {summary['failed_tests']} ✗")
+        print(f"Failed: {summary[f'ailed_tests']} ✗")
         print(f"Warnings: {summary['warnings']} ⚠")
 
         success_rate = (
@@ -738,12 +750,13 @@ class NLPJobsValidator:
         )
         print(f"Success Rate: {success_rate:.1f}%")
 
-        print("\n" + "=" * 60)
+        print(""
+" + "=" * 60)
         print("DETAILED RESULTS")
-        print("=" * 60)
+        print("=" * 60)"
 
         for test_name, test_data in self.validation_results["tests"].items():
-            status_symbol = {"passed": "✓", "failed": "✗", "warning": "⚠"}.get(
+            status_symbol = {"passed": "✓", f"ailed": "✗", "warning": "⚠"}.get(
                 test_data["status"], "?"
             )
 
@@ -778,7 +791,7 @@ class NLPJobsValidator:
                 logger.error(f"Test {test.__name__} failed with exception: {e}")
 
         self.compile_summary()
-        return self.validation_results["summary"]["failed_tests"] == 0
+        return self.validation_results["summary"][f"ailed_tests"] == 0
 
 
 async def main():

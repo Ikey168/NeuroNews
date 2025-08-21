@@ -12,6 +12,12 @@ This script demonstrates all the features implemented for Issue #21:
 Run this script to see the validation pipeline in action.
 """
 
+from src.database.data_validation_pipeline import (ContentValidator,
+                                                   DataValidationPipeline,
+                                                   DuplicateDetector,
+                                                   HTMLCleaner,
+                                                   SourceReputationAnalyzer,
+                                                   SourceReputationConfig)
 import json
 import sys
 from datetime import datetime, timedelta
@@ -19,13 +25,6 @@ from typing import Any, Dict, List
 
 # Add project root to Python path
 sys.path.append("/workspaces/NeuroNews")
-
-from src.database.data_validation_pipeline import (ContentValidator,
-                                                   DataValidationPipeline,
-                                                   DuplicateDetector,
-                                                   HTMLCleaner,
-                                                   SourceReputationAnalyzer,
-                                                   SourceReputationConfig)
 
 
 def load_config() -> SourceReputationConfig:
@@ -46,7 +45,7 @@ def load_config() -> SourceReputationConfig:
         # Fallback to default config
         return SourceReputationConfig(
             trusted_domains=["reuters.com", "bbc.com", "npr.org"],
-            questionable_domains=["dailymail.co.uk", "foxnews.com"],
+            questionable_domains=["dailymail.co.uk", f"oxnews.com"],
             banned_domains=["infowars.com", "breitbart.com"],
             reputation_thresholds={
                 "trusted": 0.9,
@@ -66,23 +65,23 @@ def create_test_articles() -> List[Dict[str, Any]]:
                 "url": "https://reuters.com/technology/ai-breakthrough-2024",
                 "title": "Scientists Achieve Major Breakthrough in Artificial Intelligence Research",
                 "content": """
-                    <div class="article-content">
-                        <p>Researchers at leading universities have announced a significant breakthrough 
-                        in artificial intelligence that could revolutionize how machines understand 
+                    <div class="article-content">"
+                        <p>Researchers at leading universities have announced a significant breakthrough
+                        in artificial intelligence that could revolutionize how machines understand
                         human language and context.</p>
-                        
-                        <p>The new neural network architecture, developed by a team led by Dr. Sarah 
-                        Johnson at MIT, shows unprecedented accuracy in natural language processing 
+
+                        <p>The new neural network architecture, developed by a team led by Dr. Sarah
+                        Johnson at MIT, shows unprecedented accuracy in natural language processing
                         tasks while requiring 75% less computational power than existing models.</p>
-                        
-                        <p>"This represents a paradigm shift in AI efficiency," said Dr. Johnson. 
-                        "We're not just making incremental improvements - we're fundamentally changing 
-                        how these systems process information."</p>
-                        
-                        <p>The research, published in Nature Machine Intelligence, demonstrates the 
-                        new approach across multiple domains including medical diagnosis, scientific 
+
+                        <p>"This represents a paradigm shift in AI efficiency," said Dr. Johnson.
+                        "We're not just making incremental improvements - we're fundamentally changing"
+                        how these systems process information."</p>"
+
+                        <p>The research, published in Nature Machine Intelligence, demonstrates the
+                        new approach across multiple domains including medical diagnosis, scientific
                         research, and automated content generation.</p>
-                        
+
                         <script>trackPageView('article-view');</script>
                         <style>.ad-banner { display: none; }</style>
                     </div>
@@ -90,7 +89,7 @@ def create_test_articles() -> List[Dict[str, Any]]:
                 "source": "reuters.com",
                 "published_date": datetime.now().isoformat(),
                 "author": "Tech Reporter",
-                "summary": "MIT researchers develop efficient AI breakthrough",
+                "summary": "MIT researchers develop efficient AI breakthrough", "
             },
         },
         {
@@ -99,17 +98,17 @@ def create_test_articles() -> List[Dict[str, Any]]:
                 "url": "https://dailymail.co.uk/tech/article-12345/AI-WILL-DESTROY-HUMANITY",
                 "title": "BREAKING: AI Will Destroy Humanity Says Expert!!!",
                 "content": """
-                    <p>A controversial expert claims artificial intelligence will lead to 
+                    <p>A controversial expert claims artificial intelligence will lead to
                     the complete destruction of humanity within the next decade.</p>
-                    
-                    <p>The unnamed source, speaking exclusively to our reporters, made 
+
+                    <p>The unnamed source, speaking exclusively to our reporters, made
                     shocking claims about secret AI experiments.</p>
-                    
+
                     <div class="advertisement">Buy our premium subscription!</div>
                 """,
                 "source": "dailymail.co.uk",
                 "published_date": datetime.now().isoformat(),
-                "author": "Sensational Writer",
+                "author": "Sensational Writer","
             },
         },
         {
@@ -140,16 +139,16 @@ def create_test_articles() -> List[Dict[str, Any]]:
                 "url": "https://bbc.com/old-tech-news",
                 "title": "Important Technology Development from Last Year",
                 "content": """
-                    <p>This is an older article with good content quality and from a trusted 
-                    source, but it was published quite a while ago. The validation pipeline 
+                    <p>This is an older article with good content quality and from a trusted
+                    source, but it was published quite a while ago. The validation pipeline
                     should flag this as potentially outdated.</p>
-                    
-                    <p>The content itself is substantial and well-written, demonstrating that 
+
+                    <p>The content itself is substantial and well-written, demonstrating that
                     age is just one factor in the overall validation scoring system.</p>
                 """,
                 "source": "bbc.com",
                 "published_date": (datetime.now() - timedelta(days=45)).isoformat(),
-                "author": "BBC Tech Reporter",
+                "author": "BBC Tech Reporter","
             },
         },
         {
@@ -161,43 +160,43 @@ def create_test_articles() -> List[Dict[str, Any]]:
                     <div class="article-wrapper" id="main-content" data-analytics="track">
                         <script type="text/javascript">
                             gtag('config', 'GA_TRACKING_ID');
-                            fbq('track', 'PageView');
+                            fbq('track', 'PageView');"
                         </script>
-                        
+
                         <style>
                             .advertisement { background: #fff; border: 1px solid #ccc; }
                             .social-share { margin: 20px 0; }
                         </style>
-                        
+
                         <h1 class="headline" data-testid="headline">Technology Report</h1>
-                        
+
                         <div class="advertisement">
                             <img src="/ad-banner.jpg" alt="Advertisement" onclick="trackAdClick()" />
                         </div>
-                        
-                        <p class="article-text">Scientists have made significant progress in 
-                        quantum computing research, with new algorithms showing promise for 
+
+                        <p class="article-text">Scientists have made significant progress in
+                        quantum computing research, with new algorithms showing promise for
                         solving complex optimization problems.</p>
-                        
+
                         <div class="social-share" onclick="shareOnSocial()">
                             <button id="share-twitter">Share on Twitter</button>
                             <button id="share-facebook">Share on Facebook</button>
                         </div>
-                        
-                        <p class="article-text">The breakthrough involves a novel approach to 
-                        quantum error correction that could make quantum computers more practical 
+
+                        <p class="article-text">The breakthrough involves a novel approach to
+                        quantum error correction that could make quantum computers more practical
                         for real-world applications.</p>
-                        
+
                         <noscript>
                             <p>Enable JavaScript for the full experience.</p>
                         </noscript>
-                        
+
                         <iframe src="https://ads.google.com/ad-frame" width="300" height="250"></iframe>
                     </div>
                 """,
                 "source": "npr.org",
                 "published_date": datetime.now().isoformat(),
-                "author": "NPR Science Desk",
+                "author": "NPR Science Desk","
             },
         },
         {
@@ -216,12 +215,12 @@ def create_test_articles() -> List[Dict[str, Any]]:
                 "url": "https://techcrunch.com/ai-breakthrough-2024-different",
                 "title": "Scientists Achieve Major AI Breakthrough in Research",  # Very similar to first
                 "content": """
-                    <p>This article has a very similar title to the first one and should be 
-                    caught by the fuzzy title matching algorithm, even though it's from a 
+                    <p>This article has a very similar title to the first one and should be
+                    caught by the fuzzy title matching algorithm, even though it's from a'
                     different source and has different content.</p>
                 """,
                 "source": "techcrunch.com",
-                "published_date": datetime.now().isoformat(),
+                "published_date": datetime.now().isoformat(),"
             },
         },
     ]
@@ -229,15 +228,16 @@ def create_test_articles() -> List[Dict[str, Any]]:
 
 def demonstrate_individual_components():
     """Demonstrate each validation component individually."""
-    print("🧪 COMPONENT TESTING")
+    print(" COMPONENT TESTING")
     print("=" * 50)
 
     # HTML Cleaner Demo
-    print("\n🧹 HTML Cleaner Demo:")
+    print(""
+🧹 HTML Cleaner Demo:")"
     cleaner = HTMLCleaner()
 
     html_input = """
-    <div class="content" id="main" onclick="track()">
+    <div class="content" id="main" onclick="track()">"
         <script>analytics.track();</script>
         <style>.ad { display: none; }</style>
         <p>This is the actual content.</p>
@@ -252,7 +252,8 @@ def demonstrate_individual_components():
     print(f"Cleaned:  {cleaned}")
 
     # Duplicate Detector Demo
-    print("\n🔍 Duplicate Detector Demo:")
+    print(""
+ Duplicate Detector Demo:")"
     detector = DuplicateDetector()
 
     article1 = {
@@ -274,7 +275,8 @@ def demonstrate_individual_components():
     print(f"Second article: Duplicate={is_dup2}, Reason={reason2}")
 
     # Source Reputation Analyzer Demo
-    print("\n⭐ Source Reputation Analyzer Demo:")
+    print(""
+⭐ Source Reputation Analyzer Demo:")"
     config = load_config()
     analyzer = SourceReputationAnalyzer(config)
 
@@ -294,7 +296,8 @@ def demonstrate_individual_components():
         print(f"{source:<20} -> {credibility:<12} (score: {score:.1f})")
 
     # Content Validator Demo
-    print("\n📋 Content Validator Demo:")
+    print(""
+ Content Validator Demo:")"
     validator = ContentValidator()
 
     test_articles = [
@@ -327,8 +330,9 @@ def demonstrate_individual_components():
 
 def demonstrate_full_pipeline():
     """Demonstrate the complete validation pipeline."""
-    print("\n🔄 FULL PIPELINE TESTING")
-    print("=" * 50)
+    print(""
+🔄 FULL PIPELINE TESTING")
+    print("=" * 50)"
 
     # Load configuration and create pipeline
     config = load_config()
@@ -339,14 +343,15 @@ def demonstrate_full_pipeline():
 
     results = []
     for test_case in test_articles:
-        print(f"\n📰 Testing: {test_case['name']}")
-        print("-" * 40)
+        print(f""
+📰 Testing: {test_case['name']}")
+        print("-" * 40)"
 
         article = test_case["article"]
         result = pipeline.process_article(article)
 
         if result:
-            print(f"✅ ACCEPTED - Score: {result.score:.1f}")
+            print(f" ACCEPTED - Score: {result.score:.1f}")
             print(
                 f"   Source Credibility: {result.cleaned_data.get('source_credibility')}"
             )
@@ -369,8 +374,9 @@ def demonstrate_full_pipeline():
         )
 
     # Display summary statistics
-    print("\n📊 PIPELINE STATISTICS")
-    print("=" * 50)
+    print(""
+ PIPELINE STATISTICS")
+    print("=" * 50)"
 
     stats = pipeline.get_statistics()
 
@@ -380,8 +386,9 @@ def demonstrate_full_pipeline():
     print(f"Warnings Issued: {stats['warnings_count']}")
 
     # Show detailed results table
-    print("\n📋 DETAILED RESULTS")
-    print("=" * 80)
+    print(""
+ DETAILED RESULTS")
+    print("=" * 80)"
 
     print(
         f"{'Test Case':<30} {'Status':<10} {'Score':<8} {'Quality':<12} {'Credibility':<12}"
@@ -391,7 +398,7 @@ def demonstrate_full_pipeline():
     for result_info in results:
         result = result_info["result"]
         if result:
-            status = "✅ PASS"
+            status = " PASS"
             score = f"{result.score:.1f}"
             quality = result.cleaned_data.get("content_quality", "N/A")
             credibility = result.cleaned_data.get("source_credibility", "N/A")
@@ -408,8 +415,9 @@ def demonstrate_full_pipeline():
 
 def demonstrate_scrapy_integration():
     """Show how the pipeline integrates with Scrapy."""
-    print("\n🕷️ SCRAPY INTEGRATION")
-    print("=" * 50)
+    print(""
+🕷️ SCRAPY INTEGRATION")
+    print("=" * 50)"
 
     print(
         """
@@ -419,7 +427,7 @@ The validation pipeline integrates with Scrapy through enhanced pipelines:
    - Removes duplicates before expensive processing
    - Uses advanced multi-strategy detection
 
-2. EnhancedValidationPipeline (Priority: 200)  
+2. EnhancedValidationPipeline (Priority: 200)
    - Applies complete data validation
    - Cleans HTML artifacts
    - Validates content quality
@@ -459,7 +467,7 @@ VALIDATION_REPORT_FILE = 'data/validation_report.json'
 
 # Source reputation lists
 TRUSTED_DOMAINS = ['reuters.com', 'bbc.com', 'npr.org']
-QUESTIONABLE_DOMAINS = ['dailymail.co.uk', 'foxnews.com']  
+QUESTIONABLE_DOMAINS = ['dailymail.co.uk', f'oxnews.com']
 BANNED_DOMAINS = ['infowars.com', 'breitbart.com']
 """
     )
@@ -467,7 +475,7 @@ BANNED_DOMAINS = ['infowars.com', 'breitbart.com']
 
 def main():
     """Main demo function."""
-    print("🎯 DATA VALIDATION PIPELINE DEMO")
+    print(" DATA VALIDATION PIPELINE DEMO")
     print("=" * 60)
     print("Demonstrating Issue #21 implementation:")
     print("✓ HTML artifact removal")
@@ -487,11 +495,13 @@ def main():
         # Show Scrapy integration
         demonstrate_scrapy_integration()
 
-        print(f"\n🎉 Demo completed successfully!")
-        print(f"The data validation pipeline is ready for production use.")
+        print(""
+ Demo completed successfully!")
+        print("The data validation pipeline is ready for production use.")"
 
     except Exception as e:
-        print(f"\n❌ Demo failed with error: {e}")
+        print(f""
+❌ Demo failed with error: {e}")"
         import traceback
 
         traceback.print_exc()

@@ -109,9 +109,7 @@ def test_get_article_success(s3_storage, s3_client):
 
     # Upload article as JSON
     key = f"test/{article['id']}.json"
-    s3_client.put_object(
-        Bucket=s3_storage.bucket_name, Key=key, Body=json.dumps(article)
-    )
+    s3_client.put_object(Bucket=s3_storage.bucket_name, Key=key, Body=json.dumps(article))
 
     # Retrieve and verify
     retrieved_article = s3_storage.get_article(key)

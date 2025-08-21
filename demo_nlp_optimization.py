@@ -2,7 +2,7 @@
 """
 Demo: Optimized NLP Pipeline for Scalability - Issue #35
 
-This demonstration script showcases the optimized NLP pipeline's key features:
+This demonstration script showcases the optimized NLP pipeline's key features:'
 1. Multi-threaded processing for faster NLP execution
 2. Intelligent caching to avoid redundant processing
 3. Memory management and optimization
@@ -114,14 +114,16 @@ class OptimizedNLPDemo:
             },
         ]
 
-        logger.info("Created {0} sample articles for demonstration".format(len(articles)))
+        logger.info(
+            "Created {0} sample articles for demonstration".format(len(articles)))
         return articles
 
     async def demonstrate_basic_optimization(self):
         """Demonstrate basic optimized pipeline functionality."""
-        print("\n" + "=" * 60)
-        print("🚀 BASIC OPTIMIZATION DEMONSTRATION")
-        print("=" * 60)
+        print(""
+" + "=" * 60)
+        print(" BASIC OPTIMIZATION DEMONSTRATION")
+        print("=" * 60)"
 
         if not OPTIMIZED_AVAILABLE:
             print("❌ Optimized pipeline not available - skipping demonstration")
@@ -133,7 +135,7 @@ class OptimizedNLPDemo:
                 max_threads=4, enable_cache=True, enable_gpu=False  # Use CPU for demo
             )
 
-            print("📊 Processing {0} articles...".format(len(self.sample_articles)))
+            print(" Processing {0} articles...".format(len(self.sample_articles)))
 
             # Process articles
             start_time = time.time()
@@ -143,15 +145,16 @@ class OptimizedNLPDemo:
             processing_time = time.time() - start_time
 
             # Display results
-            print("✅ Processing completed in {0} seconds".format(processing_time:.2f))
-            print(f"📈 Throughput: {results['throughput']:.2f} articles/sec")
-            print(f"🎯 Cache hit rate: {results['cache_stats']['hit_rate']:.1%}")
+            print(" Processing completed in {0} seconds".format(processing_time:.2f))
+            print(f" Throughput: {results['throughput']:.2f} articles/sec")
+            print(f" Cache hit rate: {results['cache_stats']['hit_rate']:.1%}")
             print(
                 f"💾 Memory usage: {results['memory_stats']['current_usage_mb']:.1f} MB"
             )
 
             # Show sample results
-            print("\n📋 Sample Results:")
+            print("
+ Sample Results:")
             for i, result in enumerate(results["results"][:3]):
                 print(f"  Article {i+1}: {result.get('article_id', 'N/A')}")
                 if "sentiment" in result:
@@ -176,11 +179,13 @@ class OptimizedNLPDemo:
             print("❌ Basic optimization demonstration failed: {0}".format(e))
             logger.error("Basic optimization error: {0}".format(e), exc_info=True)
 
+
     async def demonstrate_caching_benefits(self):
         """Demonstrate caching performance benefits."""
-        print("\n" + "=" * 60)
+        print(""
+" + "=" * 60)
         print("⚡ CACHING BENEFITS DEMONSTRATION")
-        print("=" * 60)
+        print("=" * 60)"
 
         if not OPTIMIZED_AVAILABLE:
             print("❌ Optimized pipeline not available - skipping demonstration")
@@ -209,12 +214,12 @@ class OptimizedNLPDemo:
             # Display cache benefits
             speedup = first_run_time / second_run_time if second_run_time > 0 else 1.0
             print("🏃 First run time: {0}s".format(first_run_time:.2f))
-            print("🚀 Second run time: {0}s".format(second_run_time:.2f))
+            print(" Second run time: {0}s".format(second_run_time:.2f))
             print("⚡ Speedup: {0}x faster".format(speedup:.1f))
-            print(f"📊 Cache hit rate: {results2['cache_stats']['hit_rate']:.1%}")
+            print(f" Cache hit rate: {results2['cache_stats']['hit_rate']:.1%}")
 
             self.results["caching_benefits"] = {
-                "first_run_time": first_run_time,
+                f"irst_run_time": first_run_time,
                 "second_run_time": second_run_time,
                 "speedup": speedup,
                 "cache_hit_rate": results2["cache_stats"]["hit_rate"],
@@ -226,11 +231,13 @@ class OptimizedNLPDemo:
             print("❌ Caching demonstration failed: {0}".format(e))
             logger.error("Caching error: {0}".format(e), exc_info=True)
 
+
     async def demonstrate_memory_optimization(self):
         """Demonstrate memory optimization features."""
-        print("\n" + "=" * 60)
+        print(""
+" + "=" * 60)
         print("🧠 MEMORY OPTIMIZATION DEMONSTRATION")
-        print("=" * 60)
+        print("=" * 60)"
 
         if not OPTIMIZED_AVAILABLE:
             print("❌ Optimized pipeline not available - skipping demonstration")
@@ -240,7 +247,7 @@ class OptimizedNLPDemo:
             # Create memory-optimized pipeline
             pipeline = create_memory_optimized_nlp_pipeline(max_memory_mb=512.0)
 
-            print("📊 Processing with memory optimization...")
+            print(" Processing with memory optimization...")
 
             # Monitor memory during processing
             initial_memory = pipeline.memory_manager.get_memory_usage_mb()
@@ -256,13 +263,13 @@ class OptimizedNLPDemo:
             memory_stats = pipeline.memory_manager.get_stats()
 
             print("💾 Final memory usage: {0} MB".format(final_memory:.1f))
-            print(f"📈 Peak memory usage: {memory_stats['peak_usage']:.1f} MB")
+            print(f" Peak memory usage: {memory_stats['peak_usage']:.1f} MB")
             print(f"🗑️ Garbage collections triggered: {memory_stats['gc_triggered']}")
             print(f"⚠️ Memory warnings: {memory_stats['memory_warnings']}")
 
             self.results["memory_optimization"] = {
                 "initial_memory_mb": initial_memory,
-                "final_memory_mb": final_memory,
+                f"inal_memory_mb": final_memory,
                 "peak_memory_mb": memory_stats["peak_usage"],
                 "gc_triggered": memory_stats["gc_triggered"],
             }
@@ -273,11 +280,13 @@ class OptimizedNLPDemo:
             print("❌ Memory optimization demonstration failed: {0}".format(e))
             logger.error("Memory optimization error: {0}".format(e), exc_info=True)
 
+
     async def demonstrate_concurrent_processing(self):
         """Demonstrate concurrent processing capabilities."""
-        print("\n" + "=" * 60)
+        print(""
+" + "=" * 60)
         print("🔄 CONCURRENT PROCESSING DEMONSTRATION")
-        print("=" * 60)
+        print("=" * 60)"
 
         if not OPTIMIZED_AVAILABLE:
             print("❌ Optimized pipeline not available - skipping demonstration")
@@ -330,7 +339,7 @@ class OptimizedNLPDemo:
                 "🏃 Sequential processing: {0}s ({1} articles/sec)".format(sequential_time:.2f, sequential_throughput:.2f)
             )
             print(
-                "🚀 Concurrent processing: {0}s ({1} articles/sec)".format(concurrent_time:.2f, concurrent_throughput:.2f)
+                " Concurrent processing: {0}s ({1} articles/sec)".format(concurrent_time:.2f, concurrent_throughput:.2f)
             )
             print("⚡ Efficiency gain: {0}x".format(efficiency_gain:.1f))
 
@@ -347,11 +356,13 @@ class OptimizedNLPDemo:
             print("❌ Concurrent processing demonstration failed: {0}".format(e))
             logger.error("Concurrent processing error: {0}".format(e), exc_info=True)
 
+
     async def demonstrate_integrated_processor(self):
         """Demonstrate integrated NLP processor capabilities."""
-        print("\n" + "=" * 60)
+        print(""
+" + "=" * 60)
         print("🔗 INTEGRATED PROCESSOR DEMONSTRATION")
-        print("=" * 60)
+        print("=" * 60)"
 
         if not INTEGRATION_AVAILABLE:
             print("❌ Integrated processor not available - skipping demonstration")
@@ -371,17 +382,17 @@ class OptimizedNLPDemo:
 
             # Display comprehensive results
             metrics = results["performance_metrics"]
-            print(f"✅ Articles processed: {len(results['articles'])}")
+            print(f" Articles processed: {len(results['articles'])}")
             print(f"⏱️ Total processing time: {metrics['total_processing_time']:.2f}s")
-            print(f"📈 Throughput: {metrics['articles_per_second']:.2f} articles/sec")
-            print(f"🎯 Cache hit rate: {metrics['cache_hit_rate']:.1%}")
+            print(f" Throughput: {metrics['articles_per_second']:.2f} articles/sec")
+            print(f" Cache hit rate: {metrics['cache_hit_rate']:.1%}")
             print(f"💾 Memory usage: {metrics['memory_usage_mb']:.1f} MB")
 
             # Show comprehensive stats
             comprehensive_stats = processor.get_comprehensive_stats()
             session_stats = comprehensive_stats["total_stats"]
-            print(f"📊 Total sessions: {session_stats['sessions']}")
-            print(f"📋 Total articles processed: {session_stats['articles_processed']}")
+            print(f" Total sessions: {session_stats['sessions']}")
+            print(f" Total articles processed: {session_stats['articles_processed']}")
 
             self.results["integrated_processor"] = {
                 "processing_time": metrics["total_processing_time"],
@@ -396,11 +407,13 @@ class OptimizedNLPDemo:
             print("❌ Integrated processor demonstration failed: {0}".format(e))
             logger.error("Integrated processor error: {0}".format(e), exc_info=True)
 
+
     def demonstrate_aws_sagemaker_readiness(self):
         """Demonstrate AWS SageMaker deployment readiness."""
-        print("\n" + "=" * 60)
+        print(""
+" + "=" * 60)
         print("☁️ AWS SAGEMAKER READINESS DEMONSTRATION")
-        print("=" * 60)
+        print("=" * 60)"
 
         if not OPTIMIZED_AVAILABLE:
             print("❌ Optimized pipeline not available - skipping demonstration")
@@ -420,9 +433,9 @@ class OptimizedNLPDemo:
             )
 
             print("☁️ SageMaker deployment configuration:")
-            print("  📦 Model name: {0}".format(sagemaker_config.sagemaker_model_name))
+            print("   Model name: {0}".format(sagemaker_config.sagemaker_model_name))
             print("  🔌 Endpoint: {0}".format(sagemaker_config.sagemaker_endpoint_name))
-            print("  📊 Batch size: {0}".format(sagemaker_config.batch_size))
+            print("   Batch size: {0}".format(sagemaker_config.batch_size))
             print("  🏃 Max threads: {0}".format(sagemaker_config.max_worker_threads))
             print(
                 "  ⚡ Model quantization: {0}".format(sagemaker_config.enable_model_quantization)
@@ -431,13 +444,14 @@ class OptimizedNLPDemo:
                 "  🔄 Batch transform: {0}".format(sagemaker_config.enable_sagemaker_batch_transform)
             )
 
-            print("\n✅ Key SageMaker deployment features:")
+            print(""
+ Key SageMaker deployment features:")
             print("  • Optimized batch processing for high throughput")
             print("  • Model quantization for reduced memory usage")
             print("  • Concurrent processing for scalability")
             print("  • Intelligent caching for cost optimization")
             print("  • Memory management for stable performance")
-            print("  • Error handling and graceful degradation")
+            print("  • Error handling and graceful degradation")"
 
             self.results["sagemaker_readiness"] = {
                 "model_name": sagemaker_config.sagemaker_model_name,
@@ -451,11 +465,13 @@ class OptimizedNLPDemo:
             print("❌ SageMaker readiness demonstration failed: {0}".format(e))
             logger.error("SageMaker readiness error: {0}".format(e), exc_info=True)
 
+
     def print_summary_report(self):
         """Print a comprehensive summary report."""
-        print("\n" + "=" * 60)
-        print("📋 OPTIMIZATION SUMMARY REPORT")
-        print("=" * 60)
+        print(""
+" + "=" * 60)
+        print(" OPTIMIZATION SUMMARY REPORT")
+        print("=" * 60)"
 
         if not self.results:
             print("❌ No results available for summary")
@@ -464,10 +480,11 @@ class OptimizedNLPDemo:
         print(
             f"🕒 Demonstration completed at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         )
-        print("📊 Total demonstrations run: {0}".format(len(self.results)))
+        print(" Total demonstrations run: {0}".format(len(self.results)))
 
         for demo_name, results in self.results.items():
-            print(f"\n🔸 {demo_name.replace('_', ' ').title()}:")
+            print(f"
+🔸 {demo_name.replace('_', ' ').title()}:")
             for key, value in results.items():
                 if isinstance(value, float):
                     if "time" in key.lower():
@@ -487,19 +504,22 @@ class OptimizedNLPDemo:
             throughput = basic_results.get("throughput", 0)
             cache_rate = basic_results.get("cache_hit_rate", 0)
 
-            print("\n🎯 Key Performance Indicators:")
+            print(""
+ Key Performance Indicators:")
             print("  • Overall throughput: {0} articles/sec".format(throughput:.2f))
             print("  • Cache efficiency: {0}".format(cache_rate:.1%))
-            print("  • Memory optimization: ✅ Enabled")
-            print("  • Concurrent processing: ✅ Enabled")
-            print("  • SageMaker ready: ✅ Configured")
+            print("  • Memory optimization:  Enabled")
+            print("  • Concurrent processing:  Enabled")
+            print("  • SageMaker ready:  Configured")"
 
-        print("\n✅ Issue #35 Objectives Achieved:")
-        print("  1. ✅ Multi-threaded processing implemented")
-        print("  2. ✅ Intelligent caching system deployed")
-        print("  3. ✅ AWS SageMaker optimization configured")
-        print("  4. ✅ Memory management and monitoring active")
-        print("  5. ✅ Performance monitoring and statistics enabled")
+        print(""
+ Issue #35 Objectives Achieved:")
+        print("  1.  Multi-threaded processing implemented")
+        print("  2.  Intelligent caching system deployed")
+        print("  3.  AWS SageMaker optimization configured")
+        print("  4.  Memory management and monitoring active")
+        print("  5.  Performance monitoring and statistics enabled")"
+
 
     def save_results_to_file(self, filename: str = "nlp_optimization_results.json"):
         """Save demonstration results to a file."""
@@ -528,7 +548,7 @@ class OptimizedNLPDemo:
 
 async def main():
     """Main demonstration function."""
-    print("🚀 NeuroNews NLP Pipeline Optimization Demo")
+    print(" NeuroNews NLP Pipeline Optimization Demo")
     print("Issue #35: Optimize NLP Pipeline for Scalability")
     print("=" * 60)
 
@@ -549,20 +569,24 @@ async def main():
         # Save results
         demo.save_results_to_file()
 
-        print("\n🎉 Demonstration completed successfully!")
-        print("📋 See the summary report above for detailed results.")
+        print(""
+ Demonstration completed successfully!")
+        print(" See the summary report above for detailed results.")"
 
     except KeyboardInterrupt:
-        print("\n⚠️ Demonstration interrupted by user")
+        print(""
+⚠️ Demonstration interrupted by user")"
     except Exception as e:
-        print("\n❌ Demonstration failed: {0}".format(e))
-        logger.error("Demo error: {0}".format(e), exc_info=True)
+        print(""
+❌ Demonstration failed: {0}".format(e))
+        logger.error("Demo error: {0}".format(e), exc_info=True)"
 
-    print("\n🔗 Integration with existing NeuroNews pipeline:")
+    print(""
+🔗 Integration with existing NeuroNews pipeline:")
     print("  • Drop-in replacement for existing NLP components")
     print("  • Backward compatible with current interfaces")
     print("  • Enhanced performance with caching and optimization")
-    print("  • Ready for AWS SageMaker deployment")
+    print("  • Ready for AWS SageMaker deployment")"
 
 
 if __name__ == "__main__":

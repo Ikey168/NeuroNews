@@ -127,6 +127,7 @@ def mock_sentence_transformer():
     """Provide a simple mock for SentenceTransformer in isolated tests."""
 
     class MockTransformer:
+
         def __init__(self, *args, **kwargs):
             self.embedding_dimension = 384
 

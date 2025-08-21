@@ -103,8 +103,10 @@ class EventTimelineService:
         self._initialize_components()
 
         # Timeline configuration
-        self.max_events_per_timeline = self.config.get("max_events_per_timeline", 100)
-        self.default_time_window_days = self.config.get("default_time_window_days", 365)
+        self.max_events_per_timeline = self.config.get(
+            "max_events_per_timeline", 100)
+        self.default_time_window_days = self.config.get(
+            "default_time_window_days", 365)
         self.event_clustering_threshold = self.config.get(
             "event_clustering_threshold", 0.8
         )
@@ -114,14 +116,14 @@ class EventTimelineService:
             "default": {
                 "primary_color": "#1f77b4",
                 "secondary_color": "#ff7f0e",
-                "background_color": "#fff",
+                "background_color": "#ff",
                 "text_color": "#333333",
             },
             "dark": {
                 "primary_color": "#8dd3c7",
                 "secondary_color": "#ffffb3",
                 "background_color": "#2f2f2",
-                "text_color": "#fffff",
+                "text_color": "#ffff",
             },
             "scientific": {
                 "primary_color": "#2ca02c",
@@ -138,14 +140,17 @@ class EventTimelineService:
         try:
             if ENHANCED_COMPONENTS_AVAILABLE:
                 # Use enhanced components from Issue #36/#37
-                self.graph_populator = EnhancedKnowledgeGraphPopulator(self.config)
+                self.graph_populator = EnhancedKnowledgeGraphPopulator(
+                    self.config)
                 self.entity_extractor = AdvancedEntityExtractor(self.config)
-                logger.info("Enhanced components loaded for event timeline service")
+                logger.info(
+                    "Enhanced components loaded for event timeline service")
             elif BASIC_COMPONENTS_AVAILABLE:
                 # Fallback to basic components
                 self.graph_populator = GraphBuilder(self.config)
                 self.entity_extractor = EntityExtractor()
-                logger.info("Basic components loaded for event timeline service")
+                logger.info(
+                    "Basic components loaded for event timeline service")
             else:
                 logger.warning("No graph or NLP components available")
         except Exception as e:
@@ -165,13 +170,14 @@ class EventTimelineService:
         This implements the first requirement of Issue #38:
         "Track historical events related to a topic."
         """
-        logger.info("Tracking historical events for topic: {0}".format(topic))
+        logger.info("Tracking historical events for topic: {0}".format(topic))"
 
         # Set default time range if not provided
         if end_date is None:
             end_date = datetime.now()
         if start_date is None:
-            start_date = end_date - timedelta(days=self.default_time_window_days)
+            start_date = end_date - \
+                timedelta(days=self.default_time_window_days)
 
         try:
             # Query events from the knowledge graph
@@ -212,7 +218,8 @@ class EventTimelineService:
         "Store event timestamps & relationships in Neptune."
         """
         logger.info(
-            "Storing {0} events and relationships in Neptune".format(len(events))
+            "Storing {0} events and relationships in Neptune".format(
+                len(events))
         )
 
         try:
@@ -230,7 +237,8 @@ class EventTimelineService:
 
                     # Create relationships between events and entities
                     relationships = await self._create_event_relationships(event)
-                    storage_results["relationships_created"] += len(relationships)
+                    storage_results["relationships_created"] += len(
+                        relationships)
 
                 except Exception as e:
                     error_msg = "Failed to store event {0}: {1}".format(
@@ -262,7 +270,8 @@ class EventTimelineService:
 
         Enhanced version of the Issue #37 endpoint with visualization support.
         """
-        logger.info("Generating timeline API response for topic: {0}".format(topic))
+        logger.info(
+            "Generating timeline API response for topic: {0}".format(topic))
 
         try:
             # Track historical events
@@ -298,12 +307,14 @@ class EventTimelineService:
                 response["visualization"] = visualization_data
 
             logger.info(
-                "Generated timeline response with {0} events".format(len(events))
+                "Generated timeline response with {0} events".format(
+                    len(events))
             )
             return response
 
         except Exception as e:
-            logger.error("Failed to generate timeline API response: {0}".format(e))
+            logger.error(
+                "Failed to generate timeline API response: {0}".format(e))
             raise
 
     async def generate_visualization_data(
@@ -319,7 +330,8 @@ class EventTimelineService:
         This implements the fourth requirement of Issue #38:
         "Generate visualizations of event evolution."
         """
-        logger.info("Generating visualization data for {0} events".format(len(events)))
+        logger.info(
+            "Generating visualization data for {0} events".format(len(events)))
 
         try:
             # Prepare timeline data
@@ -350,7 +362,8 @@ class EventTimelineService:
             return visualizations
 
         except Exception as e:
-            logger.error("Failed to generate visualization data: {0}".format(e))
+            logger.error(
+                "Failed to generate visualization data: {0}".format(e))
             raise
 
     async def _query_events_from_graph(
@@ -362,7 +375,8 @@ class EventTimelineService:
     ) -> List[Dict[str, Any]]:
         """Query events from the knowledge graph."""
         if not self.graph_populator:
-            logger.warning("No graph populator available, generating sample events")
+            logger.warning(
+                "No graph populator available, generating sample events")
             # Generate sample events for demonstration/testing
             return self._generate_sample_events(topic, start_date, end_date)
 
@@ -399,6 +413,7 @@ class EventTimelineService:
         for result in results:
             try:
                 # Helper function to safely extract values
+
                 def safe_extract(key: str, default: Any = ""):
                     value = result.get(key, default)
                     if isinstance(value, list) and value:
@@ -520,7 +535,8 @@ class EventTimelineService:
         """Store event data in Neptune database."""
         try:
             if not self.graph_populator:
-                logger.warning("No graph populator available for Neptune storage")
+                logger.warning(
+                    "No graph populator available for Neptune storage")
                 return False
 
             # Check if event already exists
@@ -528,7 +544,8 @@ class EventTimelineService:
                 existing = await self._check_event_exists(event.event_id)
                 if existing:
                     logger.debug(
-                        "Event {0} already exists, skipping".format(event.event_id)
+                        "Event {0} already exists, skipping".format(
+                            event.event_id)
                     )
                     return True
 
@@ -556,10 +573,12 @@ class EventTimelineService:
 
             if hasattr(self.graph_populator, "_execute_traversal"):
                 await self.graph_populator._execute_traversal(event_vertex_query)
-                logger.debug("Stored event {0} in Neptune".format(event.event_id))
+                logger.debug(
+                    "Stored event {0} in Neptune".format(event.event_id))
                 return True
             else:
-                logger.warning("Graph populator does not support traversal execution")
+                logger.warning(
+                    "Graph populator does not support traversal execution")
                 return False
 
         except Exception as e:
@@ -591,7 +610,8 @@ class EventTimelineService:
                             relationship_query
                         )
                         relationships.append(
-                            "event-{0}-entity-{1}".format(event.event_id, entity)
+                            "event-{0}-entity-{1}".format(
+                                event.event_id, entity)
                         )
 
                 except Exception as e:
@@ -624,7 +644,8 @@ class EventTimelineService:
 
                 except Exception as e:
                     logger.warning(
-                        "Failed to create relationship to related event: {0}".format(e)
+                        "Failed to create relationship to related event: {0}".format(
+                            e)
                     )
 
             logger.debug(
@@ -702,7 +723,8 @@ class EventTimelineService:
             return chart_data
 
         except Exception as e:
-            logger.error("Failed to prepare timeline chart data: {0}".format(e))
+            logger.error(
+                "Failed to prepare timeline chart data: {0}".format(e))
             return {"type": "timeline", "data": [], "error": str(e)}
 
     def _generate_event_clusters(self, events: List[HistoricalEvent]) -> Dict[str, Any]:
@@ -833,7 +855,8 @@ class EventTimelineService:
             return chart_data
 
         except Exception as e:
-            logger.error("Failed to generate entity involvement chart: {0}".format(e))
+            logger.error(
+                "Failed to generate entity involvement chart: {0}".format(e))
             return {"type": "bar", "data": [], "error": str(e)}
 
     # Helper methods
@@ -857,11 +880,13 @@ class EventTimelineService:
                     continue
 
             # If all formats fail, return current time
-            logger.warning("Could not parse timestamp: {0}".format(timestamp_str))
+            logger.warning(
+                "Could not parse timestamp: {0}".format(timestamp_str))
             return datetime.now()
 
         except Exception as e:
-            logger.error("Error parsing timestamp {0}: {1}".format(timestamp_str, e))
+            logger.error(
+                "Error parsing timestamp {0}: {1}".format(timestamp_str, e))
             return datetime.now()
 
     def _classify_event_type(self, result: Dict[str, Any]) -> str:
@@ -889,7 +914,7 @@ class EventTimelineService:
                 return "business_transaction"
             elif any(
                 word in title or word in content
-                for word in ["research", "study", "findings"]
+                for word in ["research", "study", f"indings"]
             ):
                 return "research"
             elif "technology" in category or "tech" in category:
@@ -1027,7 +1052,7 @@ class EventTimelineService:
 # Example usage and testing
 async def demo_event_timeline_service():
     """Demonstrate the Event Timeline Service functionality."""
-    print("🎯 Event Timeline Service Demo - Issue #38")
+    print(" Event Timeline Service Demo - Issue #38")
     print("=" * 50)
 
     try:
@@ -1035,7 +1060,8 @@ async def demo_event_timeline_service():
         service = EventTimelineService()
 
         # Test 1: Track historical events
-        print("\n1. Tracking historical events for 'Artificial Intelligence'...")
+        print("
+1. Tracking historical events for 'Artificial Intelligence'...")
         events = await service.track_historical_events(
             topic="Artificial Intelligence",
             start_date=datetime.now() - timedelta(days=30),
@@ -1044,49 +1070,54 @@ async def demo_event_timeline_service():
         print("   Found {0} events".format(len(events)))
 
         # Test 2: Store events in Neptune
-        print("\n2. Storing events and relationships in Neptune...")
+        print(""
+2. Storing events and relationships in Neptune...")"
         if events:
             storage_result = await service.store_event_relationships(events[:5])
             print(f"   Stored {storage_result.get('events_stored', 0)} events")
             print(
-                f"   Created {
+                f"   Created {"
                     storage_result.get(
                         'relationships_created',
-                        0)} relationships"
+                        0)} relationships""
             )
 
         # Test 3: Generate API response
-        print("\n3. Generating timeline API response...")
+        print(""
+3. Generating timeline API response...")"
         api_response = await service.generate_timeline_api_response(
             topic="Artificial Intelligence", max_events=10, include_visualizations=True
         )
         print(
-            f"   Generated response with {
+            f"   Generated response with {"
                 api_response.get(
                     'total_events',
-                    0)} events"
+                    0)} events""
         )
         print(
-            f"   Visualization included: {
+            f"   Visualization included: {"
                 api_response.get(
                     'metadata',
                     {}).get(
                     'visualization_included',
-                    False)}"
+                    False)}""
         )
 
         # Test 4: Generate visualization data
-        print("\n4. Generating visualization data...")
+        print(""
+4. Generating visualization data...")"
         if events:
             viz_data = await service.generate_visualization_data(
                 topic="Artificial Intelligence", events=events[:10], theme="default"
             )
             print("   Generated visualizations: {0}".format(list(viz_data.keys())))
 
-        print("\n✅ Event Timeline Service demo completed successfully!")
+        print(""
+ Event Timeline Service demo completed successfully!")"
 
     except Exception as e:
-        print("\n❌ Demo failed: {0}".format(e))
+        print(""
+❌ Demo failed: {0}".format(e))"
         import traceback
 
         traceback.print_exc()

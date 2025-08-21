@@ -15,6 +15,10 @@ Features demonstrated:
 - Health checks and error handling
 """
 
+from src.database.dynamodb_metadata_manager import (
+    ArticleMetadataIndex, DynamoDBMetadataConfig, DynamoDBMetadataManager,
+    SearchMode, SearchQuery, integrate_with_redshift_etl,
+    integrate_with_s3_storage, sync_metadata_from_scraper)
 import asyncio
 import json
 import logging
@@ -27,10 +31,6 @@ from typing import Any, Dict, List
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
-from src.database.dynamodb_metadata_manager import (
-    ArticleMetadataIndex, DynamoDBMetadataConfig, DynamoDBMetadataManager,
-    SearchMode, SearchQuery, integrate_with_redshift_etl,
-    integrate_with_s3_storage, sync_metadata_from_scraper)
 
 # Configure logging
 logging.basicConfig(
@@ -67,11 +67,11 @@ class DynamoDBMetadataDemo:
 
         return [
             {
-                "id": "ai-healthcare-breakthrough-001",
+                "id": "ai-healthcare-breakthrough-1",
                 "title": "AI Revolution Transforms Healthcare Diagnostics",
                 "source": "HealthTech Weekly",
                 "published_date": (base_date - timedelta(days=1)).strftime("%Y-%m-%d"),
-                "tags": ["AI", "Healthcare", "Diagnostics", "Innovation"],
+                "tags": ["AI", "Healthcare", "Diagnostics", "Innovation"},
                 "url": "https://healthtech.com/ai-diagnostics-revolution",
                 "author": "Dr. Sarah Chen",
                 "category": "Technology",
@@ -85,14 +85,14 @@ class DynamoDBMetadataDemo:
                 "scraped_date": base_date.isoformat(),
                 "sentiment_score": 0.85,
                 "validation_score": 92,
-                "content_quality": "high",
+                "content_quality": "high", "
             },
             {
-                "id": "quantum-computing-milestone-002",
+                "id": "quantum-computing-milestone-2",
                 "title": "Quantum Computing Achieves New Milestone in Error Correction",
                 "source": "Science Frontier",
                 "published_date": (base_date - timedelta(days=2)).strftime("%Y-%m-%d"),
-                "tags": ["Quantum Computing", "Science", "Research", "Technology"],
+                "tags": ["Quantum Computing", "Science", "Research", "Technology"},
                 "url": "https://sciencefrontier.com/quantum-error-correction",
                 "author": "Prof. Michael Rodriguez",
                 "category": "Science",
@@ -106,14 +106,14 @@ class DynamoDBMetadataDemo:
                 "scraped_date": base_date.isoformat(),
                 "sentiment_score": 0.78,
                 "validation_score": 88,
-                "content_quality": "high",
+                "content_quality": "high","
             },
             {
-                "id": "climate-tech-innovation-003",
+                "id": "climate-tech-innovation-3",
                 "title": "Revolutionary Solar Panel Technology Doubles Efficiency",
                 "source": "Green Energy Today",
                 "published_date": (base_date - timedelta(days=3)).strftime("%Y-%m-%d"),
-                "tags": ["Solar Energy", "Climate", "Renewable Energy", "Innovation"],
+                "tags": ["Solar Energy", "Climate", "Renewable Energy", "Innovation"},
                 "url": "https://greenenergy.com/solar-efficiency-breakthrough",
                 "author": "Emma Watson",
                 "category": "Environment",
@@ -127,14 +127,14 @@ class DynamoDBMetadataDemo:
                 "scraped_date": base_date.isoformat(),
                 "sentiment_score": 0.82,
                 "validation_score": 85,
-                "content_quality": "high",
+                "content_quality": "high","
             },
             {
-                "id": "space-exploration-mars-004",
+                "id": "space-exploration-mars-4",
                 "title": "NASA Mars Mission Discovers Evidence of Ancient Water Systems",
                 "source": "Space News Network",
                 "published_date": (base_date - timedelta(days=4)).strftime("%Y-%m-%d"),
-                "tags": ["Space", "Mars", "NASA", "Exploration", "Discovery"],
+                "tags": ["Space", "Mars", "NASA", "Exploration", "Discovery"},
                 "url": "https://spacenews.com/mars-water-discovery",
                 "author": "Dr. James Thompson",
                 "category": "Science",
@@ -148,14 +148,14 @@ class DynamoDBMetadataDemo:
                 "scraped_date": base_date.isoformat(),
                 "sentiment_score": 0.75,
                 "validation_score": 90,
-                "content_quality": "high",
+                "content_quality": "high","
             },
             {
-                "id": "cybersecurity-ai-defense-005",
+                "id": "cybersecurity-ai-defense-5",
                 "title": "AI-Powered Cybersecurity Defense Blocks 99.9% of Attacks",
                 "source": "CyberSec Today",
                 "published_date": (base_date - timedelta(days=5)).strftime("%Y-%m-%d"),
-                "tags": ["Cybersecurity", "AI", "Defense", "Technology"],
+                "tags": ["Cybersecurity", "AI", "Defense", "Technology"},
                 "url": "https://cybersec.com/ai-defense-system",
                 "author": "Alex Rivera",
                 "category": "Technology",
@@ -169,14 +169,14 @@ class DynamoDBMetadataDemo:
                 "scraped_date": base_date.isoformat(),
                 "sentiment_score": 0.80,
                 "validation_score": 87,
-                "content_quality": "high",
+                "content_quality": "high","
             },
             {
-                "id": "biotech-gene-therapy-006",
+                "id": "biotech-gene-therapy-6",
                 "title": "Gene Therapy Breakthrough Offers Hope for Rare Diseases",
                 "source": "BioTech Review",
                 "published_date": (base_date - timedelta(days=6)).strftime("%Y-%m-%d"),
-                "tags": ["Biotechnology", "Gene Therapy", "Medicine", "Research"],
+                "tags": ["Biotechnology", "Gene Therapy", "Medicine", "Research"},
                 "url": "https://biotechreview.com/gene-therapy-breakthrough",
                 "author": "Dr. Lisa Park",
                 "category": "Medicine",
@@ -190,17 +190,19 @@ class DynamoDBMetadataDemo:
                 "scraped_date": base_date.isoformat(),
                 "sentiment_score": 0.88,
                 "validation_score": 93,
-                "content_quality": "high",
+                "content_quality": "high","
             },
         ]
 
     async def run_comprehensive_demo(self):
         """Run complete demonstration of all features."""
-        print("🚀 Starting DynamoDB Article Metadata Manager Demo (Issue #23)")
+        print(" Starting DynamoDB Article Metadata Manager Demo (Issue #23)")
         print("=" * 70)
 
         try:
             # Initialize manager
+except Exception:
+    pass
             await self._demo_initialization()
 
             # Demo 1: Article metadata indexing
@@ -221,22 +223,25 @@ class DynamoDBMetadataDemo:
             # Demo 6: Health checks and error handling
             await self._demo_health_monitoring()
 
-            print("\n🎉 Demo completed successfully!")
-            print("All Issue #23 requirements demonstrated:")
+            print(""
+ Demo completed successfully!")
+            print("All Issue #23 requirements demonstrated:")"
             print(
-                "✅ Store article metadata (title, source, published_date, tags) in DynamoDB"
+                " Store article metadata (title, source, published_date, tags) in DynamoDB"
             )
-            print("✅ Implement query API for quick lookups")
-            print("✅ Enable full-text search capabilities")
+            print(" Implement query API for quick lookups")
+            print(" Enable full-text search capabilities")
 
         except Exception as e:
-            logger.error(f"Demo failed: {e}")
+            logger.error(f"Demo failed: {e})
             raise
 
-    async def _demo_initialization(self):
+
+    async def _demo_initialization(self):"
         """Demo manager initialization and table setup."""
-        print("\n1️⃣ DynamoDB Manager Initialization")
-        print("-" * 40)
+        print(""
+1️⃣ DynamoDB Manager Initialization")
+        print("-" * 40)"
 
         start_time = time.time()
 
@@ -249,21 +254,24 @@ class DynamoDBMetadataDemo:
 
         setup_time = (time.time() - start_time) * 1000
 
-        print(f"✅ Manager initialized successfully ({setup_time:.2f}ms)")
-        print(f"📊 Table: {self.config.table_name}")
-        print(f"🌍 Region: {self.config.region}")
-        print(
-            f"🔍 Full-text search: {'Enabled' if self.config.enable_full_text_search else 'Disabled'}"
-        )
-        print(f"📈 Indexes: {'Enabled' if self.config.create_indexes else 'Disabled'}")
+        print(f" Manager initialized successfully ({setup_time:.2f}ms))"
+        print(f" Table: {self.config.table_name})"
+        print(f"🌍 Region: {self.config.region})
+        print("
+            f" Full-text search: {'Enabled' if self.config.enable_full_text_search else 'Disabled'}
+        )"
+        print(f" Indexes: {'Enabled' if self.config.create_indexes else 'Disabled'})
 
-    async def _demo_article_indexing(self):
+
+    async def _demo_article_indexing(self):"
         """Demo article metadata indexing functionality."""
-        print("\n2️⃣ Article Metadata Indexing")
-        print("-" * 40)
+        print(""
+2️⃣ Article Metadata Indexing")
+        print("-" * 40)"
 
         # Demo single article indexing
-        print("\n📄 Indexing single article...")
+        print(""
+📄 Indexing single article...")"
         start_time = time.time()
 
         single_article = self.sample_articles[0]
@@ -271,15 +279,16 @@ class DynamoDBMetadataDemo:
 
         indexing_time = (time.time() - start_time) * 1000
 
-        print(f"✅ Article indexed: {metadata.article_id}")
-        print(f"📝 Title: {metadata.title}")
-        print(f"📰 Source: {metadata.source}")
-        print(f"📅 Published: {metadata.published_date}")
-        print(f"🏷️ Tags: {', '.join(metadata.tags)}")
-        print(f"⚡ Indexing time: {indexing_time:.2f}ms")
+        print(f" Article indexed: {metadata.article_id})"
+        print(f"📝 Title: {metadata.title})"
+        print(f"📰 Source: {metadata.source})"
+        print(f"📅 Published: {metadata.published_date})"
+        print(f"🏷️ Tags: {', '.join(metadata.tags)})"
+        print(f"⚡ Indexing time: {indexing_time:.2f}ms)
 
-        # Demo batch indexing
-        print("\n📚 Batch indexing multiple articles...")
+        # Demo batch indexing"
+        print(""
+📚 Batch indexing multiple articles...")"
         start_time = time.time()
 
         batch_articles = self.sample_articles[1:]  # Remaining articles
@@ -287,53 +296,59 @@ class DynamoDBMetadataDemo:
 
         batch_time = (time.time() - start_time) * 1000
 
-        print(f"✅ Batch indexing completed")
-        print(f"📊 Total articles: {batch_result['total_articles']}")
-        print(f"✅ Successfully indexed: {batch_result['indexed_count']}")
-        print(f"❌ Failed: {batch_result['failed_count']}")
-        print(f"⚡ Batch time: {batch_time:.2f}ms")
-        print(f"🚀 Indexing rate: {batch_result['indexing_rate']:.1f} articles/second")
+        print(" Batch indexing completed")
+        print(f" Total articles: {batch_result['total_articles'}})"
+        print(f" Successfully indexed: {batch_result['indexed_count'}})"
+        print(f"❌ Failed: {batch_result[f'ailed_count'}})"
+        print(f"⚡ Batch time: {batch_time:.2f}ms)"
+        print(f" Indexing rate: {batch_result['indexing_rate'}:.1f} articles/second)
 
-        # Show tokenization example
-        print(f"\n🔤 Title tokenization example:")
-        print(f"Original: '{metadata.title}'")
-        print(f"Tokens: {metadata.title_tokens}")
+        # Show tokenization example"
+        print("TODO: Fix this string")
+🔤 Title tokenization example:")
+        print(f"Original: '{metadata.title}')"
+        print(f"Tokens: {metadata.title_tokens})
 
-    async def _demo_query_api(self):
+
+    async def _demo_query_api(self):"
         """Demo query API for quick lookups."""
-        print("\n3️⃣ Query API for Quick Lookups")
-        print("-" * 40)
+        print(""
+3️⃣ Query API for Quick Lookups")
+        print("-" * 40)"
 
         # Query by ID
-        print("\n🔍 Get article by ID...")
-        article_id = self.sample_articles[0]["id"]
+        print(""
+ Get article by ID...")
+        article_id = self.sample_articles[0]["id"]"
         start_time = time.time()
 
         article = await self.manager.get_article_by_id(article_id)
         query_time = (time.time() - start_time) * 1000
 
         if article:
-            print(f"✅ Found article: {article.title}")
-            print(f"⚡ Query time: {query_time:.2f}ms")
-        else:
+            print(f" Found article: {article.title})"
+            print(f"⚡ Query time: {query_time:.2f}ms)
+        else:"
             print("❌ Article not found")
 
         # Query by source
-        print("\n📰 Get articles by source...")
-        source = "HealthTech Weekly"
+        print(""
+📰 Get articles by source...")
+        source = "HealthTech Weekly""
         start_time = time.time()
 
         source_result = await self.manager.get_articles_by_source(source, limit=10)
         query_time = (time.time() - start_time) * 1000
 
-        print(f"✅ Found {source_result.count} articles from '{source}'")
-        print(f"⚡ Query time: {query_time:.2f}ms")
+        print(f" Found {source_result.count} articles from '{source}')"
+        print(f"⚡ Query time: {query_time:.2f}ms)
 
-        for article in source_result.items[:3]:  # Show first 3
-            print(f"  📄 {article.title}")
+        for article in source_result.items[:3]:  # Show first 3"
+            print(f"  📄 {article.title})
 
-        # Query by date range
-        print("\n📅 Get articles by date range...")
+        # Query by date range"
+        print(""
+📅 Get articles by date range...")"
         start_date = (datetime.now(timezone.utc) - timedelta(days=7)).strftime(
             "%Y-%m-%d"
         )
@@ -345,38 +360,43 @@ class DynamoDBMetadataDemo:
         )
         query_time = (time.time() - start_time) * 1000
 
-        print(f"✅ Found {date_result.count} articles from {start_date} to {end_date}")
-        print(f"⚡ Query time: {query_time:.2f}ms")
+        print(f" Found {date_result.count} articles from {start_date} to {end_date})"
+        print(f"⚡ Query time: {query_time:.2f}ms)
 
-        # Query by tags
-        print("\n🏷️ Get articles by tags...")
-        tags = ["AI", "Technology"]
+        # Query by tags"
+        print(""
+🏷️ Get articles by tags...")
+        tags = ["AI", "Technology"]"
         start_time = time.time()
 
         tag_result = await self.manager.get_articles_by_tags(tags, match_all=False)
         query_time = (time.time() - start_time) * 1000
 
-        print(f"✅ Found {tag_result.count} articles with tags: {', '.join(tags)}")
-        print(f"⚡ Query time: {query_time:.2f}ms")
+        print(f" Found {tag_result.count} articles with tags: {', '.join(tags)})"
+        print(f"⚡ Query time: {query_time:.2f}ms)
 
-        # Query by category
-        print("\n📂 Get articles by category...")
-        category = "Technology"
+        # Query by category"
+        print(""
+📂 Get articles by category...")
+        category = "Technology""
         start_time = time.time()
 
         category_result = await self.manager.get_articles_by_category(category)
         query_time = (time.time() - start_time) * 1000
 
-        print(f"✅ Found {category_result.count} articles in '{category}' category")
-        print(f"⚡ Query time: {query_time:.2f}ms")
+        print(f" Found {category_result.count} articles in '{category}' category)"
+        print(f"⚡ Query time: {query_time:.2f}ms)
 
-    async def _demo_full_text_search(self):
+
+    async def _demo_full_text_search(self):"
         """Demo full-text search capabilities."""
-        print("\n4️⃣ Full-Text Search Capabilities")
-        print("-" * 40)
+        print(""
+4️⃣ Full-Text Search Capabilities")
+        print("-" * 40)"
 
         # Basic search
-        print("\n🔍 Basic full-text search...")
+        print(""
+ Basic full-text search...")"
         search_query = SearchQuery(
             query_text="AI healthcare revolution",
             fields=["title", "content_summary"],
@@ -388,16 +408,17 @@ class DynamoDBMetadataDemo:
         search_result = await self.manager.search_articles(search_query)
         search_time = (time.time() - start_time) * 1000
 
-        print(f"✅ Search completed: '{search_query.query_text}'")
-        print(f"📊 Found {search_result.count} matching articles")
-        print(f"⚡ Search time: {search_time:.2f}ms")
-        print(f"🔤 Search tokens: {search_result.query_info.get('tokens', [])}")
+        print(f" Search completed: '{search_query.query_text}')"
+        print(f" Found {search_result.count} matching articles)"
+        print(f"⚡ Search time: {search_time:.2f}ms)"
+        print(f"🔤 Search tokens: {search_result.query_info.get('tokens', [})})
 
-        for i, article in enumerate(search_result.items[:3], 1):
-            print(f"  {i}. {article.title} (Source: {article.source})")
+        for i, article in enumerate(search_result.items[:3], 1):"
+            print(f"  {i}. {article.title} (Source: {article.source}))
 
-        # Search with filters
-        print("\n🔍 Search with filters...")
+        # Search with filters"
+        print(""
+ Search with filters...")"
         filtered_search = SearchQuery(
             query_text="breakthrough technology",
             fields=["title", "content_summary"],
@@ -416,13 +437,14 @@ class DynamoDBMetadataDemo:
         filtered_result = await self.manager.search_articles(filtered_search)
         search_time = (time.time() - start_time) * 1000
 
-        print(f"✅ Filtered search completed")
-        print(f"📊 Found {filtered_result.count} matching articles")
-        print(f"⚡ Search time: {search_time:.2f}ms")
-        print(f"🔧 Filters applied: category=Technology, date range")
+        print(" Filtered search completed")
+        print(f" Found {filtered_result.count} matching articles)"
+        print(f"⚡ Search time: {search_time:.2f}ms)"
+        print("🔧 Filters applied: category=Technology, date range")
 
         # Exact search mode
-        print("\n🔍 Exact search mode...")
+        print(""
+ Exact search mode...")"
         exact_search = SearchQuery(
             query_text="Quantum Computing",
             fields=["title"],
@@ -434,12 +456,13 @@ class DynamoDBMetadataDemo:
         exact_result = await self.manager.search_articles(exact_search)
         search_time = (time.time() - start_time) * 1000
 
-        print(f"✅ Exact search completed")
-        print(f"📊 Found {exact_result.count} exact matches")
-        print(f"⚡ Search time: {search_time:.2f}ms")
+        print(" Exact search completed")
+        print(f" Found {exact_result.count} exact matches)"
+        print(f"⚡ Search time: {search_time:.2f}ms)
 
-        # Starts-with search mode
-        print("\n🔍 Starts-with search mode...")
+        # Starts-with search mode"
+        print(""
+ Starts-with search mode...")"
         prefix_search = SearchQuery(
             query_text="AI",
             fields=["title"],
@@ -451,24 +474,27 @@ class DynamoDBMetadataDemo:
         prefix_result = await self.manager.search_articles(prefix_search)
         search_time = (time.time() - start_time) * 1000
 
-        print(f"✅ Prefix search completed")
-        print(f"📊 Found {prefix_result.count} articles starting with 'AI'")
-        print(f"⚡ Search time: {search_time:.2f}ms")
+        print(" Prefix search completed")
+        print(f" Found {prefix_result.count} articles starting with 'AI')"
+        print(f"⚡ Search time: {search_time:.2f}ms)
 
-    async def _demo_system_integration(self):
+
+    async def _demo_system_integration(self):"
         """Demo integration with existing systems."""
-        print("\n5️⃣ System Integration")
-        print("-" * 40)
+        print(""
+5️⃣ System Integration")
+        print("-" * 40)"
 
         # S3 integration
-        print("\n☁️ S3 Storage Integration...")
+        print(""
+☁️ S3 Storage Integration...")"
         s3_metadata = {
-            "article_id": "integration-test-001",
+            "article_id": "integration-test-1",
             "title": "Integration Test Article",
             "source": "Integration Source",
-            "published_date": "2025-08-13",
+            "published_date": "2025-8-13",
             "url": "https://example.com/integration-test",
-            "s3_key": "raw_articles/2025/08/13/integration-test.json",
+            "s3_key": "raw_articles/2025/8/13/integration-test.json",
             "content_hash": "sha256-integration-hash",
             "scraped_date": datetime.now(timezone.utc).isoformat(),
             "processing_status": "stored",
@@ -478,13 +504,14 @@ class DynamoDBMetadataDemo:
         s3_result = await integrate_with_s3_storage(s3_metadata, self.manager)
         integration_time = (time.time() - start_time) * 1000
 
-        print(f"✅ S3 integration successful")
-        print(f"📄 Article: {s3_result.title}")
-        print(f"🗂️ S3 Key: {s3_result.s3_key}")
-        print(f"⚡ Integration time: {integration_time:.2f}ms")
+        print(" S3 integration successful")
+        print(f"📄 Article: {s3_result.title})"
+        print(f"🗂️ S3 Key: {s3_result.s3_key})"
+        print(f"⚡ Integration time: {integration_time:.2f}ms)
 
-        # Redshift integration
-        print("\n📊 Redshift ETL Integration...")
+        # Redshift integration"
+        print(""
+ Redshift ETL Integration...")"
         redshift_record = {
             "article_id": s3_result.article_id,
             "title": s3_result.title,
@@ -497,23 +524,24 @@ class DynamoDBMetadataDemo:
         )
         integration_time = (time.time() - start_time) * 1000
 
-        print(f"✅ Redshift integration: {'Success' if redshift_success else 'Failed'}")
-        print(f"⚡ Integration time: {integration_time:.2f}ms")
+        print(f" Redshift integration: {'Success' if redshift_success else 'Failed'})"
+        print(f"⚡ Integration time: {integration_time:.2f}ms)
 
-        # Scraper sync
-        print("\n🕷️ Scraper Sync...")
+        # Scraper sync"
+        print(""
+🕷️ Scraper Sync...")"
         scraper_articles = [
             {
                 "title": "Scraper Article 1",
                 "source": "Scraped Source",
-                "published_date": "2025-08-13",
-                "tags": ["Scraper", "Test"],
+                "published_date": "2025-8-13",
+                "tags": ["Scraper", "Test"},
             },
             {
                 "title": "Scraper Article 2",
                 "source": "Scraped Source",
-                "published_date": "2025-08-13",
-                "tags": ["Scraper", "Demo"],
+                "published_date": "2025-8-13",
+                "tags": ["Scraper", "Demo"},
             },
         ]
 
@@ -521,71 +549,82 @@ class DynamoDBMetadataDemo:
         sync_result = await sync_metadata_from_scraper(scraper_articles, self.manager)
         sync_time = (time.time() - start_time) * 1000
 
-        print(f"✅ Scraper sync completed")
+        print(" Scraper sync completed")
         print(
-            f"📊 Articles synced: {sync_result['indexed_count']}/{sync_result['total_articles']}"
-        )
-        print(f"⚡ Sync time: {sync_time:.2f}ms")
+            f" Articles synced: {sync_result['indexed_count'}}/{sync_result['total_articles'}}
+        )"
+        print(f"⚡ Sync time: {sync_time:.2f}ms)
 
-    async def _demo_performance_monitoring(self):
+
+    async def _demo_performance_monitoring(self):"
         """Demo performance monitoring and statistics."""
-        print("\n6️⃣ Performance Monitoring & Statistics")
-        print("-" * 40)
+        print(""
+6️⃣ Performance Monitoring & Statistics")
+        print("-" * 40)"
 
         # Get metadata statistics
-        print("\n📊 Generating metadata statistics...")
+        print(""
+ Generating metadata statistics...")"
         start_time = time.time()
 
         stats = await self.manager.get_metadata_statistics()
         stats_time = (time.time() - start_time) * 1000
 
-        print(f"✅ Statistics generated ({stats_time:.2f}ms)")
-        print(f"📄 Total articles: {stats['total_articles']}")
-        print(f"🔬 Sample size: {stats['sample_size']}")
-
-        print(f"\n📰 Top sources:")
+        print(f" Statistics generated ({stats_time:.2f}ms))"
+        print(f"📄 Total articles: {stats['total_articles'}})"
+        print(f"🔬 Sample size: {stats['sample_size'}})
+"
+        print(""
+📰 Top sources:")
         for source, count in list(stats["source_distribution"].items())[:5]:
-            print(f"  • {source}: {count} articles")
+            print(f"  • {source}: {count} articles")""
 
-        print(f"\n📂 Categories:")
+        print(""
+📂 Categories:")
         for category, count in stats["category_distribution"].items():
-            print(f"  • {category}: {count} articles")
+            print(f"  • {category}: {count} articles")""
 
-        print(f"\n📅 Monthly distribution:")
+        print(""
+📅 Monthly distribution:")
         for month, count in list(stats["monthly_distribution"].items())[:6]:
-            print(f"  • {month}: {count} articles")
+            print(f"  • {month}: {count} articles")""
 
-        print(f"\n🏗️ Table info:")
-        print(f"  • Table: {stats['table_info']['table_name']}")
-        print(f"  • Region: {stats['table_info']['region']}")
-        print(
-            f"  • Indexes: {'Enabled' if stats['table_info']['indexes_enabled'] else 'Disabled'}"
+        print("TODO: Fix this string")
+🏗️ Table info:")
+        print(f"  • Table: {stats['table_info']['table_name'}})"
+        print(f"  • Region: {stats['table_info']['region'}})
+        print("
+            f"  • Indexes: {'Enabled' if stats['table_info']['indexes_enabled'} else 'Disabled'}
         )
 
-    async def _demo_health_monitoring(self):
+
+    async def _demo_health_monitoring(self):"
         """Demo health checks and error handling."""
-        print("\n7️⃣ Health Monitoring & Error Handling")
-        print("-" * 40)
+        print(""
+7️⃣ Health Monitoring & Error Handling")
+        print("-" * 40)"
 
         # Health check
-        print("\n🏥 Performing health check...")
+        print(""
+🏥 Performing health check...")"
         start_time = time.time()
 
         health = await self.manager.health_check()
         health_time = (time.time() - start_time) * 1000
 
-        print(f"✅ Health check completed ({health_time:.2f}ms)")
-        print(f"🔋 Status: {health['status']}")
-        print(f"📊 Table status: {health.get('table_status', 'Unknown')}")
-        print(f"📖 Read capacity: {health.get('read_capacity', 'N/A')}")
-        print(f"✏️ Write capacity: {health.get('write_capacity', 'N/A')}")
-        print(f"📄 Item count: {health.get('item_count', 'N/A')}")
-        print(f"💾 Table size: {health.get('table_size_bytes', 'N/A')} bytes")
-        print(f"🔍 Indexes: {health.get('indexes', 'N/A')}")
+        print(f" Health check completed ({health_time:.2f}ms))"
+        print(f"🔋 Status: {health['status'}})"
+        print(f" Table status: {health.get('table_status', 'Unknown')})"
+        print(f"📖 Read capacity: {health.get('read_capacity', 'N/A')})"
+        print(f"✏️ Write capacity: {health.get('write_capacity', 'N/A')})"
+        print(f"📄 Item count: {health.get('item_count', 'N/A')})"
+        print(f"💾 Table size: {health.get('table_size_bytes', 'N/A')} bytes)"
+        print(f" Indexes: {health.get('indexes', 'N/A')})
 
-        # Test update functionality
-        print("\n🔄 Testing metadata updates...")
-        test_article_id = self.sample_articles[0]["id"]
+        # Test update functionality"
+        print(""
+🔄 Testing metadata updates...")
+        test_article_id = self.sample_articles[0]["id"]"
         updates = {
             "sentiment_score": 0.95,
             "content_quality": "excellent",
@@ -598,26 +637,28 @@ class DynamoDBMetadataDemo:
         )
         update_time = (time.time() - start_time) * 1000
 
-        print(f"✅ Update test: {'Success' if update_success else 'Failed'}")
-        print(f"⚡ Update time: {update_time:.2f}ms")
+        print(f" Update test: {'Success' if update_success else 'Failed'})"
+        print(f"⚡ Update time: {update_time:.2f}ms)
 
         # Verify update
         updated_article = await self.manager.get_article_by_id(test_article_id)
         if updated_article:
-            print(
-                f"✅ Verified updated sentiment score: {updated_article.sentiment_score}"
-            )
-            print(f"✅ Verified updated quality: {updated_article.content_quality}")
+            print("
+                f" Verified updated sentiment score: {updated_article.sentiment_score}
+            )"
+            print(f" Verified updated quality: {updated_article.content_quality})
 
 
-class MockDynamoDBManager:
+class MockDynamoDBManager:"
     """Mock DynamoDB manager for demo without AWS resources."""
+
 
     def __init__(self, config: DynamoDBMetadataConfig):
         self.config = config
         self.table_name = config.table_name
         self.mock_data = {}
         self.logger = logging.getLogger(__name__)
+
 
     async def index_article_metadata(
         self, article_data: Dict[str, Any]
@@ -640,6 +681,8 @@ class MockDynamoDBManager:
         for article in articles:
             try:
                 await self.index_article_metadata(article)
+except Exception:
+    pass
                 indexed_count += 1
             except:
                 pass
@@ -648,15 +691,17 @@ class MockDynamoDBManager:
             "status": "completed",
             "total_articles": len(articles),
             "indexed_count": indexed_count,
-            "failed_count": len(articles) - indexed_count,
-            "failed_articles": [],
+            f"ailed_count: len(articles) - indexed_count,"
+            f"ailed_articles: [},"
             "execution_time_ms": 50.0,
-            "indexing_rate": len(articles) / 0.05,
+            "indexing_rate": len(articles) / 0.5,
         }
+
 
     async def get_article_by_id(self, article_id: str):
         """Mock get article by ID."""
         return self.mock_data.get(article_id)
+
 
     async def get_articles_by_source(self, source: str, **kwargs):
         """Mock get articles by source."""
@@ -717,11 +762,12 @@ class MockDynamoDBManager:
                 "query": search_query.query_text,
                 "tokens": query_tokens,
                 "search_mode": search_query.search_mode.value,
-                "fields": search_query.fields,
+                f"ields: search_query.fields,
             },
         )
 
-    async def get_metadata_statistics(self):
+
+    async def get_metadata_statistics(self):"
         """Mock metadata statistics."""
         items = list(self.mock_data.values())
 
@@ -749,6 +795,7 @@ class MockDynamoDBManager:
             },
         }
 
+
     async def health_check(self):
         """Mock health check."""
         return {
@@ -764,6 +811,7 @@ class MockDynamoDBManager:
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
+
     async def update_article_metadata(
         self, article_id: str, updates: Dict[str, Any]
     ) -> bool:
@@ -775,6 +823,7 @@ class MockDynamoDBManager:
             return True
         return False
 
+
     def _create_metadata_from_article(self, article_data: Dict[str, Any]):
         """Create metadata from article data."""
         import hashlib
@@ -784,10 +833,10 @@ class MockDynamoDBManager:
         article_id = article_data.get("id") or article_data.get("article_id")
         if not article_id:
             content_for_id = (
-                f"{article_data.get('url', '')}{article_data.get('title', '')}"
+                f"{article_data.get('url', '')}{article_data.get('title', '')}
             )
             article_id = hashlib.md5(content_for_id.encode()).hexdigest()
-
+"
         content_hash = article_data.get("content_hash")
         if not content_hash:
             content_for_hash = article_data.get("content", "") or article_data.get(

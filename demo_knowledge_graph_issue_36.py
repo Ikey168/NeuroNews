@@ -38,18 +38,18 @@ DEMO_ARTICLES = [
         artificial intelligence research and development. The collaboration, led by CEO Satya
         Nadella of Microsoft and CEO Sam Altman of OpenAI, will focus on developing next-generation
         AI models and improving Azure cloud infrastructure for AI workloads.
-        
-        The partnership includes a $10 billion investment from Microsoft into OpenAI's research
+
+        The partnership includes a $10 billion investment from Microsoft into OpenAI's research'
         initiatives. The two companies will work together on GPT-4 improvements, multimodal AI
         systems, and enterprise AI solutions. Azure OpenAI Service will be enhanced to provide
         better access to advanced language models for business customers.
-        
+
         "This partnership represents the future of AI innovation," said Satya Nadella during
-        the announcement at Microsoft's headquarters in Redmond, Washington. The collaboration
+        the announcement at Microsoft's headquarters in Redmond, Washington. The collaboration'
         aims to ensure responsible AI development while maintaining competitive advantages in
         the rapidly evolving technology landscape.
-        
-        The partnership also addresses regulatory concerns under the European Union's AI Act
+
+        The partnership also addresses regulatory concerns under the European Union's AI Act'
         and ensures compliance with emerging AI governance frameworks. Both companies emphasized
         their commitment to AI safety and ethical development practices.
         """,
@@ -58,7 +58,7 @@ DEMO_ARTICLES = [
             "category": "Technology",
             "source_url": "https://example.com/microsoft-openai-partnership",
             "author": "Sarah Chen",
-            "tags": ["AI", "Microsoft", "OpenAI", "Partnership"],
+            "tags": ["AI", "Microsoft", "OpenAI", "Partnership"], "
         },
     },
     {
@@ -69,21 +69,21 @@ DEMO_ARTICLES = [
         demonstrating quantum supremacy with their new Sycamore quantum processor. The team,
         led by Dr. John Preskill and Dr. Hartmut Neven, successfully performed calculations
         that would take classical computers thousands of years to complete.
-        
-        The quantum computer, housed at Google's quantum AI laboratory in Santa Barbara,
+
+        The quantum computer, housed at Google's quantum AI laboratory in Santa Barbara,'
         California, uses 70 superconducting qubits to solve complex optimization problems.
         This advancement brings practical quantum computing applications closer to reality,
         particularly in cryptography, drug discovery, and financial modeling.
-        
+
         "We are entering a new era of computational capability," stated Sundar Pichai, CEO
-        of Alphabet Inc., Google's parent company. The breakthrough has implications for
+        of Alphabet Inc., Google's parent company. The breakthrough has implications for'
         cybersecurity standards and may require updates to current encryption protocols
         under various data protection regulations.
-        
+
         IBM Corporation and Amazon Web Services have announced competing quantum initiatives,
         indicating intense competition in the quantum computing space. The race to achieve
         practical quantum advantage continues to drive innovation across the technology sector.
-        
+
         Regulatory bodies are closely monitoring quantum computing developments due to potential
         impacts on national security and data privacy under frameworks like GDPR and CCPA.
         """,
@@ -92,7 +92,7 @@ DEMO_ARTICLES = [
             "category": "Science",
             "source_url": "https://example.com/google-quantum-breakthrough",
             "author": "Dr. Michael Roberts",
-            "tags": ["Quantum Computing", "Google", "Technology", "Research"],
+            "tags": ["Quantum Computing", "Google", "Technology", "Research"],"
         },
     },
     {
@@ -103,23 +103,23 @@ DEMO_ARTICLES = [
         venture to increase lithium-ion battery production capacity. The partnership, overseen
         by Elon Musk, CEO of Tesla, and Kazuhiro Tsuga, CEO of Panasonic, will establish
         new Gigafactory facilities in Texas and Nevada.
-        
+
         The expansion aims to meet growing demand for electric vehicles and energy storage
         systems. Tesla's Gigafactory in Austin, Texas, will be retrofitted with Panasonic's
         latest 4680 battery cell technology, increasing production efficiency by 40%.
-        
+
         "This collaboration strengthens our position in the sustainable energy transition,"
-        said Elon Musk during a press conference at Tesla's headquarters in Palo Alto,
+        said Elon Musk during a press conference at Tesla's headquarters in Palo Alto,'
         California. The partnership leverages Panasonic's expertise in battery chemistry
         and Tesla's innovative manufacturing processes.
-        
+
         The expansion requires compliance with environmental regulations and safety standards
         set by the Environmental Protection Agency (EPA) and Department of Energy (DOE).
         Battery recycling programs will be implemented to address lifecycle environmental
         impacts under the Circular Economy Action Plan.
-        
+
         Competition in the EV battery market includes partnerships between Ford and SK Innovation,
-        General Motors and LG Energy Solution, and Volkswagen's PowerCo initiative. The race
+        General Motors and LG Energy Solution, and Volkswagen's PowerCo initiative. The race'
         to secure sustainable battery supply chains continues to reshape the automotive industry.
         """,
         "published_date": datetime(2025, 8, 15, 11, 15, 0, tzinfo=timezone.utc),
@@ -127,7 +127,7 @@ DEMO_ARTICLES = [
             "category": "Automotive",
             "source_url": "https://example.com/tesla-panasonic-battery-expansion",
             "author": "Jennifer Kim",
-            "tags": ["Tesla", "Panasonic", "Electric Vehicles", "Batteries"],
+            "tags": ["Tesla", "Panasonic", "Electric Vehicles", "Batteries"],"
         },
     },
 ]
@@ -146,7 +146,7 @@ class KnowledgeGraphDemo:
 
     async def run_complete_demo(self):
         """Run the complete knowledge graph population demo."""
-        print("🚀 Enhanced Knowledge Graph Population Demo - Issue #36")
+        print(" Enhanced Knowledge Graph Population Demo - Issue #36")
         print("=" * 70)
         print("Testing complete pipeline from NLP extraction to Neptune population")
         print()
@@ -167,16 +167,18 @@ class KnowledgeGraphDemo:
             # Test 5: Validation and Statistics
             await self._demo_validation_and_stats()
 
-            print("\n🎉 Demo completed successfully!")
-            print("📊 Final Statistics: {0}".format(self.stats))
+            print(""
+ Demo completed successfully!")
+            print(" Final Statistics: {0}".format(self.stats))"
 
         except Exception as e:
             print("❌ Demo failed: {0}".format(e))
             logger.error("Demo error: {0}".format(e), exc_info=True)
 
+
     async def _demo_entity_extraction(self):
         """Demonstrate advanced entity extraction capabilities."""
-        print("📋 1. ADVANCED ENTITY EXTRACTION")
+        print(" 1. ADVANCED ENTITY EXTRACTION")
         print("-" * 40)
 
         try:
@@ -186,14 +188,15 @@ class KnowledgeGraphDemo:
                     create_advanced_entity_extractor
 
                 extractor = create_advanced_entity_extractor()
-                print("✅ Enhanced entity extractor loaded successfully")
+                print(" Enhanced entity extractor loaded successfully")
             except ImportError:
                 print("⚠️  Enhanced entity extractor not available - using mock")
                 extractor = self._create_mock_entity_extractor()
 
             # Process first article for entity extraction demo
             article = DEMO_ARTICLES[0]
-            print(f"\n📰 Processing: {article['title']}")
+            print(f"
+📰 Processing: {article['title']}")
 
             start_time = datetime.now()
             entities = await extractor.extract_entities_from_article(
@@ -201,8 +204,8 @@ class KnowledgeGraphDemo:
             )
             processing_time = (datetime.now() - start_time).total_seconds()
 
-            print("⏱️  Extraction time: {0}s".format(processing_time:.3f))
-            print("🔍 Entities found: {0}".format(len(entities)))
+            print("⏱️  Extraction time: {0}s".format()
+            print(" Entities found: {0}".format(len(entities)))
 
             # Display entities by type
             entity_types = {}
@@ -213,7 +216,8 @@ class KnowledgeGraphDemo:
                 entity_types[entity_type].append(entity)
 
             for entity_type, type_entities in entity_types.items():
-                print("\n  {0} ({1}):".format(entity_type, len(type_entities)))
+                print("
+:".format(entity_type, len(type_entities)))
                 for entity in type_entities[:3]:  # Show first 3 of each type
                     print("    • {0} (confidence: {1})".format(entity.text, entity.confidence:.2f))
                     if hasattr(entity, "properties") and entity.properties:
@@ -228,10 +232,12 @@ class KnowledgeGraphDemo:
         except Exception as e:
             print("❌ Entity extraction demo failed: {0}".format(e))
 
+
     async def _demo_relationship_detection(self):
         """Demonstrate relationship detection between entities."""
-        print("\n🔗 2. RELATIONSHIP DETECTION")
-        print("-" * 40)
+        print(""
+🔗 2. RELATIONSHIP DETECTION")
+        print("-" * 40)"
 
         try:
             # Import components
@@ -245,7 +251,8 @@ class KnowledgeGraphDemo:
 
             # Process article for relationships
             article = DEMO_ARTICLES[1]  # Google quantum article
-            print(f"\n📰 Processing: {article['title']}")
+            print(f"
+📰 Processing: {article['title']}")
 
             # Extract entities first
             entities = await extractor.extract_entities_from_article(
@@ -259,12 +266,13 @@ class KnowledgeGraphDemo:
             )
             processing_time = (datetime.now() - start_time).total_seconds()
 
-            print("⏱️  Relationship detection time: {0}s".format(processing_time:.3f))
+            print("⏱️  Relationship detection time: {0}s".format()
             print("🔗 Relationships found: {0}".format(len(relationships)))
 
             # Display relationships
             for i, rel in enumerate(relationships[:5]):  # Show first 5 relationships
-                print("\n  Relationship {0}:".format(i+1))
+                print(""
+  Relationship {0}:".format(i+1))"
                 print(
                     "    Source: {0} ({1})".format(rel.source_entity.text, rel.source_entity.label)
                 )
@@ -284,10 +292,12 @@ class KnowledgeGraphDemo:
         except Exception as e:
             print("❌ Relationship detection demo failed: {0}".format(e))
 
+
     async def _demo_graph_population(self):
         """Demonstrate knowledge graph population with Neptune."""
-        print("\n🗄️  3. KNOWLEDGE GRAPH POPULATION")
-        print("-" * 40)
+        print(""
+🗄️  3. KNOWLEDGE GRAPH POPULATION")
+        print("-" * 40)"
 
         try:
             # Import populator with fallback
@@ -299,27 +309,29 @@ class KnowledgeGraphDemo:
                 populator = create_enhanced_knowledge_graph_populator(
                     "wss://demo-cluster.neptune.amazonaws.com:8182/gremlin"
                 )
-                print("✅ Enhanced graph populator loaded successfully")
+                print(" Enhanced graph populator loaded successfully")
             except ImportError:
                 print("⚠️  Enhanced graph populator not available - using mock")
                 populator = self._create_mock_graph_populator()
 
             # Process all articles
-            print("\n📚 Processing {0} articles...".format(len(DEMO_ARTICLES)))
+            print(""
+📚 Processing {0} articles...".format(len(DEMO_ARTICLES)))"
 
             total_start_time = datetime.now()
             results = []
 
             for i, article in enumerate(DEMO_ARTICLES):
-                print(f"\n  📰 Article {i+1}: {article['title'][:50]}...")
+                print(f"
+  📰 Article {i+1}: {article['title'][:50]}...")
 
                 try:
                     # Mock the population process
                     result = await self._mock_populate_article(article)
                     results.append(result)
 
-                    print(f"    ✅ Entities: {result['entities']['created']}")
-                    print(f"    ✅ Relationships: {result['relationships']['created']}")
+                    print(f"     Entities: {result['entities']['created']}")
+                    print(f"     Relationships: {result['relationships']['created']}")
                     print(f"    ⏱️  Time: {result['processing_time']:.3f}s")
 
                 except Exception as e:
@@ -332,12 +344,13 @@ class KnowledgeGraphDemo:
             total_entities = sum(r["entities"]["created"] for r in results)
             total_relationships = sum(r["relationships"]["created"] for r in results)
 
-            print("\n📊 Population Summary:")
+            print(""
+ Population Summary:")
             print("  • Articles processed: {0}".format(len(results)))
             print("  • Total entities created: {0}".format(total_entities))
             print("  • Total relationships created: {0}".format(total_relationships))
-            print("  • Total processing time: {0}s".format(total_time:.3f))
-            print("  • Average time per article: {0}s".format(total_time/len(results):.3f))
+            print("  • Total processing time: {0}s".format()
+            print("  • Average time per article: {0}s".format(total_time/len(results):.3f))"
 
             self.stats["total_articles"] = len(results)
             self.stats["total_entities"] = total_entities
@@ -347,14 +360,17 @@ class KnowledgeGraphDemo:
         except Exception as e:
             print("❌ Graph population demo failed: {0}".format(e))
 
+
     async def _demo_graph_querying(self):
         """Demonstrate graph querying with Gremlin and SPARQL."""
-        print("\n🔍 4. GRAPH QUERYING AND VERIFICATION")
-        print("-" * 40)
+        print(""
+ 4. GRAPH QUERYING AND VERIFICATION")
+        print("-" * 40)"
 
         try:
             # Demo Gremlin queries
-            print("\n🔍 Gremlin Query Examples:")
+            print(""
+ Gremlin Query Examples:")"
 
             gremlin_queries = [
                 {
@@ -375,7 +391,8 @@ class KnowledgeGraphDemo:
             ]
 
             for query_info in gremlin_queries:
-                print(f"\n  Query: {query_info['name']}")
+                print(f"
+  Query: {query_info['name']}")
                 print(f"  Description: {query_info['description']}")
                 print(f"  Gremlin: {query_info['query']}")
 
@@ -391,7 +408,8 @@ class KnowledgeGraphDemo:
                     print("    ... and {0} more".format(len(mock_results) - 3))
 
             # Demo SPARQL queries
-            print("\n📋 SPARQL Query Examples:")
+            print(""
+ SPARQL Query Examples:")"
 
             sparql_queries = [
                 {
@@ -403,7 +421,7 @@ class KnowledgeGraphDemo:
                         ?org1 :partnersith ?org2 .
                     }
                     """,
-                    "description": "Find all organizational partnerships",
+                    "description": "Find all organizational partnerships","
                 },
                 {
                     "name": "Technology and companies",
@@ -414,12 +432,13 @@ class KnowledgeGraphDemo:
                         ?company :develops ?technology .
                     }
                     """,
-                    "description": "Find companies and their developed technologies",
+                    "description": "Find companies and their developed technologies","
                 },
             ]
 
             for query_info in sparql_queries:
-                print(f"\n  Query: {query_info['name']}")
+                print(f"
+  Query: {query_info['name']}")
                 print(f"  Description: {query_info['description']}")
                 print(f"  SPARQL: {query_info['query'].strip()}")
                 print(
@@ -429,10 +448,12 @@ class KnowledgeGraphDemo:
         except Exception as e:
             print("❌ Graph querying demo failed: {0}".format(e))
 
+
     async def _demo_validation_and_stats(self):
         """Demonstrate data validation and quality checks."""
-        print("\n✅ 5. DATA VALIDATION AND QUALITY")
-        print("-" * 40)
+        print(""
+ 5. DATA VALIDATION AND QUALITY")
+        print("-" * 40)"
 
         try:
             # Mock validation results
@@ -456,15 +477,18 @@ class KnowledgeGraphDemo:
                 "data_quality_score": 0.94,
             }
 
-            print("\n📊 Entity Distribution:")
+            print(""
+ Entity Distribution:")
             for entity_type, count in validation_results["entity_counts"].items():
-                print("  • {0}: {1}".format(entity_type, count))
+                print("  • {0}: {1}".format(entity_type, count))"
 
-            print("\n🔗 Relationship Distribution:")
+            print(""
+🔗 Relationship Distribution:")
             for rel_type, count in validation_results["relationship_counts"].items():
-                print("  • {0}: {1}".format(rel_type, count))
+                print("  • {0}: {1}".format(rel_type, count))"
 
-            print("\n🔍 Data Quality Metrics:")
+            print("
+ Data Quality Metrics:")
             print(f"  • Orphaned entities: {validation_results['orphaned_entities']}")
             print(f"  • Duplicate entities: {validation_results['duplicate_entities']}")
             print(
@@ -472,10 +496,11 @@ class KnowledgeGraphDemo:
             )
 
             # Quality recommendations
-            print("\n💡 Quality Recommendations:")
+            print(""
+💡 Quality Recommendations:")
             if validation_results["orphaned_entities"] > 0:
                 print(
-                    f"  • Review {validation_results['orphaned_entities']} orphaned entities"
+                    f"  • Review {validation_results['orphaned_entities']} orphaned entities""
                 )
             if validation_results["duplicate_entities"] > 0:
                 print(
@@ -484,15 +509,18 @@ class KnowledgeGraphDemo:
             if validation_results["data_quality_score"] < 0.95:
                 print("  • Improve entity linking to reach 95% quality score")
             else:
-                print("  • ✅ Data quality meets high standards")
+                print("  •  Data quality meets high standards")
 
         except Exception as e:
             print("❌ Validation demo failed: {0}".format(e))
 
+
     def _create_mock_entity_extractor(self):
         """Create a mock entity extractor for demo purposes."""
 
+
         class MockEntityExtractor:
+
             async def extract_entities_from_article(self, article_id, title, content):
                 # Generate mock entities based on content keywords
                 entities = []
@@ -582,7 +610,9 @@ class KnowledgeGraphDemo:
     def _create_mock_entity(self, text, label, confidence):
         """Create a mock entity object."""
 
+
         class MockEntity:
+
             def __init__(self, text, label, confidence):
                 self.text = text
                 self.label = label
@@ -611,7 +641,9 @@ class KnowledgeGraphDemo:
     ):
         """Create a mock relationship object."""
 
+
         class MockRelationship:
+
             def __init__(self, source_entity, target_entity, rel_type, content):
                 self.source_entity = source_entity
                 self.target_entity = target_entity
@@ -630,6 +662,7 @@ class KnowledgeGraphDemo:
             return "partnership" in content.lower() or "collaborate" in content.lower()
         return False
 
+
     def _determine_relationship_type(self, entity1, entity2):
         """Determine relationship type based on entity types."""
         if entity1.label == "PERSON" and entity2.label == "ORGANIZATION":
@@ -640,10 +673,13 @@ class KnowledgeGraphDemo:
             return "DEVELOPS"
         return "RELATED_TO"
 
+
     def _create_mock_graph_populator(self):
         """Create a mock graph populator for demo purposes."""
 
+
         class MockGraphPopulator:
+
             async def populate_from_article(
                 self, article_id, title, content, published_date, metadata
             ):
@@ -684,6 +720,7 @@ class KnowledgeGraphDemo:
             "processing_time": 0.15 + (len(article["content"]) / 10000),
         }
 
+
     async def _mock_execute_gremlin_query(self, query):
         """Mock Gremlin query execution."""
         # Return mock results based on query content
@@ -710,7 +747,7 @@ async def main():
 
 if __name__ == "__main__":
     # Run the demo
-    print("🎯 Starting Enhanced Knowledge Graph Demo...")
+    print(" Starting Enhanced Knowledge Graph Demo...")
     print("This demo showcases Issue #36 implementation:")
     print("• Advanced entity extraction with enhanced patterns")
     print("• Sophisticated relationship detection")
@@ -722,7 +759,9 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\n👋 Demo interrupted by user")
+        print(""
+👋 Demo interrupted by user")"
     except Exception as e:
-        print("\n❌ Demo failed with error: {0}".format(e))
-        logger.error("Demo error: {0}".format(e), exc_info=True)
+        print(""
+❌ Demo failed with error: {0}".format(e))
+        logger.error("Demo error: {0}".format(e), exc_info=True)"

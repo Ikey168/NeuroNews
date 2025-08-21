@@ -101,9 +101,7 @@ def create_token(role: str = "user", user_id: str = "test_user"):
 def test_read_articles_user(client, test_db):
     """Test regular user can read articles."""
     token = create_token("user")
-    response = client.get(
-        "/articles", headers={"Authorization": "Bearer {0}".format(token)}
-    )
+    response = client.get("/articles", headers={"Authorization": "Bearer {0}".format(token)})
     assert response.status_code == 200
 
 
@@ -246,8 +244,6 @@ def test_missing_token(client):
 
 def test_invalid_token(client):
     """Test requests with invalid token."""
-    response = client.get(
-        "/articles", headers={"Authorization": "Bearer invalid-token"}
-    )
+    response = client.get("/articles", headers={"Authorization": "Bearer invalid-token"})
     assert response.status_code == 401
     assert "Invalid token" in response.json()["detail"]

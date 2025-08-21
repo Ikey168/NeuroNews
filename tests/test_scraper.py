@@ -6,9 +6,7 @@ from src.scraper.spiders.news_spider import NewsSpider
 def create_response(content, url="http://example.com/news/article"):
     """Helper function to create a fake HtmlResponse."""
     request = Request(url=url)
-    return HtmlResponse(
-        url=url, request=request, body=content.encode("utf-8"), encoding="utf-8"
-    )
+    return HtmlResponse(url=url, request=request, body=content.encode("utf-8"), encoding="utf-8")
 
 
 class TestNewsSpider:

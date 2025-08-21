@@ -99,7 +99,7 @@ class S3StoragePipeline:
                 ContentType="application/json",
                 Metadata={
                     "title": metadata["title"][
-:255
+                        :255
                     ],  # S3 metadata values are limited to 2048 bytes
                     "url": metadata["url"][:255],
                     "source": metadata["source"][:255],

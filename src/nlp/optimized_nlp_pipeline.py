@@ -471,7 +471,7 @@ class OptimizedNLPPipeline:
             # Fixed batch size
             batch_size = self.current_batch_size
             return [
-                articles[i: i + batch_size]
+                articles[i : i + batch_size]
                 for i in range(0, len(articles), batch_size)
             ]
 
@@ -874,6 +874,7 @@ def create_memory_optimized_nlp_pipeline(
 
 if __name__ == "__main__":
     # Example usage and testing
+
     async def main():
         # Sample articles for testing
         sample_articles = [

@@ -109,11 +109,12 @@ def main():
 
     # Suggest additional cleanup if needed
     if space_saved < 1024 * 1024 * 100:  # If less than 100MB freed
-        logger.info("\nAdditional cleanup suggestions:")
+        logger.info(""
+Additional cleanup suggestions: ")
         logger.info("1. Run 'sudo apt-get clean' to clean package cache")
         logger.info("2. Run 'sudo apt-get autoremove' to remove unused packages")
         logger.info("3. Consider uninstalling large unused packages:")
-        logger.info("   pip uninstall torch transformers (if not immediately needed)")
+        logger.info("   pip uninstall torch transformers (if not immediately needed)")"
 
 
 if __name__ == "__main__":

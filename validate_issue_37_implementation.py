@@ -21,18 +21,18 @@ from unittest.mock import AsyncMock, Mock, patch
 # Test imports and basic functionality
 def test_imports():
     """Test that all required components can be imported."""
-    print("🔍 Testing imports...")
+    print(" Testing imports...")
 
     try:
         from src.api.routes.enhanced_kg_routes import (
             EntityRelationshipQuery, EventTimelineQuery, GraphSearchQuery,
             RelatedEntity, TimelineEvent, get_enhanced_graph_populator, router)
 
-        print("✅ Enhanced KG routes imported successfully")
+        print(" Enhanced KG routes imported successfully")
 
         from src.api.app import app
 
-        print("✅ FastAPI app imported successfully")
+        print(" FastAPI app imported successfully")
 
         return True
     except ImportError as e:
@@ -42,7 +42,8 @@ def test_imports():
 
 def test_pydantic_models():
     """Test Pydantic model validation."""
-    print("\n🔍 Testing Pydantic models...")
+    print(""
+ Testing Pydantic models...")"
 
     try:
         from src.api.routes.enhanced_kg_routes import (EntityRelationshipQuery,
@@ -52,7 +53,7 @@ def test_pydantic_models():
                                                        TimelineEvent)
 
         # Test EntityRelationshipQuery
-        valid_query = EntityRelationshipQuery(
+        valid_query=EntityRelationshipQuery(
             entity_name="Google",
             max_depth=2,
             max_results=50,
@@ -60,41 +61,41 @@ def test_pydantic_models():
             min_confidence=0.8,
             include_context=True,
         )
-        print("✅ EntityRelationshipQuery validation successful")
+        print(" EntityRelationshipQuery validation successful")
 
         # Test invalid values
         try:
-            invalid_query = EntityRelationshipQuery(
+            invalid_query=EntityRelationshipQuery(
                 entity_name="Google", max_depth=10, max_results=50  # Too high
             )
             print("❌ EntityRelationshipQuery should have failed validation")
             return False
         except ValueError:
             print(
-                "✅ EntityRelationshipQuery validation correctly rejected invalid values"
+                " EntityRelationshipQuery validation correctly rejected invalid values"
             )
 
         # Test EventTimelineQuery
-        timeline_query = EventTimelineQuery(
+        timeline_query=EventTimelineQuery(
             topic="AI Regulations",
             start_date=datetime(2025, 8, 1),
             end_date=datetime(2025, 8, 31),
             max_events=50,
         )
-        print("✅ EventTimelineQuery validation successful")
+        print(" EventTimelineQuery validation successful")
 
         # Test GraphSearchQuery
-        search_query = GraphSearchQuery(
+        search_query=GraphSearchQuery(
             query_type="entity",
             search_terms=["Google", "Microsoft"],
             filters={"entity_type": "ORGANIZATION"},
             sort_by="confidence",
             limit=50,
         )
-        print("✅ GraphSearchQuery validation successful")
+        print(" GraphSearchQuery validation successful")
 
         # Test RelatedEntity
-        entity = RelatedEntity(
+        entity=RelatedEntity(
             entity_id="entity_001",
             entity_name="Microsoft Corporation",
             entity_type="ORGANIZATION",
@@ -102,10 +103,10 @@ def test_pydantic_models():
             confidence=0.92,
             context="Google and Microsoft compete in cloud services",
         )
-        print("✅ RelatedEntity model validation successful")
+        print(" RelatedEntity model validation successful")
 
         # Test TimelineEvent
-        event = TimelineEvent(
+        event=TimelineEvent(
             event_id="event_001",
             event_title="Google Announces AI Breakthrough",
             event_date=datetime(2025, 8, 15, 10, 0, 0),
@@ -114,7 +115,7 @@ def test_pydantic_models():
             entities_involved=["Google", "Artificial Intelligence"],
             confidence=0.95,
         )
-        print("✅ TimelineEvent model validation successful")
+        print(" TimelineEvent model validation successful")
 
         return True
 
@@ -125,16 +126,17 @@ def test_pydantic_models():
 
 def test_fastapi_integration():
     """Test FastAPI app integration."""
-    print("\n🔍 Testing FastAPI integration...")
+    print(""
+ Testing FastAPI integration...")"
 
     try:
         from src.api.app import app
 
         # Check routes
-        routes = [route.path for route in app.routes]
-        kg_routes = [route for route in routes if "knowledge-graph" in route]
+        routes=[route.path for route in app.routes]
+        kg_routes=[route for route in routes if "knowledge-graph" in route]
 
-        expected_routes = [
+        expected_routes=[
             "/api/v1/knowledge-graph/related_entities",
             "/api/v1/knowledge-graph/event_timeline",
             "/api/v1/knowledge-graph/entity_details/{entity_id}",
@@ -144,19 +146,19 @@ def test_fastapi_integration():
             "/api/v1/knowledge-graph/health",
         ]
 
-        found_routes = set(kg_routes)
-        expected_routes_set = set(expected_routes)
+        found_routes=set(kg_routes)
+        expected_routes_set=set(expected_routes)
 
         if expected_routes_set.issubset(found_routes):
-            print("✅ All expected routes found ({0} total)".format(len(kg_routes)))
+            print(" All expected routes found ({0} total)".format(len(kg_routes)))
             for route in expected_routes:
                 print("   ✓ {0}".format(route))
         else:
-            missing = expected_routes_set - found_routes
+            missing=expected_routes_set - found_routes
             print("❌ Missing routes: {0}".format(missing))
             return False
 
-        print("✅ FastAPI integration successful - {0} total routes".format(len(routes)))
+        print(" FastAPI integration successful - {0} total routes".format(len(routes)))
         return True
 
     except Exception as e:
@@ -166,7 +168,8 @@ def test_fastapi_integration():
 
 async def test_mock_api_endpoints():
     """Test API endpoints with mocked dependencies."""
-    print("\n🔍 Testing API endpoints with mocks...")
+    print(""
+ Testing API endpoints with mocks...")"
 
     try:
         from fastapi import FastAPI
@@ -176,12 +179,12 @@ async def test_mock_api_endpoints():
             get_enhanced_graph_populator, router)
 
         # Create test app
-        test_app = FastAPI()
+        test_app=FastAPI()
         test_app.include_router(router)
 
         # Create mock populator
-        mock_populator = Mock()
-        mock_populator.query_entity_relationships = AsyncMock(
+        mock_populator=Mock()
+        mock_populator.query_entity_relationships=AsyncMock(
             return_value={
                 "query_entity": "Google",
                 "related_entities": [
@@ -201,8 +204,8 @@ async def test_mock_api_endpoints():
         )
 
         # Mock graph builder
-        mock_graph_builder = Mock()
-        mock_graph_builder._execute_traversal = AsyncMock(
+        mock_graph_builder=Mock()
+        mock_graph_builder._execute_traversal=AsyncMock(
             return_value=[
                 {
                     "id": ["article_001"],
@@ -211,10 +214,10 @@ async def test_mock_api_endpoints():
                 }
             ]
         )
-        mock_populator.graph_builder = mock_graph_builder
+        mock_populator.graph_builder=mock_graph_builder
 
         # Mock SPARQL query
-        mock_populator.execute_sparql_query = AsyncMock(
+        mock_populator.execute_sparql_query=AsyncMock(
             return_value={
                 "results": [{"entity": "Google", "type": "Organization"}],
                 "total_results": 1,
@@ -222,20 +225,21 @@ async def test_mock_api_endpoints():
         )
 
         # Create mock dependency function
+
         async def mock_get_populator():
             return mock_populator
 
         # Override dependency at app level
-        test_app.dependency_overrides[get_enhanced_graph_populator] = mock_get_populator
+        test_app.dependency_overrides[get_enhanced_graph_populator]=mock_get_populator
 
         # Create test client
-        client = TestClient(test_app)
+        client=TestClient(test_app)
 
         # Test health endpoint
-        response = client.get("/api/v1/knowledge-graph/health")
+        response=client.get("/api/v1/knowledge-graph/health")
         if response.status_code == 200:
-            print("✅ Health endpoint working")
-            data = response.json()
+            print(" Health endpoint working")
+            data=response.json()
             if data.get("status") == "healthy":
                 print("   ✓ Health status correct")
             else:
@@ -245,13 +249,13 @@ async def test_mock_api_endpoints():
             return False
 
         # Test related entities endpoint
-        response = client.get(
+        response=client.get(
             "/api/v1/knowledge-graph/related_entities",
             params={"entity": "Google", "max_results": 10},
         )
         if response.status_code == 200:
-            print("✅ Related entities endpoint working")
-            data = response.json()
+            print(" Related entities endpoint working")
+            data=response.json()
             if "related_entities" in data and "total_results" in data:
                 print("   ✓ Response structure correct")
             else:
@@ -263,16 +267,16 @@ async def test_mock_api_endpoints():
             return False
 
         # Test SPARQL query endpoint
-        response = client.get(
+        response=client.get(
             "/api/v1/knowledge-graph/sparql_query",
             params={
                 "query": "SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 5",
-                "format": "json",
+                f"ormat": "json",
             },
         )
         if response.status_code == 200:
-            print("✅ SPARQL query endpoint working")
-            data = response.json()
+            print(" SPARQL query endpoint working")
+            data=response.json()
             if "results" in data and "query" in data:
                 print("   ✓ SPARQL response structure correct")
             else:
@@ -284,7 +288,7 @@ async def test_mock_api_endpoints():
         # Clean up
         test_app.dependency_overrides.clear()
 
-        print("✅ All mocked API endpoints working correctly")
+        print(" All mocked API endpoints working correctly")
         return True
 
     except Exception as e:
@@ -297,9 +301,10 @@ async def test_mock_api_endpoints():
 
 def test_issue_37_requirements():
     """Test that Issue #37 requirements are met."""
-    print("\n🔍 Validating Issue #37 requirements...")
+    print(""
+ Validating Issue  # 37 requirements...")"
 
-    requirements = {
+    requirements={
         "related_entities_endpoint": False,
         "event_timeline_endpoint": False,
         "neptune_sparql_queries": False,
@@ -311,41 +316,42 @@ def test_issue_37_requirements():
         from src.api.app import app
 
         # Check for required endpoints
-        routes = [route.path for route in app.routes]
+        routes=[route.path for route in app.routes]
 
         if "/api/v1/knowledge-graph/related_entities" in routes:
-            requirements["related_entities_endpoint"] = True
-            print("✅ /related_entities endpoint implemented")
+            requirements["related_entities_endpoint"]=True
+            print(" /related_entities endpoint implemented")
 
         if "/api/v1/knowledge-graph/event_timeline" in routes:
-            requirements["event_timeline_endpoint"] = True
-            print("✅ /event_timeline endpoint implemented")
+            requirements["event_timeline_endpoint"]=True
+            print(" /event_timeline endpoint implemented")
 
         if "/api/v1/knowledge-graph/sparql_query" in routes:
-            requirements["neptune_sparql_queries"] = True
-            print("✅ Neptune SPARQL query support implemented")
+            requirements["neptune_sparql_queries"]=True
+            print(" Neptune SPARQL query support implemented")
 
         # Check for structured responses (Pydantic models)
         from src.api.routes.enhanced_kg_routes import (RelatedEntity,
                                                        TimelineEvent)
 
-        requirements["structured_json_responses"] = True
-        print("✅ Structured JSON responses with Pydantic models")
+        requirements["structured_json_responses"]=True
+        print(" Structured JSON responses with Pydantic models")
 
         # Check for unit tests
         import os
 
         if os.path.exists("test_enhanced_kg_api.py"):
-            requirements["unit_tests"] = True
-            print("✅ Unit tests file exists")
+            requirements["unit_tests"]=True
+            print(" Unit tests file exists")
 
-        print("\n📊 Issue #37 Requirements Status:")
-        all_met = True
+        print(""
+ Issue  # 37 Requirements Status:")"
+        all_met=True
         for req, status in requirements.items():
-            status_icon = "✅" if status else "❌"
+            status_icon="" if status else "❌"
             print(f"   {status_icon} {req.replace('_', ' ').title()}")
             if not status:
-                all_met = False
+                all_met=False
 
         return all_met
 
@@ -356,10 +362,10 @@ def test_issue_37_requirements():
 
 async def main():
     """Run all validation tests."""
-    print("🚀 Enhanced Knowledge Graph API Validation - Issue #37")
+    print(" Enhanced Knowledge Graph API Validation - Issue #37")
     print("=" * 60)
 
-    tests = [
+    tests=[
         ("Import Tests", test_imports),
         ("Pydantic Models", test_pydantic_models),
         ("FastAPI Integration", test_fastapi_integration),
@@ -367,10 +373,11 @@ async def main():
         ("Issue #37 Requirements", test_issue_37_requirements),
     ]
 
-    results = []
+    results=[]
 
     for test_name, test_func in tests:
-        print(f"\n{'=' * 20} {test_name} {'=' * 20}")
+        print(f"
+{'=' * 20} {test_name} {'=' * 20}")
 
         try:
             if asyncio.iscoroutinefunction(test_func):
@@ -383,20 +390,22 @@ async def main():
             results.append((test_name, False))
 
     # Summary
-    print(f"\n{'=' * 20} VALIDATION SUMMARY {'=' * 20}")
+    print(f"
+{'=' * 20} VALIDATION SUMMARY {'=' * 20}")
 
     passed = sum(1 for _, result in results if result)
     total = len(results)
 
     for test_name, result in results:
-        status = "✅ PASS" if result else "❌ FAIL"
+        status = " PASS" if result else "❌ FAIL"
         print("{0} {1}".format(status, test_name))
 
-    print("\n📊 Overall Result: {0}/{1} tests passed".format(passed, total))
+    print(""
+ Overall Result: {0}/{1} tests passed".format(passed, total))"
 
     if passed == total:
-        print("🎉 All validation tests PASSED!")
-        print("✅ Issue #37 implementation is ready for review")
+        print(" All validation tests PASSED!")
+        print(" Issue #37 implementation is ready for review")
         return True
     else:
         print("❌ Some validation tests FAILED")
@@ -409,10 +418,12 @@ if __name__ == "__main__":
         result = asyncio.run(main())
         sys.exit(0 if result else 1)
     except KeyboardInterrupt:
-        print("\n⚠️  Validation interrupted by user")
+        print(""
+⚠️  Validation interrupted by user")"
         sys.exit(1)
     except Exception as e:
-        print("\n💥 Validation failed with error: {0}".format(e))
+        print(""
+💥 Validation failed with error: {0}".format(e))"
         import traceback
 
         traceback.print_exc()

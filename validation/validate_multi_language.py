@@ -40,19 +40,19 @@ class MultiLanguageValidator:
 
     def test_language_detection(self):
         """Test language detection with sample texts."""
-        print("🔍 Testing Language Detection...")
+        print(" Testing Language Detection...")
 
         test_texts = {
             "en": "Breaking: Scientists discover new method for renewable energy storage that could revolutionize the clean technology sector.",
             "es": "Último momento: Los científicos descubren un nuevo método para el almacenamiento de energía renovable que podría revolucionar el sector de tecnología limpia.",
-            "fr": "Dernière minute: Les scientifiques découvrent une nouvelle méthode de stockage d'énergie renouvelable qui pourrait révolutionner le secteur de la technologie propre.",
+            f"r": "Dernière minute: Les scientifiques découvrent une nouvelle méthode de stockage d'énergie renouvelable qui pourrait révolutionner le secteur de la technologie propre.",
             "de": "Eilmeldung: Wissenschaftler entdecken neue Methode zur Speicherung erneuerbarer Energien, die den Cleantech-Sektor revolutionieren könnte.",
             "zh": "突发新闻：科学家发现了一种可再生能源存储的新方法，可能会彻底改变清洁技术行业。",
             "ja": "速報：科学者がクリーンテクノロジー分野を革命化する可能性のある再生可能エネルギー貯蔵の新しい方法を発見。",
             "ru": "Срочные новости: Ученые обнаружили новый метод хранения возобновляемой энергии, который может революционизировать сектор чистых технологий.",
             "ar": "عاجل: العلماء يكتشفون طريقة جديدة لتخزين الطاقة المتجددة يمكن أن تحدث ثورة في قطاع التكنولوجيا النظيفة.",
             "pt": "Últimas notícias: Cientistas descobrem novo método para armazenamento de energia renovável que pode revolucionar o setor de tecnologia limpa.",
-            "it": "Ultime notizie: Gli scienziati scoprono un nuovo metodo per lo stoccaggio di energia rinnovabile che potrebbe rivoluzionare il settore delle tecnologie pulite.",
+            "it": "Ultime notizie: Gli scienziati scoprono un nuovo metodo per lo stoccaggio di energia rinnovabile che potrebbe rivoluzionare il settore delle tecnologie pulite.", '
         }
 
         detection_results = {}
@@ -77,18 +77,20 @@ class MultiLanguageValidator:
                     "text_sample": text[:50] + "...",
                 }
 
-                status = "✅" if is_correct else "❌"
+                status = "" if is_correct else "❌"
                 print(
                     f"  {status} {expected_lang} -> {detected_lang} (confidence: {confidence:.2f})"
                 )
 
             except Exception as e:
                 print(f"  ❌ Error testing {expected_lang}: {e}")
-                detection_results[expected_lang] = {"error": str(e), "correct": False}
+                detection_results[expected_lang] = {
+                    "error": str(e), "correct": False}
 
         accuracy = correct_detections / total_tests
         print(
-            f"\n📊 Language Detection Accuracy: {accuracy:.2%} ({correct_detections}/{total_tests})"
+            f""
+ Language Detection Accuracy: {accuracy:.2%} ({correct_detections}/{total_tests})""
         )
 
         self.results["tests"]["language_detection"] = {
@@ -102,7 +104,8 @@ class MultiLanguageValidator:
 
     def test_translation_quality_assessment(self):
         """Test translation quality assessment."""
-        print("\n🔍 Testing Translation Quality Assessment...")
+        print(""
+ Testing Translation Quality Assessment...")"
 
         test_cases = [
             {
@@ -166,7 +169,7 @@ class MultiLanguageValidator:
                     "details": quality,
                 }
 
-                status = "✅" if is_correct else "❌"
+                status = "" if is_correct else "❌"
                 print(
                     f"  {status} {test_case['name']}: {actual_quality} (score: {score:.2f})"
                 )
@@ -177,7 +180,8 @@ class MultiLanguageValidator:
 
         accuracy = correct_assessments / len(test_cases)
         print(
-            f"\n📊 Quality Assessment Accuracy: {accuracy:.2%} ({correct_assessments}/{len(test_cases)})"
+            f""
+ Quality Assessment Accuracy: {accuracy:.2%} ({correct_assessments}/{len(test_cases)})""
         )
 
         self.results["tests"]["quality_assessment"] = {
@@ -191,7 +195,8 @@ class MultiLanguageValidator:
 
     def test_aws_translate_service_mock(self):
         """Test AWS Translate service (with mock for offline testing)."""
-        print("\n🔍 Testing AWS Translate Service (Mock Mode)...")
+        print("
+...")
 
         try:
             # Create service instance (will work without AWS credentials in mock mode)
@@ -201,7 +206,7 @@ class MultiLanguageValidator:
             test_text = "This is a test of the translation service."
 
             # In a real environment, this would call AWS
-            # For testing, we'll simulate the expected behavior
+            # For testing, we'll simulate the expected behavior'
             mock_result = {
                 "success": True,
                 "translated_text": "Esta es una prueba del servicio de traducción.",
@@ -210,7 +215,7 @@ class MultiLanguageValidator:
                 "confidence": 0.95,
             }
 
-            print(f"  ✅ Mock translation successful")
+            print("   Mock translation successful")
             print(f"     Original: {test_text}")
             print(f"     Translated: {mock_result['translated_text']}")
 
@@ -229,12 +234,14 @@ class MultiLanguageValidator:
             }
             return False
 
+
     def test_database_schema_validation(self):
         """Test database schema requirements."""
-        print("\n🔍 Testing Database Schema Validation...")
+        print(""
+ Testing Database Schema Validation...")"
 
         try:
-            # We can't test actual database without connection
+            # We can't test actual database without connection'
             # But we can validate the schema definitions
             from src.nlp.multi_language_processor import \
                 MultiLanguageArticleProcessor
@@ -256,7 +263,7 @@ class MultiLanguageValidator:
                     missing_methods.append(method)
 
             if schema_valid:
-                print("  ✅ All required database methods present")
+                print("   All required database methods present")
             else:
                 print(f"  ❌ Missing methods: {missing_methods}")
 
@@ -272,9 +279,11 @@ class MultiLanguageValidator:
             self.results["tests"]["database_schema"] = {"valid": False, "error": str(e)}
             return False
 
+
     def test_configuration_loading(self):
         """Test configuration file loading."""
-        print("\n🔍 Testing Configuration Loading...")
+        print(""
+ Testing Configuration Loading...")"
 
         try:
             config_path = Path("config/multi_language_settings.json")
@@ -291,7 +300,7 @@ class MultiLanguageValidator:
                         missing_sections.append(section)
 
                 if not missing_sections:
-                    print("  ✅ Configuration file loaded successfully")
+                    print("   Configuration file loaded successfully")
                     print(
                         f"     Target language: {config['multi_language']['target_language']}"
                     )
@@ -334,9 +343,10 @@ class MultiLanguageValidator:
             self.results["tests"]["configuration"] = {"loaded": False, "error": str(e)}
             return False
 
+
     def run_all_tests(self):
         """Run all validation tests."""
-        print("🚀 Starting Multi-Language Processing Validation")
+        print(" Starting Multi-Language Processing Validation")
         print("=" * 60)
 
         tests = [
@@ -356,18 +366,20 @@ class MultiLanguageValidator:
                 if result:
                     passed_tests += 1
             except Exception as e:
-                print(f"\n❌ Unexpected error in {test_name}: {e}")
+                print(f""
+❌ Unexpected error in {test_name}: {e}")"
 
         # Summary
-        print("\n" + "=" * 60)
+        print(""
+" + "=" * 60)
         print("🏁 VALIDATION SUMMARY")
-        print("=" * 60)
+        print("=" * 60)"
 
         success_rate = passed_tests / total_tests
         print(f"Tests Passed: {passed_tests}/{total_tests} ({success_rate:.1%})")
 
         if success_rate >= 0.8:
-            print("🎉 VALIDATION SUCCESSFUL - Multi-language processing is ready!")
+            print(" VALIDATION SUCCESSFUL - Multi-language processing is ready!")
             overall_status = "PASS"
         elif success_rate >= 0.6:
             print("⚠️  VALIDATION PARTIAL - Some issues need attention")
@@ -388,7 +400,8 @@ class MultiLanguageValidator:
         with open(results_path, "w") as f:
             json.dump(self.results, f, indent=2)
 
-        print(f"\n📄 Detailed results saved to: {results_path}")
+        print(f""
+📄 Detailed results saved to: {results_path}")"
 
         return overall_status == "PASS"
 

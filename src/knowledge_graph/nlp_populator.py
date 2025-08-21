@@ -308,7 +308,7 @@ class KnowledgeGraphPopulator:
         try:
             # Simple co-occurrence based relationships
             for i, entity1 in enumerate(entities):
-                for entity2 in entities[i + 1:]:
+                for entity2 in entities[i + 1 :]:
                     # Skip if same entity
                     if entity1.normalized_form == entity2.normalized_form:
                         continue

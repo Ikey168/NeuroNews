@@ -8,9 +8,7 @@ from src.nlp import SentimentAnalyzer, create_analyzer
 
 # Load LABELED_TEXTS from the JSON fixture file
 def load_labeled_texts():
-    fixture_path = os.path.join(
-        os.path.dirname(__file__), "fixtures", "labeled_data.json"
-    )
+    fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "labeled_data.json")
     with open(fixture_path, "r") as f:
         data = json.load(f)
     labeled_texts = []
@@ -44,9 +42,7 @@ EDGE_CASE_TEXTS_FOR_DEFAULT_ANALYZER = [
 
 @pytest.fixture
 def mock_hf_analyzer(mocker):
-    mock_pipeline_func = mocker.patch(
-        "src.nlp.sentiment_analysis.pipeline", autospec=True
-    )
+    mock_pipeline_func = mocker.patch("src.nlp.sentiment_analysis.pipeline", autospec=True)
     mock_pipeline_instance = mocker.MagicMock()
     mock_pipeline_func.return_value = mock_pipeline_instance
     # SentimentAnalyzer() will use its default model name, but pipeline is
@@ -137,9 +133,7 @@ def test_batch_processing_hf_analyzer(mock_hf_analyzer: SentimentAnalyzer):
 
     mock_pipeline_output = []
     for valid_text in valid_texts_for_pipeline:
-        original_case = next(
-            item for item in LABELED_TEXTS if item["text"] == valid_text
-        )
+        original_case = next(item for item in LABELED_TEXTS if item["text"] == valid_text)
         mock_pipeline_output.append(
             {"label": original_case["expected_label"].upper(), "score": 0.95}
         )

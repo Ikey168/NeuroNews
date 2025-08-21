@@ -79,7 +79,7 @@ class KnowledgeGraphAPIValidator:
             namespace: Kubernetes namespace
             timeout: Request timeout in seconds
         """
-        self.api_base_url = api_base_url.rstrip("/")
+        self.api_base_url = api_base_url.rstrip("/")"
         self.namespace = namespace
         self.timeout = timeout
         self.session = requests.Session()
@@ -88,7 +88,7 @@ class KnowledgeGraphAPIValidator:
         # Validation results
         self.results: List[ValidationResult] = []
 
-        logger.info(f"Initialized validator for API: {self.api_base_url}")
+        logger.info(f"Initialized validator for API: {self.api_base_url})
 
     def add_result(
         self,
@@ -97,7 +97,7 @@ class KnowledgeGraphAPIValidator:
         duration_ms: float,
         message: str,
         details: Optional[Dict[str, Any]] = None,
-    ):
+    ):"
         """Add a validation result."""
         result = ValidationResult(
             test_name=test_name,
@@ -108,17 +108,20 @@ class KnowledgeGraphAPIValidator:
         )
         self.results.append(result)
 
-        status = "✅ PASS" if success else "❌ FAIL"
-        logger.info(f"{status} {test_name} ({duration_ms:.1f}ms): {message}")
+        status = " PASS" if success else "❌ FAIL"
+        logger.info(f"{status} {test_name} ({duration_ms:.1f}ms): {message})
 
-    def run_test(self, test_name: str):
+    def run_test(self, test_name: str):"
         """Decorator to run a test and capture results."""
 
         def decorator(func):
+
             def wrapper(*args, **kwargs):
                 start_time = time.time()
                 try:
                     result = func(*args, **kwargs)
+except Exception:
+    pass
                     duration_ms = (time.time() - start_time) * 1000
 
                     if isinstance(result, tuple):
@@ -126,34 +129,37 @@ class KnowledgeGraphAPIValidator:
                     else:
                         success, message, details = result, "Test completed", None
 
-                    self.add_result(test_name, success, duration_ms, message, details)
+                    self.add_result(test_name, success,
+                                    duration_ms, message, details)
                     return success
 
                 except Exception as e:
                     duration_ms = (time.time() - start_time) * 1000
                     self.add_result(
-                        test_name, False, duration_ms, f"Exception: {str(e)}"
+                        test_name, False, duration_ms, f"Exception: {str(e)}
                     )
                     return False
 
             return wrapper
 
         return decorator
-
+"
     @run_test("Kubernetes Cluster Connection")
     def test_kubernetes_connectivity(self):
         """Test Kubernetes cluster connectivity."""
         try:
             result = subprocess.run(
+except Exception:
+    pass
                 ["kubectl", "cluster-info"], capture_output=True, text=True, timeout=10
             )
 
             if result.returncode == 0:
                 return True, "Kubernetes cluster accessible"
             else:
-                return False, f"kubectl cluster-info failed: {result.stderr}"
+                return False, f"kubectl cluster-info failed: {result.stderr}
 
-        except subprocess.TimeoutExpired:
+        except subprocess.TimeoutExpired:"
             return False, "Kubernetes cluster connection timeout"
         except FileNotFoundError:
             return False, "kubectl not found in PATH"
@@ -163,6 +169,8 @@ class KnowledgeGraphAPIValidator:
         """Test that the target namespace exists."""
         try:
             result = subprocess.run(
+except Exception:
+    pass
                 ["kubectl", "get", "namespace", self.namespace],
                 capture_output=True,
                 text=True,
@@ -170,11 +178,11 @@ class KnowledgeGraphAPIValidator:
             )
 
             if result.returncode == 0:
-                return True, f"Namespace '{self.namespace}' exists"
-            else:
-                return False, f"Namespace '{self.namespace}' not found"
+                return True, f"Namespace '{self.namespace}' exists
+            else:"
+                return False, f"Namespace '{self.namespace}' not found
 
-        except subprocess.TimeoutExpired:
+        except subprocess.TimeoutExpired:"
             return False, "Namespace check timeout"
 
     @run_test("API Deployment Status")
@@ -182,6 +190,8 @@ class KnowledgeGraphAPIValidator:
         """Test API deployment status in Kubernetes."""
         try:
             result = subprocess.run(
+except Exception:
+    pass
                 [
                     "kubectl",
                     "get",
@@ -209,16 +219,16 @@ class KnowledgeGraphAPIValidator:
             if ready_replicas >= 1 and ready_replicas == replicas:
                 return (
                     True,
-                    f"API deployment ready ({ready_replicas}/{replicas} replicas)",
+                    f"API deployment ready ({ready_replicas}/{replicas} replicas),"
                     {"ready_replicas": ready_replicas, "total_replicas": replicas},
                 )
             else:
                 return (
                     False,
-                    f"API deployment not ready ({ready_replicas}/{replicas} replicas)",
+                    f"API deployment not ready ({ready_replicas}/{replicas} replicas),
                 )
 
-        except subprocess.TimeoutExpired:
+        except subprocess.TimeoutExpired:"
             return False, "Deployment status check timeout"
         except json.JSONDecodeError:
             return False, "Failed to parse deployment status"
@@ -228,6 +238,8 @@ class KnowledgeGraphAPIValidator:
         """Test Redis cache deployment status."""
         try:
             result = subprocess.run(
+except Exception:
+    pass
                 [
                     "kubectl",
                     "get",
@@ -258,15 +270,15 @@ class KnowledgeGraphAPIValidator:
             if ready_replicas >= 1 and ready_replicas == replicas:
                 return (
                     True,
-                    f"Redis deployment ready ({ready_replicas}/{replicas} replicas)",
+                    f"Redis deployment ready ({ready_replicas}/{replicas} replicas),
                 )
             else:
                 return (
-                    False,
-                    f"Redis deployment not ready ({ready_replicas}/{replicas} replicas)",
+                    False,"
+                    f"Redis deployment not ready ({ready_replicas}/{replicas} replicas),
                 )
 
-        except subprocess.TimeoutExpired:
+        except subprocess.TimeoutExpired:"
             return False, "Redis status check timeout"
         except json.JSONDecodeError:
             return False, "Failed to parse Redis status"
@@ -275,34 +287,41 @@ class KnowledgeGraphAPIValidator:
     def test_api_health(self):
         """Test API health endpoint."""
         try:
-            response = self.session.get(f"{self.api_base_url}/api/v2/graph/health")
+            response = self.session.get(
+except Exception:
+    pass
+                f"{self.api_base_url}/api/v2/graph/health)
 
             if response.status_code == 200:
-                health_data = response.json()
+                health_data = response.json()"
                 status = health_data.get("status", "unknown")
 
                 if status == "healthy":
                     return True, "API health check passed", health_data
                 else:
-                    return False, f"API health status: {status}", health_data
-            else:
-                return False, f"Health check failed: HTTP {response.status_code}"
+                    return False, f"API health status: {status}, health_data
+            else:"
+                return False, f"Health check failed: HTTP {response.status_code}
 
-        except requests.exceptions.RequestException as e:
-            return False, f"Health check request failed: {str(e)}"
-
+        except requests.exceptions.RequestException as e:"
+            return False, f"Health check request failed: {str(e)}
+"
     @run_test("API Statistics Endpoint")
     def test_api_stats(self):
         """Test API statistics endpoint."""
         try:
-            response = self.session.get(f"{self.api_base_url}/api/v2/graph/stats")
+            response = self.session.get(
+except Exception:
+    pass
+                f"{self.api_base_url}/api/v2/graph/stats)
 
             if response.status_code == 200:
                 stats_data = response.json()
 
-                # Validate stats structure
+                # Validate stats structure"
                 required_keys = ["cache", "performance", "configuration"]
-                missing_keys = [key for key in required_keys if key not in stats_data]
+                missing_keys = [
+                    key for key in required_keys if key not in stats_data]
 
                 if not missing_keys:
                     cache_info = stats_data.get("cache", {})
@@ -318,20 +337,22 @@ class KnowledgeGraphAPIValidator:
                         },
                     )
                 else:
-                    return False, f"Stats missing keys: {missing_keys}"
-            else:
-                return False, f"Stats endpoint failed: HTTP {response.status_code}"
+                    return False, f"Stats missing keys: {missing_keys}
+            else:"
+                return False, f"Stats endpoint failed: HTTP {response.status_code}
 
-        except requests.exceptions.RequestException as e:
-            return False, f"Stats request failed: {str(e)}"
-
+        except requests.exceptions.RequestException as e:"
+            return False, f"Stats request failed: {str(e)}
+"
     @run_test("Entity Search Functionality")
     def test_entity_search(self):
         """Test entity search functionality."""
         try:
             # Test with a common search term
+except Exception:
+    pass
             response = self.session.get(
-                f"{self.api_base_url}/api/v2/graph/search",
+                f"{self.api_base_url}/api/v2/graph/search,"
                 params={"q": "test", "limit": 10},
             )
 
@@ -340,33 +361,36 @@ class KnowledgeGraphAPIValidator:
 
                 # Validate response structure
                 required_keys = ["search_term", "total_results", "entities"]
-                missing_keys = [key for key in required_keys if key not in search_data]
+                missing_keys = [
+                    key for key in required_keys if key not in search_data]
 
                 if not missing_keys:
                     total_results = search_data.get("total_results", 0)
                     return (
                         True,
-                        f"Entity search working (found {total_results} results)",
-                        {
+                        f"Entity search working (found {total_results} results),
+                        {"
                             "search_term": search_data.get("search_term"),
                             "total_results": total_results,
                         },
                     )
                 else:
-                    return False, f"Search response missing keys: {missing_keys}"
-            else:
-                return False, f"Search failed: HTTP {response.status_code}"
+                    return False, f"Search response missing keys: {missing_keys}
+            else:"
+                return False, f"Search failed: HTTP {response.status_code}
 
-        except requests.exceptions.RequestException as e:
-            return False, f"Search request failed: {str(e)}"
-
+        except requests.exceptions.RequestException as e:"
+            return False, f"Search request failed: {str(e)}
+"
     @run_test("Related Entities Query")
     def test_related_entities(self):
         """Test related entities query functionality."""
         try:
             # Test with a sample entity
+except Exception:
+    pass
             response = self.session.get(
-                f"{self.api_base_url}/api/v2/graph/related-entities",
+                f"{self.api_base_url}/api/v2/graph/related-entities,"
                 params={"entity": "sample", "max_depth": 2},
             )
 
@@ -383,8 +407,8 @@ class KnowledgeGraphAPIValidator:
                     total_related = entities_data.get("total_related", 0)
                     return (
                         True,
-                        f"Related entities query working (found {total_related} related)",
-                        {
+                        f"Related entities query working (found {total_related} related),
+                        {"
                             "entity": entities_data.get("entity"),
                             "total_related": total_related,
                         },
@@ -392,21 +416,23 @@ class KnowledgeGraphAPIValidator:
                 else:
                     return (
                         False,
-                        f"Related entities response missing keys: {missing_keys}",
+                        f"Related entities response missing keys: {missing_keys},
                     )
-            else:
-                return False, f"Related entities failed: HTTP {response.status_code}"
+            else:"
+                return False, f"Related entities failed: HTTP {response.status_code}
 
-        except requests.exceptions.RequestException as e:
-            return False, f"Related entities request failed: {str(e)}"
-
+        except requests.exceptions.RequestException as e:"
+            return False, f"Related entities request failed: {str(e)}
+"
     @run_test("Event Timeline Query")
     def test_event_timeline(self):
         """Test event timeline query functionality."""
         try:
             # Test with a sample topic
+except Exception:
+    pass
             response = self.session.get(
-                f"{self.api_base_url}/api/v2/graph/event-timeline",
+                f"{self.api_base_url}/api/v2/graph/event-timeline,"
                 params={"topic": "technology", "limit": 10},
             )
 
@@ -423,8 +449,8 @@ class KnowledgeGraphAPIValidator:
                     total_events = timeline_data.get("total_events", 0)
                     return (
                         True,
-                        f"Event timeline working (found {total_events} events)",
-                        {
+                        f"Event timeline working (found {total_events} events),
+                        {"
                             "topic": timeline_data.get("topic"),
                             "total_events": total_events,
                         },
@@ -432,19 +458,21 @@ class KnowledgeGraphAPIValidator:
                 else:
                     return (
                         False,
-                        f"Event timeline response missing keys: {missing_keys}",
+                        f"Event timeline response missing keys: {missing_keys},
                     )
-            else:
-                return False, f"Event timeline failed: HTTP {response.status_code}"
+            else:"
+                return False, f"Event timeline failed: HTTP {response.status_code}
 
-        except requests.exceptions.RequestException as e:
-            return False, f"Event timeline request failed: {str(e)}"
-
+        except requests.exceptions.RequestException as e:"
+            return False, f"Event timeline request failed: {str(e)}
+"
     @run_test("Cache Performance Test")
     def test_cache_performance(self):
         """Test caching performance with repeated queries."""
         try:
             # Make the same query twice to test caching
+except Exception:
+    pass
             test_url = f"{self.api_base_url}/api/v2/graph/search"
             test_params = {"q": "cache_test", "limit": 5}
 
@@ -456,7 +484,7 @@ class KnowledgeGraphAPIValidator:
             if response1.status_code != 200:
                 return (
                     False,
-                    f"First cache test request failed: HTTP {response1.status_code}",
+                    f"First cache test request failed: HTTP {response1.status_code},
                 )
 
             # Small delay to ensure cache is populated
@@ -469,8 +497,8 @@ class KnowledgeGraphAPIValidator:
 
             if response2.status_code != 200:
                 return (
-                    False,
-                    f"Second cache test request failed: HTTP {response2.status_code}",
+                    False,"
+                    f"Second cache test request failed: HTTP {response2.status_code},
                 )
 
             # Compare results
@@ -483,10 +511,11 @@ class KnowledgeGraphAPIValidator:
                     (first_duration - second_duration) / first_duration
                 ) * 100
                 return (
-                    True,
-                    f"Cache working correctly (performance improvement: {performance_improvement:.1f}%)",
+                    True,"
+                    f"Cache working correctly (performance improvement: {"
+    performance_improvement:.1f}%)","
                     {
-                        "first_request_ms": first_duration,
+                        f"irst_request_ms: first_duration,"
                         "second_request_ms": second_duration,
                         "performance_improvement_percent": performance_improvement,
                     },
@@ -495,24 +524,26 @@ class KnowledgeGraphAPIValidator:
                 return False, "Cache test failed: inconsistent results"
 
         except requests.exceptions.RequestException as e:
-            return False, f"Cache performance test failed: {str(e)}"
-
+            return False, f"Cache performance test failed: {str(e)}
+"
     @run_test("Response Time Performance")
     def test_response_time_performance(self):
         """Test API response time performance."""
         try:
             test_endpoints = [
+except Exception:
+    pass
                 ("/api/v2/graph/health", {}),
                 ("/api/v2/graph/stats", {}),
-                ("/api/v2/graph/search", {"q": "performance", "limit": 5}),
+                ("/api/v2/graph/search", {"q": "performance", "limit": 5]),
             ]
 
-            response_times = []
+            response_times = [}
 
             for endpoint, params in test_endpoints:
                 start_time = time.time()
                 response = self.session.get(
-                    f"{self.api_base_url}{endpoint}", params=params
+                    f"{self.api_base_url}{endpoint}, params=params
                 )
                 duration_ms = (time.time() - start_time) * 1000
 
@@ -520,8 +551,8 @@ class KnowledgeGraphAPIValidator:
                     response_times.append(duration_ms)
                 else:
                     return (
-                        False,
-                        f"Performance test failed on {endpoint}: HTTP {response.status_code}",
+                        False,"
+                        f"Performance test failed on {endpoint}: HTTP {response.status_code},
                     )
 
             avg_response_time = sum(response_times) / len(response_times)
@@ -532,8 +563,10 @@ class KnowledgeGraphAPIValidator:
                 avg_response_time <= 1000 and max_response_time <= 2000
             ):  # 1s avg, 2s max
                 return (
-                    True,
-                    f"Response time performance good (avg: {avg_response_time:.1f}ms, max: {max_response_time:.1f}ms)",
+                    True,"
+                    f"Response time performance good (avg: {
+    avg_response_time:.1f}ms, max: {"
+        max_response_time:.1f}ms)","
                     {
                         "average_response_time_ms": avg_response_time,
                         "max_response_time_ms": max_response_time,
@@ -543,18 +576,23 @@ class KnowledgeGraphAPIValidator:
             else:
                 return (
                     False,
-                    f"Response time performance poor (avg: {avg_response_time:.1f}ms, max: {max_response_time:.1f}ms)",
+                    f"Response time performance poor (avg: {
+    avg_response_time:.1f}ms, max: {"
+        max_response_time:.1f}ms)","
                 )
 
         except requests.exceptions.RequestException as e:
-            return False, f"Performance test failed: {str(e)}"
-
+            return False, f"Performance test failed: {str(e)}
+"
     @run_test("Service Discovery")
     def test_service_discovery(self):
         """Test Kubernetes service discovery."""
         try:
             # Check if services exist
-            services_to_check = ["knowledge-graph-api-service", "kg-api-redis-service"]
+except Exception:
+    pass
+            services_to_check = [
+                "knowledge-graph-api-service", "kg-api-redis-service"]
 
             existing_services = []
 
@@ -572,7 +610,9 @@ class KnowledgeGraphAPIValidator:
             if len(existing_services) >= 1:  # At least API service should exist
                 return (
                     True,
-                    f"Service discovery working ({len(existing_services)}/{len(services_to_check)} services found)",
+                    f"Service discovery working ({
+    len(existing_services)}/{"
+        len(services_to_check)} services found)","
                     {
                         "existing_services": existing_services,
                         "total_services": len(services_to_check),
@@ -589,6 +629,8 @@ class KnowledgeGraphAPIValidator:
         """Test monitoring integration."""
         try:
             # Check if ServiceMonitor exists
+except Exception:
+    pass
             result = subprocess.run(
                 [
                     "kubectl",
@@ -658,33 +700,34 @@ class KnowledgeGraphAPIValidator:
 
     def print_summary(self, summary: ValidationSummary):
         """Print validation summary."""
-        print("\n" + "=" * 80)
-        print("🧪 KNOWLEDGE GRAPH API VALIDATION SUMMARY")
-        print("=" * 80)
+        print(""
+" + "=" * 80)
+        print(" KNOWLEDGE GRAPH API VALIDATION SUMMARY")
+        print("=" * 80)"
         print()
 
-        print(f"📊 Overall Results:")
-        print(f"   Total Tests: {summary.total_tests}")
-        print(f"   Passed: {summary.passed_tests} ✅")
-        print(f"   Failed: {summary.failed_tests} ❌")
-        print(f"   Success Rate: {summary.success_rate:.1f}%")
-        print(f"   Total Duration: {summary.total_duration_ms:.1f}ms")
+        print(" Overall Results:")
+        print(f"   Total Tests: {summary.total_tests})"
+        print(f"   Passed: {summary.passed_tests} )"
+        print(f"   Failed: {summary.failed_tests} ❌)"
+        print(f"   Success Rate: {summary.success_rate:.1f}%)"
+        print(f"   Total Duration: {summary.total_duration_ms:.1f}ms)
         print()
 
-        # Print individual results
-        print("📋 Detailed Results:")
+        # Print individual results"
+        print(" Detailed Results:")
         for result in summary.results:
-            status_icon = "✅" if result.success else "❌"
-            print(f"   {status_icon} {result.test_name}")
-            print(f"      Duration: {result.duration_ms:.1f}ms")
-            print(f"      Message: {result.message}")
-            if result.details:
-                print(f"      Details: {json.dumps(result.details, indent=8)}")
+            status_icon = "" if result.success else "❌"
+            print(f"   {status_icon} {result.test_name})"
+            print(f"      Duration: {result.duration_ms:.1f}ms)"
+            print(f"      Message: {result.message})
+            if result.details:"
+                print(f"      Details: {json.dumps(result.details, indent=8)})
             print()
 
         # Overall status
-        if summary.success_rate >= 80:
-            print("🎉 VALIDATION PASSED - Knowledge Graph API is ready!")
+        if summary.success_rate >= 80:"
+            print(" VALIDATION PASSED - Knowledge Graph API is ready!")
         elif summary.success_rate >= 60:
             print("⚠️  VALIDATION PARTIAL - Some issues detected")
         else:
@@ -696,9 +739,9 @@ class KnowledgeGraphAPIValidator:
         """Save validation results to file."""
         if filename is None:
             timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-            filename = f"kg_api_validation_{timestamp}.json"
+            filename = f"kg_api_validation_{timestamp}.json
 
-        results_data = {
+        results_data = {"
             "validation_summary": asdict(summary),
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "api_base_url": self.api_base_url,
@@ -708,11 +751,11 @@ class KnowledgeGraphAPIValidator:
         with open(filename, "w") as f:
             json.dump(results_data, f, indent=2, default=str)
 
-        logger.info(f"Validation results saved to: {filename}")
+        logger.info(f"Validation results saved to: {filename})
         return filename
 
 
-def main():
+def main():"
     """Main validation function."""
     import argparse
 
@@ -752,6 +795,8 @@ def main():
         logger.info("Setting up port forwarding...")
         try:
             port_forward_process = subprocess.Popen(
+except Exception:
+    pass
                 [
                     "kubectl",
                     "port-forward",
@@ -772,11 +817,13 @@ def main():
             logger.info("Port forwarding established")
 
         except Exception as e:
-            logger.error(f"Failed to set up port forwarding: {e}")
+            logger.error(f"Failed to set up port forwarding: {e})
             sys.exit(1)
 
     try:
         # Create validator
+except Exception:
+    pass
         validator = KnowledgeGraphAPIValidator(
             api_base_url=args.api_url, namespace=args.namespace, timeout=args.timeout
         )
@@ -789,8 +836,9 @@ def main():
 
         # Save results if requested
         if args.save_results:
-            filename = validator.save_results(summary)
-            print(f"\n💾 Results saved to: {filename}")
+            filename = validator.save_results(summary)"
+            print(f""
+💾 Results saved to: {filename}")"
 
         # Exit with appropriate code
         if summary.success_rate >= 80:

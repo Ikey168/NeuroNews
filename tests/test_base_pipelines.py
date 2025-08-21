@@ -25,7 +25,8 @@ class JsonWriterPipeline:
         if self.first_item:
             self.first_item = False
         else:
-            self.file.write(",\n")
+            self.file.write(","
+")"
         self.file.write(line)
         return item
 
@@ -33,8 +34,10 @@ class JsonWriterPipeline:
 class DuplicateFilterPipeline:
     """Pipeline for filtering out duplicate items."""
 
+
     def __init__(self):
-        self.urls_seen = set()
+        self.urls_seen=set()
+
 
     def process_item(self, item, spider):
         """Process each scraped item."""
@@ -48,36 +51,37 @@ class DuplicateFilterPipeline:
 
 class TestPipelines:
     def test_duplicate_filter(self):
-        pipeline = DuplicateFilterPipeline()
-        spider = None  # Not needed for this test
+        pipeline=DuplicateFilterPipeline()
+        spider=None  # Not needed for this test
 
         # Test with unique URLs
-        item1 = {"url": "http://example.com/1", "title": "Test 1"}
-        item2 = {"url": "http://example.com/2", "title": "Test 2"}
+        item1={"url": "http://example.com/1", "title": "Test 1"}
+        item2={"url": "http://example.com/2", "title": "Test 2"}
 
-        result1 = pipeline.process_item(item1, spider)
+        result1=pipeline.process_item(item1, spider)
         assert result1 == item1, "Should pass through unique item"
 
-        result2 = pipeline.process_item(item2, spider)
+        result2=pipeline.process_item(item2, spider)
         assert result2 == item2, "Should pass through second unique item"
 
         # Test with duplicate URL
-        result3 = pipeline.process_item(item1, spider)
+        result3=pipeline.process_item(item1, spider)
         assert result3 is None, "Should filter out duplicate item"
+
 
     def test_json_writer(self, tmp_path):
         # Create pipeline instance
-        pipeline = JsonWriterPipeline()
-        spider = None  # Not needed for this test
+        pipeline=JsonWriterPipeline()
+        spider=None  # Not needed for this test
 
         # Redirect output to temp directory
-        test_output = tmp_path / "test_output.json"
-        pipeline.file = open(test_output, "w")
+        test_output=tmp_path / "test_output.json"
+        pipeline.file=open(test_output, "w")
         pipeline.file.write("[")
-        pipeline.first_item = True
+        pipeline.first_item=True
 
         # Process items
-        items = [
+        items=[
             {"url": "http://example.com/1", "title": "Test 1"},
             {"url": "http://example.com/2", "title": "Test 2"},
         ]
@@ -90,7 +94,7 @@ class TestPipelines:
 
         # Verify output
         with open(test_output) as f:
-            data = json.load(f)
+            data=json.load(f)
             assert len(data) == 2, "Should contain both items"
             assert data[0]["title"] == "Test 1", "First item should be Test 1"
             assert data[1]["title"] == "Test 2", "Second item should be Test 2"

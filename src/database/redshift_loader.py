@@ -376,7 +376,7 @@ class RedshiftETLProcessor:
         try:
             # Process articles in batches
             for i in range(0, total_articles, self._batch_size):
-                batch = articles[i: i + self._batch_size]
+                batch = articles[i : i + self._batch_size]
                 batch_result = self._process_batch(batch, use_staging)
 
                 loaded_count += batch_result["loaded"]
@@ -741,7 +741,7 @@ class RedshiftLoader(RedshiftETLProcessor):
         pages = (total + per_page - 1) // per_page  # Ceiling division
 
         # Get paginated results
-        query = """
+        query = f"""
             SELECT id, title, url, publish_date, category, source,
                    sentiment_score, sentiment_label
             FROM news_articles

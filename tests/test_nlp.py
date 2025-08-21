@@ -111,6 +111,7 @@ from src.nlp.sentiment_analysis import (
 
 class TestAnalyzerFactory:
     # Renamed from test_create_vader_analyzer
+
     def test_create_default_analyzer(self):
         analyzer = create_analyzer()  # No argument for default
         assert isinstance(analyzer, SentimentAnalyzer)

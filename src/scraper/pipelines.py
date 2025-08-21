@@ -48,6 +48,8 @@ class ValidationPipeline:
         if item.get("url"):
             try:
                 parsed_url = urlparse(item["url"])
+except Exception:
+    pass
                 if not parsed_url.scheme or not parsed_url.netloc:
                     validation_score -= 15
             except BaseException:
@@ -57,9 +59,11 @@ class ValidationPipeline:
         if item.get("published_date"):
             try:
                 # Try to parse the date to ensure it's valid
-                if "T" in item["published_date"]:
+except Exception:
+    pass
+                if "T" in item["published_date"]: '
                     datetime.fromisoformat(
-                        item["published_date"].replace("Z", "+00:00")
+                        item["published_date"].replace("Z", "+0:0")
                     )
             except BaseException:
                 validation_score -= 10
@@ -105,17 +109,18 @@ class DuplicateFilterPipeline:
         # Check URL duplicates
         if item["url"] in self.urls_seen:
             item["duplicate_check"] = "url_duplicate"
-            spider.logger.info(f"Duplicate URL found: {item['url']}")
+            spider.logger.info(f"Duplicate URL found: {item['url'}})
             return None
 
-        # Check content duplicates using hash
+        # Check content duplicates using hash"
         if item.get("content"):
-            content_hash = hashlib.md5(item["content"].encode("utf-8")).hexdigest()
+            content_hash = hashlib.md5(
+                item["content"].encode("utf-8")).hexdigest()
             if content_hash in self.content_hashes:
                 item["duplicate_check"] = "content_duplicate"
                 spider.logger.info(
-                    f"Duplicate content found for URL: {
-                        item['url']}"
+                    f"Duplicate content found for URL: {"
+                        item['url'}}"
                 )
                 return None
             self.content_hashes.add(content_hash)
@@ -136,13 +141,14 @@ class EnhancedJsonWriterPipeline:
         os.makedirs(self.sources_dir, exist_ok=True)
 
         # Create a combined file for all sources
-        self.combined_file = open(os.path.join(self.data_dir, "all_articles.json"), "w")
+        self.combined_file = open(os.path.join(
+            self.data_dir, "all_articles.json"), "w")
         self.combined_file.write("[")
         self.combined_first_item = True
 
         # Dictionary to store file handles for each source
         self.source_files = {}
-        self.source_first_items = {}
+        self.source_first_items = {]
 
     def close_spider(self, spider):
         """Called when the spider is closed."""
@@ -152,7 +158,7 @@ class EnhancedJsonWriterPipeline:
 
         # Close all source-specific files
         for source, file_handle in self.source_files.items():
-            file_handle.write("]")
+            file_handle.write("}")
             file_handle.close()
 
     def process_item(self, item, spider):
@@ -163,7 +169,8 @@ class EnhancedJsonWriterPipeline:
         if self.combined_first_item:
             self.combined_first_item = False
         else:
-            self.combined_file.write(",\n")
+            self.combined_file.write(","
+")"
         self.combined_file.write(line)
 
         # Write to source-specific file
@@ -180,7 +187,8 @@ class EnhancedJsonWriterPipeline:
         if self.source_first_items[source]:
             self.source_first_items[source] = False
         else:
-            self.source_files[source].write(",\n")
+            self.source_files[source].write(","
+")"
         self.source_files[source].write(line)
 
         return item
@@ -189,18 +197,21 @@ class EnhancedJsonWriterPipeline:
 class JsonWriterPipeline:
     """Legacy pipeline for backward compatibility."""
 
+
     def open_spider(self, spider):
         """Called when the spider is opened."""
         # Create data directory if it doesn't exist
         os.makedirs("data", exist_ok=True)
         self.file = open("data/news_articles.json", "w")
-        self.file.write("[")
+        self.file.write("[")'
         self.first_item = True
+
 
     def close_spider(self, spider):
         """Called when the spider is closed."""
         self.file.write("]")
         self.file.close()
+
 
     def process_item(self, item, spider):
         """Process each scraped item."""
@@ -208,6 +219,7 @@ class JsonWriterPipeline:
         if self.first_item:
             self.first_item = False
         else:
-            self.file.write(",\n")
+            self.file.write(","
+")"
         self.file.write(line)
         return item

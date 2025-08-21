@@ -77,9 +77,7 @@ class TestKnowledgeGraphPopulator:
     @pytest.mark.asyncio
     async def test_entity_creation(self):
         """Test Entity dataclass creation and normalization."""
-        entity = Entity(
-            text="John Doe", label="PERSON", start=0, end=8, confidence=0.95
-        )
+        entity = Entity(text="John Doe", label="PERSON", start=0, end=8, confidence=0.95)
 
         assert entity.text == "John Doe"
         assert entity.label == "PERSON"
@@ -124,9 +122,7 @@ class TestKnowledgeGraphPopulator:
         content = "This is test content for the article."
         published_date = datetime.utcnow()
 
-        await populator._add_article_node(
-            article_id, title, content, published_date
-        )
+        await populator._add_article_node(article_id, title, content, published_date)
 
         populator.graph_builder.add_vertex.assert_called_once()
         call_args = populator.graph_builder.add_vertex.call_args
@@ -140,9 +136,7 @@ class TestKnowledgeGraphPopulator:
     @pytest.mark.asyncio
     async def test_add_entity_node_new(self, populator):
         """Test adding new entity node to graph."""
-        entity = Entity(
-            text="John Doe", label="PERSON", start=0, end=8, confidence=0.95
-        )
+        entity = Entity(text="John Doe", label="PERSON", start=0, end=8, confidence=0.95)
 
         # Mock that entity doesn't exist
         populator._find_entity = AsyncMock(return_value=None)
@@ -161,9 +155,7 @@ class TestKnowledgeGraphPopulator:
     @pytest.mark.asyncio
     async def test_add_entity_node_existing(self, populator):
         """Test updating existing entity node."""
-        entity = Entity(
-            text="John Doe", label="PERSON", start=0, end=8, confidence=0.95
-        )
+        entity = Entity(text="John Doe", label="PERSON", start=0, end=8, confidence=0.95)
 
         # Mock that entity exists
         populator._find_entity = AsyncMock(return_value={"id": "existing_id"})
@@ -178,9 +170,7 @@ class TestKnowledgeGraphPopulator:
     @pytest.mark.asyncio
     async def test_link_entity_to_article(self, populator):
         """Test linking entity to article with relationship."""
-        entity = Entity(
-            text="John Doe", label="PERSON", start=0, end=8, confidence=0.95
-        )
+        entity = Entity(text="John Doe", label="PERSON", start=0, end=8, confidence=0.95)
         article_id = "article_123"
 
         await populator._link_entity_to_article(entity, article_id)
@@ -204,9 +194,7 @@ class TestKnowledgeGraphPopulator:
         text = "John Doe works for OpenAI in San Francisco."
         article_id = "article_123"
 
-        relationships = await populator._extract_relationships(
-            entities, text, article_id
-        )
+        relationships = await populator._extract_relationships(entities, text, article_id)
 
         assert len(relationships) >= 1
         assert relationships[0].source_entity == "john doe"
@@ -261,7 +249,9 @@ class TestKnowledgeGraphPopulator:
         """Test full article population workflow."""
         article_id = "test_article_123"
         title = "John Doe Joins OpenAI"
-        content = "John Doe, a renowned AI researcher, has joined OpenAI to work on advanced AI systems."
+        content = (
+            "John Doe, a renowned AI researcher, has joined OpenAI to work on advanced AI systems."
+        )
         published_date = datetime.utcnow()
 
         # Mock internal methods
@@ -269,9 +259,7 @@ class TestKnowledgeGraphPopulator:
         populator._find_related_historical_events = AsyncMock(return_value=[])
         populator._find_related_policies = AsyncMock(return_value=[])
 
-        stats = await populator.populate_from_article(
-            article_id, title, content, published_date
-        )
+        stats = await populator.populate_from_article(article_id, title, content, published_date)
 
         # Verify statistics structure
         assert "article_id" in stats
@@ -303,9 +291,7 @@ class TestKnowledgeGraphPopulator:
         # Mock entity lookup
         populator._find_entity_by_name = AsyncMock(return_value={"id": "entity_123"})
 
-        related_entities = await populator.get_related_entities(
-            entity_name, max_results=10
-        )
+        related_entities = await populator.get_related_entities(entity_name, max_results=10)
 
         assert len(related_entities) == 1
         assert related_entities[0]["entity_name"] == "OpenAI"
@@ -338,6 +324,7 @@ class TestKnowledgeGraphPopulator:
         ]
 
         # Mock populate_from_article to return stats
+
         async def mock_populate(article_id, title, content, published_date):
             return {
                 "entities_added": 2,
@@ -365,6 +352,7 @@ class TestKnowledgeGraphPopulator:
         ]
 
         # Mock populate_from_article to fail for second article
+
         async def mock_populate(article_id, title, content, published_date):
             if article_id == "article_2":
                 raise Exception("Processing failed")
@@ -418,13 +406,9 @@ class TestUtilityFunctions:
         }
         neptune_endpoint = "test-endpoint"
 
-        with patch(
-            "src.knowledge_graph.nlp_populator.KnowledgeGraphPopulator"
-        ) as MockPopulator:
+        with patch("src.knowledge_graph.nlp_populator.KnowledgeGraphPopulator") as MockPopulator:
             mock_instance = AsyncMock()
-            mock_instance.populate_from_article = AsyncMock(
-                return_value={"stats": "test"}
-            )
+            mock_instance.populate_from_article = AsyncMock(return_value={"stats": "test"})
             mock_instance.close = AsyncMock()
             MockPopulator.return_value = mock_instance
 
@@ -440,19 +424,13 @@ class TestUtilityFunctions:
         entity_name = "John Doe"
         neptune_endpoint = "test-endpoint"
 
-        with patch(
-            "src.knowledge_graph.nlp_populator.KnowledgeGraphPopulator"
-        ) as MockPopulator:
+        with patch("src.knowledge_graph.nlp_populator.KnowledgeGraphPopulator") as MockPopulator:
             mock_instance = AsyncMock()
-            mock_instance.get_related_entities = AsyncMock(
-                return_value=[{"entity": "test"}]
-            )
+            mock_instance.get_related_entities = AsyncMock(return_value=[{"entity": "test"}])
             mock_instance.close = AsyncMock()
             MockPopulator.return_value = mock_instance
 
-            relationships = await get_entity_relationships(
-                entity_name, neptune_endpoint
-            )
+            relationships = await get_entity_relationships(entity_name, neptune_endpoint)
 
             assert relationships == [{"entity": "test"}]
             mock_instance.get_related_entities.assert_called_once_with(entity_name, 10)
@@ -476,9 +454,7 @@ class TestEdgeCases:
         assert entities == []
 
     @pytest.mark.asyncio
-    async def test_low_confidence_relationships(
-        self, mock_graph_builder, mock_ner_processor
-    ):
+    async def test_low_confidence_relationships(self, mock_graph_builder, mock_ner_processor):
         """Test filtering of low-confidence relationships."""
         populator = KnowledgeGraphPopulator(
             neptune_endpoint="test-endpoint", ner_processor=mock_ner_processor
@@ -491,9 +467,7 @@ class TestEdgeCases:
             Entity(text="B", label="ORG", start=5, end=6, confidence=0.5),
         ]
 
-        relationships = await populator._extract_relationships(
-            entities, "A and B", "article"
-        )
+        relationships = await populator._extract_relationships(entities, "A and B", "article")
 
         # Should be filtered out due to low confidence
         high_conf_relationships = [
@@ -502,9 +476,7 @@ class TestEdgeCases:
         assert len(high_conf_relationships) == 0
 
     @pytest.mark.asyncio
-    async def test_error_handling_in_populate(
-        self, mock_graph_builder, mock_ner_processor
-    ):
+    async def test_error_handling_in_populate(self, mock_graph_builder, mock_ner_processor):
         """Test error handling during article population."""
         mock_graph_builder.connect.side_effect = Exception("Connection failed")
 

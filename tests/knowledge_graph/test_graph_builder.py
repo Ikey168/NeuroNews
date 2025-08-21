@@ -58,9 +58,7 @@ async def graph_builder(
         MockedClient.assert_called_once()
         MockedDRC.assert_called_once()
         assert builder.client is mock_client_instance
-        assert (
-            builder.connection is mock_driver_remote_connection_instance
-        )  # The one for 'g'
+        assert builder.connection is mock_driver_remote_connection_instance  # The one for 'g'
         assert builder.g is not None
 
         yield builder

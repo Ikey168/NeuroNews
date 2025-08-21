@@ -67,9 +67,7 @@ class TestTFIDFKeywordExtractor:
 
     def test_extract_keywords_single_text(self):
         """Test keyword extraction from single text."""
-        texts = [
-            "Machine learning and artificial intelligence are transforming technology"
-        ]
+        texts = ["Machine learning and artificial intelligence are transforming technology"]
         results = self.extractor.extract_keywords(texts, top_k=5)
 
         assert len(results) == 1
@@ -176,9 +174,7 @@ class TestCreateKeywordExtractorFallback:
     def test_factory_fallback_to_simple(self):
         """Test factory function fallback when ML dependencies missing."""
         # Mock ImportError for sklearn
-        with patch(
-            "builtins.__import__", side_effect=ImportError("No module named 'sklearn'")
-        ):
+        with patch("builtins.__import__", side_effect=ImportError("No module named 'sklearn'")):
             extractor = create_keyword_extractor()
 
             # Should return SimpleKeywordExtractor

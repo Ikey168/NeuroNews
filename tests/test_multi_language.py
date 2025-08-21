@@ -59,9 +59,7 @@ class TestLanguageDetector:
 
     def test_spanish_detection(self):
         """Test Spanish language detection."""
-        spanish_text = (
-            "Esta es una noticia sobre tecnología y innovación en el mundo moderno."
-        )
+        spanish_text = "Esta es una noticia sobre tecnología y innovación en el mundo moderno."
         result = self.detector.detect_language(spanish_text)
         assert result["language"] == "es"
         assert result["confidence"] > 0.1  # More realistic threshold
@@ -88,19 +86,17 @@ class TestLanguageDetector:
 
     def test_chinese_detection(self):
         """Test Chinese language detection."""
-        chinese_text = "这是一篇关于现代世界技术和创新的新闻文章，科学家们正在开发新的技术解决方案。"
-        result = self.detector.detect_language(
-            chinese_text, min_length=20
-        )  # Lower threshold
+        chinese_text = (
+            "这是一篇关于现代世界技术和创新的新闻文章，科学家们正在开发新的技术解决方案。"
+        )
+        result = self.detector.detect_language(chinese_text, min_length=20)  # Lower threshold
         # Accept either correct detection or unknown for short text
         assert result["language"] in ["zh", "unknown"]
 
     def test_japanese_detection(self):
         """Test Japanese language detection."""
         japanese_text = "これは現代世界のテクノロジーとイノベーションに関するニュース記事です。科学者たちが新しい技術を開発しています。"
-        result = self.detector.detect_language(
-            japanese_text, min_length=20
-        )  # Lower threshold
+        result = self.detector.detect_language(japanese_text, min_length=20)  # Lower threshold
         # Accept either correct detection or unknown for short text
         assert result["language"] in ["ja", "unknown"]
 
@@ -208,13 +204,10 @@ class TestTranslationQualityChecker:
         """Test assessment of good quality translation."""
         original = "This is a technology news article about artificial intelligence."
         translated = (
-            "Este es un artículo de noticias de tecnología sobre inteligencia "
-            "artificial."
+            "Este es un artículo de noticias de tecnología sobre inteligencia " "artificial."
         )
 
-        quality = self.checker.assess_translation_quality(
-            original, translated, "en", "es"
-        )
+        quality = self.checker.assess_translation_quality(original, translated, "en", "es")
 
         assert quality["overall_score"] >= 0.7
         assert quality["length_ratio_ok"] is True
@@ -227,9 +220,7 @@ class TestTranslationQualityChecker:
         )
         translated = "Bad"  # Very short translation
 
-        quality = self.checker.assess_translation_quality(
-            original, translated, "en", "es"
-        )
+        quality = self.checker.assess_translation_quality(original, translated, "en", "es")
 
         assert quality["overall_score"] < 0.5
         assert quality["length_ratio_ok"] is False
@@ -239,9 +230,7 @@ class TestTranslationQualityChecker:
         original = "Technology news"
         translated = "Tech�ology news"  # Contains replacement character
 
-        quality = self.checker.assess_translation_quality(
-            original, translated, "en", "es"
-        )
+        quality = self.checker.assess_translation_quality(original, translated, "en", "es")
 
         assert "Potential encoding issues detected" in quality["issues"]
 
@@ -251,9 +240,7 @@ class TestTranslationQualityChecker:
         # Exactly the same (no translation)
         translated = "Technology news article"
 
-        quality = self.checker.assess_translation_quality(
-            original, translated, "en", "es"
-        )
+        quality = self.checker.assess_translation_quality(original, translated, "en", "es")
 
         assert "No translation occurred" in quality["issues"]
 
@@ -293,9 +280,7 @@ class TestMultiLanguageArticleProcessor:
             "url": "https://example.com/news",
         }
 
-        with patch.object(
-            self.processor.language_detector, "detect_language"
-        ) as mock_detect:
+        with patch.object(self.processor.language_detector, "detect_language") as mock_detect:
             mock_detect.return_value = ("es", 0.85)  # Returns tuple, not dict
 
             result = self.processor.process_article(article_data)
@@ -311,9 +296,7 @@ class TestMultiLanguageArticleProcessor:
             "content": "Esta es una noticia sobre tecnología moderna.",
         }
 
-        with patch.object(
-            self.processor.translate_service, "translate_text"
-        ) as mock_translate:
+        with patch.object(self.processor.translate_service, "translate_text") as mock_translate:
             mock_translate.return_value = {
                 "translated_text": "This is news about modern technology.",
                 "source_language": "es",
@@ -322,9 +305,7 @@ class TestMultiLanguageArticleProcessor:
                 "confidence": 0.9,
             }
 
-            with patch.object(
-                self.processor.language_detector, "detect_language"
-            ) as mock_detect:
+            with patch.object(self.processor.language_detector, "detect_language") as mock_detect:
                 mock_detect.return_value = ("es", 0.85)
 
                 result = self.processor.process_article(article_data)
@@ -410,9 +391,7 @@ class TestMultiLanguagePipeline:
         pipeline = self.pipeline
 
         # Mock the processor creation
-        with patch(
-            "src.scraper.pipelines.multi_language_pipeline.MultiLanguageArticleProcessor"
-        ):
+        with patch("src.scraper.pipelines.multi_language_pipeline.MultiLanguageArticleProcessor"):
             pipeline.open_spider(self.spider)
 
         assert pipeline.redshift_host == "localhost"
@@ -447,9 +426,7 @@ class TestMultiLanguagePipeline:
             self.pipeline.open_spider(self.spider)
 
             item = NewsItem()
-            item["title"] = (
-                "This is a comprehensive technology news article about machine learning"
-            )
+            item["title"] = "This is a comprehensive technology news article about machine learning"
             item["content"] = (
                 "This is a comprehensive technology news article about machine learning and "
                 "artificial intelligence developments."
@@ -494,9 +471,7 @@ class TestMultiLanguagePipeline:
         from src.scraper.items import NewsItem
 
         item = NewsItem()
-        item["title"] = (
-            "Test Article About Technology and Innovation in Modern Society Today"
-        )
+        item["title"] = "Test Article About Technology and Innovation in Modern Society Today"
         item["content"] = (
             "This is test content for the article that talks about various technological "
             "advancements and how they impact our daily lives in many different ways. The "

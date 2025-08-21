@@ -38,9 +38,7 @@ class TestSentimentTrendAnalyzer:
     def mock_sentiment_analyzer(self):
         """Mock sentiment analyzer for testing."""
         analyzer = Mock()
-        analyzer.analyze = Mock(
-            return_value={"label": "positive", "score": 0.8, "confidence": 0.9}
-        )
+        analyzer.analyze = Mock(return_value={"label": "positive", "score": 0.8, "confidence": 0.9})
         return analyzer
 
     @pytest.fixture
@@ -113,9 +111,7 @@ class TestSentimentTrendAnalyzer:
         ]
 
     @pytest.fixture
-    def trend_analyzer(
-        self, mock_redshift_config, mock_sentiment_analyzer, mock_topic_extractor
-    ):
+    def trend_analyzer(self, mock_redshift_config, mock_sentiment_analyzer, mock_topic_extractor):
         """Create SentimentTrendAnalyzer instance with mocks."""
         with patch("psycopg2.connect") as mock_connect:
             mock_conn = Mock()
@@ -193,13 +189,9 @@ class TestSentimentTrendAnalyzer:
         assert len(grouped_data["technology"]) == 3
         assert len(grouped_data["politics"]) == 2
 
-    def test_aggregate_by_time_granularity_daily(
-        self, trend_analyzer, sample_sentiment_data
-    ):
+    def test_aggregate_by_time_granularity_daily(self, trend_analyzer, sample_sentiment_data):
         """Test data aggregation by daily granularity."""
-        tech_data = [
-            item for item in sample_sentiment_data if item["topic"] == "technology"
-        ]
+        tech_data = [item for item in sample_sentiment_data if item["topic"] == "technology"]
         aggregated = trend_analyzer._aggregate_by_time_granularity(tech_data, "daily")
 
         # Should have 3 different dates for technology articles
@@ -211,13 +203,9 @@ class TestSentimentTrendAnalyzer:
             for article in articles:
                 assert article["topic"] == "technology"
 
-    def test_aggregate_by_time_granularity_weekly(
-        self, trend_analyzer, sample_sentiment_data
-    ):
+    def test_aggregate_by_time_granularity_weekly(self, trend_analyzer, sample_sentiment_data):
         """Test data aggregation by weekly granularity."""
-        tech_data = [
-            item for item in sample_sentiment_data if item["topic"] == "technology"
-        ]
+        tech_data = [item for item in sample_sentiment_data if item["topic"] == "technology"]
         aggregated = trend_analyzer._aggregate_by_time_granularity(tech_data, "weekly")
 
         # All articles should fall within the same week
@@ -225,9 +213,7 @@ class TestSentimentTrendAnalyzer:
 
     def test_create_trend_points(self, trend_analyzer, sample_sentiment_data):
         """Test creation of trend points from aggregated data."""
-        tech_data = [
-            item for item in sample_sentiment_data if item["topic"] == "technology"
-        ]
+        tech_data = [item for item in sample_sentiment_data if item["topic"] == "technology"]
         aggregated = trend_analyzer._aggregate_by_time_granularity(tech_data, "daily")
 
         trend_points = trend_analyzer._create_trend_points("technology", aggregated)
@@ -262,9 +248,7 @@ class TestSentimentTrendAnalyzer:
         ]
 
         time_range = (base_date - timedelta(days=5), base_date)
-        summary = trend_analyzer._calculate_trend_summary(
-            "technology", trend_points, time_range
-        )
+        summary = trend_analyzer._calculate_trend_summary("technology", trend_points, time_range)
 
         assert summary.topic == "technology"
         assert summary.time_range == time_range
@@ -304,16 +288,12 @@ class TestSentimentTrendAnalyzer:
             mock_cursor.fetchall.return_value = [
                 tuple(item.values()) for item in sample_sentiment_data
             ]
-            mock_cursor.description = [
-                (key, None) for key in sample_sentiment_data[0].keys()
-            ]
+            mock_cursor.description = [(key, None) for key in sample_sentiment_data[0].keys()]
 
             start_date = datetime.now(timezone.utc) - timedelta(days=7)
             end_date = datetime.now(timezone.utc)
 
-            result = await trend_analyzer._fetch_sentiment_data(
-                "technology", start_date, end_date
-            )
+            result = await trend_analyzer._fetch_sentiment_data("technology", start_date, end_date)
 
             assert len(result) == len(sample_sentiment_data)
             assert all("id" in item for item in result)
@@ -353,15 +333,11 @@ class TestSentimentTrendAnalyzer:
             },
         ]
 
-        alerts = await trend_analyzer._detect_sentiment_alerts(
-            "technology", topic_data, 7
-        )
+        alerts = await trend_analyzer._detect_sentiment_alerts("technology", topic_data, 7)
 
         # Should detect significant shift
         assert len(alerts) > 0
-        shift_alert = next(
-            (a for a in alerts if a.alert_type == "significant_shift"), None
-        )
+        shift_alert = next((a for a in alerts if a.alert_type == "significant_shift"), None)
         assert shift_alert is not None
         assert shift_alert.topic == "technology"
         assert (
@@ -390,14 +366,10 @@ class TestSentimentTrendAnalyzer:
             },
         ]
 
-        alerts = await trend_analyzer._detect_sentiment_alerts(
-            "technology", topic_data, 7
-        )
+        alerts = await trend_analyzer._detect_sentiment_alerts("technology", topic_data, 7)
 
         # Should detect trend reversal
-        reversal_alert = next(
-            (a for a in alerts if a.alert_type == "trend_reversal"), None
-        )
+        reversal_alert = next((a for a in alerts if a.alert_type == "trend_reversal"), None)
         assert reversal_alert is not None
         assert reversal_alert.topic == "technology"
 
@@ -434,14 +406,10 @@ class TestSentimentTrendAnalyzer:
             },
         ]
 
-        alerts = await trend_analyzer._detect_sentiment_alerts(
-            "technology", topic_data, 7
-        )
+        alerts = await trend_analyzer._detect_sentiment_alerts("technology", topic_data, 7)
 
         # Should detect volatility spike
-        volatility_alert = next(
-            (a for a in alerts if a.alert_type == "volatility_spike"), None
-        )
+        volatility_alert = next((a for a in alerts if a.alert_type == "volatility_spike"), None)
         assert volatility_alert is not None
         assert volatility_alert.topic == "technology"
 
@@ -494,9 +462,7 @@ class TestSentimentTrendAnalyzer:
             await trend_analyzer._store_trend_data(trend_points)
 
             # Verify execute_batch was called
-            assert mock_cursor.execute_batch is not None or hasattr(
-                mock_cursor, "execute"
-            )
+            assert mock_cursor.execute_batch is not None or hasattr(mock_cursor, "execute")
             mock_conn.commit.assert_called_once()
 
     @pytest.mark.asyncio
@@ -530,15 +496,11 @@ class TestSentimentTrendAnalyzer:
             await trend_analyzer._store_alerts(alerts)
 
             # Verify execute_batch was called
-            assert mock_cursor.execute_batch is not None or hasattr(
-                mock_cursor, "execute"
-            )
+            assert mock_cursor.execute_batch is not None or hasattr(mock_cursor, "execute")
             mock_conn.commit.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_analyze_historical_trends(
-        self, trend_analyzer, sample_sentiment_data
-    ):
+    async def test_analyze_historical_trends(self, trend_analyzer, sample_sentiment_data):
         """Test full historical trend analysis workflow."""
         with patch.object(trend_analyzer, "_fetch_sentiment_data") as mock_fetch:
             with patch.object(trend_analyzer, "_store_trend_data"):
@@ -564,17 +526,13 @@ class TestSentimentTrendAnalyzer:
                     assert len(summary.data_points) > 0
 
     @pytest.mark.asyncio
-    async def test_generate_sentiment_alerts(
-        self, trend_analyzer, sample_sentiment_data
-    ):
+    async def test_generate_sentiment_alerts(self, trend_analyzer, sample_sentiment_data):
         """Test sentiment alert generation workflow."""
         # Modify sample data to create alert conditions
         alert_data = sample_sentiment_data.copy()
         # Make recent articles very positive to trigger alerts
         for item in alert_data:
-            if item["publish_date"] >= datetime.now(timezone.utc).date() - timedelta(
-                days=3
-            ):
+            if item["publish_date"] >= datetime.now(timezone.utc).date() - timedelta(days=3):
                 item["sentiment_score"] = 0.9
                 item["sentiment_label"] = "positive"
 
@@ -582,9 +540,7 @@ class TestSentimentTrendAnalyzer:
             with patch.object(trend_analyzer, "_store_alerts"):
                 mock_fetch.return_value = alert_data
 
-                alerts = await trend_analyzer.generate_sentiment_alerts(
-                    topic=None, lookback_days=7
-                )
+                alerts = await trend_analyzer.generate_sentiment_alerts(topic=None, lookback_days=7)
 
                 # Should generate alerts due to significant changes
                 assert isinstance(alerts, list)
@@ -644,9 +600,7 @@ class TestSentimentTrendAnalyzer:
 
             mock_cursor.fetchall.return_value = sample_alerts_data
 
-            alerts = await trend_analyzer.get_active_alerts(
-                topic="technology", limit=10
-            )
+            alerts = await trend_analyzer.get_active_alerts(topic="technology", limit=10)
 
             assert isinstance(alerts, list)
             # The mock will return all alerts, but in real implementation would
@@ -673,21 +627,15 @@ class TestUtilityFunctions:
             "redshift_password": "test_password",
         }
 
-        with patch(
-            "src.nlp.sentiment_trend_analyzer.SentimentTrendAnalyzer"
-        ) as MockAnalyzer:
+        with patch("src.nlp.sentiment_trend_analyzer.SentimentTrendAnalyzer") as MockAnalyzer:
             mock_instance = AsyncMock()
             mock_instance.get_topic_trend_summary = AsyncMock(return_value=None)
             MockAnalyzer.return_value = mock_instance
 
-            _ = await analyze_sentiment_trends_for_topic(
-                "technology", redshift_config, days=30
-            )
+            _ = await analyze_sentiment_trends_for_topic("technology", redshift_config, days=30)
 
             MockAnalyzer.assert_called_once_with(**redshift_config)
-            mock_instance.get_topic_trend_summary.assert_called_once_with(
-                "technology", 30
-            )
+            mock_instance.get_topic_trend_summary.assert_called_once_with("technology", 30)
 
     @pytest.mark.asyncio
     async def test_generate_daily_sentiment_alerts(self):
@@ -700,9 +648,7 @@ class TestUtilityFunctions:
             "redshift_password": "test_password",
         }
 
-        with patch(
-            "src.nlp.sentiment_trend_analyzer.SentimentTrendAnalyzer"
-        ) as MockAnalyzer:
+        with patch("src.nlp.sentiment_trend_analyzer.SentimentTrendAnalyzer") as MockAnalyzer:
             mock_instance = AsyncMock()
             mock_instance.generate_sentiment_alerts = AsyncMock(return_value=[])
             MockAnalyzer.return_value = mock_instance
@@ -710,9 +656,7 @@ class TestUtilityFunctions:
             await generate_daily_sentiment_alerts(redshift_config)
 
             MockAnalyzer.assert_called_once_with(**redshift_config)
-            mock_instance.generate_sentiment_alerts.assert_called_once_with(
-                lookback_days=7
-            )
+            mock_instance.generate_sentiment_alerts.assert_called_once_with(lookback_days=7)
 
 
 class TestDataValidation:
@@ -784,16 +728,12 @@ class TestDataValidation:
         ]
 
         time_range = (base_date - timedelta(days=1), base_date)
-        summary = trend_analyzer._calculate_trend_summary(
-            "test", single_point, time_range
-        )
+        summary = trend_analyzer._calculate_trend_summary("test", single_point, time_range)
 
         assert summary.current_sentiment == 0.5
         assert summary.average_sentiment == 0.5
         assert summary.sentiment_volatility == 0.0  # No variance with single point
-        assert (
-            summary.trend_direction == "stable"
-        )  # Can't determine trend with one point
+        assert summary.trend_direction == "stable"  # Can't determine trend with one point
 
     @pytest.mark.asyncio
     async def test_database_error_handling(self, trend_analyzer):

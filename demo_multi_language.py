@@ -4,15 +4,14 @@ Demo script showing multi-language processing functionality.
 Demonstrates language detection, quality assessment, and integration.
 """
 
+from src.nlp.language_processor import (LanguageDetector,
+                                        TranslationQualityChecker)
 import os
 import sys
 from pathlib import Path
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
-
-from src.nlp.language_processor import (LanguageDetector,
-                                        TranslationQualityChecker)
 
 
 def demo_language_detection():
@@ -32,7 +31,7 @@ def demo_language_detection():
         "Russian": "Ученые разработали революционный новый метод хранения возобновляемой энергии, который мог бы преобразовать сектор чистых технологий.",
         "Arabic": "طور العلماء طريقة جديدة ثورية لتخزين الطاقة المتجددة يمكن أن تحول قطاع التكنولوجيا النظيفة.",
         "Portuguese": "Os cientistas desenvolveram um novo método revolucionário para armazenar energia renovável que poderia transformar o setor de tecnologia limpa.",
-        "Italian": "Gli scienziati hanno sviluppato un nuovo metodo rivoluzionario per immagazzinare energia rinnovabile che potrebbe trasformare il settore delle tecnologie pulite.",
+        "Italian": "Gli scienziati hanno sviluppato un nuovo metodo rivoluzionario per immagazzinare energia rinnovabile che potrebbe trasformare il settore delle tecnologie pulite.", '
     }
 
     results = {}
@@ -40,9 +39,10 @@ def demo_language_detection():
         result = detector.detect_language(text)
         results[language] = result
 
-        print("\n{0}:".format(language))
+        print(""
+{0}:".format(language))
         print(
-            f"  Detected: {result['language']} (confidence: {result['confidence']:.2f})"
+            f"  Detected: {result['language']} (confidence: {result['confidence']:.2f})""
         )
         print("  Text: {0}...".format(text[:60]))
 
@@ -53,53 +53,53 @@ def demo_language_detection():
     total = len(results)
     accuracy = correct / total * 100
 
-    print("\n📊 Detection Accuracy: {0}% ({1}/{2})".format(accuracy:.1f, correct, total))
-    print("\nNote: This demo uses a simple pattern-based detector.")
-    print("In production, you would use AWS Comprehend for better accuracy.")
+    print("
+".format(accuracy: .1f, correct, total))
+    print(""
+Note: This demo uses a simple pattern-based detector.")
+    print("In production, you would use AWS Comprehend for better accuracy.")"
 
     return results
 
 
 def demo_quality_assessment():
     """Demonstrate translation quality assessment."""
-    print("\n\n🔍 Translation Quality Assessment Demo")
-    print("=" * 50)
+    print(""
+
+ Translation Quality Assessment Demo")
+    print("=" * 50)"
 
     checker = TranslationQualityChecker()
 
-    test_cases = [
-        {
-            "name": "High Quality Translation",
-            "original": "Scientists have developed a revolutionary method for renewable energy storage.",
-            "translated": "Los científicos han desarrollado un método revolucionario para el almacenamiento de energía renovable.",
-            "source": "en",
-            "target": "es",
-        },
-        {
-            "name": "Poor Quality - Too Short",
-            "original": "Scientists have developed a revolutionary method for renewable energy storage.",
-            "translated": "Científicos método.",
-            "source": "en",
-            "target": "es",
-        },
-        {
-            "name": "Medium Quality - Partial Translation",
-            "original": "The technology represents a breakthrough in energy storage.",
-            "translated": "La technology representa un breakthrough en energy storage.",
-            "source": "en",
-            "target": "es",
-        },
-        {
-            "name": "Encoding Issues",
-            "original": "Advanced technology solutions",
-            "translated": "Soluciones tecnol�gicas avanzadas",
-            "source": "en",
-            "target": "es",
-        },
-    ]
+    test_cases = [{"name": "High Quality Translation",
+                   "original": "Scientists have developed a revolutionary method for renewable energy storage.",
+                   "translated": "Los científicos han desarrollado un método revolucionario para el almacenamiento de energía renovable.",
+                   "source": "en",
+                   "target": "es",
+                   },
+                  {"name": "Poor Quality - Too Short",
+                   "original": "Scientists have developed a revolutionary method for renewable energy storage.",
+                   "translated": "Científicos método.",
+                   "source": "en",
+                   "target": "es",
+                   },
+                  {"name": "Medium Quality - Partial Translation",
+                   "original": "The technology represents a breakthrough in energy storage.",
+                   "translated": "La technology representa un breakthrough en energy storage.",
+                   "source": "en",
+                   "target": "es",
+                   },
+                  {"name": "Encoding Issues",
+                   "original": "Advanced technology solutions",
+                   "translated": "Soluciones tecnol�gicas avanzadas",
+                   "source": "en",
+                   "target": "es",
+                   },
+                  ]
 
     for case in test_cases:
-        print(f"\n{case['name']}:")
+        print(f"
+{case['name']}:")
 
         quality = checker.assess_translation_quality(
             case["original"], case["translated"], case["source"], case["target"]
@@ -118,8 +118,10 @@ def demo_quality_assessment():
 
 def demo_configuration():
     """Demonstrate configuration loading."""
-    print("\n\n⚙️  Configuration Demo")
-    print("=" * 50)
+    print(""
+
+⚙️  Configuration Demo")
+    print("=" * 50)"
 
     try:
         import json
@@ -157,8 +159,10 @@ def demo_configuration():
 
 def demo_pipeline_integration():
     """Demonstrate pipeline integration concepts."""
-    print("\n\n🔧 Pipeline Integration Demo")
-    print("=" * 50)
+    print(""
+
+🔧 Pipeline Integration Demo")
+    print("=" * 50)"
 
     print("Multi-language processing pipeline includes:")
     print("  1. Language Detection Pipeline")
@@ -166,28 +170,32 @@ def demo_pipeline_integration():
     print("     - Stores detection results in database")
     print("     - Provides confidence scores")
 
-    print("\n  2. Translation Pipeline")
+    print(""
+  2. Translation Pipeline")
     print("     - Uses AWS Translate for non-English content")
     print("     - Caches translation results")
-    print("     - Assesses translation quality")
+    print("     - Assesses translation quality")"
 
-    print("\n  3. Quality Control Pipeline")
+    print(""
+  3. Quality Control Pipeline")
     print("     - Validates translation length ratios")
     print("     - Detects encoding issues")
-    print("     - Filters low-quality translations")
+    print("     - Filters low-quality translations")"
 
-    print("\n  4. Storage Pipeline")
+    print(""
+  4. Storage Pipeline")
     print("     - Stores original and translated text")
     print("     - Tracks language statistics")
-    print("     - Maintains audit trail")
+    print("     - Maintains audit trail")"
 
-    print("\n✅ Pipeline integration ready for production!")
+    print(""
+ Pipeline integration ready for production!")"
     return True
 
 
 def main():
     """Run the complete demo."""
-    print("🚀 Multi-Language Processing Demo")
+    print(" Multi-Language Processing Demo")
     print("=" * 60)
     print("Issue #25: Multi-Language News Processing Implementation")
     print("=" * 60)
@@ -209,32 +217,37 @@ def main():
             results[name] = False
 
     # Summary
-    print("\n" + "=" * 60)
+    print(""
+" + "=" * 60)
     print("🏁 DEMO SUMMARY")
-    print("=" * 60)
+    print("=" * 60)"
 
     successful = sum(1 for success in results.values() if success)
     total = len(results)
 
     for name, success in results.items():
-        status = "✅" if success else "❌"
+        status = "" if success else "❌"
         print("  {0} {1}".format(status, name))
 
-    print("\nDemo Success Rate: {0}/{1} ({2}%)".format(successful, total, successful/total*100:.0f))
+    print("
+".format(successful, total, successful / total * 100: .0f))
 
     if successful == total:
-        print("\n🎉 ALL DEMOS SUCCESSFUL!")
-        print("✅ Multi-language processing is ready for production!")
-        print("\n📋 Implementation includes:")
+        print(""
+ ALL DEMOS SUCCESSFUL!")
+        print(" Multi-language processing is ready for production!")
+        print("
+ Implementation includes:")
         print("   - Language detection (10+ languages)")
         print("   - AWS Translate integration")
         print("   - Translation quality assessment")
         print("   - Database storage and caching")
         print("   - Scrapy pipeline integration")
         print("   - Comprehensive configuration")
-        print("   - Error handling and monitoring")
+        print("   - Error handling and monitoring")"
     else:
-        print("\n⚠️  {0} demo(s) had issues".format(total - successful))
+        print("
+ had issues".format(total - successful))
 
     return successful == total
 

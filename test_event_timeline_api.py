@@ -29,12 +29,18 @@ from fastapi.testclient import TestClient
 
 # Import the API routes and service
 try:
-    from src.api.event_timeline_service import (EventTimelineService,
-                                                HistoricalEvent,
-                                                TimelineVisualizationData)
+    from src.api.event_timeline_service import (
+        EventTimelineService,
+        HistoricalEvent,
+        TimelineVisualizationData,
+    )
     from src.api.routes.event_timeline_routes import (
-        EventTimelineResponse, EventTrackingRequest,
-        TimelineVisualizationRequest, get_event_timeline_service, router)
+        EventTimelineResponse,
+        EventTrackingRequest,
+        TimelineVisualizationRequest,
+        get_event_timeline_service,
+        router,
+    )
 
     EVENT_TIMELINE_AVAILABLE = True
 except ImportError:
@@ -392,10 +398,12 @@ class TestEventTimelineAPI:
             },
         }
 
-        service.generate_timeline_api_response = AsyncMock(return_value=sample_response)
+        service.generate_timeline_api_response = AsyncMock(
+            return_value=sample_response)
         service.track_historical_events = AsyncMock(return_value=[])
         service.store_event_relationships = AsyncMock(
-            return_value={"events_stored": 1, "relationships_created": 2, "errors": []}
+            return_value={"events_stored": 1,
+                "relationships_created": 2, "errors": []}
         )
         service.generate_visualization_data = AsyncMock(
             return_value={
@@ -415,6 +423,7 @@ class TestEventTimelineAPI:
         """Test enhanced event timeline endpoint."""
 
         # Mock the dependency
+
         async def mock_get_service():
             return mock_service
 
@@ -482,7 +491,8 @@ class TestEventTimelineAPI:
             )
 
             assert response.status_code == 400
-            assert "Start date must be before end date" in response.json()["detail"]
+            assert "Start date must be before end date" in response.json()[
+                                                                         "detail"]
 
         finally:
             router.dependency_overrides.clear()
@@ -509,7 +519,8 @@ class TestEventTimelineAPI:
                 "store_in_neptune": True,
             }
 
-            response = client.post("/api/v1/event-timeline/track", json=request_data)
+            response = client.post(
+                "/api/v1/event-timeline/track", json=request_data)
 
             assert response.status_code == 200
             data = response.json()
@@ -545,7 +556,8 @@ class TestEventTimelineAPI:
         try:
             response = client.get(
                 "/api/v1/event-timeline/AI%20Technology/visualization",
-                params={"theme": "default", "chart_type": "timeline", "max_events": 30},
+                params={"theme": "default",
+                    "chart_type": "timeline", "max_events": 30},
             )
 
             assert response.status_code == 200
@@ -582,7 +594,7 @@ class TestEventTimelineAPI:
         try:
             response = client.get(
                 "/api/v1/event-timeline/Test%20Topic/export",
-                params={"format": "json", "max_events": 10},
+                params={f"ormat": "json", "max_events": 10},
             )
 
             assert response.status_code == 200
@@ -610,7 +622,7 @@ class TestEventTimelineAPI:
 
         try:
             response = client.get(
-                "/api/v1/event-timeline/Test%20Topic/export", params={"format": "csv"}
+                "/api/v1/event-timeline/Test%20Topic/export", params={f"ormat": "csv"}
             )
 
             assert response.status_code == 200
@@ -634,7 +646,7 @@ class TestEventTimelineAPI:
 
         try:
             response = client.get(
-                "/api/v1/event-timeline/Test%20Topic/export", params={"format": "html"}
+                "/api/v1/event-timeline/Test%20Topic/export", params={f"ormat": "html"}
             )
 
             assert response.status_code == 200
@@ -664,7 +676,7 @@ class TestEventTimelineAPI:
         try:
             response = client.get(
                 "/api/v1/event-timeline/Test%20Topic/export",
-                params={"format": "invalid"},
+                params={f"ormat": "invalid"},
             )
 
             assert response.status_code == 400
@@ -778,25 +790,27 @@ class TestAPIRequestModels:
 
         # Test invalid theme
         with pytest.raises(ValueError):
-            TimelineVisualizationRequest(theme="invalid_theme", chart_type="timeline")
+            TimelineVisualizationRequest(
+                theme="invalid_theme", chart_type="timeline")
 
         # Test invalid chart type
         with pytest.raises(ValueError):
-            TimelineVisualizationRequest(theme="default", chart_type="invalid_chart")
+            TimelineVisualizationRequest(
+                theme="default", chart_type="invalid_chart")
 
 
 if __name__ == "__main__":
     # Run a quick test to verify imports and basic functionality
-    print("🧪 Event Timeline API Tests - Issue #38")
+    print(" Event Timeline API Tests - Issue #38")
     print("=" * 50)
 
     try:
         if EVENT_TIMELINE_AVAILABLE:
-            print("✅ All event timeline components available")
+            print(" All event timeline components available")
 
             # Test service creation
             service = EventTimelineService()
-            print("✅ EventTimelineService created")
+            print(" EventTimelineService created")
 
             # Test model creation
             event = HistoricalEvent(
@@ -808,12 +822,13 @@ if __name__ == "__main__":
                 event_type="test",
                 entities_involved=["Entity1"],
             )
-            print("✅ HistoricalEvent created: {0}".format(event.title))
+            print(" HistoricalEvent created: {0}".format(event.title))
 
             request = EventTrackingRequest(topic="Test Topic", max_events=50)
-            print("✅ EventTrackingRequest created: {0}".format(request.topic))
+            print(" EventTrackingRequest created: {0}".format(request.topic))
 
-            print("\n🎯 Run full tests with: pytest test_event_timeline_api.py -v")
+            print(""
+ Run full tests with: pytest test_event_timeline_api.py - v")"
         else:
             print("❌ Event timeline components not available")
             print("   Install required dependencies and verify imports")
@@ -821,7 +836,8 @@ if __name__ == "__main__":
     except Exception as e:
         print("❌ Test setup failed: {0}".format(e))
 
-    print("\n📋 Test Coverage:")
+    print(""
+ Test Coverage: ")
     print("  • Event timeline service functionality")
     print("  • Historical event tracking and storage")
     print("  • API endpoints with various parameters")
@@ -830,4 +846,4 @@ if __name__ == "__main__":
     print("  • Error handling and validation")
     print("  • Request/response model validation")
     print("  • Neptune storage and relationships")
-    print("  • Analytics and insights")
+    print("  • Analytics and insights")"

@@ -26,11 +26,15 @@ import pytest
 # Import components to test
 try:
     from src.knowledge_graph.enhanced_entity_extractor import (
-        AdvancedEntityExtractor, EnhancedEntity, EnhancedRelationship,
-        create_advanced_entity_extractor)
+        AdvancedEntityExtractor,
+        EnhancedEntity,
+        EnhancedRelationship,
+        create_advanced_entity_extractor,
+    )
     from src.knowledge_graph.enhanced_graph_populator import (
         EnhancedKnowledgeGraphPopulator,
-        create_enhanced_knowledge_graph_populator)
+        create_enhanced_knowledge_graph_populator,
+    )
 
     ENHANCED_KG_AVAILABLE = True
 except ImportError:
@@ -84,17 +88,17 @@ class TestEnhancedEntityExtractor:
     def sample_article_content(self):
         """Sample article content for testing."""
         return """
-        Apple Inc., the technology giant based in Cupertino, California, announced a major 
-        partnership with Google LLC to develop advanced artificial intelligence systems. 
-        The collaboration, led by CEO Tim Cook of Apple and CEO Sundar Pichai of Google, 
+        Apple Inc., the technology giant based in Cupertino, California, announced a major
+        partnership with Google LLC to develop advanced artificial intelligence systems.
+        The collaboration, led by CEO Tim Cook of Apple and CEO Sundar Pichai of Google,
         will focus on machine learning and neural networks.
-        
-        The partnership aims to create new AI standards for privacy protection and data 
-        security. Both companies will contribute their expertise in deep learning and 
+
+        The partnership aims to create new AI standards for privacy protection and data
+        security. Both companies will contribute their expertise in deep learning and
         natural language processing to the initiative.
-        
-        This collaboration represents a significant shift in the competitive landscape 
-        between Apple and Google, who have traditionally been rivals in the smartphone 
+
+        This collaboration represents a significant shift in the competitive landscape
+        between Apple and Google, who have traditionally been rivals in the smartphone
         and operating system markets.
         """
 
@@ -169,7 +173,7 @@ class TestEnhancedEntityExtractor:
         Apple Inc. is a major technology company. Apple, founded by Steve Jobs,
         continues to innovate. The company Apple has partnerships with Google.
         Google LLC, also known as Alphabet's Google, works with various companies.
-        """
+        """'
 
         entities = await extractor.extract_entities_from_article(
             article_id="test_003", title="Entity Normalization Test", content=content
@@ -261,7 +265,8 @@ class TestEnhancedKnowledgeGraphPopulator:
         mock_builder = Mock()
         mock_builder.connect = AsyncMock()
         mock_builder.add_vertex = AsyncMock(return_value={"id": "vertex_123"})
-        mock_builder.add_relationship = AsyncMock(return_value={"id": "edge_456"})
+        mock_builder.add_relationship = AsyncMock(
+            return_value={"id": "edge_456"})
         mock_builder.get_vertex_by_id = AsyncMock(
             return_value={"id": "vertex_123", "name": "test"}
         )
@@ -335,7 +340,7 @@ class TestEnhancedKnowledgeGraphPopulator:
             Apple Inc. CEO Tim Cook announced today that the company will be investing
             $10 billion in artificial intelligence research over the next five years.
             The initiative will focus on machine learning and natural language processing.
-            
+
             The announcement comes as Apple faces increased competition from Google
             and Microsoft in the AI space. Cook emphasized that privacy will remain
             a core principle in Apple's AI development.
@@ -344,7 +349,7 @@ class TestEnhancedKnowledgeGraphPopulator:
             "metadata": {
                 "category": "Technology",
                 "source_url": "https://example.com/apple-ai-initiative",
-                "author": "Tech Journalist",
+                "author": "Tech Journalist",'
             },
         }
 
@@ -435,7 +440,8 @@ class TestEnhancedKnowledgeGraphPopulator:
     ):
         """Test entity deduplication and linking."""
         # Mock existing entity found
-        mock_graph_builder._execute_traversal.return_value = ["existing_vertex_123"]
+        mock_graph_builder._execute_traversal.return_value = [
+            "existing_vertex_123"]
 
         with patch(
             "src.knowledge_graph.enhanced_graph_populator.GraphBuilder",
@@ -495,7 +501,8 @@ class TestEnhancedKnowledgeGraphPopulator:
             assert "related_entities" in result
             assert result["total_results"] >= 0
             assert result["max_depth"] == 2
-            assert result["relationship_types"] == ["PARTNERS_WITH", "COMPETES_WITH"]
+            assert result["relationship_types"] == [
+                "PARTNERS_WITH", "COMPETES_WITH"]
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(
@@ -626,7 +633,8 @@ class TestEnhancedKnowledgeGraphPopulator:
 
             # Low confidence entity should be filtered out
             assert result["entities"]["extracted"] == 1
-            assert result["entities"]["filtered"] == 0  # Should be filtered out
+            # Should be filtered out
+            assert result["entities"][f"iltered"] == 0
             assert result["entities"]["created"] == 0
 
 
@@ -666,8 +674,10 @@ class TestKnowledgeGraphIntegration:
 
         mock_graph_builder = Mock()
         mock_graph_builder.connect = AsyncMock()
-        mock_graph_builder.add_vertex = AsyncMock(return_value={"id": "vertex_123"})
-        mock_graph_builder.add_relationship = AsyncMock(return_value={"id": "edge_456"})
+        mock_graph_builder.add_vertex = AsyncMock(
+            return_value={"id": "vertex_123"})
+        mock_graph_builder.add_relationship = AsyncMock(
+            return_value={"id": "edge_456"})
         mock_graph_builder._execute_traversal = AsyncMock(return_value=[])
 
         with patch(
@@ -675,7 +685,8 @@ class TestKnowledgeGraphIntegration:
             return_value=mock_graph_builder,
         ):
             # Create components
-            entity_extractor = AdvancedEntityExtractor(nlp_pipeline=mock_nlp_pipeline)
+            entity_extractor = AdvancedEntityExtractor(
+                nlp_pipeline=mock_nlp_pipeline)
             populator = EnhancedKnowledgeGraphPopulator(
                 neptune_endpoint="ws://mock-endpoint", entity_extractor=entity_extractor
             )
@@ -743,7 +754,8 @@ class TestFactoryFunctions:
     )
     def test_create_enhanced_knowledge_graph_populator(self):
         """Test standard factory function."""
-        populator = create_enhanced_knowledge_graph_populator("ws://test-endpoint")
+        populator = create_enhanced_knowledge_graph_populator(
+            "ws://test-endpoint")
 
         assert isinstance(populator, EnhancedKnowledgeGraphPopulator)
         assert populator.neptune_endpoint == "ws://test-endpoint"
@@ -765,22 +777,25 @@ class TestFactoryFunctions:
 
 if __name__ == "__main__":
     # Run a quick test to verify imports and basic functionality
-    print("🧪 Enhanced Knowledge Graph Tests")
+    print(" Enhanced Knowledge Graph Tests")
     print("=" * 50)
 
     try:
         if ENHANCED_KG_AVAILABLE:
-            print("✅ All enhanced knowledge graph components available")
+            print(" All enhanced knowledge graph components available")
 
             # Test factory functions
             extractor = create_advanced_entity_extractor()
-            print("✅ Entity extractor created: {0}".format(type(extractor).__name__))
+            print(" Entity extractor created: {0}".format(
+                type(extractor).__name__))
 
             populator = create_enhanced_knowledge_graph_populator("ws://test")
-            print("✅ Graph populator created: {0}".format(type(populator).__name__))
+            print(" Graph populator created: {0}".format(
+                type(populator).__name__))
 
             print(
-                "\n🎯 Run full tests with: pytest test_enhanced_knowledge_graph.py -v"
+                ""
+ Run full tests with: pytest test_enhanced_knowledge_graph.py -v""
             )
         else:
             print("❌ Enhanced knowledge graph components not available")
@@ -789,7 +804,8 @@ if __name__ == "__main__":
     except Exception as e:
         print("❌ Test setup failed: {0}".format(e))
 
-    print("\n📋 Test Coverage:")
+    print(""
+ Test Coverage:")
     print("  • Entity extraction with advanced patterns")
     print("  • Relationship detection and validation")
     print("  • Neptune graph population")
@@ -797,4 +813,4 @@ if __name__ == "__main__":
     print("  • Entity linking and deduplication")
     print("  • Batch processing performance")
     print("  • Error handling and robustness")
-    print("  • End-to-end integration workflows")
+    print("  • End-to-end integration workflows")"

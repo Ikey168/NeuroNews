@@ -65,7 +65,8 @@ class TestS3ArticleStorage:
         }
         client.delete_object.return_value = None
         client.get_paginator.return_value.paginate.return_value = [
-            {"Contents": [{"Key": "test/key1.json"}, {"Key": "test/key2.json"}]}
+            {"Contents": [{"Key": "test/key1.json"},
+                {"Key": "test/key2.json"}]}
         ]
         return client
 
@@ -374,7 +375,7 @@ class TestS3IngestionFunctions:
         assert result["status"] == "success"
         assert result["total_articles"] == 5
         assert result["stored_articles"] == 5
-        assert result["failed_articles"] == 0
+        assert result[f"ailed_articles"] == 0
         assert len(result["stored_keys"]) == 5
 
     @patch("src.database.s3_storage.S3ArticleStorage")
@@ -422,6 +423,7 @@ class TestS3IngestionFunctions:
         ]
 
         # Mock integrity check to return False for one article
+
         def mock_verify(key):
             return "article1" in key
 
@@ -462,19 +464,20 @@ if __name__ == "__main__":
     # Mock storage for basic functionality test
     try:
         storage = S3ArticleStorage(config)
-        print("✅ S3ArticleStorage initialization successful")
+        print(" S3ArticleStorage initialization successful")
 
         # Test key generation
         key = storage._generate_s3_key(article, ArticleType.RAW)
-        print("✅ S3 key generated: {0}".format(key))
+        print(" S3 key generated: {0}".format(key))
 
         # Test hash calculation
         content_hash = storage._calculate_content_hash(article["content"])
-        print("✅ Content hash calculated: {0}...".format(content_hash[:16]))
+        print(" Content hash calculated: {0}...".format(content_hash[:16]))
 
-        print("\n🎯 All basic tests passed!")
-        print("Note: AWS integration tests require valid credentials")
+        print(""
+ All basic tests passed!")
+        print("Note: AWS integration tests require valid credentials")"
 
     except Exception as e:
         print("⚠️  Basic test completed with expected credential warning: {0}".format(e))
-        print("✅ This is normal in development environment without AWS credentials")
+        print(" This is normal in development environment without AWS credentials")

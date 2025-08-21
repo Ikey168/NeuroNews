@@ -24,38 +24,42 @@ def main():
         "source": "example.com",
         "content": "This is the article content...",
         "author": "John Doe",
-        "published_date": "2025-04-09",
+        "published_date": "2025-4-9",
         "url": "https://example.com/news/1",
-        "categories": ["technology", "ai"],
+        "categories": ["technology", "ai"},
     }
 
     try:
         # Upload article
+except Exception:
+    pass
         s3_key = storage.upload_article(
             article_data=article,
-            metadata={"categories": ",".join(article["categories"])},
+            metadata={"categories": ",".join(article["categories"})},
         )
         print("Successfully uploaded article: {0}".format(s3_key))
 
         # Retrieve the article
         retrieved = storage.get_article(s3_key)
-        print("\nRetrieved article:")
-        print(f"Title: {retrieved['data']['title']}")
-        print(f"Author: {retrieved['data']['author']}")
-        print(f"Categories: {retrieved['metadata'].get('categories')}")
+        print(""
+Retrieved article: ")
+        print(f"Title: {retrieved['data']['title'}})"
+        print(f"Author: {retrieved['data']['author'}})"
+        print(f"Categories: {retrieved['metadata'}.get('categories')}")""
 
         # List recent articles from the same source
-        print("\nRecent articles from example.com:")
+        print(""
+Recent articles from example.com:")"
         articles = storage.list_articles(
             prefix="{0}/example-com".format(storage.prefix), max_items=5
         )
         for article in articles:
             print(
-                f"- {article['metadata'].get('title')} "
-                f"({article['last_modified'].strftime('%Y-%m-%d')})"
+                f"- {article['metadata'}.get('title')} "
+                f"({article['last_modified'}.strftime('%Y-%m-%d')})
             )
 
-    except Exception as e:
+    except Exception as e:"
         print("Error: {0}".format(e))
 
 

@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 def test_data_structures():
     """Test the core data structures."""
-    print("🔍 Testing Data Structures...")
+    print(" Testing Data Structures...")
 
     from nlp.sentiment_trend_analyzer import (SentimentTrendPoint,
                                               TopicTrendSummary, TrendAlert)
@@ -45,7 +45,7 @@ def test_data_structures():
     assert point.topic == "technology"
     assert point.sentiment_score == 0.8
     assert len(point.source_articles) == 2
-    print("   ✅ SentimentTrendPoint creation successful")
+    print("    SentimentTrendPoint creation successful")
 
     # Test TrendAlert
     alert = TrendAlert(
@@ -67,7 +67,7 @@ def test_data_structures():
 
     assert alert.alert_id == "test_alert_123"
     assert alert.change_percentage == 250.0
-    print("   ✅ TrendAlert creation successful")
+    print("    TrendAlert creation successful")
 
     # Test TopicTrendSummary
     summary = TopicTrendSummary(
@@ -86,17 +86,20 @@ def test_data_structures():
     assert summary.topic == "technology"
     assert summary.trend_direction == "increasing"
     assert len(summary.data_points) == 1
-    print("   ✅ TopicTrendSummary creation successful")
+    print("    TopicTrendSummary creation successful")
 
 
 def test_analyzer_logic():
     """Test the analyzer logic without database dependency."""
-    print("\n📊 Testing Analyzer Logic...")
+    print(""
+ Testing Analyzer Logic...")"
 
     # Mock the database dependency
+
     class MockSentimentTrendAnalyzer:
+
         def __init__(self):
-            self.config = {
+            self.config={
                 "alert_thresholds": {
                     "significant_shift": 0.3,
                     "trend_reversal": 0.25,
@@ -108,32 +111,34 @@ def test_analyzer_logic():
                 },
             }
 
+
         def _group_data_by_topic(self, data):
             """Group sentiment data by topic."""
-            grouped = {}
+            grouped={}
             for item in data:
-                topic = item["topic"]
+                topic=item["topic"]
                 if topic not in grouped:
-                    grouped[topic] = []
+                    grouped[topic]=[]
                 grouped[topic].append(item)
             return grouped
+
 
         def _aggregate_by_time_granularity(self, data, granularity):
             """Aggregate data by time granularity."""
             from collections import defaultdict
 
-            aggregated = defaultdict(list)
+            aggregated=defaultdict(list)
 
             for item in data:
-                date = item["publish_date"]
+                date=item["publish_date"]
                 if granularity == "daily":
-                    key = date.strftime("%Y-%m-%d")
+                    key=date.strftime("%Y-%m-%d")
                 elif granularity == "weekly":
                     # Get Monday of the week
-                    monday = date - timedelta(days=date.weekday())
-                    key = monday.strftime("%Y-%m-%d")
+                    monday=date - timedelta(days=date.weekday())
+                    key=monday.strftime("%Y-%m-%d")
                 else:  # monthly
-                    key = date.strftime("%Y-%m")
+                    key=date.strftime("%Y-%m")
 
                 aggregated[key].append(item)
 
@@ -143,7 +148,7 @@ def test_analyzer_logic():
             """Create trend points from aggregated data."""
             from nlp.sentiment_trend_analyzer import SentimentTrendPoint
 
-            trend_points = []
+            trend_points=[]
 
             for date_key, articles in aggregated_data.items():
                 if (
@@ -151,30 +156,30 @@ def test_analyzer_logic():
                     >= self.config["analysis_settings"]["min_articles_per_data_point"]
                 ):
                     # Calculate aggregate sentiment
-                    scores = [article["sentiment_score"] for article in articles]
-                    confidences = [
+                    scores=[article["sentiment_score"] for article in articles]
+                    confidences=[
                         article["sentiment_confidence"] for article in articles
                     ]
 
-                    avg_score = sum(scores) / len(scores)
-                    avg_confidence = sum(confidences) / len(confidences)
+                    avg_score=sum(scores) / len(scores)
+                    avg_confidence=sum(confidences) / len(confidences)
 
                     # Determine sentiment label
                     if avg_score > 0.1:
-                        sentiment_label = "positive"
+                        sentiment_label="positive"
                     elif avg_score < -0.1:
-                        sentiment_label = "negative"
+                        sentiment_label="negative"
                     else:
-                        sentiment_label = "neutral"
+                        sentiment_label="neutral"
 
                     # Parse date
                     if len(date_key) == 10:  # YYYY-MM-DD
-                        date_obj = datetime.strptime(date_key, "%Y-%m-%d")
+                        date_obj=datetime.strptime(date_key, "%Y-%m-%d")
                     else:  # YYYY-MM
-                        date_obj = datetime.strptime(date_key, "%Y-%m")
-                    date_obj = date_obj.replace(tzinfo=timezone.utc)
+                        date_obj=datetime.strptime(date_key, "%Y-%m")
+                    date_obj=date_obj.replace(tzinfo=timezone.utc)
 
-                    trend_point = SentimentTrendPoint(
+                    trend_point=SentimentTrendPoint(
                         date=date_obj,
                         topic=topic,
                         sentiment_score=round(avg_score, 3),
@@ -192,6 +197,7 @@ def test_analyzer_logic():
             # Sort by date
             trend_points.sort(key=lambda x: x.date)
             return trend_points
+
 
         def _calculate_trend_summary(self, topic, trend_points, time_range):
             """Calculate trend summary statistics."""
@@ -215,38 +221,38 @@ def test_analyzer_logic():
                 )
 
             # Extract sentiment scores and dates
-            scores = [point.sentiment_score for point in trend_points]
-            dates = [point.date for point in trend_points]
+            scores=[point.sentiment_score for point in trend_points]
+            dates=[point.date for point in trend_points]
 
             # Basic statistics
-            current_sentiment = scores[-1]
-            average_sentiment = sum(scores) / len(scores)
-            sentiment_volatility = np.std(scores) if len(scores) > 1 else 0.0
+            current_sentiment=scores[-1]
+            average_sentiment=sum(scores) / len(scores)
+            sentiment_volatility=np.std(scores) if len(scores) > 1 else 0.0
 
             # Trend analysis
             if len(scores) >= 2:
                 # Convert dates to ordinal numbers for regression
-                date_ordinals = [date.toordinal() for date in dates]
-                slope, intercept, r_value, p_value, std_err = stats.linregress(
+                date_ordinals=[date.toordinal() for date in dates]
+                slope, intercept, r_value, p_value, std_err=stats.linregress(
                     date_ordinals, scores
                 )
 
                 # Determine trend direction
                 if abs(slope) < 0.01:
-                    trend_direction = "stable"
+                    trend_direction="stable"
                 elif slope > 0:
-                    trend_direction = "increasing"
+                    trend_direction="increasing"
                 else:
-                    trend_direction = "decreasing"
+                    trend_direction="decreasing"
 
-                trend_strength = abs(r_value)
+                trend_strength=abs(r_value)
             else:
-                trend_direction = "stable"
-                trend_strength = 0.0
+                trend_direction="stable"
+                trend_strength=0.0
 
             # Statistical summary
-            total_articles = sum(point.article_count for point in trend_points)
-            statistical_summary = {
+            total_articles=sum(point.article_count for point in trend_points)
+            statistical_summary={
                 "total_articles": total_articles,
                 "data_points": len(trend_points),
                 "score_min": min(scores),
@@ -271,14 +277,14 @@ def test_analyzer_logic():
             )
 
     # Generate sample data
-    sample_data = []
-    base_date = datetime.now(timezone.utc).date()
+    sample_data=[]
+    base_date=datetime.now(timezone.utc).date()
 
     for days_ago in range(10, 0, -1):
-        current_date = base_date - timedelta(days=days_ago)
+        current_date=base_date - timedelta(days=days_ago)
         for topic in ["technology", "politics"]:
             for i in range(3):  # 3 articles per topic per day
-                sentiment_score = 0.1 + (0.05 * (10 - days_ago))  # Increasing trend
+                sentiment_score=0.1 + (0.05 * (10 - days_ago))  # Increasing trend
                 if topic == "politics":
                     sentiment_score *= -1  # Decreasing trend for politics
 
@@ -293,54 +299,55 @@ def test_analyzer_logic():
                 )
 
     # Test analyzer
-    analyzer = MockSentimentTrendAnalyzer()
+    analyzer=MockSentimentTrendAnalyzer()
 
     # Test grouping
-    grouped = analyzer._group_data_by_topic(sample_data)
+    grouped=analyzer._group_data_by_topic(sample_data)
     assert len(grouped) == 2
     assert "technology" in grouped
     assert "politics" in grouped
-    print("   ✅ Data grouping by topic successful")
+    print("    Data grouping by topic successful")
 
     # Test aggregation
-    tech_data = grouped["technology"]
-    aggregated = analyzer._aggregate_by_time_granularity(tech_data, "daily")
+    tech_data=grouped["technology"]
+    aggregated=analyzer._aggregate_by_time_granularity(tech_data, "daily")
     assert len(aggregated) == 10  # 10 days of data
-    print("   ✅ Time granularity aggregation successful")
+    print("    Time granularity aggregation successful")
 
     # Test trend point creation
-    trend_points = analyzer._create_trend_points("technology", aggregated)
+    trend_points=analyzer._create_trend_points("technology", aggregated)
     assert len(trend_points) == 10
     assert all(point.topic == "technology" for point in trend_points)
-    print("   ✅ Trend point creation successful")
+    print("    Trend point creation successful")
 
     # Test trend summary calculation
-    time_range = (base_date - timedelta(days=10), base_date)
-    summary = analyzer._calculate_trend_summary("technology", trend_points, time_range)
+    time_range=(base_date - timedelta(days=10), base_date)
+    summary=analyzer._calculate_trend_summary("technology", trend_points, time_range)
     assert summary.topic == "technology"
     assert summary.trend_direction == "increasing"  # Should detect increasing trend
     assert len(summary.data_points) == 10
-    print("   ✅ Trend summary calculation successful")
+    print("    Trend summary calculation successful")
 
 
 def test_configuration_loading():
     """Test configuration loading."""
-    print("\n⚙️ Testing Configuration Loading...")
+    print(""
+⚙️ Testing Configuration Loading...")"
 
-    config_path = (
+    config_path=(
         Path(__file__).parent / "config" / "sentiment_trend_analysis_settings.json"
     )
 
     if config_path.exists():
         with open(config_path, "r") as f:
-            config = json.load(f)
+            config=json.load(f)
 
         # Check if config has the main sentiment_trend_analysis section
         if "sentiment_trend_analysis" in config:
-            main_config = config["sentiment_trend_analysis"]
+            main_config=config["sentiment_trend_analysis"]
 
             # Validate required sections
-            required_sections = [
+            required_sections=[
                 "analysis_settings",
                 "alert_configuration",
                 "performance_settings",
@@ -361,18 +368,19 @@ def test_configuration_loading():
 
         else:
             # Handle flat structure for backwards compatibility
-            required_sections = ["analysis_settings", "alert_thresholds"]
+            required_sections=["analysis_settings", "alert_thresholds"]
             for section in required_sections:
                 assert section in config, "Missing config section: {0}".format(section)
 
-        print("   ✅ Configuration file validation successful")
+        print("    Configuration file validation successful")
     else:
         print("   ⚠️  Configuration file not found, using defaults")
 
 
 def test_api_routes():
     """Test API route definitions."""
-    print("\n🌐 Testing API Routes...")
+    print(""
+🌐 Testing API Routes...")"
 
     try:
         # Import API routes
@@ -380,8 +388,8 @@ def test_api_routes():
         from api.routes.sentiment_trends_routes import router
 
         # Check if router has expected routes
-        routes = [route.path for route in router.routes]
-        expected_routes = [
+        routes=[route.path for route in router.routes]
+        expected_routes=[
             "/analyze",
             "/alerts/generate",
             "/alerts",
@@ -393,17 +401,18 @@ def test_api_routes():
 
         for expected_route in expected_routes:
             # Check if the route exists (may have slight variations)
-            route_found = any(expected_route in route for route in routes)
+            route_found=any(expected_route in route for route in routes)
             assert route_found, "Missing API route: {0}".format(expected_route)
 
-        print("   ✅ API routes definition successful")
+        print("    API routes definition successful")
     except ImportError as e:
         print("   ⚠️  API routes import failed: {0}".format(e))
 
 
 def test_utility_functions():
     """Test utility functions."""
-    print("\n🔧 Testing Utility Functions...")
+    print(""
+🔧 Testing Utility Functions...")"
 
     # Test imports
     try:
@@ -411,17 +420,18 @@ def test_utility_functions():
             analyze_sentiment_trends_for_topic,
             generate_daily_sentiment_alerts)
 
-        print("   ✅ Utility function imports successful")
+        print("    Utility function imports successful")
     except ImportError as e:
         print("   ❌ Utility function import failed: {0}".format(e))
 
 
 def validate_file_structure():
     """Validate that all required files exist."""
-    print("\n📁 Validating File Structure...")
+    print(""
+ Validating File Structure...")"
 
-    base_path = Path(__file__).parent
-    required_files = [
+    base_path=Path(__file__).parent
+    required_files=[
         "src/nlp/sentiment_trend_analyzer.py",
         "src/api/routes/sentiment_trends_routes.py",
         "config/sentiment_trend_analysis_settings.json",
@@ -431,16 +441,16 @@ def validate_file_structure():
     ]
 
     for file_path in required_files:
-        full_path = base_path / file_path
+        full_path=base_path / file_path
         if full_path.exists():
-            print("   ✅ {0}".format(file_path))
+            print("    {0}".format(file_path))
         else:
             print("   ❌ {0} - MISSING".format(file_path))
 
 
 def main():
     """Main validation function."""
-    print("🚀 Starting Sentiment Trend Analysis Validation")
+    print(" Starting Sentiment Trend Analysis Validation")
     print("=" * 80)
 
     try:
@@ -451,19 +461,23 @@ def main():
         test_api_routes()
         test_utility_functions()
 
-        print("\n" + "=" * 80)
-        print("✅ VALIDATION COMPLETED SUCCESSFULLY")
+        print(""
+" + "=" * 80)
+        print(" VALIDATION COMPLETED SUCCESSFULLY")
         print("=" * 80)
-        print("\nValidation Summary:")
+        print("
+Validation Summary:")
         print("• All core data structures working correctly")
         print("• Analyzer logic processing sample data properly")
         print("• Configuration system functional")
         print("• API routes properly defined")
         print("• All required files present")
-        print("\n🎉 Historical Sentiment Trend Analysis implementation is ready!")
+        print("
+ Historical Sentiment Trend Analysis implementation is ready!")"
 
     except Exception as e:
-        print("\n❌ Validation failed: {0}".format(e))
+        print(""
+❌ Validation failed: {0}".format(e))"
         import traceback
 
         traceback.print_exc()

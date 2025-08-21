@@ -10,16 +10,13 @@ Demonstrates the API Key Management system implementation with all four requirem
 """
 
 import asyncio
-import json
-import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from typing import Any, Dict
 
 import requests
 
 # Import our API key components
-from src.api.auth.api_key_manager import (APIKeyGenerator, APIKeyStatus,
-                                          api_key_manager)
+from src.api.auth.api_key_manager import api_key_manager
 from src.api.auth.jwt_auth import auth_handler
 
 
@@ -81,17 +78,15 @@ class APIKeyDemo:
                     user_id=user_data["user_id"],
                     name="{0}_primary_key".format(user_name),
                     expires_in_days=365,
-                    permissions=(
-                        ["read", "write"] if user_data["role"] != "free" else ["read"]
-                    ),
+                    permissions=(["read", "write"] if user_data["role"] != "free" else ["read"]),
                     rate_limit=1000 if user_data["role"] == "admin" else 100,
                 )
 
                 self.generated_keys[user_name] = result
 
-                print(f"   ✅ Generated: {result['key_prefix']}****")
+                print(f"    Generated: {result['key_prefix']}****")
                 print(f"   📅 Expires: {result['expires_at']}")
-                print(f"   🎯 Permissions: {result['permissions']}")
+                print(f"    Permissions: {result['permissions']}")
                 print(f"   ⚡ Rate Limit: {result['rate_limit']} req/min")
                 print()
 
@@ -109,15 +104,15 @@ class APIKeyDemo:
             )
 
             if success:
-                print(f"   ✅ Successfully revoked Alice's key: {alice_key_id[:12]}...")
+                print(f"    Successfully revoked Alice's key: {alice_key_id[:12]}...")
             else:
-                print(f"   ❌ Failed to revoke Alice's key")
+                print("   ❌ Failed to revoke Alice's key")
 
         except Exception as e:
             print("   ❌ Revocation error: {0}".format(e))
 
         print()
-        print("✅ API key generation and revocation testing complete")
+        print(" API key generation and revocation testing complete")
         print()
 
     async def demo_requirement_2_dynamodb_storage(self):
@@ -129,28 +124,26 @@ class APIKeyDemo:
 
         print("🗄️ DynamoDB API Key Storage:")
         if api_key_manager.store.table:
-            print("   ✅ DynamoDB connection established")
-            print("   📋 Table: {0}".format(api_key_manager.store.table_name))
+            print("    DynamoDB connection established")
+            print("    Table: {0}".format(api_key_manager.store.table_name))
             print("   🌎 Region: {0}".format(api_key_manager.store.region))
         else:
-            print(
-                "   ⚠️  DynamoDB not configured (boto3 not available or AWS not configured)"
-            )
+            print("   ⚠️  DynamoDB not configured (boto3 not available or AWS not configured)")
             print("   📝 In production, this would connect to AWS DynamoDB")
-            print("   📋 Table: neuronews_api_keys")
+            print("    Table: neuronews_api_keys")
             print("   🔑 Key: key_id (String)")
-            print("   📊 GSI: user-id-index for efficient user lookups")
+            print("    GSI: user-id-index for efficient user lookups")
 
         print()
         print("🔐 Security Features:")
-        print("   ✅ API keys are never stored in plaintext")
-        print("   ✅ PBKDF2 hashing with salt for key storage")
-        print("   ✅ Only key prefixes visible for identification")
-        print("   ✅ Separate permissions and rate limiting per key")
+        print("    API keys are never stored in plaintext")
+        print("    PBKDF2 hashing with salt for key storage")
+        print("    Only key prefixes visible for identification")
+        print("    Separate permissions and rate limiting per key")
         print()
 
         # Test retrieving user's keys
-        print("📋 Testing Key Retrieval:")
+        print(" Testing Key Retrieval:")
         for user_name, user_data in self.demo_users.items():
             try:
                 keys = await api_key_manager.get_user_api_keys(user_data["user_id"])
@@ -159,14 +152,17 @@ class APIKeyDemo:
                 for key in keys:
                     status_icon = "🟢" if key["status"] == "active" else "🔴"
                     print(
-                        f"      {status_icon} {key['key_prefix']}**** - {key['name']} ({key['status']})"
+                        f"      {status_icon} {
+                            key['key_prefix']}**** - {
+                            key['name']} ({
+                            key['status']})"
                     )
 
             except Exception as e:
                 print("   ❌ Error retrieving keys for {0}: {1}".format(user_name, e))
 
         print()
-        print("✅ DynamoDB storage integration demonstrated")
+        print(" DynamoDB storage integration demonstrated")
         print()
 
     async def demo_requirement_3_expiration_and_renewal(self):
@@ -184,7 +180,7 @@ class APIKeyDemo:
         print()
 
         # Test creating a short-lived key
-        print("🧪 Testing Short-Term Key (expires in 1 day):")
+        print(" Testing Short-Term Key (expires in 1 day):")
         try:
             short_key = await api_key_manager.generate_api_key(
                 user_id=self.demo_users["bob"]["user_id"],
@@ -193,7 +189,7 @@ class APIKeyDemo:
                 permissions=["read"],
             )
 
-            print(f"   ✅ Created: {short_key['key_prefix']}****")
+            print(f"    Created: {short_key['key_prefix']}****")
             print(f"   📅 Expires: {short_key['expires_at']}")
 
             # Test renewal
@@ -205,10 +201,10 @@ class APIKeyDemo:
                 extends_days=30,
             )
 
-            print(f"   ✅ Renewed key: {renewed['key_id'][:12]}...")
+            print(f"    Renewed key: {renewed['key_id'][:12]}...")
             print(f"   📅 Old expiry: {renewed['old_expires_at']}")
             print(f"   📅 New expiry: {renewed['new_expires_at']}")
-            print(f"   📈 Extended by: {renewed['extended_days']} days")
+            print(f"    Extended by: {renewed['extended_days']} days")
 
         except Exception as e:
             print("   ❌ Error testing expiration/renewal: {0}".format(e))
@@ -225,11 +221,11 @@ class APIKeyDemo:
             for i in range(api_key_manager.max_keys_per_user + 2):
                 try:
                     key = await api_key_manager.generate_api_key(
-                        user_id=charlie_user_id, name="test_key_{0}".format(i+1)
+                        user_id=charlie_user_id, name="test_key_{0}".format(i + 1)
                     )
                     created_keys += 1
                     if created_keys <= 3:  # Only show first few
-                        print(f"   ✅ Created key {i+1}: {key['key_prefix']}****")
+                        print(f"    Created key {i + 1}: {key['key_prefix']}****")
                 except ValueError as e:
                     if "maximum API key limit" in str(e):
                         print("   🛑 Limit reached after {0} keys: {1}".format(created_keys, e))
@@ -241,7 +237,7 @@ class APIKeyDemo:
             print("   ❌ Error testing key limits: {0}".format(e))
 
         print()
-        print("✅ Expiration and renewal policies demonstrated")
+        print(" Expiration and renewal policies demonstrated")
         print()
 
     async def demo_requirement_4_api_endpoints(self):
@@ -271,13 +267,13 @@ class APIKeyDemo:
         print()
 
         # Test endpoint integration (if server is running)
-        print("🧪 Testing API Endpoint Integration:")
+        print(" Testing API Endpoint Integration:")
         try:
             response = requests.get("{0}/api/keys/health".format(self.base_url), timeout=2)
 
             if response.status_code == 200:
                 health_data = response.json()
-                print(f"   ✅ Health check successful: {health_data['status']}")
+                print(f"    Health check successful: {health_data['status']}")
                 print(f"   🏥 Components: {health_data['components']}")
             else:
                 print("   ⚠️  Health check returned status: {0}".format(response.status_code))
@@ -298,7 +294,7 @@ class APIKeyDemo:
                 print("   ❌ Failed to generate token for {0}: {1}".format(user_name, e))
 
         print()
-        print("✅ API endpoints demonstrated")
+        print(" API endpoints demonstrated")
         print()
 
     async def demo_advanced_features(self):
@@ -309,45 +305,45 @@ class APIKeyDemo:
         print()
 
         print("🔒 Security Features:")
-        print("   ✅ PBKDF2 key hashing with 100,000 iterations")
-        print("   ✅ Constant-time hash comparison (HMAC)")
-        print("   ✅ Cryptographically secure key generation")
-        print("   ✅ Multiple authentication methods (header, query, bearer)")
-        print("   ✅ Usage tracking and rate limiting per key")
+        print("    PBKDF2 key hashing with 100,000 iterations")
+        print("    Constant-time hash comparison (HMAC)")
+        print("    Cryptographically secure key generation")
+        print("    Multiple authentication methods (header, query, bearer)")
+        print("    Usage tracking and rate limiting per key")
         print()
 
-        print("📊 Monitoring & Analytics:")
-        print("   ✅ Real-time usage tracking")
-        print("   ✅ Key usage statistics")
-        print("   ✅ Admin metrics dashboard")
-        print("   ✅ Health monitoring")
+        print(" Monitoring & Analytics:")
+        print("    Real-time usage tracking")
+        print("    Key usage statistics")
+        print("    Admin metrics dashboard")
+        print("    Health monitoring")
         print()
 
         print("🔧 Management Features:")
-        print("   ✅ Per-key permissions and rate limits")
-        print("   ✅ Flexible expiration policies")
-        print("   ✅ Key renewal without regeneration")
-        print("   ✅ Bulk operations for admins")
-        print("   ✅ Automatic cleanup of expired keys")
+        print("    Per-key permissions and rate limits")
+        print("    Flexible expiration policies")
+        print("    Key renewal without regeneration")
+        print("    Bulk operations for admins")
+        print("    Automatic cleanup of expired keys")
         print()
 
         # Test key validation
-        print("🔍 Testing Key Validation:")
+        print(" Testing Key Validation:")
         test_keys = ["nn_valid_key_format", "invalid_key_format", "nn_", ""]
 
         for key in test_keys:
             valid = key.startswith("nn_") and len(key) > 3
-            status = "✅ Valid format" if valid else "❌ Invalid format"
+            status = " Valid format" if valid else "❌ Invalid format"
             print(f"   '{key}': {status}")
 
         print()
-        print("✅ Advanced features demonstrated")
+        print(" Advanced features demonstrated")
         print()
 
 
 async def run_api_key_demo():
     """Run the complete API key management demo."""
-    print("🚀 NeuroNews API Key Management System Demo")
+    print(" NeuroNews API Key Management System Demo")
     print("Issue #61: Implement API Key Management System")
     print(f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print()
@@ -365,13 +361,13 @@ async def run_api_key_demo():
         print(" DEMO COMPLETE - ISSUE #61 SUMMARY")
         print("============================================================")
         print()
-        print("🎉 API Key Management System Implementation Successful!")
+        print(" API Key Management System Implementation Successful!")
         print()
-        print("📋 Requirements Status:")
-        print("✅ 1. Allow users to generate & revoke API keys")
-        print("✅ 2. Store API keys securely in DynamoDB")
-        print("✅ 3. Implement API key expiration & renewal policies")
-        print("✅ 4. Implement API /generate_api_key?user_id=xyz")
+        print(" Requirements Status:")
+        print(" 1. Allow users to generate & revoke API keys")
+        print(" 2. Store API keys securely in DynamoDB")
+        print(" 3. Implement API key expiration & renewal policies")
+        print(" 4. Implement API /generate_api_key?user_id=xyz")
         print()
         print("🔐 Security Features:")
         print("   ✓ Cryptographically secure key generation")
@@ -381,7 +377,7 @@ async def run_api_key_demo():
         print("   ✓ Usage tracking and monitoring")
         print("   ✓ Automatic expiration and cleanup")
         print()
-        print("🚀 Ready for Production Deployment!")
+        print(" Ready for Production Deployment!")
 
     except Exception as e:
         print("❌ Demo failed with error: {0}".format(e))

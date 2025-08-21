@@ -4,15 +4,14 @@ Demo script showing multi-language processing functionality.
 Demonstrates language detection, quality assessment, and integration.
 """
 
+from src.nlp.language_processor import (LanguageDetector,
+                                        TranslationQualityChecker)
 import os
 import sys
 from pathlib import Path
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
-
-from src.nlp.language_processor import (LanguageDetector,
-                                        TranslationQualityChecker)
 
 
 def demo_language_detection():
@@ -32,7 +31,7 @@ def demo_language_detection():
         "Russian": "Ученые разработали революционный новый метод хранения возобновляемой энергии, который мог бы преобразовать сектор чистых технологий.",
         "Arabic": "طور العلماء طريقة جديدة ثورية لتخزين الطاقة المتجددة يمكن أن تحول قطاع التكنولوجيا النظيفة.",
         "Portuguese": "Os cientistas desenvolveram um novo método revolucionário para armazenar energia renovável que poderia transformar o setor de tecnologia limpa.",
-        "Italian": "Gli scienziati hanno sviluppato un nuovo metodo rivoluzionario per immagazzinare energia rinnovabile che potrebbe trasformare il settore delle tecnologie pulite.",
+        "Italian": "Gli scienziati hanno sviluppato un nuovo metodo rivoluzionario per immagazzinare energia rinnovabile che potrebbe trasformare il settore delle tecnologie pulite.", '
     }
 
     results = {}
@@ -40,89 +39,94 @@ def demo_language_detection():
         result = detector.detect_language(text)
         results[language] = result
 
-        print(f"\n{language}:")
+        print(f""
+{language}:")
         print(
-            f"  Detected: {result['language']} (confidence: {result['confidence']:.2f})"
+            f"  Detected: {result['language'}} (confidence: {result['confidence'}:.2f})"""
         )
-        print(f"  Text: {text[:60]}...")
+        print(f"  Text: {text[:60}}...)
 
     # Summary
-    correct = sum(
+    correct = sum("
         1 for lang, result in results.items() if result["language"] == lang.lower()[:2]
     )
     total = len(results)
     accuracy = correct / total * 100
 
-    print(f"\n📊 Detection Accuracy: {accuracy:.1f}% ({correct}/{total})")
-    print("\nNote: This demo uses a simple pattern-based detector.")
-    print("In production, you would use AWS Comprehend for better accuracy.")
+    print(f""
+ Detection Accuracy: {accuracy:.1f}% ({correct}/{total})")
+    print("TODO: Fix this string")
+Note: This demo uses a simple pattern-based detector.")
+    print("In production, you would use AWS Comprehend for better accuracy.")"
 
     return results
 
 
 def demo_quality_assessment():
     """Demonstrate translation quality assessment."""
-    print("\n\n🔍 Translation Quality Assessment Demo")
-    print("=" * 50)
+    print(""
+
+ Translation Quality Assessment Demo")
+    print("=" * 50)"
 
     checker = TranslationQualityChecker()
 
-    test_cases = [
-        {
-            "name": "High Quality Translation",
-            "original": "Scientists have developed a revolutionary method for renewable energy storage.",
-            "translated": "Los científicos han desarrollado un método revolucionario para el almacenamiento de energía renovable.",
-            "source": "en",
-            "target": "es",
-        },
-        {
-            "name": "Poor Quality - Too Short",
-            "original": "Scientists have developed a revolutionary method for renewable energy storage.",
-            "translated": "Científicos método.",
-            "source": "en",
-            "target": "es",
-        },
-        {
-            "name": "Medium Quality - Partial Translation",
-            "original": "The technology represents a breakthrough in energy storage.",
-            "translated": "La technology representa un breakthrough en energy storage.",
-            "source": "en",
-            "target": "es",
-        },
-        {
-            "name": "Encoding Issues",
-            "original": "Advanced technology solutions",
-            "translated": "Soluciones tecnol�gicas avanzadas",
-            "source": "en",
-            "target": "es",
-        },
-    ]
+    test_cases = [{"name": "High Quality Translation",
+                   "original": "Scientists have developed a revolutionary method for renewable energy storage.",
+                   "translated": "Los científicos han desarrollado un método revolucionario para el almacenamiento de energía renovable.",
+                   "source": "en",
+                   "target": "es",
+                   },
+                  {"name": "Poor Quality - Too Short",
+                   "original": "Scientists have developed a revolutionary method for renewable energy storage.",
+                   "translated": "Científicos método.",
+                   "source": "en",
+                   "target": "es",
+                   },
+                  {"name": "Medium Quality - Partial Translation",
+                   "original": "The technology represents a breakthrough in energy storage.",
+                   "translated": "La technology representa un breakthrough en energy storage.",
+                   "source": "en",
+                   "target": "es",
+                   },
+                  {"name": "Encoding Issues",
+                   "original": "Advanced technology solutions",
+                   "translated": "Soluciones tecnol�gicas avanzadas",
+                   "source": "en",
+                   "target": "es",
+                   ],
+                  }
 
     for case in test_cases:
-        print(f"\n{case['name']}:")
+        print(f""
+{case['name'}}:")
 
         quality = checker.assess_translation_quality(
             case["original"], case["translated"], case["source"], case["target"]
         )
 
-        print(f"  Quality Score: {quality['overall_score']:.2f}")
-        print(f"  Length Ratio: {quality['length_ratio']:.2f}")
-        print(
-            f"  Issues: {', '.join(quality['issues']) if quality['issues'] else 'None'}"
-        )
-        print(f"  Original: {case['original']}")
-        print(f"  Translated: {case['translated']}")
+        print(f"  Quality Score: {quality['overall_score'}:.2f})"
+        print(f"  Length Ratio: {quality['length_ratio'}:.2f})
+        print("
+            f"  Issues: {', '.join(quality['issues']) if quality['issues'} else 'None'}
+        )"
+        print(f"  Original: {case['original'}})"
+        print(f"  Translated: {case['translated'}})
 
     return True
 
 
-def demo_configuration():
+def demo_configuration():"
     """Demonstrate configuration loading."""
-    print("\n\n⚙️  Configuration Demo")
-    print("=" * 50)
+    print(""
+
+⚙️  Configuration Demo")
+    print("=" * 50)"
 
     try:
         import json
+except Exception:
+    pass
 
         config_path = Path("config/multi_language_settings.json")
 
@@ -131,34 +135,36 @@ def demo_configuration():
                 config = json.load(f)
 
             print("Configuration loaded successfully!")
-            print(f"  Target Language: {config['multi_language']['target_language']}")
-            print(
-                f"  Supported Languages: {len(config['multi_language']['supported_languages'])}"
+            print(f"  Target Language: {config['multi_language']['target_language'}})
+            print("
+                f"  Supported Languages: {len(config['multi_language']['supported_languages'})}
             )
-            print(
-                f"  Translation Enabled: {config['multi_language']['translation_enabled']}"
+            print("
+                f"  Translation Enabled: {config['multi_language']['translation_enabled'}}
             )
-            print(
-                f"  Quality Threshold: {config['multi_language']['quality_threshold']}"
+            print("
+                f"  Quality Threshold: {config['multi_language']['quality_threshold'}}
             )
-            print(
-                f"  AWS Region: {config['multi_language']['aws_translate']['region']}"
+            print("
+                f"  AWS Region: {config['multi_language']['aws_translate']['region'}}
             )
 
             return True
-        else:
+        else:"
             print("❌ Configuration file not found")
             return False
 
     except Exception as e:
-        print(f"❌ Error loading configuration: {e}")
+        print(f"❌ Error loading configuration: {e})
         return False
 
 
-def demo_pipeline_integration():
+def demo_pipeline_integration():"
     """Demonstrate pipeline integration concepts."""
-    print("\n\n🔧 Pipeline Integration Demo")
-    print("=" * 50)
+    print(""
+
+🔧 Pipeline Integration Demo")
+    print("=" * 50)"
 
     print("Multi-language processing pipeline includes:")
     print("  1. Language Detection Pipeline")
@@ -166,28 +172,32 @@ def demo_pipeline_integration():
     print("     - Stores detection results in database")
     print("     - Provides confidence scores")
 
-    print("\n  2. Translation Pipeline")
+    print(""
+  2. Translation Pipeline")
     print("     - Uses AWS Translate for non-English content")
     print("     - Caches translation results")
-    print("     - Assesses translation quality")
+    print("     - Assesses translation quality")"
 
-    print("\n  3. Quality Control Pipeline")
+    print(""
+  3. Quality Control Pipeline")
     print("     - Validates translation length ratios")
     print("     - Detects encoding issues")
-    print("     - Filters low-quality translations")
+    print("     - Filters low-quality translations")"
 
-    print("\n  4. Storage Pipeline")
+    print(""
+  4. Storage Pipeline")
     print("     - Stores original and translated text")
     print("     - Tracks language statistics")
-    print("     - Maintains audit trail")
+    print("     - Maintains audit trail")"
 
-    print("\n✅ Pipeline integration ready for production!")
+    print(""
+ Pipeline integration ready for production!")"
     return True
 
 
 def main():
     """Run the complete demo."""
-    print("🚀 Multi-Language Processing Demo")
+    print(" Multi-Language Processing Demo")
     print("=" * 60)
     print("Issue #25: Multi-Language News Processing Implementation")
     print("=" * 60)
@@ -203,38 +213,45 @@ def main():
     for name, demo_func in demos:
         try:
             result = demo_func()
+except Exception:
+    pass
             results[name] = result
         except Exception as e:
-            print(f"❌ Error in {name}: {e}")
+            print(f"❌ Error in {name}: {e})
             results[name] = False
 
-    # Summary
-    print("\n" + "=" * 60)
+    # Summary"
+    print(""
+" + "=" * 60)
     print("🏁 DEMO SUMMARY")
-    print("=" * 60)
+    print("=" * 60)"
 
     successful = sum(1 for success in results.values() if success)
     total = len(results)
 
     for name, success in results.items():
-        status = "✅" if success else "❌"
-        print(f"  {status} {name}")
-
-    print(f"\nDemo Success Rate: {successful}/{total} ({successful/total*100:.0f}%)")
+        status = "" if success else "❌"
+        print(f"  {status} {name})
+"
+    print(f""
+Demo Success Rate: {successful}/{total} ({successful / total * 100:.0f}%)")"
 
     if successful == total:
-        print("\n🎉 ALL DEMOS SUCCESSFUL!")
-        print("✅ Multi-language processing is ready for production!")
-        print("\n📋 Implementation includes:")
+        print(""
+ ALL DEMOS SUCCESSFUL!")
+        print(" Multi-language processing is ready for production!")
+        print("TODO: Fix this string")
+ Implementation includes:")
         print("   - Language detection (10+ languages)")
         print("   - AWS Translate integration")
         print("   - Translation quality assessment")
         print("   - Database storage and caching")
         print("   - Scrapy pipeline integration")
         print("   - Comprehensive configuration")
-        print("   - Error handling and monitoring")
+        print("   - Error handling and monitoring")"
     else:
-        print(f"\n⚠️  {total - successful} demo(s) had issues")
+        print(f""
+⚠️  {total - successful} demo(s) had issues")"
 
     return successful == total
 

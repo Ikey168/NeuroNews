@@ -454,7 +454,8 @@ class EventClusterer:
             all_titles = " ".join([article["title"] for article in articles])
 
             # Simple keyword extraction from titles
-            words = re.findall(r"\b[A-Z][a-z]+\b", all_titles)  # Capitalized words
+            # Capitalized words
+            words = re.findall(r"\b[A-Z][a-z]+\b", all_titles)
             word_counts = Counter(words)
 
             # Get most common meaningful words
@@ -983,6 +984,7 @@ def get_redshift_connection_params() -> Dict[str, str]:
 
 if __name__ == "__main__":
     # Test the clusterer
+
     async def test_clusterer():
         # This would typically be called with real embeddings data
         from src.nlp.article_embedder import ArticleEmbedder

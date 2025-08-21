@@ -1,11 +1,12 @@
 import json
 import os
 
-from gremlin_python.driver.driver_remote_connection import \
-    DriverRemoteConnection
+from gremlin_python.driver.driver_remote_connection import DriverRemoteConnection
 from gremlin_python.process.anonymous_traversal import traversal
 from gremlin_python.process.graph_traversal import (  # Add __ import
-    GraphTraversalSource, __)
+    GraphTraversalSource,
+    __,
+)
 
 
 def initialize_graph_traversal():
@@ -78,9 +79,7 @@ def create_relationship_types(g: GraphTraversalSource):
         source_v = g.V().hasLabel("schema").has("name", source).next()
         target_v = g.V().hasLabel("schema").has("name", target).next()
 
-        g.V(source_v).addE("ALLOWS_RELATIONSHIP").property("type", rel_type).to(
-            target_v
-        ).next()
+        g.V(source_v).addE("ALLOWS_RELATIONSHIP").property("type", rel_type).to(target_v).next()
 
 
 def lambda_handler(event, context):

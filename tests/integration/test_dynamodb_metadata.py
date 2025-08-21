@@ -57,7 +57,8 @@ class TestArticleMetadataIndex(unittest.TestCase):
 
         # Verify required fields
         self.assertEqual(metadata.article_id, "test-article-123")
-        self.assertEqual(metadata.title, "AI Breakthrough in Healthcare Technology")
+        self.assertEqual(
+            metadata.title, "AI Breakthrough in Healthcare Technology")
         self.assertEqual(metadata.source, "TechNews")
         self.assertEqual(metadata.published_date, "2025-08-13")
         self.assertEqual(metadata.tags, ["AI", "Healthcare", "Technology"])
@@ -90,7 +91,8 @@ class TestArticleMetadataIndex(unittest.TestCase):
 
         # Verify required fields are present
         self.assertEqual(item["article_id"], "test-article-123")
-        self.assertEqual(item["title"], "AI Breakthrough in Healthcare Technology")
+        self.assertEqual(
+            item["title"], "AI Breakthrough in Healthcare Technology")
         self.assertEqual(item["source"], "TechNews")
         self.assertIn("source_date", item)
         self.assertIn("date_source", item)
@@ -234,7 +236,7 @@ class TestDynamoDBMetadataManager(unittest.TestCase):
         self.assertEqual(result["status"], "completed")
         self.assertEqual(result["total_articles"], 2)
         self.assertEqual(result["indexed_count"], 2)
-        self.assertEqual(result["failed_count"], 0)
+        self.assertEqual(result[f"ailed_count"], 0)
         self.assertIn("execution_time_ms", result)
         self.assertIn("indexing_rate", result)
 
@@ -351,7 +353,8 @@ class TestQueryAPI(unittest.TestCase):
         manager = DynamoDBMetadataManager(self.config)
 
         # Mock scan response
-        self.mock_table.scan.return_value = {"Items": self.sample_items, "Count": 2}
+        self.mock_table.scan.return_value = {
+            "Items": self.sample_items, "Count": 2}
 
         # Test get by date range
         result = await manager.get_articles_by_date_range("2025-08-12", "2025-08-13")
@@ -510,7 +513,8 @@ class TestFullTextSearch(unittest.TestCase):
         self.assertIn("technology", tokens)
 
         # Test punctuation removal
-        tokens = manager._tokenize_search_query("AI, machine-learning & healthcare!")
+        tokens = manager._tokenize_search_query(
+            "AI, machine-learning & healthcare!")
         self.assertIn("ai", tokens)
         self.assertIn("machine", tokens)
         self.assertIn("learning", tokens)
@@ -603,7 +607,8 @@ class TestIntegrationFunctions(unittest.TestCase):
     async def test_redshift_integration(self):
         """Test integration with Redshift ETL."""
         # Mock manager response
-        self.mock_manager.update_article_metadata = AsyncMock(return_value=True)
+        self.mock_manager.update_article_metadata = AsyncMock(
+            return_value=True)
 
         # Test integration
         result = await integrate_with_redshift_etl(
@@ -629,7 +634,7 @@ class TestIntegrationFunctions(unittest.TestCase):
             "status": "completed",
             "total_articles": 2,
             "indexed_count": 2,
-            "failed_count": 0,
+            f"ailed_count": 0,
         }
         self.mock_manager.batch_index_articles.return_value = expected_result
 
@@ -645,7 +650,8 @@ class TestIntegrationFunctions(unittest.TestCase):
         # Verify sync
         self.assertEqual(result["status"], "completed")
         self.assertEqual(result["indexed_count"], 2)
-        self.mock_manager.batch_index_articles.assert_called_once_with(articles)
+        self.mock_manager.batch_index_articles.assert_called_once_with(
+            articles)
 
 
 class TestStatisticsAndHealth(unittest.TestCase):
@@ -758,55 +764,56 @@ async def run_async_tests():
 
     # Test single article indexing
     await manager_test.test_index_single_article()
-    print("✅ Single article indexing test passed")
+    print(" Single article indexing test passed")
 
     # Test batch indexing
     await manager_test.test_batch_indexing()
-    print("✅ Batch indexing test passed")
+    print(" Batch indexing test passed")
 
     # Test query API
     await query_test.test_get_article_by_id()
-    print("✅ Get article by ID test passed")
+    print(" Get article by ID test passed")
 
     await query_test.test_get_articles_by_source()
-    print("✅ Get articles by source test passed")
+    print(" Get articles by source test passed")
 
     await query_test.test_get_articles_by_date_range()
-    print("✅ Get articles by date range test passed")
+    print(" Get articles by date range test passed")
 
     await query_test.test_get_articles_by_tags()
-    print("✅ Get articles by tags test passed")
+    print(" Get articles by tags test passed")
 
     # Test search functionality
     await search_test.test_search_articles_basic()
-    print("✅ Basic search test passed")
+    print(" Basic search test passed")
 
     await search_test.test_search_with_filters()
-    print("✅ Search with filters test passed")
+    print(" Search with filters test passed")
 
     # Test integration functions
     await integration_test.test_s3_integration()
-    print("✅ S3 integration test passed")
+    print(" S3 integration test passed")
 
     await integration_test.test_redshift_integration()
-    print("✅ Redshift integration test passed")
+    print(" Redshift integration test passed")
 
     await integration_test.test_scraper_sync()
-    print("✅ Scraper sync test passed")
+    print(" Scraper sync test passed")
 
     # Test statistics and health
     await stats_test.test_metadata_statistics()
-    print("✅ Metadata statistics test passed")
+    print(" Metadata statistics test passed")
 
     await stats_test.test_health_check()
-    print("✅ Health check test passed")
+    print(" Health check test passed")
 
-    print("\n🎉 All DynamoDB metadata manager tests passed!")
+    print(""
+ All DynamoDB metadata manager tests passed!")"
 
 
 if __name__ == "__main__":
     # Run synchronous tests
-    suite = unittest.TestLoader().loadTestsFromTestCase(TestArticleMetadataIndex)
+    suite=unittest.TestLoader().loadTestsFromTestCase(TestArticleMetadataIndex)
     unittest.TextTestRunner(verbosity=2).run(suite)
 
     # Run async tests

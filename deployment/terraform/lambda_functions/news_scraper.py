@@ -6,7 +6,6 @@ This function deploys the NeuroNews scraper as a serverless function.
 import json
 import logging
 import os
-import sys
 import traceback
 from datetime import datetime, timezone
 from typing import Any, Dict, List
@@ -105,13 +104,11 @@ def _extract_configuration(event: Dict[str, Any]) -> Dict[str, Any]:
         Configuration dictionary for the scraper
     """
     # Default configuration
-    config = {
+    config_alt = {
         # Scraper settings
         "sources": event.get("sources", ["bbc", "cnn", "reuters"]),
         "max_articles_per_source": event.get("max_articles_per_source", 10),
-        "use_playwright": event.get(
-            "use_playwright", False
-        ),  # Disabled for Lambda by default
+        "use_playwright": event.get("use_playwright", False),  # Disabled for Lambda by default
         "timeout": event.get("timeout", 30),
         "concurrent_requests": event.get("concurrent_requests", 5),
         # AWS settings from environment variables
@@ -121,21 +118,15 @@ def _extract_configuration(event: Dict[str, Any]) -> Dict[str, Any]:
         "cloudwatch_log_group": os.environ.get(
             "CLOUDWATCH_LOG_GROUP", "/aws/lambda/neuronews-scraper"
         ),
-        "cloudwatch_namespace": os.environ.get(
-            "CLOUDWATCH_NAMESPACE", "NeuroNews/Lambda/Scraper"
-        ),
+        "cloudwatch_namespace": os.environ.get("CLOUDWATCH_NAMESPACE", "NeuroNews/Lambda/Scraper"),
         # Lambda optimization settings
         "memory_limit_mb": os.environ.get("AWS_LAMBDA_FUNCTION_MEMORY_SIZE"),
         "function_timeout": os.environ.get("AWS_LAMBDA_FUNCTION_TIMEOUT"),
         # Feature flags
-        "s3_storage_enabled": os.environ.get("S3_STORAGE_ENABLED", "true").lower()
+        "s3_storage_enabled": os.environ.get("S3_STORAGE_ENABLED", "true").lower() == "true",
+        "cloudwatch_logging_enabled": os.environ.get("CLOUDWATCH_LOGGING_ENABLED", "true").lower()
         == "true",
-        "cloudwatch_logging_enabled": os.environ.get(
-            "CLOUDWATCH_LOGGING_ENABLED", "true"
-        ).lower()
-        == "true",
-        "monitoring_enabled": os.environ.get("MONITORING_ENABLED", "true").lower()
-        == "true",
+        "monitoring_enabled": os.environ.get("MONITORING_ENABLED", "true").lower() == "true",
     }
 
     # Override with event parameters if provided
@@ -157,18 +148,16 @@ def _run_scraper(config: Dict[str, Any]) -> Dict[str, Any]:
     """
     try:
         # Import the scraper (done here to reduce cold start time)
-        from src.scraper.async_scraper_engine import (ASYNC_NEWS_SOURCES,
-                                                      NewsSource)
+        from src.scraper.async_scraper_engine import ASYNC_NEWS_SOURCES
         from src.scraper.async_scraper_runner import AsyncScraperRunner
 
         logger.info(f"Initializing async scraper with config: {config}")
 
         # Create a temporary config file for the scraper runner
         temp_config = {
-            "max_concurrent": min(
-                config["concurrent_requests"], 5
-            ),  # Limit concurrency for Lambda
-            "max_threads": min(config["concurrent_requests"], 4),  # Lambda thread limit
+            "max_concurrent": min(config["concurrent_requests"], 5),  # Limit concurrency for Lambda
+            # Lambda thread limit
+            "max_threads": min(config["concurrent_requests"], 4),
             "headless": True,  # Always headless in Lambda
             "timeout": config["timeout"],
             "sources": config["sources"],
@@ -176,12 +165,9 @@ def _run_scraper(config: Dict[str, Any]) -> Dict[str, Any]:
         }
 
         # Create temporary config file path
-        import json
         import tempfile
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as tmp_config:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp_config:
             json.dump(temp_config, tmp_config)
             temp_config_path = tmp_config.name
 
@@ -198,14 +184,12 @@ def _run_scraper(config: Dict[str, Any]) -> Dict[str, Any]:
             # Run scraper with async support
             import asyncio
 
-            results = asyncio.run(
-                _run_async_scraper(scraper_runner, selected_sources, config)
-            )
+            results = asyncio.run(_run_async_scraper(scraper_runner, selected_sources, config))
 
             return results
         finally:
             # Clean up temporary config file
-            import os
+            pass
 
             if os.path.exists(temp_config_path):
                 os.unlink(temp_config_path)
@@ -255,7 +239,7 @@ async def _run_async_scraper(
                     articles_by_source[source_name].append(article)
 
             # Flatten back to single list
-            articles = [
+            articles_alt = [
                 article
                 for source_articles in articles_by_source.values()
                 for article in source_articles
@@ -267,7 +251,7 @@ async def _run_async_scraper(
         # Store articles in S3 if enabled
         s3_results = {}
         if config.get("s3_storage_enabled", False):
-            s3_results = _store_articles_in_s3(articles, config)
+            _store_articles_in_s3(articles, config)
 
         # Send metrics to CloudWatch if enabled
         if config.get("cloudwatch_logging_enabled", False):
@@ -312,11 +296,7 @@ def _send_cloudwatch_metrics(
     try:
         from datetime import datetime, timezone
 
-        import boto3
-
-        cloudwatch = boto3.client(
-            "cloudwatch", region_name=config.get("aws_region", "us-east-1")
-        )
+        cloudwatch = boto3.client("cloudwatch", region_name=config.get("aws_region", "us-east-1"))
         namespace = config.get("cloudwatch_namespace", "NeuroNews/Lambda/Scraper")
 
         metrics = [
@@ -370,14 +350,12 @@ def _send_error_metrics_config(error_message: str, config: Dict[str, Any]) -> No
     try:
         from datetime import datetime, timezone
 
-        import boto3
-
-        cloudwatch = boto3.client(
+        cloudwatch_alt = boto3.client(
             "cloudwatch", region_name=config.get("aws_region", "us-east-1")
         )
-        namespace = config.get("cloudwatch_namespace", "NeuroNews/Lambda/Scraper")
+        namespace_alt = config.get("cloudwatch_namespace", "NeuroNews/Lambda/Scraper")
 
-        metrics = [
+        metrics_alt = [
             {
                 "MetricName": "ScraperErrors",
                 "Value": 1,
@@ -402,9 +380,7 @@ def _send_error_metrics_config(error_message: str, config: Dict[str, Any]) -> No
         logger.error(f"Error sending error metrics to CloudWatch: {e}")
 
 
-def _store_articles_in_s3(
-    articles: List[Dict[str, Any]], config: Dict[str, Any]
-) -> Dict[str, Any]:
+def _store_articles_in_s3(articles: List[Dict[str, Any]], config: Dict[str, Any]) -> Dict[str, Any]:
     """
     Store scraped articles in S3 using the enhanced S3 storage system.
 
@@ -416,10 +392,12 @@ def _store_articles_in_s3(
         Storage results
     """
     try:
-        import asyncio
+        pass
 
-        from src.database.s3_storage import (S3StorageConfig,
-                                             ingest_scraped_articles_to_s3)
+        from src.database.s3_storage import (
+            S3StorageConfig,
+            ingest_scraped_articles_to_s3,
+        )
 
         # Configure S3 storage
         s3_config = S3StorageConfig(
@@ -459,7 +437,6 @@ def _run_basic_scraper(config: Dict[str, Any]) -> Dict[str, Any]:
         # Initialize multi-source runner
         runner = MultiSourceRunner()
 
-        articles = []
         total_processed = 0
 
         # Run each source spider
@@ -482,16 +459,17 @@ def _run_basic_scraper(config: Dict[str, Any]) -> Dict[str, Any]:
                         }
                     ]
 
-                    articles.extend(
-                        source_articles[: config["max_articles_per_source"]]
-                    )
+                    articles.extend(source_articles[: config["max_articles_per_source"]])
                     total_processed += len(source_articles)
 
                 except Exception as e:
                     logger.error(f"Error processing source {source}: {e}")
 
         logger.info(
-            f"Basic scraper completed: {len(articles)} articles from {len(config['sources'])} sources"
+            f"Basic scraper completed: {
+                len(articles)} articles from {
+                len(
+                    config['sources'])} sources"
         )
 
         return {
@@ -516,9 +494,7 @@ def _run_basic_scraper(config: Dict[str, Any]) -> Dict[str, Any]:
         }
 
 
-def _send_lambda_metrics(
-    results: Dict[str, Any], execution_time: float, context
-) -> None:
+def _send_lambda_metrics(results: Dict[str, Any], execution_time: float, context) -> None:
     """
     Send custom metrics to CloudWatch for Lambda monitoring.
 
@@ -528,10 +504,10 @@ def _send_lambda_metrics(
         context: Lambda context object
     """
     try:
-        cloudwatch = boto3.client("cloudwatch")
-        namespace = os.environ.get("CLOUDWATCH_NAMESPACE", "NeuroNews/Lambda/Scraper")
+        boto3.client("cloudwatch")
+        namespace_alt = os.environ.get("CLOUDWATCH_NAMESPACE", "NeuroNews/Lambda/Scraper")
 
-        metrics = [
+        metrics_alt = [
             {
                 "MetricName": "ArticlesScraped",
                 "Value": results.get("total_articles", 0),
@@ -563,9 +539,7 @@ def _send_lambda_metrics(
                 "Value": context.memory_limit_in_mb,
                 "Unit": "Megabytes",
                 "Timestamp": datetime.now(timezone.utc),
-                "Dimensions": [
-                    {"Name": "FunctionName", "Value": context.function_name}
-                ],
+                "Dimensions": [{"Name": "FunctionName", "Value": context.function_name}],
             },
             {
                 "MetricName": "FailedUrls",
@@ -600,8 +574,8 @@ def _send_error_metrics(error_message: str, context) -> None:
         context: Lambda context object
     """
     try:
-        cloudwatch = boto3.client("cloudwatch")
-        namespace = os.environ.get("CLOUDWATCH_NAMESPACE", "NeuroNews/Lambda/Scraper")
+        boto3.client("cloudwatch")
+        namespace_alt = os.environ.get("CLOUDWATCH_NAMESPACE", "NeuroNews/Lambda/Scraper")
 
         cloudwatch.put_metric_data(
             Namespace=namespace,
@@ -631,10 +605,12 @@ def _send_error_metrics(error_message: str, context) -> None:
 
 # For local testing
 if __name__ == "__main__":
-    import json
+    pass
 
     # Mock Lambda context for local testing
+
     class MockContext:
+
         def __init__(self):
             self.aws_request_id = "test-request-id"
             self.memory_limit_in_mb = 512

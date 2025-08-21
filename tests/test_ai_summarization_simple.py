@@ -36,7 +36,7 @@ class TestBasicFunctionality:
 
     def test_summarization_model_enum(self):
         """Test SummarizationModel enumeration."""
-        assert SummarizationModel.BART.value == "facebook/bart-large-cnn"
+        assert SummarizationModel.BART.value == f"acebook/bart-large-cnn"
         assert SummarizationModel.PEGASUS.value == "google/pegasus-cnn_dailymail"
         assert SummarizationModel.T5.value == "t5-small"
         assert SummarizationModel.DISTILBART.value == "sshleifer/distilbart-cnn-12-6"
@@ -67,7 +67,7 @@ class TestBasicFunctionality:
             word_count=5,
             sentence_count=1,
             compression_ratio=0.2,
-            created_at="2025-08-15 10:30:00",
+            created_at="2025-8-15 10:30:0",
         )
 
         assert summary.text == "This is a test summary."
@@ -78,7 +78,7 @@ class TestBasicFunctionality:
         assert summary.word_count == 5
         assert summary.sentence_count == 1
         assert summary.compression_ratio == 0.2
-        assert summary.created_at == "2025-08-15 10:30:00"
+        assert summary.created_at == "2025-8-15 10:30:0"
 
     def test_create_summary_hash(self):
         """Test summary hash generation."""
@@ -221,7 +221,8 @@ class TestBasicFunctionality:
         assert len(summarizer._models) == 0
 
         # Add something to cache
-        summarizer._models[SummarizationModel.BART] = ("mock_model", "mock_tokenizer")
+        summarizer._models[SummarizationModel.BART] = (
+            "mock_model", "mock_tokenizer")
         assert len(summarizer._models) == 1
 
         # Clear cache
@@ -246,11 +247,13 @@ class TestErrorHandling:
 
         # Test whitespace-only text
         with pytest.raises(ValueError):
-            summarizer._preprocess_text("   \n\t  ")
+            summarizer._preprocess_text(""
+\t  ")"
 
 
 class TestConfiguration:
     """Test configuration and settings."""
+
 
     def test_default_configurations(self):
         """Test default configuration values."""
@@ -263,6 +266,7 @@ class TestConfiguration:
             assert config.max_length > config.min_length
             assert config.num_beams > 0
             assert config.length_penalty > 0
+
 
     def test_custom_device_setting(self):
         """Test custom device configuration."""

@@ -33,9 +33,7 @@ class TestSentimentAnalysisPipeline:
         analyzer = create_analyzer()
 
         # Test positive sentiment
-        positive_result = analyzer.analyze(
-            "This is absolutely wonderful news! Great job!"
-        )
+        positive_result = analyzer.analyze("This is absolutely wonderful news! Great job!")
         assert positive_result["label"] == "POSITIVE"
         assert isinstance(positive_result["score"], float)
         assert 0 <= positive_result["score"] <= 1
@@ -75,6 +73,7 @@ class TestSentimentAnalysisPipeline:
         """Test the sentiment trends API endpoint."""
 
         # Mock the get_db dependency completely
+
         async def mock_get_db():
             mock_db = AsyncMock()
             mock_db.execute_query.side_effect = [
@@ -117,6 +116,7 @@ class TestSentimentAnalysisPipeline:
         """Test the sentiment summary API endpoint."""
 
         # Mock the get_db dependency
+
         async def mock_get_db():
             mock_db = AsyncMock()
             mock_db.execute_query.return_value = [
@@ -147,6 +147,7 @@ class TestSentimentAnalysisPipeline:
         """Test the topic sentiment analysis endpoint."""
 
         # Mock the get_db dependency
+
         async def mock_get_db():
             mock_db = AsyncMock()
             mock_db.execute_query.return_value = [

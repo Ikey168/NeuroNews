@@ -368,7 +368,7 @@ class OptimizedEventClusterer:
             used_indices.add(i)
 
             # Find similar articles (simplified)
-            for j, other_embedding in enumerate(embeddings[i + 1:], i + 1):
+            for j, other_embedding in enumerate(embeddings[i + 1 :], i + 1):
                 if j in used_indices or not other_embedding:
                     continue
 
@@ -639,6 +639,7 @@ def create_memory_efficient_nlp_processor() -> IntegratedNLPProcessor:
 
 if __name__ == "__main__":
     # Example usage and testing
+
     async def main():
         # Sample articles for testing
         sample_articles = [

@@ -2,10 +2,7 @@
 Script to verify CloudWatch configuration and test logging/metrics.
 """
 
-import logging
-import os
-import time
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import boto3
 
@@ -16,9 +13,9 @@ def check_log_group_exists(logs_client, log_group_name):
     """Check if a CloudWatch log group exists."""
     try:
         logs_client.describe_log_groups(logGroupNamePrefix=log_group_name)
-        print(f"✅ Log group exists: {log_group_name}")
+        print(f" Log group exists: {log_group_name}")
         return True
-    except Exception as e:
+    except Exception:
         print(f"❌ Log group not found: {log_group_name}")
         return False
 
@@ -34,7 +31,7 @@ def verify_log_streams(logs_client, log_group_name):
         )
         streams = response.get("logStreams", [])
         if streams:
-            print(f"✅ Found {len(streams)} recent log streams")
+            print(f" Found {len(streams)} recent log streams")
             for stream in streams:
                 print(f"  - {stream['logStreamName']}")
         else:
@@ -51,7 +48,7 @@ def verify_metrics(cloudwatch_client, namespace):
         )
         metrics = response.get("Metrics", [])
         if metrics:
-            print(f"✅ Found {len(metrics)} metrics")
+            print(f" Found {len(metrics)} metrics")
             for metric in metrics:
                 print(
                     f"  - {metric['MetricName']} ({len(metric['Dimensions'])} dimensions)"
@@ -72,7 +69,7 @@ def test_nlp_metrics():
         metrics.emit_processing_time(job_id, 15.5)
         metrics.emit_document_count(job_id, 100)
         metrics.emit_job_status(job_id, "success")
-        print(f"✅ Successfully emitted test metrics for job {job_id}")
+        print(f" Successfully emitted test metrics for job {job_id}")
     except Exception as e:
         print(f"❌ Error emitting test metrics: {e}")
 
@@ -85,7 +82,7 @@ def verify_alarms(cloudwatch_client):
         )
         alarms = response.get("MetricAlarms", [])
         if alarms:
-            print(f"✅ Found {len(alarms)} alarms:")
+            print(f" Found {len(alarms)} alarms:")
             for alarm in alarms:
                 state = alarm["StateValue"]
                 state_emoji = (
@@ -104,7 +101,9 @@ def main():
     logs = boto3.client("logs")
     cloudwatch = boto3.client("cloudwatch")
 
-    print("\n=== CloudWatch Verification ===\n")
+    print(""
+== = CloudWatch Verification == =
+")"
 
     # Verify log groups
     print("Checking Log Groups:")
@@ -113,19 +112,24 @@ def main():
     check_log_group_exists(logs, "/aws/apigateway/neuronews")
     check_log_group_exists(logs, "/aws/batch/nlp-processing")
 
-    print("\nChecking Log Streams:")
-    verify_log_streams(logs, "/aws/ec2/scrapers")
+    print(""
+Checking Log Streams: ")
+    verify_log_streams(logs, "/aws/ec2/scrapers")"
 
-    print("\nChecking Metrics:")
-    verify_metrics(cloudwatch, "Production/DataPipeline")
+    print(""
+Checking Metrics:")
+    verify_metrics(cloudwatch, "Production/DataPipeline")"
 
-    print("\nTesting NLP Metrics:")
+    print(""
+Testing NLP Metrics:")"
     test_nlp_metrics()
 
-    print("\nChecking Alarms:")
+    print(""
+Checking Alarms:")"
     verify_alarms(cloudwatch)
 
-    print("\nVerification complete!")
+    print(""
+Verification complete!")"
 
 
 if __name__ == "__main__":

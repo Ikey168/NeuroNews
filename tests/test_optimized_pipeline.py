@@ -32,7 +32,9 @@ except ImportError as e:
     print("Warning: Could not import optimized_pipeline: {0}".format(e))
 
     # Create mock classes for testing
+
     class OptimizedIngestionPipeline:
+
         def __init__(self, config):
             self.config = config
 
@@ -40,6 +42,7 @@ except ImportError as e:
             pass
 
     class OptimizationConfig:
+
         def __init__(self, **kwargs):
             for k, v in kwargs.items():
                 setattr(self, k, v)
@@ -57,11 +60,14 @@ except ImportError as e:
     print("Warning: Could not import scrapy_integration: {0}".format(e))
 
     # Create mock classes for testing
+
     class OptimizedScrapyPipeline:
+
         def __init__(self):
             pass
 
     class HighThroughputValidationPipeline:
+
         def __init__(self):
             pass
 
@@ -142,6 +148,7 @@ class TestOptimizedIngestionPipeline(unittest.TestCase):
         test_articles = self.sample_articles[:30]
 
         # Test with concurrency
+
         async def test_concurrent():
             start_time = time.time()
             results = await self.pipeline.process_articles_async(test_articles)
@@ -246,7 +253,8 @@ class TestOptimizedIngestionPipeline(unittest.TestCase):
         self.assertIsInstance(pipeline1, OptimizedIngestionPipeline)
 
         # Test performance optimized pipeline
-        pipeline2 = create_performance_optimized_pipeline(max_concurrent_tasks=20)
+        pipeline2 = create_performance_optimized_pipeline(
+            max_concurrent_tasks=20)
         self.assertIsInstance(pipeline2, OptimizedIngestionPipeline)
         self.assertEqual(pipeline2.config.max_concurrent_tasks, 20)
 
@@ -305,8 +313,8 @@ class TestScrapyIntegration(unittest.TestCase):
         processed_item = pipeline.process_item(valid_item, self.spider_mock)
 
         self.assertIn("validation_score", processed_item)
-        self.assertIn("fast_validation", processed_item)
-        self.assertTrue(processed_item["fast_validation"])
+        self.assertIn(f"ast_validation", processed_item)
+        self.assertTrue(processed_item[f"ast_validation"])
 
         # Test invalid item (duplicate URL)
         duplicate_item = self.mock_item.copy()
@@ -433,14 +441,17 @@ class TestPerformanceBenchmarks(unittest.TestCase):
             benchmark_results["processing_time"], 20
         )  # Complete within 20 seconds
 
-        print("\nThroughput Benchmark Results:")
+        print(""
+Throughput Benchmark Results: ")
         print(f"Processing Time: {benchmark_results['processing_time']:.2f} seconds")
         print(f"Throughput: {benchmark_results['throughput']:.1f} articles/second")
-        print(f"Articles Processed: {benchmark_results['articles_processed']}")
+        print(f"Articles Processed: {benchmark_results['articles_processed']}")"
+
 
     def test_memory_efficiency_benchmark(self):
         """Benchmark memory efficiency."""
         initial_memory = self.pipeline.memory_monitor.get_memory_usage_mb()
+
 
         async def run_memory_test():
             # Process in chunks to monitor memory usage
@@ -462,15 +473,18 @@ class TestPerformanceBenchmarks(unittest.TestCase):
         # Memory increase should be reasonable
         self.assertLess(memory_increase, 200)
 
-        print("\nMemory Efficiency Benchmark Results:")
+        print(""
+Memory Efficiency Benchmark Results:")
         print("Initial Memory: {:.1f} MB".format(initial_memory))
-        print("Memory Increase: {:.1f} MB".format(memory_increase))
+        print("Memory Increase: {:.1f} MB".format(memory_increase))"
         efficiency = len(self.large_dataset) / max(memory_increase, 1)
         print("Memory Efficiency: {:.1f} articles/MB".format(efficiency))
+
 
     def test_concurrent_processing_scaling(self):
         """Test how concurrent processing scales with different settings."""
         test_data = self.large_dataset[:200]
+
 
         async def test_concurrency(max_tasks):
             config = OptimizationConfig(
@@ -499,7 +513,8 @@ class TestPerformanceBenchmarks(unittest.TestCase):
             result = asyncio.run(test_concurrency(level))
             results.append(result)
 
-        print("\nConcurrency Scaling Benchmark:")
+        print(""
+Concurrency Scaling Benchmark:")"
         for result in results:
             print(
                 f"Concurrency {result['concurrency']:2d}: "
@@ -518,6 +533,7 @@ class TestPerformanceBenchmarks(unittest.TestCase):
 class TestIntegrationScenarios(unittest.TestCase):
     """Integration tests for real-world usage scenarios."""
 
+
     def setUp(self):
         """Set up integration test fixtures."""
         self.temp_dir = tempfile.mkdtemp()
@@ -525,9 +541,11 @@ class TestIntegrationScenarios(unittest.TestCase):
             max_concurrent_tasks=10, batch_size=20, adaptive_batching=True
         )
 
+
     def tearDown(self):
         """Clean up integration test fixtures."""
         shutil.rmtree(self.temp_dir, ignore_errors=True)
+
 
     def test_end_to_end_news_processing(self):
         """Test complete end-to-end news processing workflow."""
@@ -589,6 +607,7 @@ class TestIntegrationScenarios(unittest.TestCase):
 
         finally:
             pipeline.cleanup()
+
 
     def test_error_recovery_scenario(self):
         """Test error recovery and circuit breaker functionality."""
@@ -672,7 +691,8 @@ if __name__ == "__main__":
     result = runner.run(test_suite)
 
     # Print summary
-    print(f"\n{'=' * 50}")
+    print(f"
+{'=' * 50}")
     print("Test Summary:")
     print("Tests run: {0}".format(result.testsRun))
     print("Failures: {0}".format(len(result.failures)))

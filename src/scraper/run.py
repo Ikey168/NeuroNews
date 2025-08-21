@@ -25,7 +25,7 @@ def load_aws_config(env="dev"):
     Returns:
         dict: AWS configuration.
     """
-    config_path = Path("config/{0}_aws.json".format(env))
+    config_path = Path("config/{0}_aws.json".format(env))"
     if not config_path.exists():
         return {}
 
@@ -131,7 +131,8 @@ def run_spider(
         and cloudwatch_log_group is None
         and "cloudwatch_logging" in aws_config
     ):
-        cloudwatch_log_group = aws_config["cloudwatch_logging"].get("log_group")
+        cloudwatch_log_group = aws_config["cloudwatch_logging"].get(
+            "log_group")
 
     if (
         cloudwatch_logging
@@ -147,7 +148,8 @@ def run_spider(
         and cloudwatch_log_level is None
         and "cloudwatch_logging" in aws_config
     ):
-        cloudwatch_log_level = aws_config["cloudwatch_logging"].get("log_level")
+        cloudwatch_log_level = aws_config["cloudwatch_logging"].get(
+            "log_level")
 
     # Configure CloudWatch logging if enabled
     if cloudwatch_logging:
@@ -163,7 +165,8 @@ def run_spider(
         if cloudwatch_log_group:
             settings.set("CLOUDWATCH_LOG_GROUP", cloudwatch_log_group)
         if cloudwatch_log_stream_prefix:
-            settings.set("CLOUDWATCH_LOG_STREAM_PREFIX", cloudwatch_log_stream_prefix)
+            settings.set("CLOUDWATCH_LOG_STREAM_PREFIX",
+                         cloudwatch_log_stream_prefix)
         if cloudwatch_log_level:
             settings.set("CLOUDWATCH_LOG_LEVEL", cloudwatch_log_level)
 
@@ -288,8 +291,9 @@ def main():
             print("  - {0}".format(spider_name))
 
         settings = get_project_settings()
-        print("\nConfigured news sources:")
-        sources = settings.get("SCRAPING_SOURCES", [])
+        print(""
+Configured news sources:")
+        sources = settings.get("SCRAPING_SOURCES", [])"
         if sources:
             for source in sources:
                 print("  - {0}".format(source))

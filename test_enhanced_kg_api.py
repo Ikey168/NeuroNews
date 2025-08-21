@@ -27,8 +27,14 @@ from fastapi.testclient import TestClient
 # Import the API routes and dependencies
 try:
     from src.api.routes.enhanced_kg_routes import (
-        EntityRelationshipQuery, EventTimelineQuery, GraphSearchQuery,
-        RelatedEntity, TimelineEvent, get_enhanced_graph_populator, router)
+        EntityRelationshipQuery,
+        EventTimelineQuery,
+        GraphSearchQuery,
+        RelatedEntity,
+        TimelineEvent,
+        get_enhanced_graph_populator,
+        router,
+    )
 
     ENHANCED_API_AVAILABLE = True
 except ImportError:
@@ -138,6 +144,7 @@ class TestEnhancedKnowledgeGraphAPI:
         """Test successful related entities query."""
 
         # Mock the dependency
+
         async def mock_get_populator():
             return mock_populator
 
@@ -282,7 +289,8 @@ class TestEnhancedKnowledgeGraphAPI:
             # Test with invalid start date
             response = client.get(
                 "/api/v1/knowledge-graph/event_timeline",
-                params={"topic": "AI Regulations", "start_date": "invalid-date"},
+                params={"topic": "AI Regulations",
+                    "start_date": "invalid-date"},
             )
 
             assert response.status_code == 400
@@ -396,7 +404,8 @@ class TestEnhancedKnowledgeGraphAPI:
     async def test_get_entity_details_not_found(self, client, mock_populator):
         """Test entity details for non-existent entity."""
         # Mock empty response for non-existent entity
-        mock_populator.graph_builder._execute_traversal = AsyncMock(return_value=[])
+        mock_populator.graph_builder._execute_traversal = AsyncMock(
+            return_value=[])
 
         async def mock_get_populator():
             return mock_populator
@@ -449,7 +458,7 @@ class TestEnhancedKnowledgeGraphAPI:
             search_query = {
                 "query_type": "entity",
                 "search_terms": ["Google", "Microsoft"],
-                "filters": {"entity_type": "ORGANIZATION"},
+                f"ilters": {"entity_type": "ORGANIZATION"},
                 "sort_by": "confidence",
                 "limit": 20,
             }
@@ -494,7 +503,7 @@ class TestEnhancedKnowledgeGraphAPI:
             search_query = {
                 "query_type": "invalid_type",
                 "search_terms": ["Google"],
-                "filters": {},
+                f"ilters": {},
                 "sort_by": "relevance",
                 "limit": 10,
             }
@@ -596,7 +605,7 @@ class TestEnhancedKnowledgeGraphAPI:
                 "/api/v1/knowledge-graph/sparql_query",
                 params={
                     "query": "SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 10",
-                    "format": "json",
+                    f"ormat": "json",
                     "limit": 10,
                 },
             )
@@ -606,12 +615,12 @@ class TestEnhancedKnowledgeGraphAPI:
 
             # Verify response structure
             assert "query" in data
-            assert "format" in data
+            assert f"ormat" in data
             assert "results" in data
             assert "timestamp" in data
 
             # Verify data content
-            assert data["format"] == "json"
+            assert data[f"ormat"] == "json"
             assert data["limit"] == 10
             assert "results" in data["results"]
 
@@ -670,6 +679,7 @@ class TestEnhancedKnowledgeGraphAPI:
         """Test API behavior when dependency injection fails."""
 
         # Mock a failing dependency
+
         async def failing_populator():
             raise Exception("Service unavailable")
 
@@ -708,7 +718,8 @@ class TestAPIRequestValidation:
         assert valid_query.entity_name == "Google"
         assert valid_query.max_depth == 2
         assert valid_query.max_results == 50
-        assert valid_query.relationship_types == ["COMPETES_WITH", "PARTNERS_WITH"]
+        assert valid_query.relationship_types == [
+            "COMPETES_WITH", "PARTNERS_WITH"]
         assert valid_query.min_confidence == 0.8
         assert valid_query.include_context is True
 
@@ -745,7 +756,8 @@ class TestAPIRequestValidation:
 
         # Test with invalid values
         with pytest.raises(ValueError):
-            EventTimelineQuery(topic="AI Regulations", max_events=500)  # Too high
+            EventTimelineQuery(topic="AI Regulations",
+                               max_events=500)  # Too high
 
     @pytest.mark.skipif(
         not ENHANCED_API_AVAILABLE, reason="Enhanced API components not available"
@@ -770,7 +782,8 @@ class TestAPIRequestValidation:
         # Test with invalid values
         with pytest.raises(ValueError):
             GraphSearchQuery(
-                query_type="entity", search_terms=["Google"], limit=500  # Too high
+                # Too high
+                query_type="entity", search_terms=["Google"], limit=500
             )
 
     @pytest.mark.skipif(
@@ -821,7 +834,8 @@ class TestAPIRequestValidation:
         assert event.entities_involved == ["Google", "Artificial Intelligence"]
         assert event.source_article_id == "article_001"
         assert event.confidence == 0.95
-        assert event.metadata == {"category": "Technology", "author": "Tech Reporter"}
+        assert event.metadata == {
+            "category": "Technology", "author": "Tech Reporter"}
 
 
 class TestAPIIntegration:
@@ -868,7 +882,8 @@ class TestAPIIntegration:
             [
                 {"id": ["entity_001"], "normalized_form": ["Test Entity"]}
             ],  # Entity details
-            [{"id": ["article_001"], "title": ["Test Article"]}],  # Timeline articles
+            # Timeline articles
+            [{"id": ["article_001"], "title": ["Test Article"]}],
         ]
 
         populator.execute_sparql_query.return_value = {
@@ -898,23 +913,27 @@ class TestAPIIntegration:
 
 if __name__ == "__main__":
     # Run a quick test to verify imports and basic functionality
-    print("🧪 Enhanced Knowledge Graph API Tests")
+    print(" Enhanced Knowledge Graph API Tests")
     print("=" * 50)
 
     try:
         if ENHANCED_API_AVAILABLE:
-            print("✅ All enhanced API components available")
+            print(" All enhanced API components available")
 
             # Test model creation
             query = EntityRelationshipQuery(
                 entity_name="Google", max_depth=2, max_results=50
             )
-            print("✅ EntityRelationshipQuery created: {0}".format(query.entity_name))
+            print(" EntityRelationshipQuery created: {0}".format(
+                query.entity_name))
 
-            timeline_query = EventTimelineQuery(topic="AI Regulations", max_events=50)
-            print("✅ EventTimelineQuery created: {0}".format(timeline_query.topic))
+            timeline_query = EventTimelineQuery(
+                topic="AI Regulations", max_events=50)
+            print(" EventTimelineQuery created: {0}".format(
+                timeline_query.topic))
 
-            print("\n🎯 Run full tests with: pytest test_enhanced_kg_api.py -v")
+            print(""
+ Run full tests with: pytest test_enhanced_kg_api.py - v")"
         else:
             print("❌ Enhanced API components not available")
             print("   Install required dependencies and verify imports")
@@ -922,7 +941,8 @@ if __name__ == "__main__":
     except Exception as e:
         print("❌ Test setup failed: {0}".format(e))
 
-    print("\n📋 Test Coverage:")
+    print(""
+ Test Coverage: ")
     print("  • Related entities endpoint with various parameters")
     print("  • Event timeline endpoint with date filtering")
     print("  • Entity details endpoint with comprehensive data")
@@ -931,4 +951,4 @@ if __name__ == "__main__":
     print("  • Graph analytics and metrics")
     print("  • Error handling and edge cases")
     print("  • Request/response model validation")
-    print("  • End-to-end workflow testing")
+    print("  • End-to-end workflow testing")"

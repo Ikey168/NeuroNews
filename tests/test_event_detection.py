@@ -20,6 +20,7 @@ import pytest
 
 # Create a comprehensive mock for SentenceTransformer
 class MockSentenceTransformer:
+
     def __init__(self, model_name=None, *args, **kwargs):
         self.model_name = model_name or "test-model"
 
@@ -118,9 +119,7 @@ SAMPLE_ARTICLES = [
     },
 ]
 
-SAMPLE_EMBEDDINGS = [
-    np.random.rand(384).astype(np.float32) for _ in range(len(SAMPLE_ARTICLES))
-]
+SAMPLE_EMBEDDINGS = [np.random.rand(384).astype(np.float32) for _ in range(len(SAMPLE_ARTICLES))]
 
 
 class TestArticleEmbedder:
@@ -130,9 +129,9 @@ class TestArticleEmbedder:
     def embedder(self):
         """Create embedder instance for testing."""
         # Patch at the module level where it's imported
-        with patch(
-            "src.nlp.article_embedder.SentenceTransformer", MockSentenceTransformer
-        ), patch("psycopg2.connect") as mock_connect:
+        with patch("src.nlp.article_embedder.SentenceTransformer", MockSentenceTransformer), patch(
+            "psycopg2.connect"
+        ) as mock_connect:
 
             # Setup database mocking
             mock_conn = MagicMock()
@@ -607,9 +606,7 @@ class TestDatabaseIntegration:
     @pytest.mark.asyncio
     async def test_embedding_storage_preparation(self):
         """Test embedding data preparation for storage."""
-        with patch(
-            "src.nlp.article_embedder.SentenceTransformer", MockSentenceTransformer
-        ):
+        with patch("src.nlp.article_embedder.SentenceTransformer", MockSentenceTransformer):
             from src.nlp.article_embedder import ArticleEmbedder
 
             # Create embedder with connection parameters
@@ -703,9 +700,7 @@ class TestPerformanceAndQuality:
 
     def test_embedding_quality_assessment(self):
         """Test embedding quality metrics."""
-        with patch(
-            "src.nlp.article_embedder.SentenceTransformer", MockSentenceTransformer
-        ):
+        with patch("src.nlp.article_embedder.SentenceTransformer", MockSentenceTransformer):
             from src.nlp.article_embedder import ArticleEmbedder
 
             embedder = ArticleEmbedder("test-model")
@@ -719,9 +714,7 @@ class TestPerformanceAndQuality:
                 "This is a well-formed article with sufficient content length and good structure.",
             )
 
-            low_score = embedder._calculate_embedding_quality(
-                low_quality_embedding, "Bad"
-            )
+            low_score = embedder._calculate_embedding_quality(low_quality_embedding, "Bad")
 
             assert high_score > low_score
             assert 0 <= high_score <= 1
@@ -729,9 +722,7 @@ class TestPerformanceAndQuality:
 
     def test_processing_time_tracking(self):
         """Test processing time measurement."""
-        with patch(
-            "src.nlp.article_embedder.SentenceTransformer", MockSentenceTransformer
-        ):
+        with patch("src.nlp.article_embedder.SentenceTransformer", MockSentenceTransformer):
             from src.nlp.article_embedder import ArticleEmbedder
 
             embedder = ArticleEmbedder("test-model")
@@ -771,9 +762,7 @@ class TestErrorHandling:
 
     def test_malformed_text_preprocessing(self):
         """Test preprocessing of malformed or empty text."""
-        with patch(
-            "src.nlp.article_embedder.SentenceTransformer", MockSentenceTransformer
-        ):
+        with patch("src.nlp.article_embedder.SentenceTransformer", MockSentenceTransformer):
             from src.nlp.article_embedder import ArticleEmbedder
 
             embedder = ArticleEmbedder("test-model")
@@ -790,14 +779,10 @@ class TestErrorHandling:
 
     def test_database_connection_failure_handling(self):
         """Test handling of database connection failures."""
-        with patch(
-            "src.nlp.article_embedder.SentenceTransformer", MockSentenceTransformer
-        ):
+        with patch("src.nlp.article_embedder.SentenceTransformer", MockSentenceTransformer):
             from src.nlp.article_embedder import ArticleEmbedder
 
-            embedder = ArticleEmbedder(
-                "test-model", conn_params={"host": "invalid-host"}
-            )
+            embedder = ArticleEmbedder("test-model", conn_params={"host": "invalid-host"})
 
             # Should handle connection failures gracefully
             stats = embedder.get_statistics()
@@ -810,9 +795,9 @@ async def test_full_pipeline_integration():
     """Test the complete event detection pipeline."""
 
     # Mock external dependencies
-    with patch(
-        "src.nlp.article_embedder.SentenceTransformer", MockSentenceTransformer
-    ), patch("psycopg2.connect") as mock_db:
+    with patch("src.nlp.article_embedder.SentenceTransformer", MockSentenceTransformer), patch(
+        "psycopg2.connect"
+    ) as mock_db:
 
         # Setup database mocks
         mock_conn = Mock()

@@ -18,7 +18,8 @@ sys.path.insert(0, str(src_path))
 
 def check_dependencies():
     """Check if required dependencies are installed."""
-    required_packages = ["streamlit", "plotly", "networkx", "pandas", "requests"]
+    required_packages = ["streamlit", "plotly",
+        "networkx", "pandas", "requests"]
 
     missing_packages = []
 
@@ -33,7 +34,7 @@ def check_dependencies():
         print("Please install them using: pip install -r requirements.txt")
         return False
 
-    print("✅ All required packages are installed")
+    print(" All required packages are installed")
     return True
 
 
@@ -44,7 +45,7 @@ def check_api_connection(api_url: str):
 
         response = requests.get("{0}/health".format(api_url), timeout=5)
         if response.status_code == 200:
-            print("✅ API is accessible at {0}".format(api_url))
+            print(" API is accessible at {0}".format(api_url))
             return True
         else:
             print("⚠️  API returned status {0}".format(response.status_code))
@@ -71,22 +72,25 @@ def setup_environment():
 
 def main():
     """Main launcher function."""
-    parser = argparse.ArgumentParser(description="Launch NeuroNews Streamlit Dashboard")
+    parser = argparse.ArgumentParser(
+        description="Launch NeuroNews Streamlit Dashboard")
     parser.add_argument(
         "--port", type=int, default=8501, help="Port to run dashboard on"
     )
-    parser.add_argument("--host", default="localhost", help="Host to bind dashboard to")
+    parser.add_argument("--host", default="localhost",
+                        help="Host to bind dashboard to")
     parser.add_argument(
         "--api-url", default="http://localhost:8000", help="NeuroNews API URL"
     )
-    parser.add_argument("--dev", action="store_true", help="Run in development mode")
+    parser.add_argument("--dev", action="store_true",
+                        help="Run in development mode")
     parser.add_argument(
         "--skip-checks", action="store_true", help="Skip dependency and API checks"
     )
 
     args = parser.parse_args()
 
-    print("🚀 NeuroNews Dashboard Launcher")
+    print(" NeuroNews Dashboard Launcher")
     print("=" * 40)
 
     # Setup environment
@@ -99,17 +103,19 @@ def main():
 
     # Check dependencies
     if not args.skip_checks:
-        print("\n📦 Checking dependencies...")
+        print(""
+ Checking dependencies...")"
         if not check_dependencies():
             sys.exit(1)
 
-        print("\n🔗 Checking API connection...")
+        print(""
+🔗 Checking API connection...")"
         check_api_connection(args.api_url)
 
     # Prepare streamlit command
-    dashboard_path = src_path / "dashboards" / "streamlit_dashboard.py"
+    dashboard_path=src_path / "dashboards" / "streamlit_dashboard.py"
 
-    streamlit_cmd = [
+    streamlit_cmd=[
         "streamlit",
         "run",
         str(dashboard_path),
@@ -118,7 +124,7 @@ def main():
         "--server.address",
         args.host,
         "--server.headless",
-        "true" if args.dev else "false",
+        "true" if args.dev else f"alse",
         "--server.fileWatcherType",
         "poll" if args.dev else "auto",
         "--theme.primaryColor",
@@ -131,14 +137,16 @@ def main():
         "#262730",
     ]
 
-    print("\n🌐 Starting dashboard at http://{0}:{1}".format(args.host, args.port))
+    print(""
+🌐 Starting dashboard at http: // {0}: {1}".format(args.host, args.port))
     print("Press Ctrl+C to stop the dashboard")
-    print("-" * 40)
+    print("-" * 40)"
 
     try:
         subprocess.run(streamlit_cmd, check=True)
     except KeyboardInterrupt:
-        print("\n👋 Dashboard stopped by user")
+        print(""
+👋 Dashboard stopped by user")"
     except subprocess.CalledProcessError as e:
         print("❌ Error running dashboard: {0}".format(e))
         sys.exit(1)

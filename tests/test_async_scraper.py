@@ -508,9 +508,7 @@ class TestAsyncPipelines:
             "entities",
         ]
         has_enhancement = any(field in enhanced for field in enhanced_fields)
-        assert (
-            has_enhancement
-        ), "No enhancement fields found. Available fields: {0}".format(
+        assert has_enhancement, "No enhancement fields found. Available fields: {0}".format(
             list(enhanced.keys())
         )
 
@@ -563,9 +561,7 @@ class TestAsyncPipelines:
             "entities",
         ]
         has_enhancement = any(field in enhanced for field in enhanced_fields)
-        assert (
-            has_enhancement
-        ), "No enhancement fields found. Available fields: {0}".format(
+        assert has_enhancement, "No enhancement fields found. Available fields: {0}".format(
             list(enhanced.keys())
         )
 

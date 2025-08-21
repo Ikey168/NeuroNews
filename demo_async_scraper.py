@@ -5,6 +5,8 @@ Demonstrates AsyncIO performance, Playwright optimization, ThreadPoolExecutor pa
 and real-time performance monitoring.
 """
 
+from scraper.performance_monitor import PerformanceDashboard
+from scraper.async_scraper_runner import AsyncScraperRunner
 import argparse
 import asyncio
 import json
@@ -14,9 +16,6 @@ from pathlib import Path
 
 # Add project root to path
 sys.path.append("/workspaces/NeuroNews/src")
-
-from scraper.async_scraper_runner import AsyncScraperRunner
-from scraper.performance_monitor import PerformanceDashboard
 
 
 class AsyncScraperDemo:
@@ -28,75 +27,81 @@ class AsyncScraperDemo:
 
     async def run_performance_demo(self):
         """Run a performance demonstration comparing different configurations."""
-        print("🚀 AsyncIO News Scraper Performance Demo")
+        print(" AsyncIO News Scraper Performance Demo")
         print("=" * 50)
 
         # Test different concurrency levels
         concurrency_tests = [5, 10, 20]
 
         for max_concurrent in concurrency_tests:
-            print("\n📊 Testing with {0} concurrent connections...".format(max_concurrent))
+            print(""
+ Testing with {0} concurrent connections...".format(max_concurrent))"
 
             # Modify config for test
             await self._run_concurrency_test(max_concurrent)
 
-        print("\n📈 Performance Summary:")
+        print(""
+ Performance Summary: ")"
         self._display_performance_summary()
+
 
     async def _run_concurrency_test(self, max_concurrent):
         """Run a test with specific concurrency settings."""
         # Load and modify config
         with open(self.config_path, "r") as f:
-            config = json.load(f)
+            config=json.load(f)
 
-        config["async_scraper"]["max_concurrent"] = max_concurrent
-        config["testing"]["test_mode_article_limit"] = 20
+        config["async_scraper"]["max_concurrent"]=max_concurrent
+        config["testing"]["test_mode_article_limit"]=20
 
         # Create runner
-        runner = AsyncScraperRunner(config_dict=config)
+        runner=AsyncScraperRunner(config_dict=config)
 
-        start_time = time.time()
+        start_time=time.time()
 
         try:
             # Run scraping
-            results = await runner.run(
+            results=await runner.run(
                 test_mode=True,
                 max_articles=20,
                 enable_monitoring=True,
                 sources=["BBC", "CNN", "Reuters"],
             )
 
-            end_time = time.time()
-            duration = end_time - start_time
+            end_time=time.time()
+            duration=end_time - start_time
 
             # Store results
-            self.demo_results[max_concurrent] = {
+            self.demo_results[max_concurrent]={
                 "articles_scraped": len(results),
                 "duration": duration,
                 "articles_per_second": len(results) / duration if duration > 0 else 0,
                 "success_rate": self._calculate_success_rate(results),
             }
 
-            print("   ✅ Scraped {0} articles in {1}s".format(len(results), duration:.2f))
-            print("   ⚡ Rate: {0} articles/second".format(len(results) / duration:.2f))
+            print("    Scraped {0} articles in {1}s".format(len(results), duration: .2f))
+            print("   ⚡ Rate: {0} articles/second".format(len(results) / duration: .2f))
 
         except Exception as e:
             print("   ❌ Error: {0}".format(str(e)))
-            self.demo_results[max_concurrent] = {"error": str(e)}
+            self.demo_results[max_concurrent]={"error": str(e)}
+
 
     def _calculate_success_rate(self, results):
         """Calculate success rate from results."""
         if not results:
             return 0.0
 
-        successful = sum(1 for r in results if r.get("title") and r.get("content"))
+        successful=sum(1 for r in results if r.get("title") and r.get("content"))
         return successful / len(results) if results else 0.0
+
 
     def _display_performance_summary(self):
         """Display performance comparison summary."""
-        print("\n" + "=" * 60)
+        print(""
+" + "=" * 60)
         print("CONCURRENCY | ARTICLES | TIME(s) | RATE(art/s) | SUCCESS")
-        print("-" * 60)
+        print("-" * 60)"
 
         for concurrency, data in self.demo_results.items():
             if "error" not in data:
@@ -112,8 +117,9 @@ class AsyncScraperDemo:
 
     async def run_feature_demo(self):
         """Demonstrate specific features of the async scraper."""
-        print("\n🎯 Feature Demonstration")
-        print("=" * 50)
+        print(""
+ Feature Demonstration")
+        print("=" * 50)"
 
         # Load config
         with open(self.config_path, "r") as f:
@@ -124,17 +130,22 @@ class AsyncScraperDemo:
 
         runner = AsyncScraperRunner(config_dict=config)
 
-        print("\n1. 🔄 AsyncIO Non-blocking Requests")
+        print(""
+1. 🔄 AsyncIO Non-blocking Requests")"
         await self._demo_async_requests(runner)
 
-        print("\n2. 🎭 Playwright JavaScript-heavy Sites")
+        print(""
+2. 🎭 Playwright JavaScript-heavy Sites")"
         await self._demo_playwright_sites(runner)
 
-        print("\n3. 🧵 ThreadPoolExecutor Parallelization")
+        print(""
+3. 🧵 ThreadPoolExecutor Parallelization")"
         await self._demo_thread_pool_processing(runner)
 
-        print("\n4. 📊 Real-time Performance Monitoring")
+        print(""
+4.  Real-time Performance Monitoring")"
         await self._demo_performance_monitoring(runner)
+
 
     async def _demo_async_requests(self, runner):
         """Demonstrate AsyncIO non-blocking requests."""
@@ -153,10 +164,11 @@ class AsyncScraperDemo:
         duration = time.time() - start_time
 
         print(
-            "   ✅ Processed {0} articles from {1} sources".format(len(results), len(http_sources))
+            "    Processed {0} articles from {1} sources".format(len(results), len(http_sources))
         )
         print("   ⚡ Average: {0} articles/second".format(len(results) / duration:.2f))
         print("   🔗 Concurrent connections enabled efficient processing")
+
 
     async def _demo_playwright_sites(self, runner):
         """Demonstrate Playwright optimization for JS-heavy sites."""
@@ -171,9 +183,10 @@ class AsyncScraperDemo:
         )
         duration = time.time() - start_time
 
-        print("   ✅ Successfully scraped {0} articles from JS-heavy sites".format(len(results)))
+        print("    Successfully scraped {0} articles from JS-heavy sites".format(len(results)))
         print("   🎭 Playwright handled dynamic content loading")
         print("   ⏱️  Processing time: {0}s".format(duration:.2f))
+
 
     async def _demo_thread_pool_processing(self, runner):
         """Demonstrate ThreadPoolExecutor for CPU-intensive tasks."""
@@ -192,9 +205,10 @@ class AsyncScraperDemo:
         # Check for enhanced fields (processed by ThreadPoolExecutor)
         enhanced_count = sum(1 for r in results if "quality_score" in r)
 
-        print("   ✅ Processed {0} articles with enhancement".format(len(results)))
+        print("    Processed {0} articles with enhancement".format(len(results)))
         print("   🧵 {0} articles enhanced using ThreadPoolExecutor".format(enhanced_count))
         print("   ⚡ Parallel processing improved efficiency")
+
 
     async def _demo_performance_monitoring(self, runner):
         """Demonstrate real-time performance monitoring."""
@@ -204,7 +218,7 @@ class AsyncScraperDemo:
         monitor = PerformanceDashboard(update_interval=2)
 
         # Simulate scraping with monitoring
-        print("   📊 Starting monitored scraping session...")
+        print("    Starting monitored scraping session...")
 
         start_time = time.time()
         results = await runner.run(
@@ -220,21 +234,24 @@ class AsyncScraperDemo:
         system_info = monitor.get_system_info()
 
         print(
-            f"   ✅ Monitoring captured {stats.get('total_articles', 0)} article metrics"
+            f"    Monitoring captured {stats.get('total_articles', 0)} article metrics"
         )
-        print(f"   📈 Success rate: {stats.get('success_rate', 0):.1%}")
+        print(f"    Success rate: {stats.get('success_rate', 0):.1%}")
         print(f"   💾 Memory usage: {system_info.get('memory_percent', 0):.1f}%")
         print(f"   🖥️  CPU usage: {system_info.get('cpu_percent', 0):.1f}%")
 
+
     async def run_comparison_demo(self):
         """Run a comparison between traditional and async approaches."""
-        print("\n⚖️  Traditional vs AsyncIO Comparison")
-        print("=" * 50)
+        print(""
+⚖️  Traditional vs AsyncIO Comparison")
+        print("=" * 50)"
 
         print("📝 Simulating traditional sequential scraping...")
         await self._simulate_traditional_scraping()
 
-        print("\n🚀 Running AsyncIO concurrent scraping...")
+        print(""
+ Running AsyncIO concurrent scraping...")"
         await self._run_async_scraping()
 
         self._display_comparison_results()
@@ -264,9 +281,10 @@ class AsyncScraperDemo:
         }
 
         print(
-            "   ✅ Traditional approach: {0}s for {1} articles".format(simulated_duration:.1f, article_count)
+            "    Traditional approach: {0}s for {1} articles".format(simulated_duration:.1f, article_count)
         )
-        print("   📊 Rate: {0} articles/second".format(article_count / simulated_duration:.2f))
+        print("    Rate: {0} articles/second".format(article_count / simulated_duration:.2f))
+
 
     async def _run_async_scraping(self):
         """Run actual async scraping for comparison."""
@@ -292,8 +310,9 @@ class AsyncScraperDemo:
             "rate": len(results) / duration if duration > 0 else 0,
         }
 
-        print("   ✅ AsyncIO approach: {0}s for {1} articles".format(duration:.1f, len(results)))
-        print("   📊 Rate: {0} articles/second".format(len(results) / duration:.2f))
+        print("    AsyncIO approach: {0}s for {1} articles".format(duration:.1f, len(results)))
+        print("    Rate: {0} articles/second".format(len(results) / duration:.2f))
+
 
     def _display_comparison_results(self):
         """Display comparison results."""
@@ -308,7 +327,8 @@ class AsyncScraperDemo:
             )
             rate_improvement = (async_res["rate"] - trad["rate"]) / trad["rate"] * 100
 
-            print("\n📊 Performance Comparison Results:")
+            print("
+ Performance Comparison Results:")
             print("=" * 50)
             print(f"Traditional: {trad['duration']:.1f}s ({trad['rate']:.2f} art/s)")
             print(
@@ -359,13 +379,14 @@ async def main():
         print("  --all          : Run all demonstrations")
         return
 
-    print("\n🎉 Demo completed successfully!")
+    print(""
+ Demo completed successfully!")
     print("💡 The AsyncIO scraper provides:")
     print("   - 3-5x performance improvement over traditional scraping")
     print("   - Non-blocking concurrent HTTP requests")
     print("   - Optimized JavaScript-heavy site handling")
     print("   - Parallel CPU-intensive processing")
-    print("   - Real-time performance monitoring")
+    print("   - Real-time performance monitoring")"
 
 
 if __name__ == "__main__":

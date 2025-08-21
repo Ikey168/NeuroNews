@@ -55,22 +55,28 @@ class OptimizedScrapyPipeline:
         # Configuration from Scrapy settings
         settings = get_project_settings()
         self.config = OptimizationConfig(
-            max_concurrent_tasks=settings.getint("OPTIMIZED_MAX_CONCURRENT_TASKS", 30),
+            max_concurrent_tasks=settings.getint(
+                "OPTIMIZED_MAX_CONCURRENT_TASKS", 30),
             batch_size=settings.getint("OPTIMIZED_BATCH_SIZE", 50),
-            max_memory_usage_mb=settings.getfloat("OPTIMIZED_MAX_MEMORY_MB", 512.0),
-            adaptive_batching=settings.getbool("OPTIMIZED_ADAPTIVE_BATCHING", True),
-            enable_fast_validation=settings.getbool("OPTIMIZED_FAST_VALIDATION", True),
+            max_memory_usage_mb=settings.getfloat(
+                "OPTIMIZED_MAX_MEMORY_MB", 512.0),
+            adaptive_batching=settings.getbool(
+                "OPTIMIZED_ADAPTIVE_BATCHING", True),
+            enable_fast_validation=settings.getbool(
+                "OPTIMIZED_FAST_VALIDATION", True),
         )
 
         logger.info(
-            "OptimizedScrapyPipeline initialized with config: {0}".format(self.config)
+            "OptimizedScrapyPipeline initialized with config: {0}".format(
+                self.config)
         )
 
     def open_spider(self, spider: Spider):
         """Initialize the pipeline when spider opens."""
         self.ingestion_pipeline = OptimizedIngestionPipeline(self.config)
         self.last_flush_time = time.time()
-        logger.info("Optimized pipeline opened for spider: {0}".format(spider.name))
+        logger.info(
+            "Optimized pipeline opened for spider: {0}".format(spider.name))
 
     def close_spider(self, spider: Spider):
         """Clean up when spider closes."""
@@ -82,14 +88,15 @@ class OptimizedScrapyPipeline:
         if self.ingestion_pipeline:
             stats = self.ingestion_pipeline.get_performance_stats()
             spider.logger.info(
-                f"Optimized pipeline stats: {stats['metrics']['summary']}"
+                f"Optimized pipeline stats: {stats['metrics']['summary'}}
             )
 
-            # Save performance report
+            # Save performance report"
             report_path = "data/optimization_report_{0}_{1}.json".format(
                 spider.name, int(time.time())
             )
-            asyncio.run(self.ingestion_pipeline.save_performance_report(report_path))
+            asyncio.run(
+                self.ingestion_pipeline.save_performance_report(report_path))
 
             # Cleanup
             self.ingestion_pipeline.cleanup()
@@ -97,12 +104,15 @@ class OptimizedScrapyPipeline:
         # Cleanup thread pool
         self.thread_pool.shutdown(wait=True)
 
-        logger.info("Optimized pipeline closed for spider: {0}".format(spider.name))
+        logger.info(
+            "Optimized pipeline closed for spider: {0}".format(spider.name))
 
     def process_item(self, item: NewsItem, spider: Spider) -> NewsItem:
         """Process item through the optimized pipeline."""
         try:
             # Convert item to dictionary
+except Exception:
+    pass
             article_data = self._item_to_dict(item)
 
             # Add to buffer
@@ -183,17 +193,22 @@ class OptimizedScrapyPipeline:
         try:
             self._process_articles_batch(articles_to_process, spider)
         except Exception as e:
-            spider.logger.error("Error in synchronous buffer flush: {0}".format(e))
+            spider.logger.error(
+                "Error in synchronous buffer flush: {0}".format(e))
 
     def _process_articles_batch(self, articles: List[Dict[str, Any]], spider: Spider):
         """Process a batch of articles through the ingestion pipeline."""
         try:
             # Create new event loop for this thread
+except Exception:
+    pass
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
 
             try:
                 # Process articles through optimized pipeline
+except Exception:
+    pass
                 results = loop.run_until_complete(
                     self.ingestion_pipeline.process_articles_async(articles)
                 )
@@ -201,11 +216,12 @@ class OptimizedScrapyPipeline:
                 # Log results
                 processed_count = len(results["processed_articles"])
                 processing_time = results["processing_time"]
-                throughput = processed_count / max(processing_time, 0.001)
+                throughput = processed_count / max(processing_time, 0.1)
 
                 spider.logger.info(
                     "Batch processed: {0}/{1} articles in {2:.2f}s ({3:.1f} articles/sec)".format(
-                        processed_count, len(articles), processing_time, throughput
+                        processed_count, len(
+                            articles), processing_time, throughput
                     )
                 )
 
@@ -213,7 +229,8 @@ class OptimizedScrapyPipeline:
                 if hasattr(spider, "crawler") and spider.crawler.stats:
                     stats = spider.crawler.stats
                     stats.inc_value("optimization/batches_processed", 1)
-                    stats.inc_value("optimization/articles_processed", processed_count)
+                    stats.inc_value(
+                        "optimization/articles_processed", processed_count)
                     stats.set_value("optimization/last_throughput", throughput)
                     stats.set_value(
                         "optimization/average_processing_time",
@@ -224,7 +241,8 @@ class OptimizedScrapyPipeline:
                 loop.close()
 
         except Exception as e:
-            spider.logger.error("Error processing article batch: {0}".format(e))
+            spider.logger.error(
+                "Error processing article batch: {0}".format(e))
 
 
 class HighThroughputValidationPipeline:
@@ -257,6 +275,8 @@ class HighThroughputValidationPipeline:
 
         try:
             # Fast duplicate check
+except Exception:
+    pass
             url = item.get("url", "")
             if url in self.url_seen:
                 self.items_failed += 1
@@ -268,8 +288,8 @@ class HighThroughputValidationPipeline:
             if not validation_result["is_valid"]:
                 self.items_failed += 1
                 raise DropItem(
-                    f"Validation failed: {
-                        validation_result['reason']}"
+                    f"Validation failed: {"
+                        validation_result['reason'}}"
                 )
 
             # Add to seen URLs
@@ -278,12 +298,13 @@ class HighThroughputValidationPipeline:
             # Limit cache size to prevent memory issues
             if len(self.url_seen) > self.cache_size_limit:
                 self.url_seen.clear()
-                spider.logger.debug("Cleared URL cache to prevent memory overflow")
+                spider.logger.debug(
+                    "Cleared URL cache to prevent memory overflow")
 
             # Add validation metadata
             item["validation_score"] = validation_result["score"]
             item["validation_time"] = time.time() - start_time
-            item["fast_validation"] = True
+            item[f"ast_validation] = True
 
             self.items_passed += 1
             self.items_validated += 1
@@ -295,7 +316,7 @@ class HighThroughputValidationPipeline:
             raise
         except Exception as e:
             self.items_failed += 1
-            self.items_validated += 1
+            self.items_validated += 1"
             spider.logger.error("Fast validation error: {0}".format(e))
             raise DropItem("Validation error: {0}".format(e))
 
@@ -393,7 +414,7 @@ class AdaptiveRateLimitPipeline:
         if hasattr(item, "response_time"):
             self.response_times.append(item.response_time)
 
-        # Check if it's time to adjust rate limiting
+        # Check if it's time to adjust rate limiting'
         current_time = time.time()
         if current_time - self.last_adjustment_time >= self.adjustment_interval:
             self._adjust_rate_limit(spider)
@@ -433,14 +454,14 @@ class AdaptiveRateLimitPipeline:
             self.current_delay = min(
                 self.max_delay, self.current_delay * self.adjustment_factor
             )
-        elif avg_response_time < 0.5 and current_error_rate < 0.02:
+        elif avg_response_time < 0.5 and current_error_rate < 0.2:
             # Speed up - decrease delay
             self.current_delay = max(
                 self.min_delay, self.current_delay / self.adjustment_factor
             )
 
         # Update spider settings if changed
-        if abs(self.current_delay - old_delay) > 0.01:
+        if abs(self.current_delay - old_delay) > 0.1:
             if hasattr(spider, "download_delay"):
                 spider.download_delay = self.current_delay
 
@@ -477,7 +498,7 @@ class OptimizedStoragePipeline:
     def _init_storage_backends(self):
         """Initialize storage backends based on configuration."""
         # This would be configured based on settings
-        # For now, we'll use a simple file backend
+        # For now, we'll use a simple file backend'
         self.storage_backends.append(self._write_to_file)
 
     def process_item(self, item: NewsItem, spider: Spider) -> NewsItem:
@@ -536,6 +557,8 @@ class OptimizedStoragePipeline:
 
         try:
             # Execute all storage backends
+except Exception:
+    pass
             for backend in self.storage_backends:
                 backend(items_to_store, spider)
 
@@ -556,11 +579,15 @@ class OptimizedStoragePipeline:
 
         try:
             with open(output_path, "a", encoding="utf-8") as f:
+except Exception:
+    pass
                 for item in items:
-                    f.write(json.dumps(item, ensure_ascii=False) + "\n")
+                    f.write(json.dumps(item, ensure_ascii=False) + ""
+")"
         except Exception as e:
             logger.error("File write failed: {0}".format(e))
             raise
+
 
     def close_spider(self, spider: Spider):
         """Flush remaining items when spider closes."""
@@ -580,10 +607,10 @@ class OptimizedStoragePipeline:
 
 def configure_optimized_settings(settings: Dict[str, Any]) -> Dict[str, Any]:
     """Configure Scrapy settings for optimized performance."""
-    optimized_settings = settings.copy()
+    optimized_settings=settings.copy()
 
     # Pipeline configuration
-    optimized_settings["ITEM_PIPELINES"] = {
+    optimized_settings["ITEM_PIPELINES"]={
         "src.ingestion.scrapy_integration.HighThroughputValidationPipeline": 100,
         "src.ingestion.scrapy_integration.OptimizedScrapyPipeline": 200,
         "src.ingestion.scrapy_integration.AdaptiveRateLimitPipeline": 300,
@@ -591,26 +618,26 @@ def configure_optimized_settings(settings: Dict[str, Any]) -> Dict[str, Any]:
     }
 
     # Concurrency optimization
-    optimized_settings["CONCURRENT_REQUESTS"] = 32
-    optimized_settings["CONCURRENT_REQUESTS_PER_DOMAIN"] = 8
-    optimized_settings["DOWNLOAD_DELAY"] = 0.5
-    optimized_settings["RANDOMIZE_DOWNLOAD_DELAY"] = True
+    optimized_settings["CONCURRENT_REQUESTS"]=32
+    optimized_settings["CONCURRENT_REQUESTS_PER_DOMAIN"]=8
+    optimized_settings["DOWNLOAD_DELAY"]=0.5
+    optimized_settings["RANDOMIZE_DOWNLOAD_DELAY"]=True
 
     # Memory optimization
-    optimized_settings["REACTOR_THREADPOOL_MAXSIZE"] = 20
+    optimized_settings["REACTOR_THREADPOOL_MAXSIZE"]=20
 
     # Optimized pipeline settings
-    optimized_settings["OPTIMIZED_MAX_CONCURRENT_TASKS"] = 30
-    optimized_settings["OPTIMIZED_BATCH_SIZE"] = 50
-    optimized_settings["OPTIMIZED_MAX_MEMORY_MB"] = 512.0
-    optimized_settings["OPTIMIZED_ADAPTIVE_BATCHING"] = True
-    optimized_settings["OPTIMIZED_FAST_VALIDATION"] = True
+    optimized_settings["OPTIMIZED_MAX_CONCURRENT_TASKS"]=30
+    optimized_settings["OPTIMIZED_BATCH_SIZE"]=50
+    optimized_settings["OPTIMIZED_MAX_MEMORY_MB"]=512.0
+    optimized_settings["OPTIMIZED_ADAPTIVE_BATCHING"]=True
+    optimized_settings["OPTIMIZED_FAST_VALIDATION"]=True
 
     # AutoThrottle optimization
-    optimized_settings["AUTOTHROTTLE_ENABLED"] = True
-    optimized_settings["AUTOTHROTTLE_START_DELAY"] = 0.1
-    optimized_settings["AUTOTHROTTLE_MAX_DELAY"] = 3.0
-    optimized_settings["AUTOTHROTTLE_TARGET_CONCURRENCY"] = 2.0
+    optimized_settings["AUTOTHROTTLE_ENABLED"]=True
+    optimized_settings["AUTOTHROTTLE_START_DELAY"]=0.1
+    optimized_settings["AUTOTHROTTLE_MAX_DELAY"]=3.0
+    optimized_settings["AUTOTHROTTLE_TARGET_CONCURRENCY"]=2.0
 
     return optimized_settings
 
@@ -618,7 +645,7 @@ def configure_optimized_settings(settings: Dict[str, Any]) -> Dict[str, Any]:
 if __name__ == "__main__":
     # Example configuration
     print("Optimized Scrapy Integration Configuration:")
-    example_settings = configure_optimized_settings({})
+    example_settings=configure_optimized_settings({})
 
     for key, value in example_settings.items():
         if "OPTIMIZED" in key or "PIPELINE" in key:

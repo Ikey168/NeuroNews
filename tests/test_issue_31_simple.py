@@ -28,7 +28,8 @@ def test_config_validation():
     # Check required sections
     required_sections = ["embedding", "clustering", "categories", "database"]
     for section in required_sections:
-        assert section in event_config, "Missing config section: {0}".format(section)
+        assert section in event_config, "Missing config section: {0}".format(
+            section)
 
     # Check embedding config
     embedding_config = event_config["embedding"]
@@ -42,7 +43,7 @@ def test_config_validation():
     assert "kmeans" in clustering_config["methods"]
     assert "dbscan" in clustering_config["methods"]
 
-    print("✅ Configuration validation passed")
+    print(" Configuration validation passed")
 
 
 def test_database_schema():
@@ -70,7 +71,7 @@ def test_database_schema():
     for view in required_views:
         assert view in schema_content, "Missing view: {0}".format(view)
 
-    print("✅ Database schema validation passed")
+    print(" Database schema validation passed")
 
 
 def test_api_endpoints():
@@ -91,7 +92,8 @@ def test_api_endpoints():
     ]
 
     for endpoint in required_endpoints:
-        assert endpoint in api_content, "Missing endpoint: {0}".format(endpoint)
+        assert endpoint in api_content, "Missing endpoint: {0}".format(
+            endpoint)
 
     # Check for response models
     required_models = [
@@ -101,14 +103,15 @@ def test_api_endpoints():
     ]
 
     for model in required_models:
-        assert model in api_content, "Missing response model: {0}".format(model)
+        assert model in api_content, "Missing response model: {0}".format(
+            model)
 
     # Check for proper HTTP methods
     http_methods = ["@router.get", "@router.post"]
     for method in http_methods:
         assert method in api_content, "Missing HTTP method: {0}".format(method)
 
-    print("✅ API endpoints validation passed")
+    print(" API endpoints validation passed")
 
 
 def test_core_implementation():
@@ -150,9 +153,10 @@ def test_core_implementation():
     ]
 
     for req in clusterer_requirements:
-        assert req in clusterer_content, "Missing in EventClusterer: {0}".format(req)
+        assert req in clusterer_content, "Missing in EventClusterer: {0}".format(
+            req)
 
-    print("✅ Core implementation validation passed")
+    print(" Core implementation validation passed")
 
 
 def test_demo_results():
@@ -194,8 +198,8 @@ def test_demo_results():
             assert field in event, "Missing field in event: {0}".format(field)
 
     print(
-        f"✅ Demo results validation passed: {
-            clustering['events_detected']} events detected"
+        f" Demo results validation passed: {"
+            clustering['events_detected']} events detected""
     )
 
 
@@ -221,17 +225,21 @@ def test_code_quality():
             )
             total_lines += lines
 
-    assert total_lines > 1000, "Insufficient code: {0} lines".format(total_lines)
+    assert total_lines > 1000, "Insufficient code: {0} lines".format(
+        total_lines)
 
     # Check for proper error handling
     for file_path in core_files:
         with open(file_path, "r") as f:
             content = f.read()
-            assert "try:" in content, "No error handling in {0}".format(file_path)
-            assert "except" in content, "No exception handling in {0}".format(file_path)
+            assert "try:" in content, "No error handling in {0}".format(
+                file_path)
+            assert "except" in content, "No exception handling in {0}".format(
+                file_path)
             assert "logger" in content, "No logging in {0}".format(file_path)
 
-    print("✅ Code quality validation passed: {0} lines of code".format(total_lines))
+    print(" Code quality validation passed: {0} lines of code".format(
+        total_lines))
 
 
 def test_documentation():
@@ -259,7 +267,7 @@ def test_documentation():
     # Check that summary is substantial
     assert len(summary_content) > 5000, "Implementation summary too short"
 
-    print("✅ Documentation validation passed")
+    print(" Documentation validation passed")
 
 
 def test_integration_ready():
@@ -285,12 +293,12 @@ def test_integration_ready():
     ), "sentence-transformers not in requirements"
     assert "scikit-learn" in req_content, "scikit-learn not in requirements"
 
-    print("✅ Integration readiness validation passed")
+    print(" Integration readiness validation passed")
 
 
 def main():
     """Run all simplified tests."""
-    print("🔍 SIMPLIFIED ISSUE #31 VALIDATION")
+    print(" SIMPLIFIED ISSUE #31 VALIDATION")
     print("=" * 50)
 
     tests = [
@@ -308,24 +316,27 @@ def main():
     total = len(tests)
 
     for test_func in tests:
-        print("\n🧪 Running {0}...".format(test_func.__name__))
+        print(""
+ Running {0}...".format(test_func.__name__))"
         try:
             test_func()
             passed += 1
         except Exception as e:
             print("❌ {0} failed: {1}".format(test_func.__name__, e))
 
-    print("\n" + "=" * 50)
-    print("📊 VALIDATION SUMMARY: {0}/{1} tests passed".format(passed, total))
+    print(""
+" + "=" * 50)
+    print(" VALIDATION SUMMARY: {0}/{1} tests passed".format(passed, total))"
 
     if passed == total:
-        print("🎉 ALL SIMPLIFIED TESTS PASSED!")
-        print("\n✅ Issue #31 implementation is structurally complete")
-        print("✅ All required files present with substantial content")
-        print("✅ Configuration and schema properly defined")
-        print("✅ API endpoints correctly implemented")
-        print("✅ Demo results show successful event detection")
-        print("✅ Ready for deployment and further testing")
+        print(" ALL SIMPLIFIED TESTS PASSED!")
+        print(""
+ Issue #31 implementation is structurally complete")
+        print(" All required files present with substantial content")
+        print(" Configuration and schema properly defined")
+        print(" API endpoints correctly implemented")
+        print(" Demo results show successful event detection")
+        print(" Ready for deployment and further testing")"
         return True
     else:
         print("❌ {0} tests failed".format(total - passed))

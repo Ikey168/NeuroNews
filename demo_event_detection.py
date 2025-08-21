@@ -126,7 +126,7 @@ class EventDetectionDemo:
                 "published_date": base_date + timedelta(hours=8),
                 "category": "Health",
                 "source_credibility": "reliable",
-                "sentiment_score": 0.9,
+                "sentiment_score": 0.9, '
             },
             {
                 "id": "health_002",
@@ -136,7 +136,7 @@ class EventDetectionDemo:
                 "published_date": base_date + timedelta(hours=9),
                 "category": "Health",
                 "source_credibility": "reliable",
-                "sentiment_score": 0.8,
+                "sentiment_score": 0.8,'
             },
         ]
 
@@ -168,11 +168,12 @@ class EventDetectionDemo:
 
     async def run_demo(self):
         """Run the complete event detection demo."""
-        print("🚀 Starting Event Detection and Article Clustering Demo")
+        print(" Starting Event Detection and Article Clustering Demo")
         print(f"📅 Demo Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        print("\n" + "=" * 60)
+        print(""
+" + "=" * 60)
         print("🔬 EVENT DETECTION SYSTEM DEMO")
-        print("=" * 60)
+        print("=" * 60)"
 
         try:
             # 1. Article Embedding Demo
@@ -196,18 +197,22 @@ class EventDetectionDemo:
             # Save demo results
             await self.save_demo_results()
 
-            print("\n" + "=" * 60)
-            print("✅ Event Detection Demo Completed Successfully!")
-            print("=" * 60)
+            print(""
+" + "=" * 60)
+            print(" Event Detection Demo Completed Successfully!")
+            print("=" * 60)"
 
         except Exception as e:
             logger.error("Demo execution failed: {0}".format(e))
-            print("\n❌ Demo failed with error: {0}".format(e))
+            print(""
+❌ Demo failed with error: {0}".format(e))"
+
 
     async def demo_article_embedding(self):
         """Demonstrate article embedding generation."""
-        print("\n📦 ARTICLE EMBEDDING GENERATION")
-        print("-" * 40)
+        print(""
+ ARTICLE EMBEDDING GENERATION")
+        print("-" * 40)"
 
         try:
             from src.nlp.article_embedder import (
@@ -224,12 +229,13 @@ class EventDetectionDemo:
 
             # Generate embeddings for sample articles
             print(
-                "\n🔄 Generating embeddings for {0} articles...".format(len(self.sample_articles))
+                ""
+🔄 Generating embeddings for {0} articles...".format(len(self.sample_articles))"
             )
 
             embeddings = await embedder.generate_embeddings_batch(self.sample_articles)
 
-            print("✅ Generated {0} embeddings".format(len(embeddings)))
+            print(" Generated {0} embeddings".format(len(embeddings)))
 
             # Show quality metrics
             if embeddings:
@@ -238,8 +244,8 @@ class EventDetectionDemo:
                 )
                 avg_time = np.mean([emb["processing_time"] for emb in embeddings])
 
-                print("📊 Average quality score: {0}".format(avg_quality:.3f))
-                print("⏱️ Average processing time: {0}s".format(avg_time:.3f))
+                print(" Average quality score: {0}".format()
+                print("⏱️ Average processing time: {0}s".format()
 
             # Store results
             self.demo_results["embeddings"] = {
@@ -274,10 +280,12 @@ class EventDetectionDemo:
             print("❌ Embedding demo failed: {0}".format(e))
             self.embeddings_data = []
 
+
     async def demo_event_clustering(self):
         """Demonstrate event clustering and detection."""
-        print("\n🔍 EVENT CLUSTERING AND DETECTION")
-        print("-" * 40)
+        print(""
+ EVENT CLUSTERING AND DETECTION")
+        print("-" * 40)"
 
         try:
             from src.nlp.event_clusterer import (
@@ -296,23 +304,26 @@ class EventDetectionDemo:
             )
 
             print("🔬 Clustering method: {0}".format(clusterer.clustering_method))
-            print("📊 Min cluster size: {0}".format(clusterer.min_cluster_size))
+            print(" Min cluster size: {0}".format(clusterer.min_cluster_size))
 
             # Detect events
-            print("\n🔄 Detecting events from {0} articles...".format(len(self.embeddings_data)))
+            print(""
+🔄 Detecting events from {0} articles...".format(len(self.embeddings_data)))"
 
             events = await clusterer.detect_events(self.embeddings_data)
 
-            print("🎯 Detected {0} events".format(len(events)))
+            print(" Detected {0} events".format(len(events)))
 
             # Display event details
             if events:
-                print("\n📰 Detected Events:")
+                print(""
+📰 Detected Events:")"
                 for i, event in enumerate(events[:5], 1):  # Show top 5
-                    print(f"\n{i}. {event['cluster_name']}")
+                    print(f"
+{i}. {event['cluster_name']}")
                     print(f"   📂 Category: {event['category']}")
                     print(f"   🔥 Type: {event['event_type']}")
-                    print(f"   📈 Articles: {event['cluster_size']}")
+                    print(f"    Articles: {event['cluster_size']}")
                     print(f"   ⭐ Trending Score: {event['trending_score']:.2f}")
                     print(f"   💥 Impact Score: {event['impact_score']:.1f}")
                     print(f"   ⚡ Velocity Score: {event['velocity_score']:.2f}")
@@ -343,10 +354,12 @@ class EventDetectionDemo:
             print("❌ Clustering demo failed: {0}".format(e))
             self.detected_events = []
 
+
     async def demo_breaking_news_api(self):
         """Demonstrate breaking news API functionality."""
-        print("\n📺 BREAKING NEWS API DEMO")
-        print("-" * 40)
+        print(""
+📺 BREAKING NEWS API DEMO")
+        print("-" * 40)"
 
         try:
             if not hasattr(self, "detected_events") or not self.detected_events:
@@ -363,8 +376,9 @@ class EventDetectionDemo:
                 if event["trending_score"] >= 2.0 and event["impact_score"] >= 50.0
             ]
 
-            print("\n📊 API Response Simulation:")
-            print("🔥 Breaking events: {0}".format(len(breaking_events)))
+            print(""
+ API Response Simulation:")
+            print("🔥 Breaking events: {0}".format(len(breaking_events)))"
 
             # Group by category
             category_stats = {}
@@ -380,7 +394,8 @@ class EventDetectionDemo:
                 count = category_stats[category]["count"]
                 category_stats[category]["avg_score"] /= count
 
-            print("\n📈 Events by Category:")
+            print(""
+ Events by Category:")"
             for category, stats in sorted(
                 category_stats.items(), key=lambda x: x[1]["avg_score"], reverse=True
             ):
@@ -409,11 +424,12 @@ class EventDetectionDemo:
                 },
             }
 
-            print("\n🌐 API Endpoint Performance:")
+            print(""
+🌐 API Endpoint Performance:")"
             for endpoint, metrics in api_responses.items():
                 print("   {0}".format(endpoint))
                 print(
-                    f"     📊 Results: {metrics['events'] if 'events' in metrics else metrics['clusters']}"
+                    f"      Results: {metrics['events'] if 'events' in metrics else metrics['clusters']}"
                 )
                 print(f"     ⏱️ Response time: {metrics['response_time']}")
                 print(f"     💾 Cached: {metrics['cached']}")
@@ -430,17 +446,19 @@ class EventDetectionDemo:
             logger.error("Error in API demo: {0}".format(e))
             print("❌ API demo failed: {0}".format(e))
 
+
     async def demo_event_significance(self):
         """Demonstrate event significance scoring."""
-        print("\n⭐ EVENT SIGNIFICANCE SCORING")
-        print("-" * 40)
+        print(""
+⭐ EVENT SIGNIFICANCE SCORING")
+        print("-" * 40)"
 
         try:
             if not hasattr(self, "detected_events") or not self.detected_events:
                 print("❌ No events available for significance demo")
                 return
 
-            print("📊 Event Significance Analysis:")
+            print(" Event Significance Analysis:")
 
             # Calculate significance scores
             significance_scores = []
@@ -461,14 +479,16 @@ class EventDetectionDemo:
                 reverse=True,
             )
 
-            print("\n🏆 Top Events by Significance:")
+            print(""
+🏆 Top Events by Significance:")"
             for i, event in enumerate(sorted_events[:3], 1):
-                print(f"\n{i}. {event['cluster_name']}")
-                print(f"   🎯 Significance: {event['significance_score']:.2f}")
-                print(f"   📈 Trending: {event['trending_score']:.2f}")
+                print(f"
+{i}. {event['cluster_name']}")
+                print(f"    Significance: {event['significance_score']:.2f}")
+                print(f"    Trending: {event['trending_score']:.2f}")
                 print(f"   💥 Impact: {event['impact_score']:.1f}")
                 print(f"   ⚡ Velocity: {event['velocity_score']:.2f}")
-                print(f"   📊 Cluster Size: {event['cluster_size']}")
+                print(f"    Cluster Size: {event['cluster_size']}")
                 print(f"   ⏱️ Duration: {event['event_duration_hours']:.1f} hours")
 
             # Significance distribution
@@ -476,10 +496,11 @@ class EventDetectionDemo:
             medium_significance = len([s for s in significance_scores if 20 <= s < 50])
             low_significance = len([s for s in significance_scores if s < 20])
 
-            print("\n📊 Significance Distribution:")
+            print(""
+ Significance Distribution:")
             print("   🔥 High (≥50): {0} events".format(high_significance))
             print("   🔶 Medium (20-49): {0} events".format(medium_significance))
-            print("   🔵 Low (<20): {0} events".format(low_significance))
+            print("   🔵 Low (<20): {0} events".format(low_significance))"
 
             # Store results
             self.demo_results["significance"] = {
@@ -506,23 +527,26 @@ class EventDetectionDemo:
             logger.error("Error in significance demo: {0}".format(e))
             print("❌ Significance demo failed: {0}".format(e))
 
+
     async def demo_database_integration(self):
         """Demonstrate database integration capabilities."""
-        print("\n🗄️ DATABASE INTEGRATION DEMO")
-        print("-" * 40)
+        print(""
+🗄️ DATABASE INTEGRATION DEMO")
+        print("-" * 40)"
 
         try:
-            print("📊 Database Integration Features:")
-            print("   ✅ Event clusters storage")
-            print("   ✅ Article-cluster assignments")
-            print("   ✅ Embedding vectors caching")
-            print("   ✅ Performance metrics tracking")
-            print("   ✅ Breaking news views")
+            print(" Database Integration Features:")
+            print("    Event clusters storage")
+            print("    Article-cluster assignments")
+            print("    Embedding vectors caching")
+            print("    Performance metrics tracking")
+            print("    Breaking news views")
 
             # Simulate database operations
-            print("\n💾 Simulated Database Operations:")
+            print(""
+💾 Simulated Database Operations:")
             print(
-                f"   📝 Events to store: {len(self.detected_events) if hasattr(self, 'detected_events') else 0}"
+                f"   📝 Events to store: {len(self.detected_events) if hasattr(self, 'detected_events') else 0}""
             )
             print(
                 f"   🔗 Article assignments: {sum(len(e['articles']) for e in self.detected_events) if hasattr(self, 'detected_events') else 0}"
@@ -532,18 +556,20 @@ class EventDetectionDemo:
             )
 
             # Schema information
-            print("\n🏗️ Database Schema:")
-            print("   📋 event_clusters table")
+            print(""
+🏗️ Database Schema:")
+            print("    event_clusters table")
             print("   🔗 article_cluster_assignments table")
             print("   🧠 article_embeddings table")
-            print("   📊 Views: active_breaking_news, trending_events_by_category")
+            print("    Views: active_breaking_news, trending_events_by_category")"
 
             # Performance estimates
-            print("\n⚡ Performance Estimates:")
+            print(""
+⚡ Performance Estimates:")
             print("   💾 Storage per event: ~2KB")
             print("   🧠 Embedding storage: ~1.5KB per article")
-            print("   🔍 Query response time: <100ms")
-            print("   📈 Indexing: Optimized for time-based queries")
+            print("    Query response time: <100ms")
+            print("    Indexing: Optimized for time-based queries")"
 
             # Store results
             self.demo_results["database"] = {
@@ -565,10 +591,12 @@ class EventDetectionDemo:
             logger.error("Error in database demo: {0}".format(e))
             print("❌ Database demo failed: {0}".format(e))
 
+
     async def demo_performance_metrics(self):
         """Demonstrate performance metrics and monitoring."""
-        print("\n📈 PERFORMANCE METRICS DEMO")
-        print("-" * 40)
+        print(""
+ PERFORMANCE METRICS DEMO")
+        print("-" * 40)"
 
         try:
             # Calculate overall metrics
@@ -593,12 +621,12 @@ class EventDetectionDemo:
             else:
                 clustering_time = 0
 
-            print("📊 Overall Performance Metrics:")
+            print(" Overall Performance Metrics:")
             print("   📰 Articles processed: {0}".format(total_articles))
             print("   🧠 Embeddings generated: {0}".format(total_embeddings))
-            print("   🎯 Events detected: {0}".format(total_events))
-            print("   ⏱️ Avg embedding time: {0}s per article".format(avg_embedding_time:.3f))
-            print("   🔍 Clustering time: {0}s total".format(clustering_time:.3f))
+            print("    Events detected: {0}".format(total_events))
+            print("   ⏱️ Avg embedding time: {0}s per article".format()
+            print("    Clustering time: {0}s total".format()
 
             # Quality metrics
             if hasattr(self, "detected_events") and self.detected_events:
@@ -612,10 +640,11 @@ class EventDetectionDemo:
                     [e["cohesion_score"] for e in self.detected_events]
                 )
 
-                print("\n🎯 Quality Metrics:")
-                print("   📊 Average cluster size: {0}".format(avg_cluster_size:.1f))
-                print("   📈 Average silhouette score: {0}".format(avg_silhouette:.3f))
-                print("   🎪 Average cohesion score: {0}".format(avg_cohesion:.3f))
+                print(""
+ Quality Metrics:")
+                print("    Average cluster size: {0}".format(avg_cluster_size:.1f))
+                print("    Average silhouette score: {0}".format()
+                print("   🎪 Average cohesion score: {0}".format()"
 
             # System efficiency
             total_processing_time = (
@@ -627,11 +656,12 @@ class EventDetectionDemo:
                 else 0
             )
 
-            print("\n⚡ System Efficiency:")
-            print("   🚀 Total processing time: {0}s".format(total_processing_time:.2f))
-            print("   📊 Throughput: {0} articles/second".format(throughput:.1f))
+            print(""
+⚡ System Efficiency:")
+            print("    Total processing time: {0}s".format(total_processing_time:.2f))
+            print("    Throughput: {0} articles/second".format(throughput:.1f))
             print("   💾 Memory efficient: Batch processing enabled")
-            print("   🔄 Scalable: Async processing architecture")
+            print("   🔄 Scalable: Async processing architecture")"
 
             # Store metrics
             self.demo_results["performance"] = {
@@ -665,6 +695,7 @@ class EventDetectionDemo:
             logger.error("Error in performance demo: {0}".format(e))
             print("❌ Performance demo failed: {0}".format(e))
 
+
     async def save_demo_results(self):
         """Save demo results to JSON file."""
         try:
@@ -677,6 +708,7 @@ class EventDetectionDemo:
             }
 
             # Convert numpy arrays to lists for JSON serialization
+
             def convert_numpy(obj):
                 if isinstance(obj, np.ndarray):
                     return obj.tolist()
@@ -699,7 +731,8 @@ class EventDetectionDemo:
             with open(output_file, "w", encoding="utf-8") as f:
                 json.dump(clean_results, f, indent=2, ensure_ascii=False, default=str)
 
-            print("\n💾 Demo results saved to: {0}".format(output_file))
+            print(""
+💾 Demo results saved to: {0}".format(output_file))"
 
         except Exception as e:
             logger.error("Error saving demo results: {0}".format(e))

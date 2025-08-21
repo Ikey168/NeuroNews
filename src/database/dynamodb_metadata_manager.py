@@ -415,7 +415,7 @@ class DynamoDBMetadataManager:
         try:
             # Process in batches (DynamoDB limit is 25)
             for i in range(0, len(articles), self.config.batch_size):
-                batch = articles[i: i + self.config.batch_size]
+                batch = articles[i : i + self.config.batch_size]
                 batch_result = await self._process_batch(batch)
 
                 indexed_count += batch_result["indexed"]

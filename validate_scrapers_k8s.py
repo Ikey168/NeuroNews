@@ -61,16 +61,16 @@ def run_kubectl(command: str) -> Dict[str, Any]:
 
 def check_namespace() -> bool:
     """Check if neuronews namespace exists."""
-    print_colored("🔍 Checking namespace...", "BLUE")
+    print_colored(" Checking namespace...", "BLUE")
 
     result = run_kubectl("get namespace neuronews -o json")
     if result and "metadata" in result:
-        print_colored("✅ Namespace 'neuronews' exists", "GREEN")
+        print_colored(" Namespace 'neuronews' exists", "GREEN")
 
         # Check labels
         labels = result.get("metadata", {}).get("labels", {})
         if labels.get("name") == "neuronews":
-            print_colored("✅ Namespace properly labeled", "GREEN")
+            print_colored(" Namespace properly labeled", "GREEN")
         else:
             print_colored("⚠️  Namespace missing proper labels", "YELLOW")
 
@@ -82,7 +82,7 @@ def check_namespace() -> bool:
 
 def check_rbac() -> bool:
     """Check RBAC configuration."""
-    print_colored("🔍 Checking RBAC configuration...", "BLUE")
+    print_colored(" Checking RBAC configuration...", "BLUE")
 
     success = True
 
@@ -91,23 +91,25 @@ def check_rbac() -> bool:
         "get serviceaccount neuronews-scrapers -n neuronews -o json"
     )
     if sa_result and "metadata" in sa_result:
-        print_colored("✅ ServiceAccount 'neuronews-scrapers' exists", "GREEN")
+        print_colored(" ServiceAccount 'neuronews-scrapers' exists", "GREEN")
     else:
         print_colored("❌ ServiceAccount 'neuronews-scrapers' not found", "RED")
         success = False
 
     # Check Role
-    role_result = run_kubectl("get role neuronews-scrapers-role -n neuronews -o json")
+    role_result = run_kubectl(
+        "get role neuronews-scrapers-role -n neuronews -o json")
     if role_result and "metadata" in role_result:
-        print_colored("✅ Role 'neuronews-scrapers-role' exists", "GREEN")
+        print_colored(" Role 'neuronews-scrapers-role' exists", "GREEN")
 
         # Check role permissions
         rules = role_result.get("rules", [])
         expected_resources = ["jobs", "secrets", "configmaps"]
-        has_job_permissions = any("jobs" in rule.get("resources", []) for rule in rules)
+        has_job_permissions = any("jobs" in rule.get(
+            "resources", []) for rule in rules)
 
         if has_job_permissions:
-            print_colored("✅ Role has required permissions", "GREEN")
+            print_colored(" Role has required permissions", "GREEN")
         else:
             print_colored("⚠️  Role may be missing job permissions", "YELLOW")
     else:
@@ -119,9 +121,11 @@ def check_rbac() -> bool:
         "get rolebinding neuronews-scrapers-binding -n neuronews -o json"
     )
     if rb_result and "metadata" in rb_result:
-        print_colored("✅ RoleBinding 'neuronews-scrapers-binding' exists", "GREEN")
+        print_colored(
+            " RoleBinding 'neuronews-scrapers-binding' exists", "GREEN")
     else:
-        print_colored("❌ RoleBinding 'neuronews-scrapers-binding' not found", "RED")
+        print_colored(
+            "❌ RoleBinding 'neuronews-scrapers-binding' not found", "RED")
         success = False
 
     return success
@@ -129,13 +133,13 @@ def check_rbac() -> bool:
 
 def check_configmaps() -> bool:
     """Check ConfigMap configuration."""
-    print_colored("🔍 Checking ConfigMaps...", "BLUE")
+    print_colored(" Checking ConfigMaps...", "BLUE")
 
     cm_result = run_kubectl(
         "get configmap neuronews-scraper-config -n neuronews -o json"
     )
     if cm_result and "metadata" in cm_result:
-        print_colored("✅ ConfigMap 'neuronews-scraper-config' exists", "GREEN")
+        print_colored(" ConfigMap 'neuronews-scraper-config' exists", "GREEN")
 
         # Check data fields
         data = cm_result.get("data", {})
@@ -148,9 +152,10 @@ def check_configmaps() -> bool:
 
         for key in expected_keys:
             if key in data:
-                print_colored("✅ ConfigMap has {0}".format(key), "GREEN")
+                print_colored(" ConfigMap has {0}".format(key), "GREEN")
             else:
-                print_colored("⚠️  ConfigMap missing {0}".format(key), "YELLOW")
+                print_colored(
+                    "⚠️  ConfigMap missing {0}".format(key), "YELLOW")
 
         return True
 
@@ -160,7 +165,7 @@ def check_configmaps() -> bool:
 
 def check_cronjobs() -> Dict[str, Any]:
     """Check CronJob configuration and status."""
-    print_colored("🔍 Checking CronJobs...", "BLUE")
+    print_colored(" Checking CronJobs...", "BLUE")
 
     cronjobs_result = run_kubectl(
         "get cronjobs -n neuronews -l app=neuronews-scrapers -o json"
@@ -191,12 +196,12 @@ def check_cronjobs() -> Dict[str, Any]:
         }
 
         if name in expected_cronjobs:
-            print_colored(f"✅ CronJob '{name}' exists", "GREEN")
+            print_colored(f" CronJob '{name}' exists", "GREEN")
             print_colored("   Schedule: {0}".format(schedule), "CYAN")
             if suspend:
                 print_colored("   ⚠️  Currently suspended", "YELLOW")
             else:
-                print_colored("   ✅ Active", "GREEN")
+                print_colored("    Active", "GREEN")
         else:
             print_colored(f"⚠️  Unexpected CronJob '{name}'", "YELLOW")
 
@@ -211,18 +216,20 @@ def check_cronjobs() -> Dict[str, Any]:
 
 def check_jobs() -> Dict[str, Any]:
     """Check recent job execution."""
-    print_colored("🔍 Checking recent jobs...", "BLUE")
+    print_colored(" Checking recent jobs...", "BLUE")
 
-    jobs_result = run_kubectl("get jobs -n neuronews -l app=neuronews-scrapers -o json")
+    jobs_result = run_kubectl(
+        "get jobs -n neuronews -l app=neuronews-scrapers -o json")
     if not jobs_result or "items" not in jobs_result:
-        print_colored("ℹ️  No jobs found (this is normal for new deployments)", "CYAN")
+        print_colored(
+            "ℹ️  No jobs found (this is normal for new deployments)", "CYAN")
         return {}
 
     jobs = jobs_result["items"]
     job_info = {
         "total": len(jobs),
         "successful": 0,
-        "failed": 0,
+        f"ailed": 0,
         "active": 0,
         "recent_jobs": [],
     }
@@ -232,15 +239,16 @@ def check_jobs() -> Dict[str, Any]:
         status = job.get("status", {})
         creation_time = job["metadata"]["creationTimestamp"]
 
-        job_data = {"name": name, "creation_time": creation_time, "status": "unknown"}
+        job_data = {"name": name,
+            "creation_time": creation_time, "status": "unknown"}
 
         if status.get("succeeded", 0) > 0:
             job_info["successful"] += 1
             job_data["status"] = "successful"
-            print_colored(f"✅ Job '{name}' succeeded", "GREEN")
-        elif status.get("failed", 0) > 0:
-            job_info["failed"] += 1
-            job_data["status"] = "failed"
+            print_colored(f" Job '{name}' succeeded", "GREEN")
+        elif status.get(f"ailed", 0) > 0:
+            job_info[f"ailed"] += 1
+            job_data["status"] = f"ailed"
             print_colored(f"❌ Job '{name}' failed", "RED")
         elif status.get("active", 0) > 0:
             job_info["active"] += 1
@@ -250,7 +258,10 @@ def check_jobs() -> Dict[str, Any]:
         job_info["recent_jobs"].append(job_data)
 
     print_colored(
-        f"ℹ️  Job Summary: {job_info['successful']} successful, {job_info['failed']} failed, {job_info['active']} active",
+        f"ℹ️  Job Summary: {
+            job_info['successful']} successful, {
+            job_info[f'ailed']} failed, {
+                job_info['active']} active",
         "CYAN",
     )
     return job_info
@@ -258,7 +269,7 @@ def check_jobs() -> Dict[str, Any]:
 
 def check_monitoring() -> bool:
     """Check monitoring configuration."""
-    print_colored("🔍 Checking monitoring configuration...", "BLUE")
+    print_colored(" Checking monitoring configuration...", "BLUE")
 
     success = True
 
@@ -267,9 +278,10 @@ def check_monitoring() -> bool:
         "get servicemonitor neuronews-scrapers-monitor -n neuronews -o json"
     )
     if sm_result and "metadata" in sm_result:
-        print_colored("✅ ServiceMonitor exists", "GREEN")
+        print_colored(" ServiceMonitor exists", "GREEN")
     else:
-        print_colored("⚠️  ServiceMonitor not found (may not be deployed)", "YELLOW")
+        print_colored(
+            "⚠️  ServiceMonitor not found (may not be deployed)", "YELLOW")
         success = False
 
     # Check PrometheusRule
@@ -277,9 +289,10 @@ def check_monitoring() -> bool:
         "get prometheusrule neuronews-scrapers-alerts -n neuronews -o json"
     )
     if pr_result and "metadata" in pr_result:
-        print_colored("✅ PrometheusRule exists", "GREEN")
+        print_colored(" PrometheusRule exists", "GREEN")
     else:
-        print_colored("⚠️  PrometheusRule not found (may not be deployed)", "YELLOW")
+        print_colored(
+            "⚠️  PrometheusRule not found (may not be deployed)", "YELLOW")
         success = False
 
     return success
@@ -287,13 +300,13 @@ def check_monitoring() -> bool:
 
 def check_network_policies() -> bool:
     """Check network policies."""
-    print_colored("🔍 Checking network policies...", "BLUE")
+    print_colored(" Checking network policies...", "BLUE")
 
     np_result = run_kubectl(
         "get networkpolicy neuronews-scrapers-network-policy -n neuronews -o json"
     )
     if np_result and "metadata" in np_result:
-        print_colored("✅ Network policy exists", "GREEN")
+        print_colored(" Network policy exists", "GREEN")
         return True
     else:
         print_colored("⚠️  Network policy not found", "YELLOW")
@@ -302,7 +315,7 @@ def check_network_policies() -> bool:
 
 def check_resource_quotas() -> bool:
     """Check resource quotas and limits."""
-    print_colored("🔍 Checking resource management...", "BLUE")
+    print_colored(" Checking resource management...", "BLUE")
 
     success = True
 
@@ -311,7 +324,7 @@ def check_resource_quotas() -> bool:
         "get resourcequota neuronews-scrapers-quota -n neuronews -o json"
     )
     if rq_result and "metadata" in rq_result:
-        print_colored("✅ ResourceQuota exists", "GREEN")
+        print_colored(" ResourceQuota exists", "GREEN")
 
         # Check quota usage
         status = rq_result.get("status", {})
@@ -319,11 +332,15 @@ def check_resource_quotas() -> bool:
             used = status["used"]
             hard = status["hard"]
             print_colored(
-                f"   CPU used: {used.get('requests.cpu', '0')} / {hard.get('requests.cpu', 'unlimited')}",
+                f"   CPU used: {used.get('requests.cpu',
+    '0')} / {hard.get('requests.cpu',
+     'unlimited')}",
                 "CYAN",
             )
             print_colored(
-                f"   Memory used: {used.get('requests.memory', '0')} / {hard.get('requests.memory', 'unlimited')}",
+                f"   Memory used: {used.get('requests.memory',
+    '0')} / {hard.get('requests.memory',
+     'unlimited')}",
                 "CYAN",
             )
     else:
@@ -335,7 +352,7 @@ def check_resource_quotas() -> bool:
         "get limitrange neuronews-scrapers-limits -n neuronews -o json"
     )
     if lr_result and "metadata" in lr_result:
-        print_colored("✅ LimitRange exists", "GREEN")
+        print_colored(" LimitRange exists", "GREEN")
     else:
         print_colored("⚠️  LimitRange not found", "YELLOW")
         success = False
@@ -345,7 +362,7 @@ def check_resource_quotas() -> bool:
 
 def test_job_creation() -> bool:
     """Test manual job creation capability."""
-    print_colored("🔍 Testing job creation capability...", "BLUE")
+    print_colored(" Testing job creation capability...", "BLUE")
 
     # Try to create a test job
     test_job_name = "test-scraper-job-{0}".format(int(time.time()))
@@ -362,15 +379,16 @@ def test_job_creation() -> bool:
     cronjob = cronjobs_result["items"][0]
     cronjob_name = cronjob["metadata"]["name"]
 
-    print_colored("ℹ️  Attempting to create test job from {0}".format(cronjob_name), "CYAN")
+    print_colored("ℹ️  Attempting to create test job from {0}".format(
+        cronjob_name), "CYAN")
 
-    # Note: We'll just check if we have the permissions, not actually create the job
+    # Note: We'll just check if we have the permissions, not actually create the job'
     # to avoid cluttering the cluster with test jobs
     auth_result = run_kubectl(
         "auth can-i create jobs --as=system:serviceaccount:neuronews:neuronews-scrapers -n neuronews"
     )
     if auth_result and auth_result.get("output", "").strip().lower() == "yes":
-        print_colored("✅ Job creation permissions verified", "GREEN")
+        print_colored(" Job creation permissions verified", "GREEN")
         return True
     else:
         print_colored("❌ Missing job creation permissions", "RED")
@@ -379,16 +397,17 @@ def test_job_creation() -> bool:
 
 def generate_validation_report(results: Dict[str, Any]) -> None:
     """Generate a comprehensive validation report."""
-    print_colored("\n" + "=" * 80, "BOLD")
-    print_colored("📊 VALIDATION REPORT", "BOLD")
-    print_colored("=" * 80, "BOLD")
+    print_colored(""
+" + "=" * 80, "BOLD")
+    print_colored(" VALIDATION REPORT", "BOLD")
+    print_colored("=" * 80, "BOLD")"
 
     # Overall status
     all_passed = all(results.values())
     if all_passed:
-        print_colored("🎉 ALL VALIDATIONS PASSED", "GREEN")
+        print_colored(" ALL VALIDATIONS PASSED", "GREEN")
         print_colored(
-            "✅ Scraper CronJobs are properly deployed and configured", "GREEN"
+            " Scraper CronJobs are properly deployed and configured", "GREEN"
         )
     else:
         print_colored("⚠️  SOME VALIDATIONS FAILED", "YELLOW")
@@ -411,14 +430,14 @@ def generate_validation_report(results: Dict[str, Any]) -> None:
     }
 
     for key, name in components.items():
-        status = "✅ PASS" if results.get(key, False) else "❌ FAIL"
+        status = " PASS" if results.get(key, False) else "❌ FAIL"
         color = "GREEN" if results.get(key, False) else "RED"
-        print_colored("{0} {1}".format(name:<30, status), color)
+        print_colored("{0} {1}".format(name: < 30, status), color)
 
     print()
 
     # Recommendations
-    print_colored("📋 RECOMMENDATIONS:", "BOLD")
+    print_colored(" RECOMMENDATIONS:", "BOLD")
 
     if not results.get("monitoring", False):
         print_colored(
@@ -455,12 +474,13 @@ def generate_validation_report(results: Dict[str, Any]) -> None:
             "CYAN",
         )
 
-    print_colored("\n" + "=" * 80, "BOLD")
+    print_colored(""
+" + "=" * 80, "BOLD")"
 
 
 def main():
     """Run comprehensive validation of scraper deployment."""
-    print_colored("🚀 NeuroNews Scrapers Kubernetes Validation", "BOLD")
+    print_colored(" NeuroNews Scrapers Kubernetes Validation", "BOLD")
     print_colored("Issue #73: Deploy Scrapers as Kubernetes CronJobs", "CYAN")
     print_colored(
         f"Validation Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", "CYAN"
@@ -513,7 +533,7 @@ def main():
             "validation_summary": {
                 "total_components": len(results),
                 "passed": sum(1 for v in results.values() if v),
-                "failed": sum(1 for v in results.values() if not v),
+                f"ailed": sum(1 for v in results.values() if not v),
             },
         }
 
@@ -528,10 +548,12 @@ def main():
         sys.exit(0 if all(results.values()) else 1)
 
     except KeyboardInterrupt:
-        print_colored("\n⚠️  Validation interrupted by user", "YELLOW")
+        print_colored(""
+⚠️  Validation interrupted by user", "YELLOW")"
         sys.exit(1)
     except Exception as e:
-        print_colored("\n❌ Validation failed with error: {0}".format(str(e)), "RED")
+        print_colored(""
+❌ Validation failed with error: {0}".format(str(e)), "RED")"
         sys.exit(1)
 
 

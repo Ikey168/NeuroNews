@@ -134,9 +134,7 @@ class TestRedshiftETLProcessor(unittest.TestCase):
                 "id": "article_{0}".format(i),
                 "url": "https://example.com/article-{0}".format(i),
                 "title": "Test Article {0}".format(i),
-                "content": "This is test article content {0} with sufficient length.".format(
-                    i
-                ),
+                "content": "This is test article content {0} with sufficient length.".format(i),
                 "source": "example.com",
                 "validation_score": 80.0 + i,
                 "content_quality": "high",
@@ -205,9 +203,7 @@ class TestRedshiftETLProcessor(unittest.TestCase):
         self.mock_cursor.fetchall.return_value = []
         self.mock_cursor.rowcount = len(self.sample_articles)
 
-        stats = self.processor.batch_load_articles(
-            self.sample_articles, use_staging=False
-        )
+        stats = self.processor.batch_load_articles(self.sample_articles, use_staging=False)
 
         self.assertEqual(stats["total_articles"], 5)
         self.assertEqual(stats["loaded_count"], 5)
@@ -341,9 +337,7 @@ class TestRedshiftIntegration(unittest.TestCase):
         ]
 
         # Process through ETL
-        stats = self.mock_processor.process_validation_pipeline_output(
-            validation_results
-        )
+        stats = self.mock_processor.process_validation_pipeline_output(validation_results)
 
         # Verify processing was called with correct data
         self.mock_processor.process_validation_pipeline_output.assert_called_once_with(
@@ -378,9 +372,7 @@ class TestSchemaManagement(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
-        self.processor = RedshiftETLProcessor(
-            host="localhost", password="test-password"
-        )
+        self.processor = RedshiftETLProcessor(host="localhost", password="test-password")
 
         self.mock_conn = Mock()
         self.mock_cursor = Mock()

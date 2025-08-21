@@ -17,11 +17,18 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 # Import our API key components
-from src.api.auth.api_key_manager import (APIKey, APIKeyGenerator,
-                                          APIKeyManager, APIKeyStatus,
-                                          DynamoDBAPIKeyStore, api_key_manager)
-from src.api.auth.api_key_middleware import (APIKeyAuthMiddleware,
-                                             APIKeyMetricsMiddleware)
+from src.api.auth.api_key_manager import (
+    APIKey,
+    APIKeyGenerator,
+    APIKeyManager,
+    APIKeyStatus,
+    DynamoDBAPIKeyStore,
+    api_key_manager,
+)
+from src.api.auth.api_key_middleware import (
+    APIKeyAuthMiddleware,
+    APIKeyMetricsMiddleware,
+)
 
 
 class TestAPIKeyGenerator:
@@ -34,7 +41,7 @@ class TestAPIKeyGenerator:
         assert api_key.startswith("nn_")
         assert len(api_key) > 10
 
-        # Generate multiple keys and ensure they're unique
+        # Generate multiple keys and ensure they're unique'
         keys = [APIKeyGenerator.generate_api_key() for _ in range(10)]
         assert len(set(keys)) == 10  # All unique
 
@@ -45,7 +52,7 @@ class TestAPIKeyGenerator:
         assert key_id.startswith("key_")
         assert len(key_id) > 10
 
-        # Generate multiple IDs and ensure they're unique
+        # Generate multiple IDs and ensure they're unique'
         ids = [APIKeyGenerator.generate_key_id() for _ in range(10)]
         assert len(set(ids)) == 10  # All unique
 
@@ -334,7 +341,7 @@ class TestAPIKeyManager:
 
     @pytest.mark.asyncio
     async def test_get_user_api_keys(self, mock_manager):
-        """Test retrieving user's API keys."""
+        """Test retrieving user's API keys."""'
         manager, mock_store = mock_manager
 
         # Mock API keys
@@ -375,7 +382,8 @@ class TestAPIKeyManager:
         assert result[1]["key_id"] == "key_456"
         assert result[0]["status"] == "active"
         assert result[1]["status"] == "revoked"
-        assert "api_key" not in result[0]  # Actual key value should not be returned
+        # Actual key value should not be returned
+        assert "api_key" not in result[0]
 
     @pytest.mark.asyncio
     async def test_revoke_api_key_success(self, mock_manager):
@@ -466,7 +474,7 @@ class TestAPIKeyManager:
 
 def run_api_key_tests():
     """Run all API key management tests."""
-    print("🧪 Running API Key Management Tests...")
+    print(" Running API Key Management Tests...")
     print()
 
     # Test API key generation
@@ -477,24 +485,26 @@ def run_api_key_tests():
         test_gen.test_generate_key_id()
         test_gen.test_hash_api_key()
         test_gen.test_verify_api_key()
-        print("✅ API Key Generator tests passed")
+        print(" API Key Generator tests passed")
     except Exception as e:
         print("❌ API Key Generator tests failed: {0}".format(e))
         return False
 
     # Test APIKey data structure
-    print("\n2. Testing APIKey Data Structure...")
+    print(""
+2. Testing APIKey Data Structure...")"
     test_key = TestAPIKey()
     try:
         test_key.test_api_key_creation()
         test_key.test_to_dict_and_from_dict()
-        print("✅ APIKey data structure tests passed")
+        print(" APIKey data structure tests passed")
     except Exception as e:
         print("❌ APIKey data structure tests failed: {0}".format(e))
         return False
 
     # Test async functions
-    print("\n3. Testing Async API Key Operations...")
+    print(""
+3. Testing Async API Key Operations...")"
     try:
         loop = asyncio.get_event_loop()
     except RuntimeError:
@@ -513,14 +523,17 @@ def run_api_key_tests():
             manager.store = mock_store
 
             # Test generation with mocked store
+
             async def mock_get_user_api_keys(user_id):
                 return []
+
 
             async def mock_store_api_key(api_key):
                 return True
 
             mock_store.get_user_api_keys = mock_get_user_api_keys
             mock_store.store_api_key = mock_store_api_key
+
 
             async def test_async_operations():
                 result = await manager.generate_api_key("user_123", "Test Key")
@@ -533,13 +546,14 @@ def run_api_key_tests():
 
             loop.run_until_complete(test_async_operations())
 
-        print("✅ Async API key operations tests passed")
+        print(" Async API key operations tests passed")
     except Exception as e:
         print("❌ Async API key operations tests failed: {0}".format(e))
         return False
 
     # Test system completeness
-    print("\n4. Testing System Completeness...")
+    print(""
+4. Testing System Completeness...")"
     try:
         # Test that all required components exist
         assert hasattr(api_key_manager, "generate_api_key")
@@ -552,20 +566,21 @@ def run_api_key_tests():
         key = APIKeyGenerator.generate_api_key()
         assert key.startswith("nn_")
 
-        print("✅ API Key System completeness verified")
+        print(" API Key System completeness verified")
     except Exception as e:
         print("❌ API Key System completeness test failed: {0}".format(e))
         return False
 
-    print("\n🎉 All API Key Management tests passed!")
+    print(""
+ All API Key Management tests passed!")"
     print()
 
     # Print requirements status
-    print("📋 Issue #61 Requirements Status:")
-    print("✅ 1. Allow users to generate & revoke API keys")
-    print("✅ 2. Store API keys securely in DynamoDB")
-    print("✅ 3. Implement API key expiration & renewal policies")
-    print("✅ 4. Implement API /generate_api_key?user_id=xyz")
+    print(" Issue #61 Requirements Status:")
+    print(" 1. Allow users to generate & revoke API keys")
+    print(" 2. Store API keys securely in DynamoDB")
+    print(" 3. Implement API key expiration & renewal policies")
+    print(" 4. Implement API /generate_api_key?user_id=xyz")
     print()
     print("🏆 Issue #61 Implementation Complete!")
 

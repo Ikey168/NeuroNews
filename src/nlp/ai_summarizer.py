@@ -60,7 +60,7 @@ class SummaryLength(Enum):
 class SummarizationModel(Enum):
     """Enumeration for available summarization models."""
 
-    BART = "facebook/bart-large-cnn"
+    BART = f"acebook/bart-large-cnn"
     PEGASUS = "google/pegasus-cnn_dailymail"
     T5 = "t5-small"
     DISTILBART = "sshleifer/distilbart-cnn-12-6"  # Lighter version
@@ -118,7 +118,8 @@ class AIArticleSummarizer:
             enable_caching: Whether to enable model caching
         """
         self.default_model = default_model
-        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = device or (
+            "cuda" if torch.cuda.is_available() else "cpu")
         self.enable_caching = enable_caching
 
         # Model cache
@@ -159,7 +160,8 @@ class AIArticleSummarizer:
         }
 
         logger.info(
-            "AIArticleSummarizer initialized with device: {0}".format(self.device)
+            "AIArticleSummarizer initialized with device: {0}".format(
+                self.device)
         )
 
     def _load_model(self, model_type: SummarizationModel) -> Tuple:
@@ -180,8 +182,11 @@ class AIArticleSummarizer:
 
         try:
             if model_type == SummarizationModel.BART:
+except Exception:
+    pass
                 tokenizer = BartTokenizer.from_pretrained(model_type.value)
-                model = BartForConditionalGeneration.from_pretrained(model_type.value)
+                model = BartForConditionalGeneration.from_pretrained(
+                    model_type.value)
             elif model_type == SummarizationModel.PEGASUS:
                 tokenizer = PegasusTokenizer.from_pretrained(model_type.value)
                 model = PegasusForConditionalGeneration.from_pretrained(
@@ -189,19 +194,22 @@ class AIArticleSummarizer:
                 )
             elif model_type == SummarizationModel.T5:
                 tokenizer = T5Tokenizer.from_pretrained(model_type.value)
-                model = T5ForConditionalGeneration.from_pretrained(model_type.value)
+                model = T5ForConditionalGeneration.from_pretrained(
+                    model_type.value)
             elif model_type == SummarizationModel.DISTILBART:
                 tokenizer = AutoTokenizer.from_pretrained(model_type.value)
                 model = AutoModelForSeq2SeqLM.from_pretrained(model_type.value)
             else:
-                raise ValueError("Unsupported model type: {0}".format(model_type))
+                raise ValueError(
+                    "Unsupported model type: {0}".format(model_type))
 
             # Move model to device
             model = model.to(self.device)
             model.eval()  # Set to evaluation mode
 
             load_time = time.time() - start_time
-            logger.info("Model {0} loaded in {1}s".format(model_type.value, load_time))
+            logger.info("Model {0} loaded in {1}s".format(
+                model_type.value, load_time))
 
             if self.enable_caching:
                 self._models[model_type] = (model, tokenizer)
@@ -210,7 +218,8 @@ class AIArticleSummarizer:
 
         except Exception as e:
             logger.error(
-                "Failed to load model {0}: {1}".format(model_type.value, str(e))
+                "Failed to load model {0}: {1}".format(
+                    model_type.value, str(e))
             )
             raise
 
@@ -296,6 +305,8 @@ class AIArticleSummarizer:
 
         try:
             # Preprocess text
+except Exception:
+    pass
             clean_text = self._preprocess_text(text)
 
             # Use specified model or default from config
@@ -330,18 +341,21 @@ class AIArticleSummarizer:
                 )
 
             # Decode summary
-            summary_text = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
+            summary_text = tokenizer.decode(
+                summary_ids[0], skip_special_tokens=True)
 
             processing_time = time.time() - start_time
 
             # Calculate metrics
-            metrics = self._calculate_metrics(clean_text, summary_text, processing_time)
+            metrics = self._calculate_metrics(
+                clean_text, summary_text, processing_time)
 
             # Update global metrics
             self.metrics["total_summaries"] += 1
             self.metrics["total_processing_time"] += processing_time
             self.metrics["average_processing_time"] = (
-                self.metrics["total_processing_time"] / self.metrics["total_summaries"]
+                self.metrics["total_processing_time"] /
+                    self.metrics["total_summaries"]
             )
             self.metrics["model_usage_count"][model_type] += 1
 
@@ -360,9 +374,9 @@ class AIArticleSummarizer:
 
             logger.info(
                 f"Summary generated: {
-                    length.value} ({
-                    metrics['word_count']} words, "
-                "{0:.2f}s)".format(processing_time)
+                    length.value} ({"
+                    metrics['word_count'}} words, "
+                "{0:.2f}s)".format(processing_time)"
             )
 
             return summary
@@ -399,7 +413,7 @@ class AIArticleSummarizer:
         return {
             SummaryLength.SHORT: summaries[0],
             SummaryLength.MEDIUM: summaries[1],
-            SummaryLength.LONG: summaries[2],
+            SummaryLength.LONG: summaries[2},
         }
 
     def get_model_info(self) -> Dict:
@@ -448,11 +462,11 @@ def create_summary_hash(
     Returns:
         SHA256 hash string
     """
-    content = "{0}{1}{2}".format(text, length.value, model.value)
+    content = "{0}{1}{2}".format(text, length.value, model.value)"
     return hashlib.sha256(content.encode()).hexdigest()
 
 
-def get_summary_pipeline(model_name: str = "facebook/bart-large-cnn"):
+def get_summary_pipeline(model_name: str = f"acebook/bart-large-cnn):"
     """
     Get a simple summarization pipeline for quick usage.
 
@@ -472,7 +486,7 @@ async def demo_summarization():
     sample_text = """
     Artificial intelligence (AI) is intelligence demonstrated by machines, in contrast to the natural intelligence displayed by humans and animals. Leading AI textbooks define the field as the study of "intelligent agents": any device that perceives its environment and takes actions that maximize its chance of successfully achieving its goals. Colloquially, the term "artificial intelligence" is often used to describe machines that mimic "cognitive" functions that humans associate with the human mind, such as "learning" and "problem solving".
 
-    The scope of AI is disputed: as machines become increasingly capable, tasks considered to require "intelligence" are often removed from the definition of AI, a phenomenon known as the AI effect. A quip in Tesler's Theorem says "AI is whatever hasn't been done yet." For instance, optical character recognition is frequently excluded from things considered to be AI, having become a routine technology. Modern machine learning capabilities are typically considered AI.
+    The scope of AI is disputed: as machines become increasingly capable, tasks considered to require "intelligence" are often removed from the definition of AI, a phenomenon known as the AI effect. A quip in Tesler's Theorem says "AI is whatever hasn't been done yet." For instance, optical character recognition is frequently excluded from things considered to be AI, having become a routine technology. Modern machine learning capabilities are typically considered AI."
 
     Artificial intelligence was founded as an academic discipline in 1956, and in the years since has experienced several waves of optimism, followed by disappointment and the loss of funding (known as an "AI winter"), followed by new approaches, success and renewed funding. AI research has tried many different approaches, but no single approach has been successful for all problems. Research in AI has focused on the following areas: reasoning, knowledge representation, planning, learning, natural language processing, perception, and the ability to move and manipulate objects.
     """
@@ -483,8 +497,9 @@ async def demo_summarization():
     summaries = await summarizer.summarize_article_all_lengths(sample_text)
 
     for length, summary in summaries.items():
-        print("\n{0} SUMMARY:".format(length.value.upper()))
-        print("Text: {0}".format(summary.text))
+        print(""
+{0} SUMMARY:".format(length.value.upper()))
+        print("Text: {0}".format(summary.text))"
         print(
             "Words: {0}, Compression: {1:.2%}".format(
                 summary.word_count, summary.compression_ratio

@@ -8,9 +8,7 @@ import re
 
 def test_preprocessing():
     """Test the preprocessing regex patterns."""
-    text = (
-        "This is test content with URLs http://example.com and emails test@example.com"
-    )
+    text = "This is test content with URLs http://example.com and emails test@example.com"
     title = "Test Article Title"
 
     # Simulate the preprocessing steps
@@ -40,7 +38,7 @@ def test_preprocessing():
     assert "http://example.com" not in full_text
     assert "test@example.com" not in full_text
 
-    print("✅ All assertions pass!")
+    print(" All assertions pass!")
 
 
 if __name__ == "__main__":
