@@ -129,10 +129,10 @@ class ArticleEmbedder:
 
             # Normalize quotes - using escape sequences for special quotes
             full_text = re.sub(
-                r"[\u201c\u201d]", '"', full_text"
+                r"[\u201c\u201d]", '"', full_text
             )  # Unicode smart quotes
             full_text = re.sub(
-                r"[\u2018\u2019]", "'", full_text'
+                r"[\u2018\u2019]", "'", full_text
             )  # Unicode smart apostrophes
 
             # Remove leading/trailing whitespace

@@ -220,8 +220,7 @@ class S3ArticleStorage:
             article_id = str(uuid.uuid4())
             prefix = article_type.value
             current_date = datetime.now(timezone.utc)
-            return f"{prefix}/{
-                current_date.strftime('%Y/%m/%d')}/{article_id}.json"
+            return f"{prefix}/{current_date.strftime('%Y/%m/%d')}/{article_id}.json"
 
     async def store_raw_article(
         self, article: Dict[str, Any], metadata: Optional[Dict[str, Any]] = None

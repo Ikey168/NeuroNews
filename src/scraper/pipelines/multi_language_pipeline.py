@@ -127,12 +127,10 @@ class MultiLanguagePipeline:
         logger.info(f"  Items translated: {self.stats['items_translated']}")
         logger.info(f"  Items dropped: {self.stats['items_dropped']}")
         logger.info(
-            f"  Translation errors: {
-                self.stats['translation_errors']}"
+            f"  Translation errors: {self.stats['translation_errors']}"
         )
         logger.info(
-            f"  Language distribution: {
-                self.stats['language_distribution']}"
+            f"  Language distribution: {self.stats['language_distribution']}"
         )
 
         # Get detailed statistics from processor

@@ -792,9 +792,7 @@ class KeywordTopicExtractor:
                 results.append(result)
             except Exception as e:
                 logger.error(
-                    f"Error processing article {"
-                        article.get(
-                            'id', 'unknown')}: {e}""
+                    f"Error processing article {article.get('id', 'unknown')}: {e}"
                 )
                 results.append(self._empty_result(article, datetime.now()))
 
@@ -816,7 +814,7 @@ class SimpleKeywordExtractor:
         return {"keywords_per_article": 10, "min_keyword_length": 3, "max_keywords": 50}
 
     def _create_simple_preprocessor(self):
-        """Create a simple preprocessor that doesn't require NLTK."""'
+        """Create a simple preprocessor that doesn't require NLTK."""
 
         class SimplePreprocessor:
 
@@ -1107,9 +1105,8 @@ if __name__ == "__main__":
 
     # Display results
     for result in results:
-        print(""
-Article: {0}".format(result.title))
-        print("Keywords: {0}".format([k.keyword for k in result.keywords[:100]]))"
+        print(f"Article: {result.title}")
+        print("Keywords: {0}".format([k.keyword for k in result.keywords[:100]]))
         if result.dominant_topic:
             print("Dominant Topic: {0}".format(result.dominant_topic.topic_name))
         print("Processing Time: {0}s".format(result.processing_time))

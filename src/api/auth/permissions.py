@@ -139,8 +139,7 @@ def require_permissions(*permissions: Permission):
 
                 raise HTTPException(
                     status_code=403,
-                    detail=f"Missing required permissions: {
-                        ', '.join(missing_permissions)}",
+                    detail=f"Missing required permissions: {', '.join(missing_permissions)}",
                 )
 
             # Log successful authorization

@@ -171,8 +171,7 @@ async def get_related_entities(
         )
     except Exception as e:
         logger.error(
-            f"Error getting related entities for '{entity}': {
-                str(e)}"
+            f"Error getting related entities for '{entity}': {str(e)}"
         )
         import traceback
 

@@ -438,8 +438,7 @@ class PerformanceDashboard:
 
         if problematic_sources:
             recommendations.append(
-                f" Review configuration for problematic sources: {"
-                    ', '.join(problematic_sources)}""
+                f"Review configuration for problematic sources: {', '.join(problematic_sources)}"
             )
 
         # Based on concurrent connections

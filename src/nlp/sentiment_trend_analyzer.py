@@ -327,8 +327,7 @@ class SentimentTrendAnalyzer:
         """
         try:
             logger.info(
-                f"Generating sentiment alerts for topic: {
-                    topic or 'all'}"
+                f"Generating sentiment alerts for topic: {topic or 'all'}"
             )
 
             end_date = datetime.now(timezone.utc)
