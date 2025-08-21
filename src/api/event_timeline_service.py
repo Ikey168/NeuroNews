@@ -1069,8 +1069,7 @@ async def demo_event_timeline_service():
         print("   Found {0} events".format(len(events)))
 
         # Test 2: Store events in Neptune
-        print(""
-2. Storing events and relationships in Neptune...")"
+        print("\n2. Storing events and relationships in Neptune...")
         if events:
             storage_result = await service.store_event_relationships(events[:5])
             print(f"   Stored {storage_result.get('events_stored', 0)} events")
@@ -1082,7 +1081,7 @@ async def demo_event_timeline_service():
             )
 
         # Test 3: Generate API response
-        print(""
+        print("\n
 3. Generating timeline API response...")"
         api_response = await service.generate_timeline_api_response(
             topic="Artificial Intelligence", max_events=10, include_visualizations=True
@@ -1103,7 +1102,7 @@ async def demo_event_timeline_service():
         )
 
         # Test 4: Generate visualization data
-        print(""
+        print("\n
 4. Generating visualization data...")"
         if events:
             viz_data = await service.generate_visualization_data(
@@ -1111,11 +1110,11 @@ async def demo_event_timeline_service():
             )
             print("   Generated visualizations: {0}".format(list(viz_data.keys())))
 
-        print(""
+        print("\n
  Event Timeline Service demo completed successfully!")"
 
     except Exception as e:
-        print(""
+        print("\n
 ❌ Demo failed: {0}".format(e))"
         import traceback
 

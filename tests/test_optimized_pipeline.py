@@ -511,7 +511,7 @@ class TestPerformanceBenchmarks(unittest.TestCase):
             result = asyncio.run(test_concurrency(level))
             results.append(result)
 
-        print(""
+        print("\n
 Concurrency Scaling Benchmark:")"
         for result in results:
             print(

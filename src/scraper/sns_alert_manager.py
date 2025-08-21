@@ -243,9 +243,7 @@ except Exception:
             alert_type=AlertType.SCRAPER_FAILURE,
             severity=severity,
             title="Scraper Failure - {0} Attempts".format(retry_count + 1),
-            message="Failed to scrape URL: {0}"
-Reason: {1}
-Retry Count: {2}".format("
+            message="Failed to scrape URL: {0}\nReason: {1}\nRetry Count: {2}".format(
                 url, failure_reason, retry_count
             ),
             timestamp=time.time(),

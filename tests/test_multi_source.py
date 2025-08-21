@@ -32,7 +32,7 @@ def test_spider_imports():
 
 def test_configuration():
     """Test that configuration is loaded correctly."""
-    print(""
+    print("\n
 Testing configuration...")"
 
     try:
@@ -56,7 +56,7 @@ Testing configuration...")"
 
 def test_data_validator():
     """Test data validator functionality."""
-    print(""
+    print("\n
 Testing data validator...")"
 
     try:
@@ -70,7 +70,7 @@ Testing data validator...")"
 
 def test_pipelines():
     """Test pipeline imports."""
-    print(""
+    print("\n
 Testing pipeline imports...")"
 
     try:
@@ -109,7 +109,7 @@ Testing pipeline imports...")"
 
 def test_items():
     """Test items structure."""
-    print(""
+    print("\n
 Testing items structure...")"
 
     try:
