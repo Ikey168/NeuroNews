@@ -49,7 +49,7 @@ def test_database_operations():
                 INSERT INTO test_articles (title, content)
                 VALUES (%s, %s) RETURNING id
             """,
-                ("Test Article", "This is test content"), "
+                ("Test Article", "This is test content"),
             )
 
             article_id = cur.fetchone()["id"]
@@ -62,7 +62,7 @@ def test_database_operations():
                        created_at
                 FROM test_articles
                 WHERE id = %s
-            ""","
+            """,
                 (article_id,),
             )
 
@@ -189,7 +189,7 @@ def test_service_integration():
                 """
                 INSERT INTO integration_test (data, cache_key)
                 VALUES (%s, %s) RETURNING id
-            ""","
+            """,
                 (json.dumps(test_data), cache_key),
             )
 
@@ -273,10 +273,9 @@ def run_comprehensive_tests():
     passed = sum(results)
     total = len(results)
 
-    logger.info(f""
-{'=' * 60}")
+    logger.info(f"{'=' * 60}")
     logger.info("🏆 COMPREHENSIVE TEST RESULTS: {0}/{1} PASSED".format(passed, total))
-    logger.info(f"{'=' * 60}")"
+    logger.info(f"{'=' * 60}")
 
     if passed == total:
         logger.info(" ALL TESTS PASSED! Containerization approach validated!")

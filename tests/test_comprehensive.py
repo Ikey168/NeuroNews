@@ -20,8 +20,6 @@ def test_database_operations():
     """Test advanced database operations that would be difficult to mock."""
     try:
         import psycopg2
-except Exception:
-    pass
         from psycopg2.extras import RealDictCursor
 
         conn = psycopg2.connect(
@@ -51,7 +49,7 @@ except Exception:
                 INSERT INTO test_articles (title, content)
                 VALUES (%s, %s) RETURNING id
             """,
-                ("Test Article", "This is test content"), "
+                ("Test Article", "This is test content"),
             )
 
             article_id = cur.fetchone()["id"]
@@ -64,7 +62,7 @@ except Exception:
                        created_at
                 FROM test_articles
                 WHERE id = %s
-            ""","
+            """,
                 (article_id,),
             )
 
@@ -92,9 +90,6 @@ def test_redis_advanced():
     """Test Redis operations that demonstrate real service benefits."""
     try:
         import json
-except Exception:
-    pass
-
         import redis
 
         r = redis.Redis(
@@ -107,9 +102,9 @@ except Exception:
         test_data = {
             "articles": [
                 {"id": 1, "title": "Article 1", "score": 0.95},
-                {"id": 2, "title": "Article 2", "score": 0.87],
-            },
-            "clusters": {"tech": [1, 2], "science": [3, 4}},
+                {"id": 2, "title": "Article 2", "score": 0.87},
+            ],
+            "clusters": {"tech": [1, 2], "science": [3, 4]},
             "metadata": {"version": "1.0", "updated": time.time()},
         }
 
@@ -153,9 +148,6 @@ def test_service_integration():
     """Test integration between services (impossible with mocking)."""
     try:
         import json
-except Exception:
-    pass
-
         import psycopg2
         import redis
 
@@ -195,7 +187,7 @@ except Exception:
                 """
                 INSERT INTO integration_test (data, cache_key)
                 VALUES (%s, %s) RETURNING id
-            ""","
+            """,
                 (json.dumps(test_data), cache_key),
             )
 
@@ -267,11 +259,9 @@ def run_comprehensive_tests():
         logger.info("Running {0}...".format(test_name))
         try:
             result = test_func()
-except Exception:
-    pass
             results.append(result)
             if result:
-                logger.info(" {0} PASSED".format(test_name))
+                logger.info("✅ {0} PASSED".format(test_name))
             else:
                 logger.error("❌ {0} FAILED".format(test_name))
         except Exception as e:
@@ -281,10 +271,9 @@ except Exception:
     passed = sum(results)
     total = len(results)
 
-    logger.info(f""
-{'=' * 60}")
+    logger.info(f"{'=' * 60}")
     logger.info("🏆 COMPREHENSIVE TEST RESULTS: {0}/{1} PASSED".format(passed, total))
-    logger.info(f"{'=' * 60}")""
+    logger.info(f"{'=' * 60}")
 
     if passed == total:
         logger.info(" ALL TESTS PASSED! Containerization approach validated!")
