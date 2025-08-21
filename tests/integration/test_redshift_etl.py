@@ -5,7 +5,7 @@ These tests verify the functionality of the RedshiftETLProcessor and its
 integration with the data validation pipeline.
 """
 
-from database.redshift_loader import ArticleRecord, RedshiftETLProcessor
+from src.database.redshift_loader import ArticleRecord, RedshiftETLProcessor
 import logging
 import os
 import sys

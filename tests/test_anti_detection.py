@@ -4,10 +4,10 @@ Test suite for proxy rotation and anti-detection system.
 Tests proxy manager, user agent rotation, CAPTCHA solver, and Tor integration.
 """
 
-from scraper.user_agent_rotator import UserAgentRotator
-from scraper.tor_manager import TorManager
-from scraper.proxy_manager import ProxyConfig, ProxyRotationManager
-from scraper.captcha_solver import CaptchaSolver
+from src.scraper.user_agent_rotator import UserAgentRotator
+from src.scraper.tor_manager import TorManager
+from src.scraper.proxy_manager import ProxyConfig, ProxyRotationManager
+from src.scraper.captcha_solver import CaptchaSolver
 import asyncio
 import json
 import sys
@@ -355,8 +355,7 @@ if __name__ == "__main__":
 
         # Test user agent rotator
         ua_rotator = UserAgentRotator()
-        print(""
-Testing user agent rotation...")"
+        print("Testing user agent rotation...")
         for i in range(3):
             headers=ua_rotator.get_random_headers()
             print(f"Headers {i + 1}: {headers['User-Agent'][:50]}...")
@@ -369,8 +368,7 @@ Testing user agent rotation...")"
         detected = await captcha_solver.detect_captcha(test_html)
         print("CAPTCHA detected: {0}".format(detected))
 
-        print(""
-All tests completed successfully!")"
+        print("All tests completed successfully!")
 
     # Run manual tests
     asyncio.run(run_manual_tests())

@@ -4,10 +4,10 @@ Tests AsyncIO functionality, Playwright optimization, ThreadPoolExecutor paralle
 and performance monitoring.
 """
 
-from scraper.performance_monitor import PerformanceDashboard
-from scraper.async_scraper_runner import AsyncScraperRunner
-from scraper.async_scraper_engine import AsyncNewsScraperEngine, NewsSource
-from scraper.async_pipelines import AsyncPipelineProcessor
+from src.scraper.performance_monitor import PerformanceDashboard
+from src.scraper.async_scraper_runner import AsyncScraperRunner
+from src.scraper.async_scraper_engine import AsyncNewsScraperEngine, NewsSource
+from src.scraper.async_pipelines import AsyncPipelineProcessor
 import pytest_asyncio
 import asyncio
 import json

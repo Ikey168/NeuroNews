@@ -4,13 +4,13 @@ Test suite for monitoring and error handling system.
 Tests CloudWatch logging, DynamoDB failure tracking, SNS alerting, and retry logic.
 """
 
-from scraper.sns_alert_manager import Alert, AlertSeverity, AlertType, SNSAlertManager
-from scraper.enhanced_retry_manager import (
+from src.scraper.sns_alert_manager import Alert, AlertSeverity, AlertType, SNSAlertManager
+from src.scraper.enhanced_retry_manager import (
     EnhancedRetryManager,
     RetryConfig,
 )
-from scraper.dynamodb_failure_manager import DynamoDBFailureManager
-from scraper.cloudwatch_logger import CloudWatchLogger, ScrapingMetrics, ScrapingStatus
+from src.scraper.dynamodb_failure_manager import DynamoDBFailureManager
+from src.scraper.cloudwatch_logger import CloudWatchLogger, ScrapingMetrics, ScrapingStatus
 import asyncio
 import json
 import sys
@@ -396,9 +396,8 @@ if __name__ == "__main__":
         print("Testing monitoring and error handling system...")
 
         # Test CloudWatch logger
-        print(""
-1. Testing CloudWatch Logger...")
-        cloudwatch_logger = CloudWatchLogger(region_name="us-east-1")"
+        print("1. Testing CloudWatch Logger...")
+        cloudwatch_logger = CloudWatchLogger(region_name="us-east-1")
 
         metrics = ScrapingMetrics(
             url="https://test.com",
@@ -415,8 +414,7 @@ if __name__ == "__main__":
             print("❌ CloudWatch logging test failed: {0}".format(e))
 
         # Test DynamoDB manager
-        print(""
-2. Testing DynamoDB Failure Manager...")"
+        print("2. Testing DynamoDB Failure Manager...")
         failure_manager = DynamoDBFailureManager(
             table_name="test-failed-urls", region_name="us-east-1"
         )
@@ -434,8 +432,7 @@ if __name__ == "__main__":
             print("❌ DynamoDB failure recording test failed: {0}".format(e))
 
         # Test SNS alert manager
-        print(""
-3. Testing SNS Alert Manager...")"
+        print("3. Testing SNS Alert Manager...")
         try:
             alert_manager = SNSAlertManager(
                 topic_arn="arn:aws:sns:us-east-1:123456789012:test-topic",
@@ -458,8 +455,7 @@ if __name__ == "__main__":
             print("⚠️ SNS alert manager test: {0}".format(e))
 
         # Test retry manager
-        print(""
-4. Testing Enhanced Retry Manager...")"
+        print("4. Testing Enhanced Retry Manager...")
         retry_manager = EnhancedRetryManager()
 
         call_count = 0
@@ -485,8 +481,7 @@ if __name__ == "__main__":
         except Exception as e:
             print("❌ Retry manager test failed: {0}".format(e))
 
-        print(""
- Manual tests completed!")"
+        print("Manual tests completed!")
 
     # Run manual tests
     asyncio.run(run_manual_tests())

@@ -1,4 +1,4 @@
-from database.s3_storage import S3Storage
+from src.database.s3_storage import S3Storage
 import json
 import os
 import sys

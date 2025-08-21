@@ -474,8 +474,7 @@ if __name__ == "__main__":
         content_hash = storage._calculate_content_hash(article["content"])
         print(" Content hash calculated: {0}...".format(content_hash[:16]))
 
-        print(""
- All basic tests passed!")
+        print("All basic tests passed!")
         print("Note: AWS integration tests require valid credentials")"
 
     except Exception as e:
