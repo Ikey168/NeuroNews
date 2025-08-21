@@ -32,8 +32,7 @@ def test_spider_imports():
 
 def test_configuration():
     """Test that configuration is loaded correctly."""
-    print("\n
-Testing configuration...")"
+    print("\nTesting configuration...")
 
     try:
         config_path="config/settings.json"
@@ -56,8 +55,7 @@ Testing configuration...")"
 
 def test_data_validator():
     """Test data validator functionality."""
-    print("\n
-Testing data validator...")"
+    print("\nTesting data validator...")
 
     try:
         ScrapedDataValidator()
@@ -70,8 +68,7 @@ Testing data validator...")"
 
 def test_pipelines():
     """Test pipeline imports."""
-    print("\n
-Testing pipeline imports...")"
+    print("\nTesting pipeline imports...")
 
     try:
         # Import the module directly
@@ -109,8 +106,7 @@ Testing pipeline imports...")"
 
 def test_items():
     """Test items structure."""
-    print("\n
-Testing items structure...")"
+    print("\nTesting items structure...")
 
     try:
         from src.scraper.items import NewsItem
@@ -132,8 +128,7 @@ Testing items structure...")"
 
 def run_all_tests():
     """Run all tests."""
-    print(" Running Multi-Source Scraper Tests"
-" + "=" * 50)"
+    print("Running Multi-Source Scraper Tests" + "=" * 50)
 
     tests=[
         test_configuration,

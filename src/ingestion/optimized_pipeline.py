@@ -615,9 +615,7 @@ class OptimizedIngestionPipeline:
             self.metrics.update_metrics(
                 processing_time, False, type(e).__name__)
             logger.warning(
-                f"Article processing failed for {"
-                    article.get(
-                        'url', 'unknown')}: {e}""
+                f"Article processing failed for {article.get('url', 'unknown')}: {e}"
             )
             return None
 

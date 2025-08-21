@@ -383,38 +383,23 @@ def main():
     # Print summary
     if "summary" in results:
         summary = results["summary"]
-        print(""
-== = VALIDATION SUMMARY == =")
-        print(f"Sources analyzed: {summary.get('total_sources_analyzed', 0)}")"
+        print("=== VALIDATION SUMMARY ===")
+        print(f"Sources analyzed: {summary.get('total_sources_analyzed', 0)}")
         print(
-            f"Total articles: {"
-                summary.get(
-                    'total_articles_across_sources',
-                    0)}""
+            f"Total articles: {summary.get('total_articles_across_sources', 0)}"
         )
         print(
-            f"Average accuracy score: {"
-                summary.get(
-                    'average_accuracy_score',
-                    0):.2f}"
+            f"Average accuracy score: {summary.get('average_accuracy_score', 0):.2f}"
         )
         print(f"Best source: {summary.get('best_performing_source', 'N/A')}")
-        print(f"Worst source: {summary.get('worst_performing_source', 'N/A')}")"
+        print(f"Worst source: {summary.get('worst_performing_source', 'N/A')}")
 
     # Print per-source results
-    print(""
-=== PER-SOURCE RESULTS ===")"
+    print("=== PER-SOURCE RESULTS ===")
     for source, data in results.items():
         if source != "summary" and "error" not in data:
             print(
-                f"{"
-                    source.upper()}: {
-                    data.get(
-                        'accuracy_score',
-                        0):.2f}% accuracy, {
-                    data.get(
-                        'total_articles',
-                        0)} articles""
+                f"{source.upper()}: {data.get('accuracy_score', 0):.2f}% accuracy, {data.get('total_articles', 0)} articles"
             )
 
 

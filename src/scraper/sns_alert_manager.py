@@ -202,9 +202,7 @@ class SNSAlertManager:
 
         # Send without rate limiting
         try:
-            subject = "[{0]} NeuroNews Scraper Alert: {1}".format(
-except Exception:
-    pass
+            subject = "[{0}] NeuroNews Scraper Alert: {1}".format(
                 alert.severity.value, alert.title
             )
             message = alert.to_sns_message()
@@ -275,15 +273,14 @@ except Exception:
             alert_type=AlertType.HIGH_FAILURE_RATE,
             severity=severity,
             title="High Failure Rate Detected: {0:.1f}%".format(failure_rate),
-            message="Scraper failure rate is {0:.1f}% over the last {1} hours."
-Failed: {2}/{3} attempts".format("
+            message="Scraper failure rate is {0:.1f}% over the last {1} hours. Failed: {2}/{3} attempts".format(
                 failure_rate, time_period, failed_count, total_count
             ),
             timestamp=time.time(),
             metadata={
-                f"ailure_rate: failure_rate,"
-                "time_period_hours": time_period,
-                f"ailed_count: failed_count,"
+                "failure_rate": failure_rate,
+            "time_period_hours": time_period,
+                "failed_count": failed_count,
                 "total_count": total_count,
             },
         )
@@ -305,8 +302,7 @@ Failed: {2}/{3} attempts".format("
             alert_type=AlertType.CAPTCHA_BLOCKING,
             severity=AlertSeverity.WARNING,
             title="Frequent CAPTCHA Encounters",
-            message="Encountered {0} CAPTCHAs for {1} in the last {2} hours."
-This may indicate detection by anti-bot systems.".format("
+            message="Encountered {0} CAPTCHAs for {1} in the last {2} hours. This may indicate detection by anti-bot systems.".format(
                 captcha_count, url, time_period
             ),
             timestamp=time.time(),
@@ -334,8 +330,7 @@ This may indicate detection by anti-bot systems.".format("
             alert_type=AlertType.IP_BLOCKING,
             severity=AlertSeverity.ERROR,
             title="IP Blocking Detected",
-            message="Multiple IPs blocked for {0} in the last {1} hours."
-Blocked IPs: {2}{3}".format("
+            message="Multiple IPs blocked for {0} in the last {1} hours. Blocked IPs: {2}{3}".format(
                 url,
                 time_period,
                 ", ".join(blocked_ips[:5]),
@@ -395,10 +390,7 @@ Blocked IPs: {2}{3}".format("
             alert_type=AlertType.SYSTEM_ERROR,
             severity=AlertSeverity.ERROR,
             title="System Error in {0}".format(component),
-            message="Error Type: {0}"
-Message: {1}
-Component: {2}".format("
-                error_type, error_message, component
+            message="Error Type: {0} Message: {1} Component: {2}".format(error_type, error_message, component
             ),
             timestamp=time.time(),
             metadata={

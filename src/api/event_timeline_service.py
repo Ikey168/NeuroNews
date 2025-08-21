@@ -1074,48 +1074,33 @@ async def demo_event_timeline_service():
             storage_result = await service.store_event_relationships(events[:5])
             print(f"   Stored {storage_result.get('events_stored', 0)} events")
             print(
-                f"   Created {"
-                    storage_result.get(
-                        'relationships_created',
-                        0)} relationships""
+                f"   Created {storage_result.get('relationships_created', 0)} relationships"
             )
 
         # Test 3: Generate API response
-        print("\n
-3. Generating timeline API response...")"
+        print("\n3. Generating timeline API response...")
         api_response = await service.generate_timeline_api_response(
             topic="Artificial Intelligence", max_events=10, include_visualizations=True
         )
         print(
-            f"   Generated response with {"
-                api_response.get(
-                    'total_events',
-                    0)} events""
+            f"   Generated response with {api_response.get('total_events', 0)} events"
         )
         print(
-            f"   Visualization included: {"
-                api_response.get(
-                    'metadata',
-                    {}).get(
-                    'visualization_included',
-                    False)}""
+            f"   Visualization included: {api_response.get('metadata', {}).get('visualization_included', False)}"
         )
 
         # Test 4: Generate visualization data
-        print("\n
-4. Generating visualization data...")"
+        print("\n4. Generating visualization data...")
         if events:
             viz_data = await service.generate_visualization_data(
                 topic="Artificial Intelligence", events=events[:10], theme="default"
             )
             print("   Generated visualizations: {0}".format(list(viz_data.keys())))
 
-        print("\n
- Event Timeline Service demo completed successfully!")"
+        print("\n Event Timeline Service demo completed successfully!")
 
     except Exception as e:
-        print("\n
-❌ Demo failed: {0}".format(e))"
+        print("\n❌ Demo failed: {0}".format(e))
         import traceback
 
         traceback.print_exc()

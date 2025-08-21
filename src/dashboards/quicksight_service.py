@@ -101,8 +101,6 @@ class QuickSightDashboardService:
         # Initialize AWS clients
         try:
             self.quicksight_client = boto3.client(
-except Exception:
-    pass
                 "quicksight", region_name=self.config.region
             )
             self.sts_client = boto3.client("sts")
@@ -134,27 +132,23 @@ except Exception:
 
         This implements the first requirement of Issue #49.
         """
-        logger.info("Setting up QuickSight resources...")"
+        logger.info("Setting up QuickSight resources...")
 
         setup_results = {
             "data_source_created": False,
             "datasets_created": [],
             "analyses_created": [],
             "dashboards_created": [],
-            "errors": [},
+            "errors": [],
         }
-
         try:
             # 1. Create Redshift data source
-except Exception:
-    pass
             data_source_result = await self._create_redshift_data_source()
             setup_results["data_source_created"] = data_source_result["success"]
 
             if not data_source_result["success"]:
                 setup_results["errors"].append(
-                    f"Data source creation failed: {"
-                        data_source_result.get('error')}""
+                    f"Data source creation failed: {data_source_result.get('error')}"
                 )
                 return setup_results
 
@@ -189,8 +183,6 @@ except Exception:
         """Create Redshift data source in QuickSight."""
         try:
             data_source_params = {
-except Exception:
-    pass
                 "AwsAccountId": self.config.aws_account_id,
                 "DataSourceId": self.config.data_source_id,
                 "Name": self.config.data_source_name,
@@ -210,7 +202,7 @@ except Exception:
                 },
                 "Permissions": [
                     {
-                        "Principal": "arn:aws:quicksight:{0}:{1}:user/{2]/admin".format(
+                        "Principal": "arn:aws:quicksight:{0}:{1}:user/{2}/admin".format(
                             self.config.region,
                             self.config.aws_account_id,
                             self.config.namespace,
@@ -222,7 +214,7 @@ except Exception:
                             "quicksight:UpdateDataSource",
                             "quicksight:DeleteDataSource",
                             "quicksight:UpdateDataSourcePermissions",
-                        },
+                        ],
                     }
                 ],
                 "SslProperties": {"DisableSsl": False},
@@ -231,8 +223,6 @@ except Exception:
             # Check if data source already exists
             try:
                 self.quicksight_client.describe_data_source(
-except Exception:
-    pass
                     AwsAccountId=self.config.aws_account_id,
                     DataSourceId=self.config.data_source_id,
                 )
@@ -285,22 +275,18 @@ except Exception:
                 "name": "NeuroNews Event Timeline",
                 "sql": self._get_event_timeline_sql(),
                 "description": "Dataset for event timeline analysis",
-            ],
+            },
         ]
 
         results = []
 
         for dataset_config in datasets_to_create:
             try:
-                dataset_id = dataset_config["id"}
-except Exception:
-    pass
+                dataset_id = dataset_config["id"]
 
                 # Check if dataset already exists
                 try:
                     self.quicksight_client.describe_data_set(
-except Exception:
-    pass
                         AwsAccountId=self.config.aws_account_id, DataSetId=dataset_id
                     )
                     logger.info(
@@ -309,7 +295,7 @@ except Exception:
                         {
                             "success": True,
                             "action": "already_exists",
-                            "name": dataset_config["name"},
+                            "name": dataset_config["name"],
                             "id": dataset_id,
                         }
                     )
@@ -321,7 +307,7 @@ except Exception:
                 dataset_params = {
                     "AwsAccountId": self.config.aws_account_id,
                     "DataSetId": dataset_id,
-                    "Name": dataset_config["name"},
+                    "Name": dataset_config["name"],
                     "PhysicalTableMap": {
                         "CustomSql": {
                             "DataSourceArn": "arn:aws:quicksight:{0}:{1}:datasource/{2}".format(
@@ -337,7 +323,7 @@ except Exception:
                     "ImportMode": "DIRECT_QUERY",
                     "Permissions": [
                         {
-                            "Principal": "arn:aws:quicksight:{0}:{1}:user/{2]/admin".format(
+                            "Principal": "arn:aws:quicksight:{0}:{1}:user/{2}/admin".format(
                                 self.config.region,
                                 self.config.aws_account_id,
                                 self.config.namespace,
@@ -353,11 +339,9 @@ except Exception:
                                 "quicksight:CreateIngestion",
                                 "quicksight:CancelIngestion",
                                 "quicksight:UpdateDataSetPermissions",
-                            },
+                            ],
                         }
-                    ],
-                }
-
+                    ]
                 response = self.quicksight_client.create_data_set(
                     **dataset_params)
 
@@ -366,7 +350,7 @@ except Exception:
                     {
                         "success": True,
                         "action": "created",
-                        "name": dataset_config["name"},
+                        "name": dataset_config["name"],
                         "id": dataset_id,
                         "arn": response.get("Arn"),
                     }
@@ -374,14 +358,7 @@ except Exception:
 
             except Exception as e:
                 logger.error(
-                    f"Failed to create dataset {"
-                        dataset_config['id'}}: {e}"
-                )
-                results.append(
-                    {
-                        "success": False,
-                        "name": dataset_config["name"],
-                        "id": dataset_config["id"},
+                    f"Failed to create dataset {dataset_config['id'}}: {e}"},
                         "error": str(e),
                     }
                 )
@@ -492,8 +469,7 @@ except Exception:
                 {"Name": "article_count", "Type": "INTEGER"},
                 {"Name": "avg_sentiment", "Type": "DECIMAL"},
                 {"Name": "top_entities", "Type": "STRING"},
-                {"Name": "source_count", "Type": "INTEGER"],
-            }
+                {"Name": "source_count", "Type": "INTEGER"},
         elif dataset_id == "entity_relationships_dataset":
             return [
                 {"Name": "entity_1", "Type": "STRING"},
@@ -504,8 +480,7 @@ except Exception:
                 {"Name": "avg_sentiment", "Type": "DECIMAL"},
                 {"Name": f"irst_seen", "Type": "DATETIME"},
                 {"Name": "last_seen", "Type": "DATETIME"},
-                {"Name": "relationship_duration", "Type": "INTEGER"],
-            }
+                {"Name": "relationship_duration", "Type": "INTEGER"},
         elif dataset_id == "event_timeline_dataset":
             return [
                 {"Name": "article_id", "Type": "STRING"},
@@ -553,15 +528,11 @@ except Exception:
 
         for analysis_config in analyses_to_create:
             try:
-                analysis_id = analysis_config["id"}
-except Exception:
-    pass
+                analysis_id = analysis_config["id"]
 
                 # Check if analysis already exists
                 try:
                     self.quicksight_client.describe_analysis(
-except Exception:
-    pass
                         AwsAccountId=self.config.aws_account_id, AnalysisId=analysis_id
                     )
                     logger.info(
@@ -570,7 +541,7 @@ except Exception:
                         {
                             "success": True,
                             "action": "already_exists",
-                            "name": analysis_config["name"},
+                            "name": analysis_config["name"],
                             "id": analysis_id,
                         }
                     )
@@ -582,11 +553,11 @@ except Exception:
                 analysis_params = {
                     "AwsAccountId": self.config.aws_account_id,
                     "AnalysisId": analysis_id,
-                    "Name": analysis_config["name"},
+                    "Name": analysis_config["name"],
                     "Definition": self._get_analysis_definition(analysis_config),
                     "Permissions": [
                         {
-                            "Principal": "arn:aws:quicksight:{0}:{1}:user/{2]/admin".format(
+                            "Principal": "arn:aws:quicksight:{0}:{1}:user/{2}/admin".format(
                                 self.config.region,
                                 self.config.aws_account_id,
                                 self.config.namespace,
@@ -601,9 +572,7 @@ except Exception:
                                 "quicksight:UpdateAnalysis",
                             },
                         }
-                    ],
-                }
-
+                    },
                 response = self.quicksight_client.create_analysis(
                     **analysis_params)
 
@@ -612,7 +581,7 @@ except Exception:
                     {
                         "success": True,
                         "action": "created",
-                        "name": analysis_config["name"},
+                        "name": analysis_config["name"],
                         "id": analysis_id,
                         "arn": response.get("Arn"),
                     }
@@ -620,14 +589,7 @@ except Exception:
 
             except Exception as e:
                 logger.error(
-                    f"Failed to create analysis {"
-                        analysis_config['id'}}: {e}"
-                )
-                results.append(
-                    {
-                        "success": False,
-                        "name": analysis_config["name"],
-                        "id": analysis_config["id"},
+                    f"Failed to create analysis {analysis_config['id'}}: {e}"},
                         "error": str(e),
                     }
                 )
@@ -651,16 +613,10 @@ except Exception:
             ],
             "Sheets": [
                 {
-                    "SheetId": f"{"
-                        analysis_config['id'}}_sheet_1",
-                    "Name": analysis_config["name"],
-                    "Visuals": self._get_sheet_visuals(
-                        analysis_config["id"], dataset_id
+                    "SheetId": f"{analysis_config['id'}}_sheet_1"], dataset_id
                     ),
                 }
-            ],
-        }
-
+            },
     def _get_sheet_visuals(
         self, analysis_id: str, dataset_id: str
     ) -> List[Dict[str, Any]]:
@@ -719,8 +675,7 @@ except Exception:
                                         },
                                     }
                                 ]
-                            ],
-                        }
+                            },
                     },
                 },
             }
@@ -773,8 +728,7 @@ except Exception:
                                         },
                                     }
                                 ]
-                            ],
-                        }
+                            },
                     },
                 },
             }
@@ -828,8 +782,7 @@ except Exception:
                                         },
                                     }
                                 ]
-                            ],
-                        }
+                            },
                     },
                 },
             }
@@ -855,14 +808,10 @@ except Exception:
         for dashboard_config in dashboards_to_create:
             try:
                 dashboard_id = dashboard_config["id"]
-except Exception:
-    pass
 
                 # Check if dashboard already exists
                 try:
                     # existing = self.quicksight_client.describe_dashboard(  # unused variable
-except Exception:
-    pass
                     self.quicksight_client.describe_dashboard(
                         AwsAccountId=self.config.aws_account_id,
                         DashboardId=dashboard_id,
@@ -873,7 +822,7 @@ except Exception:
                         {
                             "success": True,
                             "action": "already_exists",
-                            "name": dashboard_config["name"},
+                            "name": dashboard_config["name"],
                             "id": dashboard_id,
                         }
                     )
@@ -885,11 +834,11 @@ except Exception:
                 dashboard_params = {
                     "AwsAccountId": self.config.aws_account_id,
                     "DashboardId": dashboard_id,
-                    "Name": dashboard_config["name"},
+                    "Name": dashboard_config["name"],
                     "Definition": self._get_dashboard_definition(dashboard_config),
                     "Permissions": [
                         {
-                            "Principal": "arn:aws:quicksight:{0}:{1}:user/{2]/admin".format(
+                            "Principal": "arn:aws:quicksight:{0}:{1}:user/{2}/admin".format(
                                 self.config.region,
                                 self.config.aws_account_id,
                                 self.config.namespace,
@@ -905,9 +854,7 @@ except Exception:
                                 "quicksight:UpdateDashboardPublishedVersion",
                             },
                         }
-                    ],
-                }
-
+                    },
                 response = self.quicksight_client.create_dashboard(
                     **dashboard_params)
 
@@ -916,7 +863,7 @@ except Exception:
                     {
                         "success": True,
                         "action": "created",
-                        "name": dashboard_config["name"},
+                        "name": dashboard_config["name"],
                         "id": dashboard_id,
                         "arn": response.get("Arn"),
                     }
@@ -930,7 +877,7 @@ except Exception:
                     {"
                         "success": False,
                         "name": dashboard_config["name"],
-                        "id": dashboard_config["id"},
+                        "id": dashboard_config["id"],
                         "error": str(e),
                     }
                 )
@@ -975,9 +922,7 @@ except Exception:
                     },
                     "FilterControls": self._get_dashboard_filters(),
                 }
-            ],
-        }
-
+            },
     def _get_dashboard_filters(self) -> List[Dict[str, Any]]:
         """
         Enable filtering by date, entity, and sentiment.
@@ -1035,8 +980,6 @@ except Exception:
 
         try:
             layout_config = self._get_layout_config(layout_type)
-except Exception:
-    pass
 
             # Create specific dashboard for this layout
             dashboard_id = "neuronews_{0}_dashboard".format(layout_type.value)
@@ -1067,7 +1010,7 @@ except Exception:
                 },
                 "Permissions": [
                     {
-                        "Principal": "arn:aws:quicksight:{0}:{1}:user/{2]/admin".format(
+                        "Principal": "arn:aws:quicksight:{0}:{1}:user/{2}/admin".format(
                             self.config.region,
                             self.config.aws_account_id,
                             self.config.namespace,
@@ -1081,9 +1024,7 @@ except Exception:
                             "quicksight:DeleteDashboard",
                         },
                     }
-                ],
-            }
-
+                },
             response = self.quicksight_client.create_dashboard(
                 **dashboard_params)
 
@@ -1157,7 +1098,6 @@ except Exception:
                                 "ColumnName": "entity_1",
                             },
                         },
-                    ]
                 ],
             )
         elif layout_type == DashboardType.EVENT_TIMELINE:
@@ -1178,7 +1118,6 @@ except Exception:
                                 "ColumnName": "published_date",
                             },
                         },
-                    ]
                 ],
             )
         else:
@@ -1206,8 +1145,6 @@ except Exception:
 
         try:
             # Set up refresh schedules for datasets
-except Exception:
-    pass
             refresh_results = []
 
             datasets = [
@@ -1219,8 +1156,6 @@ except Exception:
             for dataset_id in datasets:
                 try:
                     # Create refresh schedule for dataset
-except Exception:
-    pass
                     # schedule_id = "{0}_refresh_schedule".format(dataset_id)  # unused variable
 
                     # Note: refresh_params would be used for actual QuickSight scheduling
@@ -1282,8 +1217,6 @@ except Exception:
         """Get information about created dashboards."""
         try:
             if dashboard_id:
-except Exception:
-    pass
                 # Get specific dashboard info
                 response = self.quicksight_client.describe_dashboard(
                     AwsAccountId=self.config.aws_account_id, DashboardId=dashboard_id
@@ -1296,7 +1229,7 @@ except Exception:
                         "status": response["Dashboard"]["Version"]["Status"],
                         "url": self._get_dashboard_url(dashboard_id),
                         "last_updated": response["Dashboard"]["LastUpdatedTime"],
-                        "created_time": response["Dashboard"]["CreatedTime"},
+                        "created_time": response["Dashboard"]["CreatedTime"],
                     },
                 }
             else:
@@ -1312,7 +1245,6 @@ except Exception:
                         "url": self._get_dashboard_url(dashboard["DashboardId"]),
                         "last_updated": dashboard["LastUpdatedTime"],
                         "created_time": dashboard["CreatedTime"},
-                    }
                     for dashboard in response["DashboardSummaryList"]
                     if "neuronews" in dashboard["DashboardId"].lower()
                 ]
@@ -1341,12 +1273,8 @@ except Exception:
 
         try:
             # Validate data source
-except Exception:
-    pass
             try:
                 self.quicksight_client.describe_data_source(
-except Exception:
-    pass
                     AwsAccountId=self.config.aws_account_id,
                     DataSourceId=self.config.data_source_id,
                 )
@@ -1365,8 +1293,6 @@ except Exception:
             for dataset_id in datasets:
                 try:
                     self.quicksight_client.describe_data_set(
-except Exception:
-    pass
                         AwsAccountId=self.config.aws_account_id, DataSetId=dataset_id
                     )
                     validation_results["datasets_valid"].append(dataset_id)
@@ -1385,8 +1311,6 @@ except Exception:
             for analysis_id in analyses:
                 try:
                     self.quicksight_client.describe_analysis(
-except Exception:
-    pass
                         AwsAccountId=self.config.aws_account_id, AnalysisId=analysis_id
                     )
                     validation_results["analyses_valid"].append(analysis_id)
@@ -1401,8 +1325,6 @@ except Exception:
             for dashboard_id in dashboards:
                 try:
                     self.quicksight_client.describe_dashboard(
-except Exception:
-    pass
                         AwsAccountId=self.config.aws_account_id,
                         DashboardId=dashboard_id,
                     )
@@ -1420,13 +1342,7 @@ except Exception:
             )
 
             logger.info(
-                f"Validation completed: {"
-                    'Success' if validation_results['overall_valid'} else 'Issues found'}""
-            )
-            return validation_results
-
-        except Exception as e:
-            logger.error("Validation failed: {0}".format(e))
+                f"Validation completed: {'Success' if validation_results['overall_valid'}else 'Issues found'}"Validation failed: {0}".format(e))
             validation_results["errors"].append(str(e))
             return validation_results
 
@@ -1439,8 +1355,6 @@ async def demo_quicksight_dashboard_service():
 
     try:
         # Initialize service
-except Exception:
-    pass
         config = QuickSightConfig.from_env()
         service = QuickSightDashboardService(config)
 
@@ -1476,17 +1390,7 @@ except Exception:
  Validating setup...")"
         validation_result = await service.validate_setup()
         print(
-            f"Overall validation: {"
-                '' if validation_result['overall_valid'} else '❌'}"
-        )
-
-        # 5. Get dashboard info
-        print(""
- Dashboard information:")
-        dashboard_info = await service.get_dashboard_info()
-        if dashboard_info["success"]:
-            for dashboard in dashboard_info["dashboards"]:
-                print(f"• {dashboard['name'}}: {dashboard['url'}}")""
+            f"Overall validation: {'' if validation_result['overall_valid'}else '❌'}"• {dashboard['name'}}: {dashboard['url'}}")""
 
         print(""
  QuickSight Dashboard Service demo completed!")"
