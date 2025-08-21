@@ -972,7 +972,7 @@ if __name__ == "__main__":
                 "metadata": {
                     "category": "Technology",
                     "source_url": "https://example.com/apple-google-ai-partnership",
-                    "author": "Tech Reporter", "
+                    "author": "Tech Reporter"
                 },
             }
         ]
@@ -1015,36 +1015,30 @@ if __name__ == "__main__":
                 relationship_types=["PARTNERS_WITH", "WORKS_FOR"],
             )
 
-            print("
- Entity Relationship Query:")
+            print("\n🔍 Entity Relationship Query:")
             print(f"  • Query entity: {query_result['query_entity']}")
             print(
-                f"  • Related entities found: {
-                    query_result['total_results']}"
+                f"  • Related entities found: {query_result['total_results']}"
             )
 
             # Validate graph data
             validation = await populator.validate_graph_data()
 
-            print("
- Graph Validation:")
+            print("\n🔍 Graph Validation:")
             print(f"  • Entity counts: {validation['entity_counts']}")
             print(
-                f"  • Relationship counts: {
-                    validation['relationship_counts']}"
+                f"  • Relationship counts: {validation['relationship_counts']}"
             )
             print(f"  • Orphaned entities: {validation['orphaned_entities']}")
 
             # Get processing statistics
             stats = populator.get_processing_statistics()
 
-            print("
- Processing Statistics:")
+            print("\n📊 Processing Statistics:")
             print(f"  • Articles processed: {stats['articles_processed']}")
             print(f"  • Entities created: {stats['entities_created']}")
             print(
-                f"  • Relationships created: {
-                    stats['relationships_created']}"
+                f"  • Relationships created: {stats['relationships_created']}"
             )
             print(
                 f"  • Average entities per article: {
@@ -1058,8 +1052,7 @@ if __name__ == "__main__":
             # Clean up
             await populator.close()
 
-            print(""
- Demo completed successfully!")"
+            print("\n✅ Demo completed successfully!")
 
         except Exception as e:
             print("❌ Demo failed: {0}".format(e))

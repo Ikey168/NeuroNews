@@ -141,7 +141,7 @@ class AdvancedEntityExtractor:
                 # Full names
                 r"\b[A-Z][a-z]+ [A-Z][a-z]+(?:\s+[A-Z][a-z]+)?\b",
                 r"\b(?:Dr\.|Prof\.|Mr\.|Ms\.|Mrs\.)\s+[A-Z][a-z]+\b",  # Titles
-            },
+            ],
         },
         "ORGANIZATION": {
             "neptune_label": "Organization",
@@ -150,7 +150,7 @@ class AdvancedEntityExtractor:
                 r"\b[A-Z][a-z]*(?:\s+[A-Z][a-z]*)*\s+(?:Inc\.?|LLC|Corp\.?|Ltd\.?|Co\.?)\b",
                 r"\b[A-Z][A-Z]+\b",  # Acronyms
                 r"\bGoogle|Microsoft|Apple|Amazon|Facebook|Meta|Tesla|Twitter|LinkedIn\b",
-            },
+            ],
         },
         "TECHNOLOGY": {
             "neptune_label": "Technology",
@@ -183,7 +183,7 @@ class AdvancedEntityExtractor:
                 "iot",
                 "5g",
                 "quantum computing",
-            },
+            ],
         },
         "POLICY": {
             "neptune_label": "Policy",
@@ -203,7 +203,7 @@ class AdvancedEntityExtractor:
                 "license",
                 "terms of service",
                 "user agreement",
-            },
+            ],
         },
         "LOCATION": {
             "neptune_label": "Location",
@@ -293,8 +293,6 @@ class AdvancedEntityExtractor:
         """Initialize NLP processing components."""
         try:
             # Try to use optimized NLP pipeline first
-except Exception:
-    pass
             if OPTIMIZED_NLP_AVAILABLE:
                 nlp_config = NLPConfig(
                     max_worker_threads=4,
@@ -338,8 +336,6 @@ except Exception:
 
         try:
             full_text = "{0}. {1}".format(title, content)
-except Exception:
-    pass
 
             # Extract entities using NER processor
             ner_entities = self.ner_processor.extract_entities(
@@ -418,8 +414,6 @@ except Exception:
 
         try:
             # Pattern-based relationship extraction
-except Exception:
-    pass
             pattern_relationships = await self._extract_relationships_by_patterns(
                 entities, text, article_id
             )

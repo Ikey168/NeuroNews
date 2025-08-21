@@ -552,7 +552,7 @@ class ArticleEmbedder:
                             tokens_count, embedding_quality_score, processing_time
                         ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                         ON CONFLICT (article_id, text_hash, embedding_model) DO NOTHING
-                    ""","
+                    """,
                         values,
                     )
 
@@ -683,7 +683,7 @@ class ArticleEmbedder:
         return stats
 
     async def create_embeddings_table(self):
-        """Create the article_embeddings table if it doesn't exist."""'
+        """Create the article_embeddings table if it doesn't exist."""
         if not self.conn_params:
             return
 
@@ -781,15 +781,13 @@ if __name__ == "__main__":
         )
 
         print(
-            f"Generated embedding with dimension: {"
-                result['embedding_dimension']}"
+            f"Generated embedding with dimension: {result['embedding_dimension']}"
         )
         print(f"Quality score: {result['embedding_quality_score']:.3f}")
-        print(f"Processing time: {result['processing_time']:.3f}s")"
+        print(f"Processing time: {result['processing_time']:.3f}s")
 
         # Print statistics
         stats = embedder.get_statistics()
-        print(""
-Statistics: {0}".format(stats))"
+        print("\nStatistics: {0}".format(stats))
 
     asyncio.run(test_embedder())
