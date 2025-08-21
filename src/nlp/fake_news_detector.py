@@ -14,7 +14,19 @@ import numpy as np
 import pandas as pd
 import torch
 from sklearn.metrics import (
-    accuracy      for i, article in enumerate(test_articles):
+    accuracy          logger        result=detector.predict_trustworthiness(article)
+        logger.info(f"Article {i + 1}: {article[:100]}...")
+        logger.info("Trustworthiness: {0}%".format(result["trustworthiness_score"]))
+        logger.info(
+            f"Classification: {result['classification']} (confidence: {result['confidence']}%)"
+        )sting predictions:")
+    for i, article in enumerate(test_articles):
+        result=detector.predict_trustworthiness(article)
+        logger.info(f"Article {i + 1}: {article[:100]}...")
+        logger.info("Trustworthiness: {0}%".format(result["trustworthiness_score"]))
+        logger.info(
+            f"Classification: {result['classification']} (confidence: {result['confidence']}%)"
+        )le in enumerate(test_articles):
         result=detector.predict_trustworthiness(article)
         logger.info(f"Article {i + 1}: {article[:100]}...")
         logger.info("Trustworthiness: {0}%".format(result["trustworthiness_score"]))
@@ -416,13 +428,15 @@ def main():
         "EXCLUSIVE: Aliens have been secretly living among us for decades, sources confirm.",
     ]
 
-    logger.info(""
-Testing predictions: ")"
+            logger.info(
+            f"Classification: {result['classification']} (confidence: {result['confidence']}%)"
+        )
+
+    logger.info("Testing predictions:")
     for i, article in enumerate(test_articles):
         result=detector.predict_trustworthiness(article)
-        logger.info(""
-Article {0}: {1}...".format(i + 1, article[:100]))
-        logger.info("Trustworthiness: {0}%".format(result["trustworthiness_score"]))"
+        logger.info(f"Article {i + 1}: {article[:100]}...")
+        logger.info("Trustworthiness: {0}%".format(result["trustworthiness_score"]))
         logger.info(
             f"Classification: {
                 result['classification'}} (confidence: {"
