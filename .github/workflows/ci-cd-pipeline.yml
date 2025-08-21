@@ -15,6 +15,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/src
 
 jobs:
   # Job 1: Run tests and quality checks
@@ -70,13 +71,13 @@ jobs:
         run: |
           pytest tests/ --cov=src/ --cov-report=xml --cov-report=html --cov-fail-under=70 --ignore=tests/integration/
         env:
-          PYTHONPATH: ${{ github.workspace }}
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/src
 
       - name: Run integration tests
         run: |
           pytest tests/integration/ -v --tb=short
         env:
-          PYTHONPATH: ${{ github.workspace }}
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/src
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v3
