@@ -7,7 +7,49 @@ of different lengths (short, medium, long) and handles various article types.
 
 Features:
 - Multiple summarization models (BART, Pegasus, T5)
-- Three summary lengths (short, medium, long)
+- Three summary lengt                w                                 logger.info(
+                f"Summary generated: {length.value} ({metrics['word_count']} words, "
+                f"{processing_time:.2f}s)"
+            )
+
+            return summarylogger.error(
+                f"Summary generation failed: {str(e)} (processing time: {processing_time:.2f}s)"
+            )
+
+            return summary
+
+        except Exception as e:      logger.info(
+                f"Summary generated: {length.value} ({metrics['word_count']} words, "
+                f"{processing_time:.2f}s)"
+            )
+
+            return summary
+
+        except Exception as e:ger.info(
+                f"Summary generated: {length.value} ({metrics['word_count']} words, "
+                f"{processing_time:.2f}s)"
+            )
+
+            return summary logger.info(
+                f"Summary generated: {length.value} ({metrics['word_count']} words, "
+                f"{processing_time:.2f}s)"
+            )unt=metrics["word_count"],
+                sentence_count=metrics["sentence_count"],
+                compression_ratio=metrics["compression_ratio"],
+                created_at=time.strftime("%Y-%m-%d %H:%M:%S"),
+            )
+
+            logger.info(
+                f"Summary generated: {length.value} ({metrics['word_count']} words, "
+                f"{processing_time:.2f}s)"
+            )
+
+            return summaryogger.info(
+                f"Summary generated: {length.value} ({metrics['word_count']} words, "
+                f"{processing_time:.2f}s)"
+            )
+
+            return summary, medium, long)
 - Batch processing for efficiency
 - Caching and storage integration
 - Error handling and fallbacks
@@ -182,8 +224,6 @@ class AIArticleSummarizer:
 
         try:
             if model_type == SummarizationModel.BART:
-except Exception:
-    pass
                 tokenizer = BartTokenizer.from_pretrained(model_type.value)
                 model = BartForConditionalGeneration.from_pretrained(
                     model_type.value)
@@ -305,8 +345,6 @@ except Exception:
 
         try:
             # Preprocess text
-except Exception:
-    pass
             clean_text = self._preprocess_text(text)
 
             # Use specified model or default from config
@@ -372,12 +410,8 @@ except Exception:
                 created_at=time.strftime("%Y-%m-%d %H:%M:%S"),
             )
 
-            logger.info(
-                f"Summary generated: {
-                    length.value} ({"
-                    metrics['word_count'}} words, "
-                "{0:.2f}s)".format(processing_time)"
-            )
+            logger.info("Summary generated successfully")
+            logger.error("Summary generation failed")
 
             return summary
 
@@ -413,7 +447,7 @@ except Exception:
         return {
             SummaryLength.SHORT: summaries[0],
             SummaryLength.MEDIUM: summaries[1],
-            SummaryLength.LONG: summaries[2},
+            SummaryLength.LONG: summaries[2],
         }
 
     def get_model_info(self) -> Dict:
@@ -462,11 +496,11 @@ def create_summary_hash(
     Returns:
         SHA256 hash string
     """
-    content = "{0}{1}{2}".format(text, length.value, model.value)"
+    content = "{0}{1}{2}".format(text, length.value, model.value)
     return hashlib.sha256(content.encode()).hexdigest()
 
 
-def get_summary_pipeline(model_name: str = f"acebook/bart-large-cnn):"
+def get_summary_pipeline(model_name: str = "facebook/bart-large-cnn"):
     """
     Get a simple summarization pipeline for quick usage.
 
@@ -497,9 +531,8 @@ async def demo_summarization():
     summaries = await summarizer.summarize_article_all_lengths(sample_text)
 
     for length, summary in summaries.items():
-        print(""
-{0} SUMMARY:".format(length.value.upper()))
-        print("Text: {0}".format(summary.text))"
+        print(f"{length.value.upper()} SUMMARY:")
+        print("Text: {0}".format(summary.text))
         print(
             "Words: {0}, Compression: {1:.2%}".format(
                 summary.word_count, summary.compression_ratio

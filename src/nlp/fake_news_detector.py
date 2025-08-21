@@ -14,8 +14,17 @@ import numpy as np
 import pandas as pd
 import torch
 from sklearn.metrics import (
-    accuracy_score,
-    confusion_matrix,
+    accuracy      for i, article in enumerate(test_articles):
+        result=detector.predict_trustworthiness(article)
+        logger.info(f"Article {i + 1}: {article[:100]}...")
+        logger.info("Trustworthiness: {0}%".format(result["trustworthiness_score"]))
+        logger.info(
+            f"Classification: {result['classification']} (confidence: {result['confidence']}%)"
+        )lt=detector.predict_trustworthiness(article)
+        logger.info(f"Article {i + 1}: {article[:100]}...")
+        logger.info("Trustworthiness: {0}%".format(result["trustworthiness_score"]))
+        logger.info(
+            f"Classification: {result['classification']} (confidence: {result['confidence']}%)"    confusion_matrix,
     precision_recall_fscore_support,
 )
 from sklearn.model_selection import train_test_split
@@ -65,7 +74,7 @@ class FakeNewsDataset(Dataset):
 
         return {
             "input_ids": encoding["input_ids"].flatten(),
-            "attention_mask": encoding["attention_mask"}.flatten(),
+            "attention_mask": encoding["attention_mask"].flatten(),
             "labels": torch.tensor(label, dtype=torch.long),
         }
 
@@ -156,8 +165,6 @@ class FakeNewsDetector:
             # Load actual LIAR dataset if available
             try:
                 df = pd.read_csv(data_path, sep="\\t")
-except Exception:
-    pass
                 texts = df["statement"].tolist()
                 # Convert LIAR labels to binary (real vs fake)
                 label_mapping = {

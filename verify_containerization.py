@@ -57,10 +57,9 @@ def main():
         results.append(success)
         time.sleep(1)  # Brief pause between tests
 
-    print(""
-" + "=" * 50)
-    print(" VERIFICATION RESULTS:")
-    print(" Passed: {0}/{1} tests".format(sum(results), len(results)))"
+    print("=" * 50)
+    print("VERIFICATION RESULTS:")
+    print("Passed: {0}/{1} tests".format(sum(results), len(results)))
 
     if all(results):
         print(" CONTAINERIZATION VERIFICATION COMPLETE!")

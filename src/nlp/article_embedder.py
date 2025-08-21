@@ -120,7 +120,7 @@ class ArticleEmbedder:
             full_text = re.sub(r"\S+@\S+", "", full_text)
 
             # Remove special characters but keep basic punctuation
-            full_text = re.sub(r'[^\w\s.,!?;:()\-\'"]+', " ", full_text)'
+            full_text = re.sub(r'[^\w\s.,!?;:()\-\'"]+', " ", full_text)
 
             # Remove excessive punctuation
             full_text = re.sub(r"[.]{2,}", ".", full_text)

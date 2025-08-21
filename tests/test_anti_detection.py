@@ -363,10 +363,9 @@ Testing user agent rotation...")"
 
         # Test CAPTCHA detection
         captcha_solver=CaptchaSolver(api_key="test_key")
-        print(""
-Testing CAPTCHA detection...")
+        print("Testing CAPTCHA detection...")
 
-        test_html = '<div class="g-recaptcha" data-sitekey="test123"></div>'"
+        test_html = '<div class="g-recaptcha" data-sitekey="test123"></div>'
         detected = await captcha_solver.detect_captcha(test_html)
         print("CAPTCHA detected: {0}".format(detected))
 

@@ -115,8 +115,7 @@ class DuplicateFilterPipeline:
             if content_hash in self.content_hashes:
                 item["duplicate_check"] = "content_duplicate"
                 spider.logger.info(
-                    f"Duplicate content found for URL: {
-                        item['url']}"
+                    f"Duplicate content found for URL: {item['url']}"
                 )
                 return None
             self.content_hashes.add(content_hash)

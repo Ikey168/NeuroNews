@@ -25,8 +25,7 @@ class JsonWriterPipeline:
         if self.first_item:
             self.first_item = False
         else:
-            self.file.write(","
-")"
+            self.file.write(",\n")
         self.file.write(line)
         return item
 

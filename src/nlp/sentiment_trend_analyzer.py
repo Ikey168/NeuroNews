@@ -254,8 +254,7 @@ class SentimentTrendAnalyzer:
         """
         try:
             logger.info(
-                f"Analyzing historical sentiment trends for topic: {
-                    topic or 'all'}"
+                f"Analyzing historical sentiment trends for topic: {topic or 'all'}"
             )
 
             # Set default date range if not provided

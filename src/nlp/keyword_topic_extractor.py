@@ -699,9 +699,7 @@ class KeywordTopicExtractor:
 
         if not full_text:
             logger.warning(
-                f"Empty text for article {"
-                    article.get(
-                        'id', 'unknown')}""
+                f"Empty text for article {article.get('id', 'unknown')}"
             )
             return self._empty_result(article, start_time)
 

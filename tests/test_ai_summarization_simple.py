@@ -247,8 +247,7 @@ class TestErrorHandling:
 
         # Test whitespace-only text
         with pytest.raises(ValueError):
-            summarizer._preprocess_text(""
-\t  ")"
+            summarizer._preprocess_text("")
 
 
 class TestConfiguration:
