@@ -213,16 +213,13 @@ class TestNERProcessor(unittest.TestCase):
         """Test text preprocessing functionality."""
         # Test with messy text
         messy_text = (
-            "This   is    a"
-
-  messy    text with lots   of    whitespace""
+            "This   is    a messy    text with lots   of    whitespace"
         )
         cleaned = self.processor._preprocess_text(messy_text)
 
         # Should normalize whitespace
-        self.assertNotIn(""
-", cleaned)
-        self.assertNotIn("  ", cleaned)  # No double spaces"
+        self.assertNotIn("\n", cleaned)
+        self.assertNotIn("  ", cleaned)  # No double spaces
 
         # Test with very long text
         long_text = "This is a very long text. " * 1000

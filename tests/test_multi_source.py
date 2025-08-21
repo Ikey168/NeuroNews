@@ -156,14 +156,12 @@ def run_all_tests():
             print("❌ Test {0} failed with exception: {1}".format(test.__name__, e))
             failed += 1
 
-    print(f""
-{'=' * 50}")
-    print(" Test Results: {0} passed, {1} failed".format(passed, failed))"
+    print(f"\n{'=' * 50}")
+    print(" Test Results: {0} passed, {1} failed".format(passed, failed))
 
     if failed == 0:
-        print(" All tests passed! Multi-source scraper is ready to use.")
-        print(""
-Next steps:")
+        print("✅ All tests passed! Multi-source scraper is ready to use.")
+        print("\nNext steps:")
         print("1. Run a test scraper: python -m src.scraper.run --spider cnn")
         print("2. Run all sources: python -m src.scraper.run --multi-source")
         print("3. Generate a report: python -m src.scraper.run --report")"

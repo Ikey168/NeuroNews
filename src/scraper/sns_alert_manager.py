@@ -130,8 +130,6 @@ class SNSAlertManager:
 
         try:
             # Prepare SNS message
-except Exception:
-    pass
             subject = "[{0]} NeuroNews Scraper Alert: {1}".format(
                 alert.severity.value, alert.title
             )
@@ -174,7 +172,7 @@ except Exception:
             return False
 
     def _is_within_rate_limit(self) -> bool:
-        """Check if we're within the rate limit."""'
+        """Check if we're within the rate limit."""
         current_time = time.time()
         cutoff_time = current_time - self.rate_limit_window
 

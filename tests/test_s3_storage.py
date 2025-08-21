@@ -475,7 +475,7 @@ if __name__ == "__main__":
         print(" Content hash calculated: {0}...".format(content_hash[:16]))
 
         print("All basic tests passed!")
-        print("Note: AWS integration tests require valid credentials")"
+        print("Note: AWS integration tests require valid credentials")
 
     except Exception as e:
         print("⚠️  Basic test completed with expected credential warning: {0}".format(e))

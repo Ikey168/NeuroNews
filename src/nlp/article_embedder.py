@@ -418,7 +418,7 @@ class ArticleEmbedder:
                         AND embedding_model = %s
                         ORDER BY created_at DESC
                         LIMIT 1
-                    ""","
+                    """,
                         (article_id, text_hash, self.model_name),
                     )
 
@@ -482,7 +482,7 @@ class ArticleEmbedder:
                         WHERE article_id = ANY(%s)
                         AND text_hash = ANY(%s)
                         AND embedding_model = %s
-                    ""","
+                    """,
                         (article_ids, text_hashes, self.model_name),
                     )
 

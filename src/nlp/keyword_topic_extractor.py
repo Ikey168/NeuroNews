@@ -465,7 +465,7 @@ class TFIDFKeywordExtractor:
                     text, max_keywords=top_k
                 )
                 keywords = [
-                    KeywordResult(keyword=kw, score=0.5, method=f"requency")
+                    KeywordResult(keyword=kw, score=0.5, method="frequency")
                     for kw in pos_keywords
                 ]
                 results.append(keywords)
@@ -495,7 +495,7 @@ class TFIDFKeywordExtractor:
                 ]
                 keywords = [
                     KeywordResult(
-                        keyword=word, score=freq / len(words), method=f"requency"
+                        keyword=word, score=freq / len(words), method="frequency"
                     )
                     for word, freq in top_words
                 ]
@@ -999,17 +999,16 @@ def create_keyword_extractor(
         # Check if all required ML dependencies are available
         sklearn_available = False
         try:
-            pass
-
+            from sklearn.decomposition import LatentDirichletAllocation
+            from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
             sklearn_available = True
         except ImportError:
             pass
 
         nltk_available = False
         try:
-            pass
-
-            # Try to use NLTK to check if it's properly set up'
+            import nltk
+            # Try to use NLTK to check if it's properly set up
             from nltk.corpus import stopwords
 
             # Test if data is available (may need download)

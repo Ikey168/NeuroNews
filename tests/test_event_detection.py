@@ -78,12 +78,15 @@ sklearn_cluster_mock.__spec__ = MagicMock()
 sklearn_metrics_mock.__spec__ = MagicMock()
 sklearn_preprocessing_mock.__spec__ = MagicMock()
 
-# Mock the modules before any imports
+# Mock the modules before any imports - but only for this test file
+# We'll clean this up at the end of the file
 
-sys.modules["sklearn"] = sklearn_mock
-sys.modules["sklearn.cluster"] = sklearn_cluster_mock
-sys.modules["sklearn.metrics"] = sklearn_metrics_mock
-sys.modules["sklearn.preprocessing"] = sklearn_preprocessing_mock
+# Temporarily disable sklearn mocking to fix import issues
+# if "sklearn" not in sys.modules:
+#     sys.modules["sklearn"] = sklearn_mock
+#     sys.modules["sklearn.cluster"] = sklearn_cluster_mock
+#     sys.modules["sklearn.metrics"] = sklearn_metrics_mock
+#     sys.modules["sklearn.preprocessing"] = sklearn_preprocessing_mock
 
 # Test data
 SAMPLE_ARTICLES = [
@@ -851,6 +854,19 @@ async def test_full_pipeline_integration():
 
         assert embedder_stats["embeddings_generated"] > 0
         assert clusterer_stats["articles_clustered"] > 0
+
+
+# Clean up sklearn mocks to avoid interfering with other tests
+def cleanup_sklearn_mocks():
+    """Clean up sklearn mocks from sys.modules if they're mock objects"""
+    import sys
+    sklearn_modules = ["sklearn", "sklearn.cluster", "sklearn.metrics", "sklearn.preprocessing"]
+    for module_name in sklearn_modules:
+        if module_name in sys.modules:
+            module = sys.modules[module_name]
+            # Check if it's a mock object
+            if hasattr(module, '_mock_name') or str(type(module).__name__) == 'MagicMock':
+                del sys.modules[module_name]
 
 
 if __name__ == "__main__":
