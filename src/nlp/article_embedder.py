@@ -246,7 +246,7 @@ class ArticleEmbedder:
         Returns:
             List of embedding results
         """
-        logger.info("Processing batch of {0} articles".format(len(articles)))"
+        logger.info("Processing batch of {0} articles".format(len(articles)))
         start_time = time.time()
 
         try:
