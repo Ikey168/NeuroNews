@@ -192,31 +192,25 @@ class AsyncScraperRunner:
 
     def print_summary(self, articles: list, stats: dict):
         """Print scraping summary."""
-        print(""
-" + "=" * 60)
+        print("\n" + "=" * 60)
         print(" ASYNC SCRAPER PERFORMANCE SUMMARY")
         print("=" * 60)
 
         print(f"⏱️  Total Duration: {stats['elapsed_time']:.2f} seconds")
         print("📰 Total Articles: {0}".format(len(articles)))
-        print(f" Articles/Second: {stats['articles_per_second']:.2f}")
-        print(f" Success Rate: {stats['success_rate']:.1f}%")"
+        print(f"📊 Articles/Second: {stats['articles_per_second']:.2f}")
+        print(f"✅ Success Rate: {stats['success_rate']:.1f}%")
         print(
-            f"🔄 Total Requests: {
-                stats['successful_requests'] +
-                stats[f'ailed_requests']}"
+            f"🔄 Total Requests: {stats['successful_requests'] + stats['failed_requests']}"
         )
         print(f"⚡ Avg Response Time: {stats['avg_response_time']:.2f}s")
         print(f"💾 Avg Memory Usage: {stats['avg_memory_mb']:.1f} MB")
         print(f"🖥️  Avg CPU Usage: {stats['avg_cpu_percent']:.1f}%")
 
-        print(""
- Source Breakdown:")
-        for source, source_stats in stats["source_stats"].items():"
+        print("\n📊 Source Breakdown:")
+        for source, source_stats in stats["source_stats"].items():
             print(
-                f"  {source}: {
-                    source_stats['articles']} articles, {
-                    source_stats['errors']} errors"
+                f"  {source}: {source_stats['articles']} articles, {source_stats['errors']} errors"
             )
 
         # Quality breakdown
@@ -226,11 +220,10 @@ class AsyncScraperRunner:
             if quality in quality_counts:
                 quality_counts[quality] += 1
 
-        print(""
-🏆 Quality Distribution:")"
+        print("\n🏆 Quality Distribution:")
         for quality, count in quality_counts.items():
             percentage = (count / len(articles)) * 100 if articles else 0
-            print("  {0}: {1} ({2}%)".format(quality.title(), count, percentage))
+            print("  {0}: {1} ({2:.1f}%)".format(quality.title(), count, percentage))
 
         print("=" * 60)
 
@@ -283,8 +276,7 @@ def main():
         return 0
 
     except KeyboardInterrupt:
-        print(""
-⚠️  Scraping interrupted by user")"
+        print("\n⚠️  Scraping interrupted by user")
         return 1
     except Exception as e:
         print("❌ Scraper failed: {0}".format(e))

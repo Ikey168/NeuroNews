@@ -453,10 +453,9 @@ class PerformanceDashboard:
         """Print live dashboard to console."""
         metrics = self.get_current_metrics()
 
-        print(""
-" + "=" * 80)
+        print("\n" + "=" * 80)
         print(" NEURONEWS ASYNC SCRAPER - LIVE PERFORMANCE DASHBOARD")
-        print("=" * 80)"
+        print("=" * 80)
 
         # Key metrics
         print(f"⏱️  Uptime: {metrics['elapsed_time']:.1f}s")
@@ -468,19 +467,15 @@ class PerformanceDashboard:
         print(f"🧵 Threads: {metrics['counters']['active_threads']}")
 
         # System metrics
-        print("
-🖥️  System Resources:")
+        print("\n🖥️  System Resources:")
         print(f"   CPU: {metrics['system']['avg_cpu']:.1f}%")
         print(f"   Memory: {metrics['system']['avg_memory']:.1f} MB")
 
         # Source breakdown
-        print(""
- Source Performance:")
-        for source, stats in metrics["sources"].items():"
+        print("\n📊 Source Performance:")
+        for source, stats in metrics["sources"].items():
             print(
-                f"   {source}: {
-                    stats['articles']} articles, {
-                    stats['success_rate']:.1f}% success"
+                f"   {source}: {stats['articles']} articles, {stats['success_rate']:.1f}% success"
             )
 
         print("=" * 80)
