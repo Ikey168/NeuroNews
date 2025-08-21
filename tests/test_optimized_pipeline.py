@@ -472,10 +472,9 @@ class TestPerformanceBenchmarks(unittest.TestCase):
         # Memory increase should be reasonable
         self.assertLess(memory_increase, 200)
 
-        print(""
-Memory Efficiency Benchmark Results:")
+        print("\n📊 Memory Efficiency Benchmark Results:")
         print("Initial Memory: {:.1f} MB".format(initial_memory))
-        print("Memory Increase: {:.1f} MB".format(memory_increase))"
+        print("Memory Increase: {:.1f} MB".format(memory_increase))
         efficiency = len(self.large_dataset) / max(memory_increase, 1)
         print("Memory Efficiency: {:.1f} articles/MB".format(efficiency))
 

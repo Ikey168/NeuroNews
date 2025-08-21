@@ -170,7 +170,7 @@ class EventTimelineService:
         This implements the first requirement of Issue #38:
         "Track historical events related to a topic."
         """
-        logger.info("Tracking historical events for topic: {0}".format(topic))"
+        logger.info("Tracking historical events for topic: {0}".format(topic))
 
         # Set default time range if not provided
         if end_date is None:
@@ -1060,8 +1060,7 @@ async def demo_event_timeline_service():
         service = EventTimelineService()
 
         # Test 1: Track historical events
-        print("
-1. Tracking historical events for 'Artificial Intelligence'...")
+        print("\n1. Tracking historical events for 'Artificial Intelligence'...")
         events = await service.track_historical_events(
             topic="Artificial Intelligence",
             start_date=datetime.now() - timedelta(days=30),

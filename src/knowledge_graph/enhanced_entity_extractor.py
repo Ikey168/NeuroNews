@@ -556,7 +556,7 @@ class AdvancedEntityExtractor:
                 "ai": ["artificial intelligence", "machine learning", "deep learning"],
                 "blockchain": ["blockchain", "cryptocurrency", "bitcoin"],
                 "cloud": ["cloud computing", "aws", "azure", "google cloud"],
-                "programming": ["python", "javascript", "java", "c++"},
+                "programming": ["python", "javascript", "java", "c++"],
             }
 
             entity_text_lower = entity.text.lower()
@@ -714,7 +714,7 @@ class AdvancedEntityExtractor:
                     ],
                     "COMPETES_WITH": ["compete", "rival", "versus", "against"],
                     "DEVELOPS": ["develop", "create", "build", "design", "launch"],
-                    "USES_TECHNOLOGY": ["use", "implement", "adopt", "deploy"},
+                    "USES_TECHNOLOGY": ["use", "implement", "adopt", "deploy"],
                 }
 
                 sentence_lower = sentence.lower()
@@ -800,7 +800,7 @@ class AdvancedEntityExtractor:
                 ("PERSON", "TECHNOLOGY"),
             ],
             "LOCATED_IN": [("ORGANIZATION", "LOCATION"), ("PERSON", "LOCATION")],
-            "REGULATES": [("POLICY", "TECHNOLOGY"), ("POLICY", "ORGANIZATION")},
+            "REGULATES": [("POLICY", "TECHNOLOGY"), ("POLICY", "ORGANIZATION")],
         }
 
         if relation_type not in valid_combinations:
@@ -829,7 +829,7 @@ class AdvancedEntityExtractor:
             "average_relationships_per_article": (
                 self.stats["relationships_found"] /
                     self.stats["articles_processed"]
-                if self.stats["articles_processed"} > 0
+                if self.stats["articles_processed"] > 0
                 else 0
             ),
         }
@@ -891,7 +891,7 @@ if __name__ == "__main__":
 
             Both companies are headquartered in Silicon Valley and have been working on similar AI projects.
             The partnership is expected to influence future AI policies and help establish industry best practices.
-            """, "
+            """
         }
 
         # Create entity extractor
@@ -899,8 +899,6 @@ if __name__ == "__main__":
 
         try:
             # Extract entities
-except Exception:
-    pass
             entities = await extractor.extract_entities_from_article(
                 sample_article["id"], sample_article["title"], sample_article["content"]
             )
@@ -922,8 +920,7 @@ except Exception:
                 sample_article["id"],
             )
 
-            print(""
-🔗 Extracted Relationships:")"
+            print("\n🔗 Extracted Relationships:")
             for rel in relationships:
                 print(
                     "  • {0} --[{1]}--> {2}".format(
@@ -937,8 +934,7 @@ except Exception:
 
             # Get statistics
             stats = extractor.get_extraction_statistics()
-            print(""
- Extraction Statistics:")"
+            print("\n📊 Extraction Statistics:")
             for key, value in stats.items():
                 print("  • {0}: {1}".format(key, value))
 

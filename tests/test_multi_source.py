@@ -164,7 +164,7 @@ def run_all_tests():
         print("\nNext steps:")
         print("1. Run a test scraper: python -m src.scraper.run --spider cnn")
         print("2. Run all sources: python -m src.scraper.run --multi-source")
-        print("3. Generate a report: python -m src.scraper.run --report")"
+        print("3. Generate a report: python -m src.scraper.run --report")
     else:
         print("⚠️  Some tests failed. Please fix the issues before using the scraper.")
 

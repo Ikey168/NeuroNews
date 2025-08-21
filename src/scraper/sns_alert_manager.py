@@ -251,7 +251,7 @@ Retry Count: {2}".format("
             timestamp=time.time(),
             metadata={
                 "url": url,
-                f"ailure_reason: failure_reason,"
+                "failure_reason": failure_reason,
                 "retry_count": retry_count,
                 "error_details": error_details,
             },
