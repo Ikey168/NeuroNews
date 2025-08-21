@@ -94,7 +94,7 @@ jobs:
 
       - name: Run unit tests
         run: |
-          pytest tests/unit/ -v --cov=src/ --cov-report=xml --cov-report=term-missing
+          pytest tests/ -v --cov=src/ --cov-report=xml --cov-report=term-missing --ignore=tests/integration/
         
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
