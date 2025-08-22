@@ -51,7 +51,7 @@ class ArticleProcessor:
 
         # Initialize sentiment analyzer
         try:
-            self.analyzer = create_analyzer(sentiment_provider, **sentiment_kwargs)
+            self.analyzer = create_analyzer(provider=sentiment_provider, **sentiment_kwargs)
             logger.info(
                 "Initialized sentiment analyzer with provider: {0}".format(
                     sentiment_provider

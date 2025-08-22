@@ -1,7 +1,11 @@
 """
 SNS integration for sending alerts when scrapers fail multiple times.
-Provides intelligent alerting with rate limiting and escal        try:
-            # Prepare SNS message
+Provides intelligent alerting with rate limiting and escal             try:
+            # Prepare SNS message  
+            subject = f"[{alert.severity.value}] NeuroNews Scraper Alert: {alert.title}"
+            message = alert.to_sns_message()
+
+            # Add message attributes for filtering            # Prepare SNS message
             subject = "[{0}] NeuroNews Scraper Alert: {1}".format(
                 alert.severity.value, alert.title
             )
@@ -137,9 +141,7 @@ class SNSAlertManager:
 
         try:
             # Prepare SNS message
-            subject = "[{0]} NeuroNews Scraper Alert: {1}".format(
-                alert.severity.value, alert.title
-            )
+            subject = f"[{alert.severity.value}] NeuroNews Scraper Alert: {alert.title}"
             message = alert.to_sns_message()
 
             # Add message attributes for filtering
@@ -168,14 +170,12 @@ class SNSAlertManager:
             self._cleanup_old_alerts()
 
             self.logger.info(
-                "Sent alert: {0} (MessageId: {1})".format(
-                    alert.title, response["MessageId"]
-                )
+                f"Sent alert: {alert.title} (MessageId: {response['MessageId']})"
             )
             return True
 
         except Exception as e:
-            self.logger.error("Error sending alert: {0}".format(str(e)))
+            self.logger.error(f"Error sending alert: {str(e)}")
             return False
 
     def _is_within_rate_limit(self) -> bool:
