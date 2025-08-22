@@ -603,7 +603,7 @@ class TestIntegrationWorkflow:
                 redshift_database="test_db",
                 redshift_user="test_user",
                 redshift_password="test_pass",
-                sentiment_provider="local",  # Use local instead of aws
+                sentiment_provider="huggingface",  # Use huggingface instead of local
             )
 
         # Test with invalid article data
