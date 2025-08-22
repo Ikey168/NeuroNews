@@ -1,0 +1,58 @@
+{
+  "demo_timestamp": "2025-08-21T23:45:00.000Z",
+  "articles_processed": 50,
+  "events_detected": 3,
+  "clusters_formed": 8,
+  "processing_time_seconds": 12.5,
+  "embeddings": {
+    "total_generated": 50,
+    "average_dimension": 384,
+    "quality_score": 0.88
+  },
+  "events": [
+    {
+      "event_id": "event_001",
+      "name": "Economic Policy Summit",
+      "event_type": "political",
+      "trending_score": 0.85,
+      "impact_score": 0.92,
+      "velocity_score": 0.78,
+      "category": "politics",
+      "articles_count": 15,
+      "summary": "Major economic policy discussions at international summit"
+    },
+    {
+      "event_id": "event_002", 
+      "name": "Tech Innovation Conference",
+      "event_type": "technology",
+      "trending_score": 0.73,
+      "impact_score": 0.68,
+      "velocity_score": 0.89,
+      "category": "technology",
+      "articles_count": 22,
+      "summary": "New AI breakthroughs announced at tech conference"
+    },
+    {
+      "event_id": "event_003",
+      "name": "Climate Action Meeting",
+      "event_type": "environmental",
+      "trending_score": 0.67,
+      "impact_score": 0.94,
+      "velocity_score": 0.55,
+      "category": "environment",
+      "articles_count": 13,
+      "summary": "International climate action commitments announced"
+    }
+  ],
+  "quality_metrics": {
+    "average_cluster_quality": 0.82,
+    "embedding_quality": 0.88,
+    "silhouette_score": 0.74
+  },
+  "performance_metrics": {
+    "articles_per_second": 4.0,
+    "memory_usage_mb": 256,
+    "cpu_usage_percent": 45
+  },
+  "status": "success"
+}

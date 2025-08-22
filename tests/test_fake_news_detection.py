@@ -22,7 +22,7 @@ class TestFakeNewsDetector:
     @pytest.fixture
     def detector(self):
         """Create a FakeNewsDetector instance for testing."""
-        return FakeNewsDetector(model_name="roberta-base")
+        return FakeNewsDetector(model_name="roberta-base", use_pretrained=False)
 
     @pytest.fixture
     def sample_texts(self):
@@ -56,8 +56,8 @@ class TestFakeNewsDetector:
         assert config.num_epochs == 3
         assert config.learning_rate == 2e-5
 
-    @patch("src.nlp.fake_news_detector.AutoTokenizer")
-    @patch("src.nlp.fake_news_detector.AutoModelForSequenceClassification")
+    @patch("src.nlp.fake_news_detector.RobertaTokenizer")
+    @patch("src.nlp.fake_news_detector.RobertaForSequenceClassification")
     def test_model_loading(self, mock_model, mock_tokenizer, detector):
         """Test model and tokenizer loading."""
         # Setup mocks

@@ -8,12 +8,14 @@ import asyncio
 import logging
 import os
 import sys
+import pytest
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.asyncio
 async def test_database_connection():
     """Test basic database connectivity."""
     try:
@@ -29,6 +31,7 @@ async def test_database_connection():
         return False
 
 
+@pytest.mark.asyncio
 async def test_redis_connection():
     """Test Redis connectivity."""
     try:
@@ -53,6 +56,7 @@ async def test_redis_connection():
         return False
 
 
+@pytest.mark.asyncio
 async def test_s3_connection():
     """Test S3/MinIO connectivity."""
     try:

@@ -610,34 +610,35 @@ class TestDatabaseIntegration:
     async def test_embedding_storage_preparation(self):
         """Test embedding data preparation for storage."""
         with patch("src.nlp.article_embedder.SentenceTransformer", MockSentenceTransformer):
-            from src.nlp.article_embedder import ArticleEmbedder
+            # Mock the database connection before import
+            with patch("src.nlp.article_embedder.psycopg2.connect") as mock_connect:
+                from src.nlp.article_embedder import ArticleEmbedder
 
-            # Create embedder with connection parameters
-            conn_params = {
-                "host": "localhost",
-                "port": 5439,
-                "database": "test-db",
-                "user": "test-user",
-                "password": "test-pass",
-            }
-            embedder = ArticleEmbedder(model_name="test-model", conn_params=conn_params)
-
-            # Test data preparation
-            embeddings = [
-                {
-                    "article_id": "test_001",
-                    "embedding_vector": [0.1, 0.2, 0.3],
-                    "embedding_dimension": 3,
-                    "text_preprocessed": "test text",
-                    "text_hash": "test_hash",
-                    "tokens_count": 2,
-                    "embedding_quality_score": 0.8,
-                    "processing_time": 0.5,
+                # Create embedder with connection parameters
+                conn_params = {
+                    "host": "localhost", 
+                    "port": 5439,
+                    "database": "test-db",
+                    "user": "test-user",
+                    "password": "test-pass",
                 }
-            ]
+                embedder = ArticleEmbedder(model_name="test-model", conn_params=conn_params)
 
-            # Mock database operations
-            with patch("psycopg2.connect") as mock_connect:
+                # Test data preparation
+                embeddings = [
+                    {
+                        "article_id": "test_001",
+                        "embedding_vector": [0.1, 0.2, 0.3],
+                        "embedding_dimension": 3,
+                        "text_preprocessed": "test text",
+                        "text_hash": "test_hash",
+                        "tokens_count": 2,
+                        "embedding_quality_score": 0.8,
+                        "processing_time": 0.5,
+                    }
+                ]
+
+                # Mock database operations
                 mock_conn = Mock()
                 mock_cursor = Mock()
 
