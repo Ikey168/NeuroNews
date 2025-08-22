@@ -117,15 +117,16 @@ class TestOptimizedIngestionPipeline(unittest.TestCase):
         article = self.sample_articles[0]
 
         async def run_test():
-            result = await self.pipeline.process_article_async(article)
+            result = await self.pipeline.process_articles_async([article])
             return result
 
         result = asyncio.run(run_test())
 
         self.assertIsNotNone(result)
-        self.assertEqual(result["title"], article["title"])
-        self.assertIn("processing_metadata", result)
-        self.assertTrue(result["processing_metadata"]["optimized_processing"])
+        self.assertIn("processed_articles", result)
+        self.assertEqual(len(result["processed_articles"]), 1)
+        processed_article = result["processed_articles"][0]
+        self.assertEqual(processed_article["title"], article["title"])
 
     def test_batch_processing(self):
         """Test batch processing functionality."""
@@ -141,7 +142,7 @@ class TestOptimizedIngestionPipeline(unittest.TestCase):
         self.assertEqual(len(results["processed_articles"]), 20)
         self.assertIn("processing_time", results)
         self.assertIn("metrics", results)
-        self.assertGreater(results["metrics"]["performance"]["throughput"], 0)
+        self.assertGreater(results["metrics"]["performance"]["throughput_articles_per_second"], 0)
 
     def test_concurrent_processing_performance(self):
         """Test that concurrent processing improves performance."""
@@ -158,7 +159,7 @@ class TestOptimizedIngestionPipeline(unittest.TestCase):
         concurrent_time, results = asyncio.run(test_concurrent())
 
         # Verify performance metrics
-        self.assertGreater(results["metrics"]["performance"]["throughput"], 0)
+        self.assertGreater(results["metrics"]["performance"]["throughput_articles_per_second"], 0)
         self.assertEqual(len(results["processed_articles"]), 30)
 
         # Test processing time is reasonable
@@ -183,51 +184,65 @@ class TestOptimizedIngestionPipeline(unittest.TestCase):
 
     def test_memory_monitoring(self):
         """Test memory monitoring functionality."""
-        monitor = MemoryMonitor(threshold_mb=50.0)
+        monitor = MemoryMonitor(max_memory_mb=50.0)
 
-        # Test memory check
-        memory_mb = monitor.get_memory_usage_mb()
-        self.assertGreater(memory_mb, 0)
+        # Test memory check using available methods
+        stats = monitor.get_usage_stats()
+        self.assertGreater(stats["current_mb"], 0)
 
-        # Test threshold checking
-        is_over = monitor.is_memory_over_threshold()
-        self.assertIsInstance(is_over, bool)
+        # Test memory availability checking
+        is_available = monitor.is_memory_available(required_mb=10.0)
+        self.assertIsInstance(is_available, bool)
 
     def test_circuit_breaker(self):
         """Test circuit breaker functionality."""
         breaker = CircuitBreaker(
-            failure_threshold=3, recovery_timeout=1.0, error_rate_threshold=0.5
+            failure_threshold=3, recovery_timeout=1.0
         )
 
-        # Test initial state
-        self.assertTrue(breaker.can_process())
+        # Test initial state (should be CLOSED)
+        self.assertEqual(breaker.state, "CLOSED")
 
-        # Test failure recording
-        for _ in range(3):
-            breaker.record_failure()
+        # Test successful calls
+        def success_func():
+            return "success"
 
-        # Should be open after threshold failures
-        self.assertFalse(breaker.can_process())
+        result = breaker.call(success_func)
+        self.assertEqual(result, "success")
+        self.assertEqual(breaker.state, "CLOSED")
 
-        # Test success recording
-        breaker.record_success()
+        # Test failure handling
+        def failure_func():
+            raise Exception("Test failure")
+
+        # Generate failures to trip the breaker
+        for i in range(3):
+            try:
+                breaker.call(failure_func)
+            except Exception:
+                pass  # Expected
+
+        # Should be OPEN after threshold failures
+        self.assertEqual(breaker.state, "OPEN")
 
     def test_performance_metrics(self):
         """Test performance metrics collection."""
         metrics = IngestionMetrics()
 
-        # Record some metrics
-        metrics.record_processing_time(1.5)
-        metrics.record_articles_processed(10)
-        metrics.record_memory_usage(50.0)
+        # Record some metrics using update_metrics
+        metrics.update_metrics(processing_time=1.5, success=True)
+        metrics.update_metrics(processing_time=2.0, success=True)
+        metrics.update_metrics(processing_time=1.0, success=False, error_type="validation")
 
         # Get summary
         summary = metrics.get_summary()
 
-        self.assertIn("total_articles", summary)
-        self.assertIn("average_processing_time", summary)
-        self.assertIn("throughput", summary)
-        self.assertEqual(summary["total_articles"], 10)
+        self.assertIn("summary", summary)
+        self.assertIn("performance", summary)
+        self.assertEqual(summary["summary"]["total_processed"], 3)
+        self.assertEqual(summary["summary"]["successful"], 2)
+        self.assertEqual(summary["summary"]["failed"], 1)
+        self.assertIn("throughput_articles_per_second", summary["performance"])
 
     def test_error_handling(self):
         """Test error handling in pipeline."""

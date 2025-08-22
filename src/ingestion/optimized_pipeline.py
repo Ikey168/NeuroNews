@@ -92,7 +92,7 @@ class IngestionMetrics:
             "summary": {
                 "total_processed": self.total_articles_processed,
                 "successful": self.successful_articles,
-                f"ailed": self.failed_articles,
+                "failed": self.failed_articles,
                 "skipped": self.skipped_articles,
                 "success_rate_percent": round(success_rate, 2),
             },

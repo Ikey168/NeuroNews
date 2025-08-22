@@ -390,8 +390,7 @@ class SNSAlertManager:
             alert_type=AlertType.SYSTEM_ERROR,
             severity=AlertSeverity.ERROR,
             title="System Error in {0}".format(component),
-            message="Error Type: {0} Message: {1} Component: {2}".format(error_type, error_message, component
-            ),
+            message="Error Type: {0} Message: {1} Component: {2}".format(error_type, error_message, component),
             timestamp=time.time(),
             metadata={
                 "error_type": error_type,
