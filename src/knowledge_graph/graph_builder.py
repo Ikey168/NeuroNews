@@ -14,10 +14,11 @@ class GraphBuilder:
     Manages connection to and queries for a Gremlin-compatible graph database like Neptune.
     """
 
-    def __init__(self, endpoint: str):
+    def __init__(self, endpoint: str, force_websocket_mode: bool = False):
         self.endpoint = endpoint
         self.client: Client = None
         self.connection: DriverRemoteConnection = None
+        self.force_websocket_mode = force_websocket_mode
         self.g: __ = None  # GraphTraversalSource
         logger.info("GraphBuilder initialized with endpoint: {0}".format(self.endpoint))
 
@@ -89,7 +90,7 @@ class GraphBuilder:
                 # If we get here, we're in a nested event loop situation
                 
                 # Check if we're running in pytest (more specific than just nested loops)
-                if 'pytest' in os.environ.get('_', '') or 'PYTEST_CURRENT_TEST' in os.environ:
+                if not self.force_websocket_mode and ('pytest' in os.environ.get('_', '') or 'PYTEST_CURRENT_TEST' in os.environ):
                     logger.warning("Detected nested event loop in test environment, using mock graph operations")
                     
                     # Return mock data that looks like a real entity for testing
@@ -236,8 +237,9 @@ class GraphBuilder:
                 import asyncio
                 try:
                     asyncio.get_running_loop()
-                    logger.warning("Detected nested event loop, skipping async close")
-                    return
+                    if not self.force_websocket_mode:
+                        logger.warning("Detected nested event loop, skipping async close")
+                        return
                 except RuntimeError:
                     pass
                     

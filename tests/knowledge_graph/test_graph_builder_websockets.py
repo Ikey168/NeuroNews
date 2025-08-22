@@ -1,3 +1,4 @@
+import os
 import unittest  # Import the full unittest module
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -42,7 +43,8 @@ async def graph_builder_websockets(event_loop):
         return_value=mock_driver_remote_connection_instance,
     ) as MockedDRC:
 
-        builder = GraphBuilder(endpoint=NEPTUNE_MOCK_ENDPOINT)
+        # Use force_websocket_mode=True to bypass mock detection
+        builder = GraphBuilder(endpoint=NEPTUNE_MOCK_ENDPOINT, force_websocket_mode=True)
         await builder.connect()
 
         MockedClient.assert_called_with(

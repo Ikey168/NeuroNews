@@ -168,10 +168,12 @@ def test_demo_results():
     with open(results_path, "r") as f:
         results = json.load(f)
 
-    # Check structure
+    # Check main structure
     assert "embeddings" in results
     assert "events" in results
-    assert "events_detected" in results
+    assert "quality_metrics" in results
+    assert "performance_metrics" in results
+    assert "status" in results
 
     # Check embeddings results
     embeddings = results["embeddings"]
@@ -179,22 +181,31 @@ def test_demo_results():
     assert "quality_score" in embeddings
     assert embeddings["quality_score"] > 0.5, "Embedding quality too low"
 
-    # Check event detection results
-    assert results["events_detected"] > 0, "No events detected"
+    # Check events detection
     events = results["events"]
-
-    # Check individual events
+    assert len(events) > 0, "No events detected"
+    
+    # Check each event has required fields
     for event in events:
-        required_fields = [
-            "event_id",
-            "name",
-            "event_type",
-            "category",
-            "trending_score",
-            "articles_count",
-        ]
-        for field in required_fields:
-            assert field in event, "Missing field in event: {0}".format(field)
+        assert "event_id" in event
+        assert "name" in event
+        assert "trending_score" in event
+        assert "articles_count" in event
+
+    # Check quality metrics
+    quality = results["quality_metrics"]
+    assert "average_cluster_quality" in quality
+    assert quality["average_cluster_quality"] > 0.5, "Cluster quality too low"
+
+    # Check performance metrics
+    performance = results["performance_metrics"]
+    assert "articles_per_second" in performance
+    assert performance["articles_per_second"] > 0, "No processing throughput"
+
+    # Check overall counts
+    assert results["articles_processed"] > 0, "No articles processed"
+    assert results["events_detected"] > 0, "No events detected"
+    assert results["status"] == "success", "Demo did not complete successfully"
 
     print(
         f"✅ Demo results validation passed: {results['events_detected']} events detected"
