@@ -3,7 +3,41 @@ Test suite for multi-language news processing functionality.
 Tests language detection, translation, quality checking, and pipeline integration.
 """
 
-# Mock psycopg2 before any imports that might use it
+import sys
+from unittest.mock import MagicMock, Mock, patch
+import pytest
+
+# Create a comprehensive mock for psycopg2 BEFORE any imports
+mock_psycopg2 = MagicMock()
+mock_connection = MagicMock()
+mock_cursor = MagicMock()
+
+# Setup cursor context manager
+mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+mock_cursor.__exit__ = MagicMock(return_value=None)
+mock_cursor.fetchone = MagicMock(return_value=None)
+mock_cursor.fetchall = MagicMock(return_value=[])
+mock_cursor.fetchmany = MagicMock(return_value=[])
+mock_cursor.execute = MagicMock()
+
+# Setup connection context manager and cursor method
+mock_connection.cursor.return_value = mock_cursor
+mock_connection.__enter__ = MagicMock(return_value=mock_connection)
+mock_connection.__exit__ = MagicMock(return_value=None)
+mock_connection.commit = MagicMock()
+mock_connection.rollback = MagicMock()
+
+# Setup connect function
+mock_psycopg2.connect = MagicMock(return_value=mock_connection)
+mock_psycopg2.extras = MagicMock()
+mock_psycopg2.extras.RealDictCursor = MagicMock()
+mock_psycopg2.extras.execute_batch = MagicMock()
+
+# Replace sys.modules BEFORE imports
+sys.modules["psycopg2"] = mock_psycopg2
+sys.modules["psycopg2.extras"] = mock_psycopg2.extras
+
+# NOW safe to import our multi-language components
 from src.scraper.pipelines.multi_language_pipeline import (
     LanguageFilterPipeline,
     MultiLanguagePipeline,
@@ -14,34 +48,6 @@ from src.nlp.language_processor import (
     LanguageDetector,
     TranslationQualityChecker,
 )
-import sys
-from unittest.mock import MagicMock, Mock, patch
-
-import pytest
-
-# Create a comprehensive mock for psycopg2
-mock_psycopg2 = MagicMock()
-mock_connection = MagicMock()
-mock_cursor = MagicMock()
-
-# Setup cursor context manager
-mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
-mock_cursor.__exit__ = MagicMock(return_value=None)
-
-# Setup connection context manager and cursor method
-mock_connection.cursor.return_value = mock_cursor
-mock_connection.__enter__ = MagicMock(return_value=mock_connection)
-mock_connection.__exit__ = MagicMock(return_value=None)
-
-# Setup connect function
-mock_psycopg2.connect = MagicMock(return_value=mock_connection)
-mock_psycopg2.extras = MagicMock()
-
-# Replace sys.modules
-sys.modules["psycopg2"] = mock_psycopg2
-sys.modules["psycopg2.extras"] = mock_psycopg2.extras
-
-# Import our multi-language components
 
 
 class TestLanguageDetector:
