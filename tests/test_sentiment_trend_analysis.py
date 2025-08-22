@@ -116,8 +116,16 @@ class TestSentimentTrendAnalyzer:
         with patch("psycopg2.connect") as mock_connect:
             mock_conn = Mock()
             mock_cursor = Mock()
-            mock_connect.return_value.__enter__.return_value = mock_conn
-            mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+            
+            # Properly configure context managers
+            mock_cursor.__enter__ = Mock(return_value=mock_cursor)
+            mock_cursor.__exit__ = Mock(return_value=None)
+            
+            mock_conn.__enter__ = Mock(return_value=mock_conn)
+            mock_conn.__exit__ = Mock(return_value=None)
+            mock_conn.cursor.return_value = mock_cursor
+            
+            mock_connect.return_value = mock_conn
 
             analyzer = SentimentTrendAnalyzer(
                 sentiment_analyzer=mock_sentiment_analyzer,
@@ -281,8 +289,16 @@ class TestSentimentTrendAnalyzer:
         with patch("psycopg2.connect") as mock_connect:
             mock_conn = Mock()
             mock_cursor = Mock()
-            mock_connect.return_value.__enter__.return_value = mock_conn
-            mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+            
+            # Properly configure context managers
+            mock_cursor.__enter__ = Mock(return_value=mock_cursor)
+            mock_cursor.__exit__ = Mock(return_value=None)
+            
+            mock_conn.__enter__ = Mock(return_value=mock_conn)
+            mock_conn.__exit__ = Mock(return_value=None)
+            mock_conn.cursor.return_value = mock_cursor
+            
+            mock_connect.return_value = mock_conn
 
             # Setup cursor to return sample data
             mock_cursor.fetchall.return_value = [
@@ -456,8 +472,16 @@ class TestSentimentTrendAnalyzer:
         with patch("psycopg2.connect") as mock_connect:
             mock_conn = Mock()
             mock_cursor = Mock()
-            mock_connect.return_value.__enter__.return_value = mock_conn
-            mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+            
+            # Properly configure context managers
+            mock_cursor.__enter__ = Mock(return_value=mock_cursor)
+            mock_cursor.__exit__ = Mock(return_value=None)
+            
+            mock_conn.__enter__ = Mock(return_value=mock_conn)
+            mock_conn.__exit__ = Mock(return_value=None)
+            mock_conn.cursor.return_value = mock_cursor
+            
+            mock_connect.return_value = mock_conn
 
             await trend_analyzer._store_trend_data(trend_points)
 
@@ -490,8 +514,12 @@ class TestSentimentTrendAnalyzer:
         with patch("psycopg2.connect") as mock_connect:
             mock_conn = Mock()
             mock_cursor = Mock()
-            mock_connect.return_value.__enter__.return_value = mock_conn
-            mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+            mock_conn.__enter__ = Mock(return_value=mock_conn)
+            mock_conn.__exit__ = Mock(return_value=None)
+            mock_cursor.__enter__ = Mock(return_value=mock_cursor)
+            mock_cursor.__exit__ = Mock(return_value=None)
+            mock_connect.return_value = mock_conn
+            mock_conn.cursor.return_value = mock_cursor
 
             await trend_analyzer._store_alerts(alerts)
 
@@ -595,8 +623,12 @@ class TestSentimentTrendAnalyzer:
         with patch("psycopg2.connect") as mock_connect:
             mock_conn = Mock()
             mock_cursor = Mock()
-            mock_connect.return_value.__enter__.return_value = mock_conn
-            mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+            mock_conn.__enter__ = Mock(return_value=mock_conn)
+            mock_conn.__exit__ = Mock(return_value=None)
+            mock_cursor.__enter__ = Mock(return_value=mock_cursor)
+            mock_cursor.__exit__ = Mock(return_value=None)
+            mock_connect.return_value = mock_conn
+            mock_conn.cursor.return_value = mock_cursor
 
             mock_cursor.fetchall.return_value = sample_alerts_data
 
