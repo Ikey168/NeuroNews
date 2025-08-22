@@ -167,12 +167,12 @@ class TestFakeNewsDetector:
             "attention_mask": Mock(),
         }
 
-        # Mock model output
-        mock_logits = Mock()
-        mock_logits.cpu.return_value.numpy.return_value = [
-            [0.2, 0.8]
-        ]  # High confidence for "real"
-        detector.model.return_value.logits = mock_logits
+        # Mock model output with proper torch tensor
+        import torch
+        mock_logits = torch.tensor([[0.2, 0.8]])  # High confidence for "real"
+        mock_output = Mock()
+        mock_output.logits = mock_logits
+        detector.model.return_value = mock_output
 
         # Test prediction
         result = detector.predict_trustworthiness("This is a test article.")

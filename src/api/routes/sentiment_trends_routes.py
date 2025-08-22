@@ -13,7 +13,11 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from src.core.config import get_settings
+# Simple settings placeholder - replace with actual config if needed
+def get_settings():
+    """Simple settings placeholder."""
+    return {}
+
 from src.nlp.sentiment_trend_analyzer import (
     SentimentTrendAnalyzer,
 )
@@ -35,7 +39,7 @@ class TrendAnalysisRequest(BaseModel):
     topic: Optional[str] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
-    time_granularity: str = Field(default="daily", regex="^(daily|weekly|monthly)$")
+    time_granularity: str = Field(default="daily", pattern="^(daily|weekly|monthly)$")
 
 
 class AlertGenerationRequest(BaseModel):
@@ -106,7 +110,7 @@ async def analyze_sentiment_trends(
     start_date: Optional[datetime] = Query(None, description="Start date for analysis"),
     end_date: Optional[datetime] = Query(None, description="End date for analysis"),
     time_granularity: str = Query(
-        "daily", regex="^(daily|weekly|monthly)$", description="Time granularity"
+        "daily", pattern="^(daily|weekly|monthly)$", description="Time granularity"
     ),
     analyzer: SentimentTrendAnalyzer = Depends(get_sentiment_analyzer),
 ) -> Dict[str, Any]:
@@ -314,7 +318,7 @@ async def generate_sentiment_alerts(
 async def get_sentiment_alerts(
     topic: Optional[str] = Query(None, description="Filter alerts by topic"),
     severity: Optional[str] = Query(
-        None, regex="^(low|medium|high|critical)$", description="Filter by severity"
+        None, pattern="^(low|medium|high|critical)$", description="Filter by severity"
     ),
     limit: int = Query(
         50, ge=1, le=200, description="Maximum number of alerts to return"

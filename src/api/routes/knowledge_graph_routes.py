@@ -11,7 +11,15 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from src.core.config import get_settings
+# Simple settings placeholder - replace with actual config if needed
+class Settings:
+    """Simple settings placeholder."""
+    NEPTUNE_ENDPOINT = "mock://neptune"
+    
+def get_settings():
+    """Simple settings placeholder."""
+    return Settings()
+
 from src.knowledge_graph.nlp_populator import (
     KnowledgeGraphPopulator,
 )

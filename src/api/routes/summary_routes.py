@@ -25,12 +25,12 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path
 from pydantic import BaseModel, Field, validator
 from starlette.status import HTTP_201_CREATED, HTTP_404_NOT_FOUND
 
-from ..nlp.ai_summarizer import (
+from src.nlp.ai_summarizer import (
     AIArticleSummarizer,
     SummarizationModel,
     SummaryLength,
 )
-from ..nlp.summary_database import (
+from src.nlp.summary_database import (
     SummaryDatabase,
     get_redshift_connection_params,
 )

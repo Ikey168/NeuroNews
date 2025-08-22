@@ -5,7 +5,7 @@ Main FastAPI application configuration.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.routes import event_routes, graph_routes, news_routes, veracity_routes
+from src.api.routes import event_routes, graph_routes, news_routes, veracity_routes, knowledge_graph_routes
 
 # Try to import enhanced knowledge graph routes (Issue #37)
 try:
@@ -118,6 +118,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(graph_routes.router)
+app.include_router(knowledge_graph_routes.router)
 app.include_router(news_routes.router)
 app.include_router(event_routes.router)
 app.include_router(veracity_routes.router)
