@@ -15,7 +15,7 @@ import asyncio
 import json
 import sys
 import time
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
 import pytest
 from moto import mock_aws
@@ -169,7 +169,12 @@ class TestSNSAlertManager:
     @pytest.mark.asyncio
     async def test_send_alert(self):
         """Test sending alerts."""
-        with mock_aws():
+        # Create manager without AWS initialization issues
+        with patch('boto3.client') as mock_boto_client:
+            mock_sns = Mock()
+            mock_boto_client.return_value = mock_sns
+            mock_sns.publish.return_value = {"MessageId": "test-123"}
+            
             manager = SNSAlertManager(
                 topic_arn="arn:aws:sns:us-east-1:123456789012:test-topic",
                 region_name="us-east-1",
@@ -184,17 +189,19 @@ class TestSNSAlertManager:
                 metadata={"test": True},
             )
 
-            with patch.object(manager.sns, "publish") as mock_publish:
-                mock_publish.return_value = {"MessageId": "test-123"}
-
-                result = await manager.send_alert(alert)
-                assert result
-                mock_publish.assert_called_once()
+            result = await manager.send_alert(alert)
+            assert result
+            mock_sns.publish.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_rate_limiting(self):
         """Test alert rate limiting."""
-        with mock_aws():
+        # Create manager without AWS initialization issues
+        with patch('boto3.client') as mock_boto_client:
+            mock_sns = Mock()
+            mock_boto_client.return_value = mock_sns
+            mock_sns.publish.return_value = {"MessageId": "test-123"}
+            
             manager = SNSAlertManager(
                 topic_arn="arn:aws:sns:us-east-1:123456789012:test-topic",
                 region_name="us-east-1",
@@ -210,18 +217,15 @@ class TestSNSAlertManager:
                 metadata={},
             )
 
-            with patch.object(manager.sns, "publish") as mock_publish:
-                mock_publish.return_value = {"MessageId": "test-123"}
+            # First two alerts should go through
+            result1 = await manager.send_alert(alert)
+            result2 = await manager.send_alert(alert)
+            assert result1
+            assert result2
 
-                # First two alerts should go through
-                result1 = await manager.send_alert(alert)
-                result2 = await manager.send_alert(alert)
-                assert result1
-                assert result2
-
-                # Third alert should be rate limited
-                result3 = await manager.send_alert(alert)
-                assert result3 is False
+            # Third alert should be rate limited
+            result3 = await manager.send_alert(alert)
+            assert result3 is False
 
 
 class TestEnhancedRetryManager:

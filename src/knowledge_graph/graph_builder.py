@@ -157,6 +157,24 @@ class GraphBuilder:
         results = await self._execute_traversal(t)
         return results[0] if results else None
 
+    async def query_vertices(self, label: str, properties: dict = None):
+        """Query vertices by label and optional properties."""
+        if not self.g:
+            await self.connect()
+
+        # Start with vertices of the specified label
+        t = self.g.V().hasLabel(label)
+        
+        # Add property filters if provided
+        if properties:
+            for key, value in properties.items():
+                t = t.has(key, value)
+        
+        # Return all matching vertices with their properties
+        t = t.valueMap(True)
+        results = await self._execute_traversal(t)
+        return results if results else []
+
     async def delete_vertex(self, vertex_id: str):
         """Deletes a vertex by its ID."""
         if not self.g:

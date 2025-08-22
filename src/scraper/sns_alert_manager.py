@@ -175,7 +175,7 @@ class SNSAlertManager:
             return True
 
         except Exception as e:
-            self.logger.error("Error sending alert: {0}".format(e))
+            self.logger.error("Error sending alert: {0}".format(str(e)))
             return False
 
     def _is_within_rate_limit(self) -> bool:
@@ -218,7 +218,7 @@ class SNSAlertManager:
                              Subject=subject, Message=message)
         except Exception as e:
             self.logger.error(
-                "Error sending rate limit notification: {0}".format(e))
+                "Error sending rate limit notification: {0}".format(str(e)))
 
     async def alert_scraper_failure(
         self,
