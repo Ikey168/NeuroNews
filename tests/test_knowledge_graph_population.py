@@ -20,59 +20,62 @@ from src.knowledge_graph.nlp_populator import (
 )
 
 
+@pytest.fixture
+def mock_graph_builder():
+    """Mock GraphBuilder for testing."""
+    builder = AsyncMock()
+    builder.connect = AsyncMock()
+    builder.close = AsyncMock()
+    builder.add_vertex = AsyncMock(return_value={"id": "test_vertex"})
+    builder.add_edge = AsyncMock(return_value={"id": "test_edge"})
+    builder.query_vertices = AsyncMock(return_value=[])
+    builder.get_related_vertices = AsyncMock(return_value=[])
+    builder.update_vertex_property = AsyncMock(return_value={"updated": True})
+    return builder
+
+
+@pytest.fixture
+def mock_ner_processor():
+    """Mock NER processor for testing."""
+    processor = AsyncMock()
+    processor.process_text = AsyncMock(
+        return_value={
+            "entities": [
+                {
+                    "text": "John Doe",
+                    "label": "PERSON",
+                    "start": 0,
+                    "end": 8,
+                    "confidence": 0.95,
+                },
+                {
+                    "text": "OpenAI",
+                    "label": "ORG",
+                    "start": 20,
+                    "end": 26,
+                    "confidence": 0.90,
+                },
+            ]
+        }
+    )
+    return processor
+
+
+@pytest.fixture
+def populator(mock_graph_builder, mock_ner_processor):
+    """Create KnowledgeGraphPopulator instance with mocks."""
+    with patch("src.knowledge_graph.nlp_populator.GraphBuilder") as mock_gb:
+        mock_gb.return_value = mock_graph_builder
+
+        populator = KnowledgeGraphPopulator(
+            neptune_endpoint="test-endpoint", ner_processor=mock_ner_processor
+        )
+        populator.graph_builder = mock_graph_builder
+        return populator
+
+
 class TestKnowledgeGraphPopulator:
     """Test cases for KnowledgeGraphPopulator class."""
-
-    @pytest.fixture
-    def mock_graph_builder(self):
-        """Mock GraphBuilder for testing."""
-        builder = AsyncMock()
-        builder.connect = AsyncMock()
-        builder.close = AsyncMock()
-        builder.add_vertex = AsyncMock(return_value={"id": "test_vertex"})
-        builder.add_edge = AsyncMock(return_value={"id": "test_edge"})
-        builder.query_vertices = AsyncMock(return_value=[])
-        builder.get_related_vertices = AsyncMock(return_value=[])
-        builder.update_vertex_property = AsyncMock(return_value={"updated": True})
-        return builder
-
-    @pytest.fixture
-    def mock_ner_processor(self):
-        """Mock NER processor for testing."""
-        processor = AsyncMock()
-        processor.process_text = AsyncMock(
-            return_value={
-                "entities": [
-                    {
-                        "text": "John Doe",
-                        "label": "PERSON",
-                        "start": 0,
-                        "end": 8,
-                        "confidence": 0.95,
-                    },
-                    {
-                        "text": "OpenAI",
-                        "label": "ORG",
-                        "start": 20,
-                        "end": 26,
-                        "confidence": 0.90,
-                    },
-                ]
-            }
-        )
-        return processor
-
-    @pytest.fixture
-    def populator(self, mock_graph_builder, mock_ner_processor):
-        """Create KnowledgeGraphPopulator instance with mocks."""
-        with patch("src.knowledge_graph.nlp_populator.GraphBuilder") as mock_gb:
-            mock_gb.return_value = mock_graph_builder
-
-            populator = KnowledgeGraphPopulator(
-                neptune_endpoint="test-endpoint", ner_processor=mock_ner_processor
-            )
-            populator.graph_builder = mock_graph_builder
-            return populator
 
     @pytest.mark.asyncio
     async def test_entity_creation(self):
