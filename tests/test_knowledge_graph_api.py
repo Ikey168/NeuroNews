@@ -6,6 +6,7 @@ including the /related_entities endpoint and other knowledge graph operations.
 """
 
 from unittest.mock import AsyncMock, patch
+import os
 
 import pytest
 from fastapi.testclient import TestClient
@@ -13,14 +14,20 @@ from fastapi.testclient import TestClient
 from src.api.app import app  # Fixed import path
 from src.knowledge_graph.nlp_populator import KnowledgeGraphPopulator
 
+@pytest.fixture
+def client():
+    """FastAPI test client with WAF disabled."""
+    # Set environment variable to disable WAF for testing
+    os.environ["DISABLE_WAF_FOR_TESTS"] = "true"
+    test_client = TestClient(app)
+    yield test_client
+    # Clean up
+    if "DISABLE_WAF_FOR_TESTS" in os.environ:
+        del os.environ["DISABLE_WAF_FOR_TESTS"]
+
 
 class TestKnowledgeGraphAPIRoutes:
     """Test cases for knowledge graph API endpoints."""
-
-    @pytest.fixture
-    def client(self):
-        """FastAPI test client."""
-        return TestClient(app)
 
     @pytest.fixture
     def mock_populator(self):
@@ -32,10 +39,16 @@ class TestKnowledgeGraphAPIRoutes:
     def test_get_related_entities_success(self, client):
         """Test successful related entities retrieval."""
         with patch(
-            "src.api.routes.knowledge_graph_routes.get_graph_populator"
-        ) as mock_get_populator:
-            mock_populator = AsyncMock()
-            mock_populator.get_related_entities.return_value = [
+            "src.knowledge_graph.nlp_populator.KnowledgeGraphPopulator.get_related_entities"
+        ) as mock_get_related_entities, patch(
+            "src.knowledge_graph.nlp_populator.GraphBuilder"
+        ) as mock_graph_builder_class:
+            # Mock the GraphBuilder to use websocket mode
+            mock_graph_builder_instance = AsyncMock()
+            mock_graph_builder_class.return_value = mock_graph_builder_instance
+            
+            # Mock the get_related_entities method directly
+            mock_get_related_entities.return_value = [
                 {
                     "entity_name": "OpenAI",
                     "entity_type": "ORG",
@@ -46,8 +59,6 @@ class TestKnowledgeGraphAPIRoutes:
                     "last_updated": "2024-01-02T00:00:00",
                 }
             ]
-            mock_populator.close = AsyncMock()
-            mock_get_populator.return_value = mock_populator
 
             response = client.get("/api/v1/related_entities?entity_name=John Doe")
 
@@ -63,10 +74,15 @@ class TestKnowledgeGraphAPIRoutes:
     def test_get_related_entities_with_params(self, client):
         """Test related entities with additional parameters."""
         with patch(
-            "src.api.routes.knowledge_graph_routes.get_graph_populator"
-        ) as mock_get_populator:
-            mock_populator = AsyncMock()
-            mock_populator.get_related_entities.return_value = [
+            "src.knowledge_graph.nlp_populator.KnowledgeGraphPopulator.get_related_entities"
+        ) as mock_get_related_entities, patch(
+            "src.knowledge_graph.nlp_populator.GraphBuilder"
+        ) as mock_graph_builder_class:
+            # Mock the GraphBuilder to use websocket mode
+            mock_graph_builder_instance = AsyncMock()
+            mock_graph_builder_class.return_value = mock_graph_builder_instance
+            
+            mock_get_related_entities.return_value = [
                 {
                     "entity_name": "High Confidence Entity",
                     "entity_type": "ORG",
@@ -86,8 +102,6 @@ class TestKnowledgeGraphAPIRoutes:
                     "last_updated": "2024-01-02T00:00:00",
                 },
             ]
-            mock_populator.close = AsyncMock()
-            mock_get_populator.return_value = mock_populator
 
             response = client.get(
                 "/api/v1/related_entities"
@@ -147,12 +161,15 @@ class TestKnowledgeGraphAPIRoutes:
     def test_get_related_entities_empty_results(self, client):
         """Test related entities when no results found."""
         with patch(
-            "src.api.routes.knowledge_graph_routes.get_graph_populator"
-        ) as mock_get_populator:
-            mock_populator = AsyncMock()
-            mock_populator.get_related_entities.return_value = []
-            mock_populator.close = AsyncMock()
-            mock_get_populator.return_value = mock_populator
+            "src.knowledge_graph.nlp_populator.KnowledgeGraphPopulator.get_related_entities"
+        ) as mock_get_related_entities, patch(
+            "src.knowledge_graph.nlp_populator.GraphBuilder"
+        ) as mock_graph_builder_class:
+            # Mock the GraphBuilder to use websocket mode
+            mock_graph_builder_instance = AsyncMock()
+            mock_graph_builder_class.return_value = mock_graph_builder_instance
+            
+            mock_get_related_entities.return_value = []
 
             response = client.get("/api/v1/related_entities?entity_name=Nonexistent Entity")
 

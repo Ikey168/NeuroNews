@@ -123,6 +123,9 @@ async def get_related_entities_endpoint(
         )
         return response
 
+    except HTTPException:
+        # Re-raise HTTPExceptions (like 400 validation errors) as-is
+        raise
     except Exception as e:
         logger.error(
             "Error processing related entities request for {0}: {1}".format(

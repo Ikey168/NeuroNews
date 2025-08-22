@@ -63,6 +63,7 @@ class KnowledgeGraphPopulator:
         neptune_endpoint: str,
         ner_processor: Optional[NERProcessor] = None,
         article_processor: Optional[ArticleProcessor] = None,
+        force_websocket_mode: bool = False,
     ):
         """
         Initialize the knowledge graph populator.
@@ -71,8 +72,9 @@ class KnowledgeGraphPopulator:
             neptune_endpoint: AWS Neptune database endpoint
             ner_processor: Named Entity Recognition processor
             article_processor: Article processing component
+            force_websocket_mode: Force websocket mode for testing
         """
-        self.graph_builder = GraphBuilder(neptune_endpoint)
+        self.graph_builder = GraphBuilder(neptune_endpoint, force_websocket_mode=force_websocket_mode)
         self.ner_processor = ner_processor or NERProcessor()
         self.article_processor = article_processor  # Keep as None if not provided
 
