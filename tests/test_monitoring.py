@@ -169,57 +169,59 @@ class TestSNSAlertManager:
     @pytest.mark.asyncio
     async def test_send_alert(self):
         """Test sending alerts."""
-        manager = SNSAlertManager(
-            topic_arn="arn:aws:sns:us-east-1:123456789012:test-topic",
-            region_name="us-east-1",
-        )
+        with mock_aws():
+            manager = SNSAlertManager(
+                topic_arn="arn:aws:sns:us-east-1:123456789012:test-topic",
+                region_name="us-east-1",
+            )
 
-        alert = Alert(
-            alert_type=AlertType.SCRAPER_FAILURE,
-            severity=AlertSeverity.ERROR,
-            title="Test Alert",
-            message="This is a test alert",
-            timestamp=time.time(),
-            metadata={"test": True},
-        )
+            alert = Alert(
+                alert_type=AlertType.SCRAPER_FAILURE,
+                severity=AlertSeverity.ERROR,
+                title="Test Alert",
+                message="This is a test alert",
+                timestamp=time.time(),
+                metadata={"test": True},
+            )
 
-        with patch.object(manager.sns, "publish") as mock_publish:
-            mock_publish.return_value = {"MessageId": "test-123"}
+            with patch.object(manager.sns, "publish") as mock_publish:
+                mock_publish.return_value = {"MessageId": "test-123"}
 
-            result = await manager.send_alert(alert)
-            assert result
-            mock_publish.assert_called_once()
+                result = await manager.send_alert(alert)
+                assert result
+                mock_publish.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_rate_limiting(self):
         """Test alert rate limiting."""
-        manager = SNSAlertManager(
-            topic_arn="arn:aws:sns:us-east-1:123456789012:test-topic",
-            region_name="us-east-1",
-            max_alerts_per_window=2,
-        )
+        with mock_aws():
+            manager = SNSAlertManager(
+                topic_arn="arn:aws:sns:us-east-1:123456789012:test-topic",
+                region_name="us-east-1",
+                max_alerts_per_window=2,
+            )
 
-        alert = Alert(
-            alert_type=AlertType.SCRAPER_FAILURE,
-            severity=AlertSeverity.INFO,
-            title="Test Alert",
-            message="This is a test alert",
-            timestamp=time.time(),
-            metadata={},
-        )
+            alert = Alert(
+                alert_type=AlertType.SCRAPER_FAILURE,
+                severity=AlertSeverity.INFO,
+                title="Test Alert",
+                message="This is a test alert",
+                timestamp=time.time(),
+                metadata={},
+            )
 
-        with patch.object(manager.sns, "publish") as mock_publish:
-            mock_publish.return_value = {"MessageId": "test-123"}
+            with patch.object(manager.sns, "publish") as mock_publish:
+                mock_publish.return_value = {"MessageId": "test-123"}
 
-            # First two alerts should go through
-            result1 = await manager.send_alert(alert)
-            result2 = await manager.send_alert(alert)
-            assert result1
-            assert result2
+                # First two alerts should go through
+                result1 = await manager.send_alert(alert)
+                result2 = await manager.send_alert(alert)
+                assert result1
+                assert result2
 
-            # Third alert should be rate limited
-            result3 = await manager.send_alert(alert)
-            assert result3 is False
+                # Third alert should be rate limited
+                result3 = await manager.send_alert(alert)
+                assert result3 is False
 
 
 class TestEnhancedRetryManager:

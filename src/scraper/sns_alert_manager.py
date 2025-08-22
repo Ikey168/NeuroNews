@@ -1,6 +1,13 @@
 """
 SNS integration for sending alerts when scrapers fail multiple times.
-Provides intelligent alerting with rate limiting and escalation.
+Provides intelligent alerting with rate limiting and escal        try:
+            # Prepare SNS message
+            subject = "[{0}] NeuroNews Scraper Alert: {1}".format(
+                alert.severity.value, alert.title
+            )
+            message = alert.to_sns_message()      subject = "[{0}] NeuroNews Scraper Alert: {1}".format(
+                alert.severity.value, alert.title
+            )on.
 """
 
 import json
