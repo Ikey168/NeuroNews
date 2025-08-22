@@ -10,7 +10,7 @@ import hashlib
 import json
 import sys
 from datetime import datetime, timezone
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -119,6 +119,7 @@ class TestS3ArticleStorage:
 
         assert hash_result == expected_hash
 
+    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_store_raw_article_success(
         self, mock_boto3, s3_config, mock_s3_client, sample_article
@@ -138,6 +139,7 @@ class TestS3ArticleStorage:
 
         mock_s3_client.put_object.assert_called_once()
 
+    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_store_raw_article_missing_fields(
         self, mock_boto3, s3_config, mock_s3_client
@@ -151,6 +153,7 @@ class TestS3ArticleStorage:
         with pytest.raises(ValueError, match="Missing required fields"):
             await storage.store_raw_article(incomplete_article)
 
+    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_store_processed_article_success(
         self, mock_boto3, s3_config, mock_s3_client, sample_article
@@ -176,6 +179,7 @@ class TestS3ArticleStorage:
 
         mock_s3_client.put_object.assert_called_once()
 
+    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_retrieve_article_success(
         self, mock_boto3, s3_config, mock_s3_client
@@ -196,6 +200,7 @@ class TestS3ArticleStorage:
             Bucket=s3_config.bucket_name, Key="test/key.json"
         )
 
+    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_verify_article_integrity_success(
         self, mock_boto3, s3_config, mock_s3_client
@@ -216,6 +221,7 @@ class TestS3ArticleStorage:
 
         assert is_valid is True
 
+    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_verify_article_integrity_failure(
         self, mock_boto3, s3_config, mock_s3_client
@@ -234,6 +240,7 @@ class TestS3ArticleStorage:
 
         assert is_valid is False
 
+    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_list_articles_by_date(self, mock_boto3, s3_config, mock_s3_client):
         """Test listing articles by date."""
@@ -256,6 +263,7 @@ class TestS3ArticleStorage:
         assert len(articles) == 2
         assert all("2025/08/13" in key for key in articles)
 
+    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_batch_store_raw_articles(
         self, mock_boto3, s3_config, mock_s3_client
@@ -280,6 +288,7 @@ class TestS3ArticleStorage:
         assert all(isinstance(r, ArticleMetadata) for r in results)
         assert mock_s3_client.put_object.call_count == 3
 
+    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_get_storage_statistics(self, mock_boto3, s3_config, mock_s3_client):
         """Test getting storage statistics."""
@@ -304,6 +313,7 @@ class TestS3ArticleStorage:
         assert "total_count" in stats
         assert isinstance(stats["raw_articles"]["count"], int)
 
+    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_s3_client_unavailable(self, mock_boto3, s3_config):
         """Test behavior when S3 client is unavailable."""
@@ -341,13 +351,14 @@ class TestS3IngestionFunctions:
             for i in range(5)
         ]
 
+    @pytest.mark.asyncio
     @patch("src.database.s3_storage.S3ArticleStorage")
     async def test_ingest_scraped_articles_success(
         self, mock_storage_class, s3_config, sample_articles
     ):
         """Test successful article ingestion."""
         # Mock storage instance
-        mock_storage = Mock()
+        mock_storage = AsyncMock()
         mock_storage.batch_store_raw_articles.return_value = [
             ArticleMetadata(
                 article_id="id{0}".format(i),
@@ -375,9 +386,10 @@ class TestS3IngestionFunctions:
         assert result["status"] == "success"
         assert result["total_articles"] == 5
         assert result["stored_articles"] == 5
-        assert result[f"ailed_articles"] == 0
+        assert result["failed_articles"] == 0
         assert len(result["stored_keys"]) == 5
 
+    @pytest.mark.asyncio
     @patch("src.database.s3_storage.S3ArticleStorage")
     async def test_ingest_empty_articles(self, mock_storage_class, s3_config):
         """Test ingestion with empty articles list."""
@@ -387,13 +399,14 @@ class TestS3IngestionFunctions:
         assert result["total_articles"] == 0
         assert result["stored_articles"] == 0
 
+    @pytest.mark.asyncio
     @patch("src.database.s3_storage.S3ArticleStorage")
     async def test_verify_s3_data_consistency_success(
         self, mock_storage_class, s3_config
     ):
         """Test successful data consistency verification."""
         # Mock storage instance
-        mock_storage = Mock()
+        mock_storage = AsyncMock()
         mock_storage.list_articles_by_prefix.return_value = [
             "raw_articles/2025/08/13/article1.json",
             "raw_articles/2025/08/13/article2.json",
@@ -410,13 +423,14 @@ class TestS3IngestionFunctions:
         assert result["invalid_articles"] == 0
         assert result["integrity_rate"] == 100.0
 
+    @pytest.mark.asyncio
     @patch("src.database.s3_storage.S3ArticleStorage")
     async def test_verify_s3_data_consistency_with_failures(
         self, mock_storage_class, s3_config
     ):
         """Test data consistency verification with some failures."""
         # Mock storage instance
-        mock_storage = Mock()
+        mock_storage = AsyncMock()
         mock_storage.list_articles_by_prefix.return_value = [
             "raw_articles/2025/08/13/article1.json",
             "raw_articles/2025/08/13/article2.json",

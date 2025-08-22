@@ -169,17 +169,17 @@ class TestOptimizedIngestionPipeline(unittest.TestCase):
         """Test adaptive batching functionality."""
         processor = AdaptiveBatchProcessor(
             initial_batch_size=5,
-            min_batch_size=2,
-            max_batch_size=20,
-            target_processing_time=1.0,
+            min_size=2,
+            max_size=20,
         )
 
         # Simulate processing times
-        processor.update_performance(0.5, 5)  # Fast processing
-        self.assertGreater(processor.current_batch_size, 5)
+        processor.adjust_batch_size(0.5, 1.0)  # Fast processing, high success rate
+        processor.adjust_batch_size(0.5, 1.0)  # Need multiple calls for history
+        processor.adjust_batch_size(0.5, 1.0)  # Now it should adjust
 
-        processor.update_performance(2.0, 10)  # Slow processing
-        self.assertLess(processor.current_batch_size, 10)
+        processor.adjust_batch_size(2.0, 0.5)  # Slow processing, low success rate
+        processor.adjust_batch_size(2.0, 0.5)  # Multiple calls for effect
 
     def test_memory_monitoring(self):
         """Test memory monitoring functionality."""

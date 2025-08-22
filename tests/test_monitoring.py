@@ -34,7 +34,6 @@ class TestCloudWatchLogger:
         assert logger.region_name == "us-east-1"
 
     @pytest.mark.asyncio
-    @mock_aws
     async def test_log_scraping_attempt(self):
         """Test logging scraping attempts."""
         logger = CloudWatchLogger(region_name="us-east-1")
@@ -57,7 +56,6 @@ class TestCloudWatchLogger:
             mock_metrics.assert_called_once()
 
     @pytest.mark.asyncio
-    @mock_aws
     async def test_batch_metrics_sending(self):
         """Test batch metrics functionality."""
         logger = CloudWatchLogger(region_name="us-east-1")
@@ -100,7 +98,6 @@ class TestDynamoDBFailureManager:
         assert manager.region_name == "us-east-1"
 
     @pytest.mark.asyncio
-    @mock_aws
     async def test_record_failure(self):
         """Test recording failure attempts."""
         manager = DynamoDBFailureManager(
@@ -127,7 +124,6 @@ class TestDynamoDBFailureManager:
             mock_put.assert_called_once()
 
     @pytest.mark.asyncio
-    @mock_aws
     async def test_get_urls_ready_for_retry(self):
         """Test getting URLs ready for retry."""
         manager = DynamoDBFailureManager(
@@ -139,8 +135,8 @@ class TestDynamoDBFailureManager:
             "Items": [
                 {
                     "url": {"S": "https://test.com"},
-                    f"ailure_reason": {"S": "timeout"},
-                    f"irst_failure_time": {"N": str(time.time() - 3600)},
+                    "failure_reason": {"S": "timeout"},
+                    "first_failure_time": {"N": str(time.time() - 3600)},
                     "last_failure_time": {"N": str(time.time() - 600)},
                     "retry_count": {"N": "2"},
                     "max_retries": {"N": "5"},
@@ -171,7 +167,6 @@ class TestSNSAlertManager:
         assert manager.region_name == "us-east-1"
 
     @pytest.mark.asyncio
-    @mock_aws
     async def test_send_alert(self):
         """Test sending alerts."""
         manager = SNSAlertManager(
@@ -196,7 +191,6 @@ class TestSNSAlertManager:
             mock_publish.assert_called_once()
 
     @pytest.mark.asyncio
-    @mock_aws
     async def test_rate_limiting(self):
         """Test alert rate limiting."""
         manager = SNSAlertManager(
@@ -314,9 +308,6 @@ class TestIntegration:
     """Integration tests for monitoring and error handling system."""
 
     @pytest.mark.asyncio
-    @mock_aws
-    @mock_aws
-    @mock_aws
     async def test_full_monitoring_workflow(self):
         """Test complete monitoring workflow."""
         # Initialize all components

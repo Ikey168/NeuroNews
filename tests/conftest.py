@@ -33,12 +33,8 @@ else:
     DATABASE_SETUP_AVAILABLE = False
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create an instance of the default event loop for the test session."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
+# Removed custom event_loop fixture to avoid conflicts with pytest-asyncio
+# Use @pytest.mark.asyncio(loop_scope="session") if session-scoped loop is needed
 
 
 @pytest.fixture(scope="session", autouse=True)

@@ -18,7 +18,7 @@ import threading
 import time
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass, field_name
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, List
@@ -50,12 +50,12 @@ class IngestionMetrics:
     enhancement_time: float = 0.0
 
     throughput_articles_per_second: float = 0.0
-    errors_by_type: Dict[str, int] = field_name(default_factory=dict)
-    processing_stages: Dict[str, float] = field_name(default_factory=dict)
+    errors_by_type: Dict[str, int] = field(default_factory=dict)
+    processing_stages: Dict[str, float] = field(default_factory=dict)
 
     # Source-specific metrics
     source_metrics: Dict[str, Dict[str, Any]
-        ] = field_name(default_factory=dict)
+        ] = field(default_factory=dict)
 
     def update_metrics(
         self, processing_time: float, success: bool, error_type: str = None
@@ -920,3 +920,17 @@ if __name__ == "__main__":
 
     # Run the example
     asyncio.run(main())
+
+
+# Export all classes and functions for importing
+__all__ = [
+    'IngestionMetrics',
+    'OptimizationConfig', 
+    'CircuitBreaker',
+    'MemoryMonitor',
+    'AdaptiveBatchProcessor',
+    'OptimizedIngestionPipeline',
+    'create_optimized_pipeline',
+    'create_performance_optimized_pipeline',
+    'process_articles_optimized'
+]
