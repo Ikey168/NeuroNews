@@ -238,7 +238,9 @@ class TestMultiLanguageArticleProcessor:
     def setup_method(self):
         with patch("psycopg2.connect"), patch(
             "src.nlp.sentiment_analysis.SentimentAnalyzer"
-        ), patch.object(MultiLanguageArticleProcessor, "_initialize_database"):
+        ), patch.object(MultiLanguageArticleProcessor, "_initialize_database"), patch.object(
+            MultiLanguageArticleProcessor, "_create_translation_tables"
+        ):
             self.processor = MultiLanguageArticleProcessor(
                 redshift_host="localhost",
                 redshift_port=5439,
@@ -290,7 +292,9 @@ class TestMultiLanguageArticleProcessor:
             assert "translated_content" in result or result["translated_text"] is not None
 
     @patch("psycopg2.connect")
-    def test_database_integration(self, mock_connect):
+    @patch("src.nlp.multi_language_processor.MultiLanguageArticleProcessor._create_translation_tables")
+    @patch("src.nlp.multi_language_processor.MultiLanguageArticleProcessor._initialize_database")
+    def test_database_integration(self, mock_init_db, mock_create_tables, mock_connect):
         """Test database storage integration."""
         mock_cursor = Mock()
         from unittest.mock import MagicMock
@@ -367,18 +371,23 @@ class TestMultiLanguagePipeline:
 
     def test_pipeline_initialization(self):
         """Test pipeline initialization."""
-        pipeline = self.pipeline
-        pipeline.open_spider(self.spider)
+        with patch.object(MultiLanguageArticleProcessor, "_create_translation_tables"), patch.object(
+            MultiLanguageArticleProcessor, "_initialize_database"
+        ):
+            pipeline = self.pipeline
+            pipeline.open_spider(self.spider)
 
-        assert pipeline.enabled is True
-        assert pipeline.target_language == "en"
-        assert pipeline.quality_threshold == 0.7
+            assert pipeline.enabled is True
+            assert pipeline.target_language == "en"
+            assert pipeline.quality_threshold == 0.7
 
     def test_pipeline_initialization_with_patch(self):
         """Test pipeline initialization with patched sentiment analyzer."""
         with patch("psycopg2.connect"), patch(
             "src.nlp.sentiment_analysis.SentimentAnalyzer"
-        ) as mock_analyzer:
+        ) as mock_analyzer, patch.object(MultiLanguageArticleProcessor, "_create_translation_tables"), patch.object(
+            MultiLanguageArticleProcessor, "_initialize_database"
+        ):
             mock_analyzer.return_value = Mock()
             pipeline = self.pipeline
             pipeline.open_spider(self.spider)
@@ -392,7 +401,9 @@ class TestMultiLanguagePipeline:
 
         with patch("psycopg2.connect"), patch(
             "src.nlp.sentiment_analysis.SentimentAnalyzer"
-        ) as mock_analyzer:
+        ) as mock_analyzer, patch.object(MultiLanguageArticleProcessor, "_create_translation_tables"), patch.object(
+            MultiLanguageArticleProcessor, "_initialize_database"
+        ):
             mock_analyzer.return_value = Mock()
             # Initialize pipeline first
             self.pipeline.open_spider(self.spider)
@@ -437,7 +448,9 @@ class TestMultiLanguagePipeline:
 
         with patch("psycopg2.connect"), patch(
             "src.nlp.sentiment_analysis.SentimentAnalyzer"
-        ) as mock_analyzer:
+        ) as mock_analyzer, patch.object(MultiLanguageArticleProcessor, "_create_translation_tables"), patch.object(
+            MultiLanguageArticleProcessor, "_initialize_database"
+        ):
             mock_analyzer.return_value = Mock()
             pipeline = self.pipeline
             pipeline.open_spider(spider)
@@ -524,7 +537,7 @@ class TestIntegrationWorkflow:
         # Create processor
         with patch("src.nlp.sentiment_analysis.SentimentAnalyzer") as mock_analyzer, patch.object(
             MultiLanguageArticleProcessor, "_initialize_database"
-        ):
+        ), patch.object(MultiLanguageArticleProcessor, "_create_translation_tables"):
             mock_analyzer.return_value = Mock()
 
             processor = MultiLanguageArticleProcessor(
@@ -558,7 +571,9 @@ class TestIntegrationWorkflow:
         """Test error handling in processing workflow."""
         with patch("psycopg2.connect"), patch(
             "src.nlp.sentiment_analysis.SentimentAnalyzer"
-        ) as mock_analyzer, patch.object(MultiLanguageArticleProcessor, "_initialize_database"):
+        ) as mock_analyzer, patch.object(MultiLanguageArticleProcessor, "_initialize_database"), patch.object(
+            MultiLanguageArticleProcessor, "_create_translation_tables"
+        ):
             mock_analyzer.return_value = Mock()
 
             processor = MultiLanguageArticleProcessor(

@@ -90,7 +90,8 @@ async def mocked_graph():
         return_value=mock_driver_remote_connection_instance,
     ):
 
-        graph_instance = GraphBuilder(NEPTUNE_MOCK_ENDPOINT)
+        # Force websocket mode to bypass the built-in test detection
+        graph_instance = GraphBuilder(NEPTUNE_MOCK_ENDPOINT, force_websocket_mode=True)
         await graph_instance.connect()
 
         # Attach operations log for testing verification

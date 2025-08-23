@@ -749,8 +749,8 @@ class SentimentTrendAnalyzer:
         # Create description
         direction = "improved" if current_sentiment > previous_sentiment else "declined"
         description = (
-            f"Sentiment for '{topic}' has {direction} by {change_percentage}% "
-            "({0:.3f} → {1}) over {2}".format(previous_sentiment, current_sentiment)
+            f"Sentiment for '{topic}' has {direction} by {change_percentage:.1f}% "
+            f"({previous_sentiment:.3f} → {current_sentiment:.3f}) over {time_window}"
         )
 
         # Calculate confidence based on change magnitude and affected articles

@@ -7,35 +7,45 @@ import sys
 from unittest.mock import MagicMock, Mock, patch
 import pytest
 
-# Create a comprehensive mock for psycopg2 BEFORE any imports
-mock_psycopg2 = MagicMock()
-mock_connection = MagicMock()
-mock_cursor = MagicMock()
+# Check if psycopg2 is already mocked by another test file
+if "psycopg2" not in sys.modules or not hasattr(sys.modules["psycopg2"], 'connect'):
+    # Create a comprehensive mock for psycopg2 ONLY if not already present
+    mock_psycopg2 = MagicMock()
+    mock_connection = MagicMock()
+    mock_cursor = MagicMock()
 
-# Setup cursor context manager
-mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
-mock_cursor.__exit__ = MagicMock(return_value=None)
-mock_cursor.fetchone = MagicMock(return_value=None)
-mock_cursor.fetchall = MagicMock(return_value=[])
-mock_cursor.fetchmany = MagicMock(return_value=[])
-mock_cursor.execute = MagicMock()
+    # Setup cursor context manager
+    mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+    mock_cursor.__exit__ = MagicMock(return_value=None)
+    mock_cursor.fetchone = MagicMock(return_value=None)
+    mock_cursor.fetchall = MagicMock(return_value=[])
+    mock_cursor.fetchmany = MagicMock(return_value=[])
+    mock_cursor.execute = MagicMock()
 
-# Setup connection context manager and cursor method
-mock_connection.cursor.return_value = mock_cursor
-mock_connection.__enter__ = MagicMock(return_value=mock_connection)
-mock_connection.__exit__ = MagicMock(return_value=None)
-mock_connection.commit = MagicMock()
-mock_connection.rollback = MagicMock()
+    # Setup connection context manager and cursor method
+    mock_connection.cursor.return_value = mock_cursor
+    mock_connection.__enter__ = MagicMock(return_value=mock_connection)
+    mock_connection.__exit__ = MagicMock(return_value=None)
+    mock_connection.commit = MagicMock()
+    mock_connection.rollback = MagicMock()
 
-# Setup connect function
-mock_psycopg2.connect = MagicMock(return_value=mock_connection)
-mock_psycopg2.extras = MagicMock()
-mock_psycopg2.extras.RealDictCursor = MagicMock()
-mock_psycopg2.extras.execute_batch = MagicMock()
+    # Setup connect function
+    mock_psycopg2.connect = MagicMock(return_value=mock_connection)
+    mock_psycopg2.extras = MagicMock()
+    mock_psycopg2.extras.RealDictCursor = MagicMock()
+    mock_psycopg2.extras.execute_batch = MagicMock()
 
-# Replace sys.modules BEFORE imports
-sys.modules["psycopg2"] = mock_psycopg2
-sys.modules["psycopg2.extras"] = mock_psycopg2.extras
+    # Replace sys.modules ONLY if not already mocked
+    sys.modules["psycopg2"] = mock_psycopg2
+    sys.modules["psycopg2.extras"] = mock_psycopg2.extras
+else:
+    # Use existing mock and ensure it has the attributes we need
+    mock_psycopg2 = sys.modules["psycopg2"]
+    if not hasattr(mock_psycopg2, 'extras'):
+        mock_psycopg2.extras = MagicMock()
+        mock_psycopg2.extras.RealDictCursor = MagicMock()
+        mock_psycopg2.extras.execute_batch = MagicMock()
+        sys.modules["psycopg2.extras"] = mock_psycopg2.extras
 
 # NOW safe to import our multi-language components
 from src.scraper.pipelines.multi_language_pipeline import (
@@ -257,9 +267,9 @@ class TestMultiLanguageArticleProcessor:
     def setup_method(self):
         # Patch the _initialize_database method to prevent actual database
         # connections
-        with patch.object(MultiLanguageArticleProcessor, "_initialize_database"), patch(
-            "src.nlp.sentiment_analysis.SentimentAnalyzer"
-        ):
+        with patch.object(MultiLanguageArticleProcessor, "_create_translation_tables"), \
+             patch.object(MultiLanguageArticleProcessor, "_initialize_database"), \
+             patch("src.nlp.sentiment_analysis.SentimentAnalyzer"):
 
             self.processor = MultiLanguageArticleProcessor(
                 redshift_host="localhost",  # Use localhost instead of test_host
@@ -269,9 +279,13 @@ class TestMultiLanguageArticleProcessor:
                 redshift_password="test_pass",
             )
 
-    @patch("psycopg2.connect")
-    def test_language_detection_workflow(self, mock_connect):
+    def test_language_detection_workflow(self):
         """Test the language detection workflow."""
+        # Use the global mock that's already established
+        import sys
+        psycopg2_mock = sys.modules["psycopg2"]
+        mock_connect = psycopg2_mock.connect
+        
         # Mock database connection
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
@@ -319,18 +333,21 @@ class TestMultiLanguageArticleProcessor:
                 assert result["translation_performed"] is True
                 assert "translated_content" in result
 
-    @patch("psycopg2.connect")
-    def test_database_integration(self, mock_connect):
+    def test_database_integration(self):
         """Test database storage integration."""
-        mock_cursor = Mock()
-        mock_conn = Mock()
-        mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
-        mock_conn.cursor.return_value.__exit__ = Mock(return_value=None)
-        mock_conn.__enter__ = Mock(return_value=mock_conn)
-        mock_conn.__exit__ = Mock(return_value=None)
-        mock_connect.return_value = mock_conn
+        # Work with the already established global mock
+        import sys
+        psycopg2_mock = sys.modules["psycopg2"]
+        mock_connection = psycopg2_mock.connect.return_value
+        mock_cursor = mock_connection.cursor.return_value
+        
+        # Reset mock for this test
+        mock_cursor.reset_mock()
+        mock_connection.reset_mock()
 
-        with patch("src.nlp.sentiment_analysis.SentimentAnalyzer"):
+        with patch.object(MultiLanguageArticleProcessor, "_create_translation_tables"), \
+             patch.object(MultiLanguageArticleProcessor, "_initialize_database"), \
+             patch("src.nlp.sentiment_analysis.SentimentAnalyzer"):
             processor = MultiLanguageArticleProcessor(
                 redshift_host="localhost",
                 redshift_port=5439,
@@ -340,7 +357,7 @@ class TestMultiLanguageArticleProcessor:
             )
 
         # Mock the connection attribute for the processor
-        processor.connection = mock_conn
+        processor.connection = mock_connection
 
         # Test language detection storage
         detection_data = {
@@ -547,9 +564,13 @@ class TestIntegrationWorkflow:
         }
 
     @patch("boto3.client")
-    @patch("psycopg2.connect")
-    def test_full_processing_workflow(self, mock_db, mock_boto):
+    def test_full_processing_workflow(self, mock_boto):
         """Test complete multi-language processing workflow."""
+        # Use the global mock that's already established
+        import sys
+        psycopg2_mock = sys.modules["psycopg2"]
+        mock_db = psycopg2_mock.connect
+        
         # Setup mocks
         mock_translate = Mock()
         mock_translate.translate_text.return_value = {
@@ -579,16 +600,21 @@ class TestIntegrationWorkflow:
 
     def test_error_handling_workflow(self):
         """Test error handling in processing workflow."""
-        with patch("psycopg2.connect") as mock_connect, patch(
+        with patch(
             "src.nlp.sentiment_analysis.SentimentAnalyzer"
-        ) as mock_analyzer_class, patch.object(
-            MultiLanguageArticleProcessor, "_initialize_database"
-        ):
+        ) as mock_analyzer_class, \
+             patch.object(MultiLanguageArticleProcessor, "_initialize_database"), \
+             patch.object(MultiLanguageArticleProcessor, "_create_translation_tables"):
 
             mock_analyzer = Mock()
             mock_analyzer_class.return_value = mock_analyzer
 
-            # Mock the context manager for database connection
+            # Use the global mock that's already configured
+            import sys
+            psycopg2_mock = sys.modules["psycopg2"]
+            mock_connect = psycopg2_mock.connect
+            
+            # Ensure the global mock is configured for this test
             mock_cursor = Mock()
             mock_conn = Mock()
             mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)

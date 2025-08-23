@@ -262,6 +262,10 @@ class MemoryMonitor:
             "utilization_percent": (self.current_usage / self.max_memory_mb) * 100,
         }
 
+    def get_memory_usage_mb(self) -> float:
+        """Get current memory usage in MB."""
+        return self.current_usage
+
 
 class AdaptiveBatchProcessor:
     """Adaptive batch processor that optimizes batch sizes based on performance."""
