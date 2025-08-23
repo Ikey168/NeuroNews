@@ -1,0 +1,198 @@
+---
+# NeuroNews Scrapers & NLP Jobs Deployment Playbook
+- name: "Deploy Scrapers & NLP Jobs"
+  hosts: localhost
+  gather_facts: yes
+  vars:
+    deployment_timestamp: "{{ ansible_date_time.epoch }}"
+    job_namespace: "neuronews"
+    log_retention_days: 7
+    retry_limit: 3
+    cronjob_schedule_scraper: "0 * * * *"  # hourly
+    cronjob_schedule_nlp: "30 * * * *"      # hourly, offset
+  tasks:
+    - name: "Create namespace for jobs"
+      k8s:
+        name: "{{ job_namespace }}"
+        api_version: v1
+        kind: Namespace
+        state: present
+        definition:
+          metadata:
+            labels:
+              app: "neuronews"
+              managed-by: "ansible"
+    - name: "Deploy Scrapy CronJob"
+      k8s:
+        state: present
+        definition:
+          apiVersion: batch/v1
+          kind: CronJob
+          metadata:
+            name: "scrapy-news-cronjob"
+            namespace: "{{ job_namespace }}"
+            labels:
+              app: "scrapy-news"
+              component: "scraper"
+          spec:
+            schedule: "{{ cronjob_schedule_scraper }}"
+            successfulJobsHistoryLimit: 3
+            failedJobsHistoryLimit: 3
+            jobTemplate:
+              spec:
+                backoffLimit: {{ retry_limit }}
+                template:
+                  metadata:
+                    labels:
+                      app: "scrapy-news"
+                  spec:
+                    restartPolicy: OnFailure
+                    containers:
+                    - name: scrapy-news
+                      image: "neuronews/scraper:latest"
+                      args: ["python", "src/scraper/run.py"]
+                      resources:
+                        requests:
+                          cpu: "100m"
+                          memory: "128Mi"
+                        limits:
+                          cpu: "500m"
+                          memory: "512Mi"
+                      env:
+                      - name: LOG_LEVEL
+                        value: "INFO"
+                      - name: AWS_CLOUDWATCH_ENABLED
+                        value: "true"
+                      volumeMounts:
+                      - name: logs
+                        mountPath: /var/log/scraper
+                    volumes:
+                    - name: logs
+                      emptyDir: {}
+    - name: "Deploy NLP Job"
+      k8s:
+        state: present
+        definition:
+          apiVersion: batch/v1
+          kind: CronJob
+          metadata:
+            name: "nlp-job-cronjob"
+            namespace: "{{ job_namespace }}"
+            labels:
+              app: "nlp-job"
+              component: "nlp"
+          spec:
+            schedule: "{{ cronjob_schedule_nlp }}"
+            successfulJobsHistoryLimit: 3
+            failedJobsHistoryLimit: 3
+            jobTemplate:
+              spec:
+                backoffLimit: {{ retry_limit }}
+                template:
+                  metadata:
+                    labels:
+                      app: "nlp-job"
+                  spec:
+                    restartPolicy: OnFailure
+                    containers:
+                    - name: nlp-job
+                      image: "neuronews/nlp:latest"
+                      args: ["python", "src/nlp/kubernetes/ai_processor.py"]
+                      resources:
+                        requests:
+                          cpu: "200m"
+                          memory: "256Mi"
+                        limits:
+                          cpu: "1000m"
+                          memory: "2Gi"
+                      env:
+                      - name: LOG_LEVEL
+                        value: "INFO"
+                      - name: AWS_CLOUDWATCH_ENABLED
+                        value: "true"
+                      volumeMounts:
+                      - name: logs
+                        mountPath: /var/log/nlp
+                    volumes:
+                    - name: logs
+                      emptyDir: {}
+    - name: "Verify CronJobs are created"
+      k8s_info:
+        api_version: batch/v1
+        kind: CronJob
+        namespace: "{{ job_namespace }}"
+      register: cronjobs
+    - name: "Display CronJob status"
+      debug:
+        msg: |
+          ============================================
+          CronJobs Deployed:
+          {% for job in cronjobs.resources %}
+          - {{ job.metadata.name }} (schedule: {{ job.spec.schedule }})
+          {% endfor %}
+          ============================================
+    - name: "Test job execution (manual trigger)"
+      k8s:
+        state: present
+        definition:
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: "scrapy-news-test-{{ deployment_timestamp }}"
+            namespace: "{{ job_namespace }}"
+            labels:
+              app: "scrapy-news"
+              test: "true"
+          spec:
+            template:
+              metadata:
+                labels:
+                  app: "scrapy-news"
+                  test: "true"
+              spec:
+                restartPolicy: Never
+                containers:
+                - name: scrapy-news
+                  image: "neuronews/scraper:latest"
+                  args: ["python", "src/scraper/run.py"]
+                  env:
+                  - name: LOG_LEVEL
+                    value: "DEBUG"
+                  - name: AWS_CLOUDWATCH_ENABLED
+                    value: "true"
+                  volumeMounts:
+                  - name: logs
+                    mountPath: /var/log/scraper
+                volumes:
+                - name: logs
+                  emptyDir: {}
+    - name: "Wait for test job to complete"
+      k8s_info:
+        api_version: batch/v1
+        kind: Job
+        name: "scrapy-news-test-{{ deployment_timestamp }}"
+        namespace: "{{ job_namespace }}"
+        wait: true
+        wait_condition:
+          type: Complete
+          status: "True"
+        wait_timeout: 300
+    - name: "Get logs from test job pod"
+      k8s_log:
+        api_version: v1
+        kind: Pod
+        namespace: "{{ job_namespace }}"
+        label_selectors:
+          - "app=scrapy-news"
+          - "test=true"
+      register: test_job_logs
+    - name: "Display test job logs"
+      debug:
+        var: test_job_logs.log
+    - name: "Clean up test job"
+      k8s:
+        state: absent
+        api_version: batch/v1
+        kind: Job
+        name: "scrapy-news-test-{{ deployment_timestamp }}"
+        namespace: "{{ job_namespace }}"
