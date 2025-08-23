@@ -49,7 +49,7 @@ except ImportError:
 
 # Try to import influence analysis routes (Issue #40)
 try:
-    from src.api import influence_routes
+    from src.api.routes import influence_routes
 
     INFLUENCE_ANALYSIS_AVAILABLE = True
 except ImportError:
@@ -192,22 +192,22 @@ if INFLUENCE_ANALYSIS_AVAILABLE:
 @app.get("/")
 async def root():
     """Root endpoint."""
-        return {
-            "status": "ok",
-            "message": "NeuroNews API is running",
-            "features": {
-                "rate_limiting": RATE_LIMITING_AVAILABLE,
-                "rbac": RBAC_AVAILABLE,
-                "api_key_management": API_KEY_MANAGEMENT_AVAILABLE,
-                "waf_security": WAF_SECURITY_AVAILABLE,
-                "enhanced_kg": ENHANCED_KG_AVAILABLE,
-                "event_timeline": EVENT_TIMELINE_AVAILABLE,
-                "quicksight": QUICKSIGHT_AVAILABLE,
-                "topic_routes": TOPIC_ROUTES_AVAILABLE,
-                "graph_search": GRAPH_SEARCH_AVAILABLE,
-                "influence_analysis": INFLUENCE_ANALYSIS_AVAILABLE,
-            },
-        }
+    return {
+        "status": "ok",
+        "message": "NeuroNews API is running",
+        "features": {
+            "rate_limiting": RATE_LIMITING_AVAILABLE,
+            "rbac": RBAC_AVAILABLE,
+            "api_key_management": API_KEY_MANAGEMENT_AVAILABLE,
+            "waf_security": WAF_SECURITY_AVAILABLE,
+            "enhanced_kg": ENHANCED_KG_AVAILABLE,
+            "event_timeline": EVENT_TIMELINE_AVAILABLE,
+            "quicksight": QUICKSIGHT_AVAILABLE,
+            "topic_routes": TOPIC_ROUTES_AVAILABLE,
+            "graph_search": GRAPH_SEARCH_AVAILABLE,
+            "influence_analysis": INFLUENCE_ANALYSIS_AVAILABLE,
+        },
+    }
 @app.get("/health")
 async def health_check():
     """Health check endpoint for monitoring."""

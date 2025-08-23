@@ -14,7 +14,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from src.knowledge_graph.influence_network_analyzer import InfluenceNetworkAnalyzer
-from src.api.influence_routes import router as influence_router
+from src.api.routes.influence_routes import router as influence_router
 
 
 class TestInfluenceNetworkAnalyzer:
