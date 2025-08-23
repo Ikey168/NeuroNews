@@ -1,0 +1,84 @@
+---
+# Backup current deployment tasks
+- name: "Check if current deployment exists"
+  k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    name: "{{ fastapi.name }}"
+    namespace: "{{ app.namespace }}"
+  register: current_deployment
+
+- name: "Create backup directory"
+  file:
+    path: "./backups/{{ deployment_timestamp }}"
+    state: directory
+    mode: '0755'
+  when: current_deployment.resources | length > 0
+
+- name: "Backup current deployment manifest"
+  copy:
+    content: "{{ current_deployment.resources[0] | to_nice_yaml }}"
+    dest: "./backups/{{ deployment_timestamp }}/deployment.yaml"
+  when: current_deployment.resources | length > 0
+
+- name: "Backup current service manifest"
+  k8s_info:
+    api_version: v1
+    kind: Service
+    name: "{{ fastapi.name }}-service"
+    namespace: "{{ app.namespace }}"
+  register: current_service
+
+- name: "Save service backup"
+  copy:
+    content: "{{ current_service.resources[0] | to_nice_yaml }}"
+    dest: "./backups/{{ deployment_timestamp }}/service.yaml"
+  when: current_service.resources | length > 0
+
+- name: "Backup configmaps"
+  k8s_info:
+    api_version: v1
+    kind: ConfigMap
+    namespace: "{{ app.namespace }}"
+    label_selectors:
+      - "app={{ app.name }}"
+  register: current_configmaps
+
+- name: "Save configmap backups"
+  copy:
+    content: "{{ item | to_nice_yaml }}"
+    dest: "./backups/{{ deployment_timestamp }}/configmap-{{ item.metadata.name }}.yaml"
+  loop: "{{ current_configmaps.resources }}"
+  when: current_configmaps.resources | length > 0
+
+- name: "Create backup metadata"
+  copy:
+    content: |
+      backup_timestamp: {{ deployment_timestamp }}
+      backup_date: {{ ansible_date_time.iso8601 }}
+      environment: {{ app.environment }}
+      namespace: {{ app.namespace }}
+      deployment_name: {{ fastapi.name }}
+      backup_reason: "Pre-deployment backup"
+      ansible_user: {{ ansible_user | default('automated') }}
+    dest: "./backups/{{ deployment_timestamp }}/metadata.yml"
+
+- name: "Display backup information"
+  debug:
+    msg: |
+      ============================================
+      Backup Created Successfully
+      ============================================
+      Backup ID: {{ deployment_timestamp }}
+      Location: ./backups/{{ deployment_timestamp }}/
+      Items Backed Up:
+      {% if current_deployment.resources | length > 0 %}
+      - Deployment: {{ fastapi.name }}
+      {% endif %}
+      {% if current_service.resources | length > 0 %}
+      - Service: {{ fastapi.name }}-service
+      {% endif %}
+      {% if current_configmaps.resources | length > 0 %}
+      - ConfigMaps: {{ current_configmaps.resources | length }} items
+      {% endif %}
+      ============================================

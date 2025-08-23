@@ -1,0 +1,113 @@
+# NeuroNews Application Variables
+---
+# Application Configuration
+app:
+  name: "neuronews"
+  version: "{{ app_version | default('latest') }}"
+  namespace: "neuronews"
+  environment: "{{ deployment_env | default('production') }}"
+  
+# FastAPI Configuration
+fastapi:
+  name: "neuronews-fastapi"
+  image: "neuronews/fastapi"
+  tag: "{{ app_version | default('latest') }}"
+  port: 8000
+  replicas: 3
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "256Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+  autoscaling:
+    enabled: true
+    min_replicas: 3
+    max_replicas: 10
+    target_cpu_utilization: 70
+    target_memory_utilization: 80
+
+# Database Configuration
+database:
+  host: "postgres-service"
+  port: 5432
+  name: "neuronews"
+  user: "neuronews"
+  ssl_mode: "require"
+
+# Redis Configuration
+redis:
+  host: "redis-service"
+  port: 6379
+  db: 0
+
+# AWS Configuration
+aws:
+  region: "us-east-1"
+  s3_bucket: "neuronews-data"
+  neptune_endpoint: "neuronews-cluster.cluster-xxx.us-east-1.neptune.amazonaws.com"
+  neptune_port: 8182
+
+# Monitoring Configuration
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    port: 9090
+  grafana:
+    enabled: true
+    port: 3000
+  alerts:
+    enabled: true
+    email: "admin@neuronews.com"
+
+# Security Configuration
+security:
+  rbac:
+    enabled: true
+  network_policies:
+    enabled: true
+  pod_security:
+    enabled: true
+    policy: "restricted"
+  secrets:
+    auto_rotate: true
+    vault_integration: false
+
+# Ingress Configuration
+ingress:
+  enabled: true
+  class: "nginx"
+  host: "api.neuronews.com"
+  tls:
+    enabled: true
+    secret_name: "neuronews-tls"
+  annotations:
+    cert_manager: true
+    rate_limiting: true
+
+# Health Checks
+health_checks:
+  liveness:
+    path: "/health"
+    initial_delay: 30
+    period: 10
+    timeout: 5
+    failure_threshold: 3
+  readiness:
+    path: "/health/ready"
+    initial_delay: 5
+    period: 5
+    timeout: 3
+    failure_threshold: 3
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "json"
+  output: "stdout"
+  rotation:
+    enabled: true
+    max_size: "100MB"
+    max_files: 10

@@ -1,0 +1,35 @@
+---
+# Rollback deployment tasks
+- name: "Check for backup directory"
+  stat:
+    path: "./backups/{{ deployment_timestamp }}"
+  register: backup_dir
+
+- name: "Restore deployment manifest"
+  k8s:
+    state: present
+    definition: "{{ lookup('file', './backups/' + deployment_timestamp + '/deployment.yaml') }}"
+  when: backup_dir.stat.exists
+
+- name: "Restore service manifest"
+  k8s:
+    state: present
+    definition: "{{ lookup('file', './backups/' + deployment_timestamp + '/service.yaml') }}"
+  when: backup_dir.stat.exists
+
+- name: "Restore configmaps"
+  k8s:
+    state: present
+    definition: "{{ lookup('file', item) }}"
+  loop: "{{ lookup('fileglob', './backups/' + deployment_timestamp + '/configmap-*.yaml', wantlist=True) }}"
+  when: backup_dir.stat.exists
+
+- name: "Display rollback information"
+  debug:
+    msg: |
+      ============================================
+      Rollback Complete
+      ============================================
+      Backup ID: {{ deployment_timestamp }}
+      Restored deployment, service, and configmaps
+      ============================================
