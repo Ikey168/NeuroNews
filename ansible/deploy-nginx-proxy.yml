@@ -1,0 +1,70 @@
+---
+# NeuroNews NGINX Reverse Proxy Deployment Playbook
+- name: "Deploy NGINX Reverse Proxy for FastAPI"
+  hosts: localhost
+  gather_facts: yes
+  vars:
+    nginx_namespace: "neuronews"
+  tasks:
+    - name: "Create NGINX namespace (if not exists)"
+      k8s:
+        name: "{{ nginx_namespace }}"
+        api_version: v1
+        kind: Namespace
+        state: present
+        definition:
+          metadata:
+            labels:
+              app: "neuronews"
+              managed-by: "ansible"
+    - name: "Apply NGINX ConfigMap"
+      k8s:
+        state: present
+        src: "k8s/nginx/configmap.yaml"
+    - name: "Apply NGINX Deployment"
+      k8s:
+        state: present
+        src: "k8s/nginx/deployment.yaml"
+    - name: "Apply NGINX Service"
+      k8s:
+        state: present
+        src: "k8s/nginx/service.yaml"
+    - name: "Wait for NGINX pods to be ready"
+      k8s_info:
+        api_version: apps/v1
+        kind: Deployment
+        name: nginx-api-proxy
+        namespace: "{{ nginx_namespace }}"
+        wait: true
+        wait_condition:
+          type: Available
+          status: "True"
+        wait_timeout: 180
+    - name: "Get NGINX Service external IP"
+      k8s_info:
+        api_version: v1
+        kind: Service
+        name: nginx-api-proxy-service
+        namespace: "{{ nginx_namespace }}"
+      register: nginx_service
+    - name: "Display NGINX Service info"
+      debug:
+        msg: |
+          ============================================
+          NGINX Reverse Proxy Deployed
+          External IP: {{ nginx_service.resources[0].status.loadBalancer.ingress[0].ip | default('pending') }}
+          ============================================
+    - name: "Test API proxying through NGINX"
+      uri:
+        url: "http://{{ nginx_service.resources[0].status.loadBalancer.ingress[0].ip | default('localhost') }}/docs"
+        method: GET
+        return_content: yes
+        status_code: 200
+      register: nginx_test
+      failed_when: nginx_test.status != 200
+    - name: "Display API proxy test result"
+      debug:
+        msg: |
+          ============================================
+          API Proxy Test Result: {{ 'SUCCESS' if nginx_test.status == 200 else 'FAILED' }}
+          ============================================
