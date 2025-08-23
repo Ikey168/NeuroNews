@@ -1,0 +1,60 @@
+---
+# Smoke Tests for NeuroNews Deployment
+# Quick validation tests to ensure basic functionality
+
+- name: Run basic functionality tests
+  uri:
+    url: "{{ test_url }}{{ item.endpoint }}"
+    method: "{{ item.method | default('GET') }}"
+    status_code: "{{ item.expected_status | default([200]) }}"
+    timeout: 30
+    headers: "{{ item.headers | default({}) }}"
+    body: "{{ item.body | default(omit) }}"
+    body_format: "{{ item.body_format | default('json') }}"
+  register: smoke_test_results
+  loop:
+    - endpoint: "/health"
+      description: "Health check endpoint"
+    - endpoint: "/api/v1/news"
+      description: "News API endpoint"
+      expected_status: [200, 404]  # May return 404 if no data
+    - endpoint: "/api/v1/analytics"
+      description: "Analytics API endpoint"
+      expected_status: [200, 404]
+    - endpoint: "/metrics"
+      description: "Prometheus metrics endpoint"
+      expected_status: [200, 404]
+    - endpoint: "/api/v1/search?q=test"
+      description: "Search API endpoint"
+      expected_status: [200, 404, 422]  # May return 422 for invalid query
+  loop_control:
+    label: "{{ item.description }}"
+
+- name: Validate smoke test results
+  assert:
+    that:
+      - item.status in item.item.expected_status
+    fail_msg: "Smoke test failed for {{ item.item.description }}: Expected {{ item.item.expected_status }}, got {{ item.status }}"
+    success_msg: "Smoke test passed for {{ item.item.description }}"
+  loop: "{{ smoke_test_results.results }}"
+  loop_control:
+    label: "{{ item.item.description }}"
+
+- name: Test API response format
+  assert:
+    that:
+      - item.content_type is defined
+      - "'json' in item.content_type or 'text' in item.content_type"
+    fail_msg: "Unexpected content type for {{ item.item.description }}: {{ item.content_type }}"
+  loop: "{{ smoke_test_results.results }}"
+  loop_control:
+    label: "{{ item.item.description }}"
+  when: item.status == 200
+
+- name: Display smoke test summary
+  debug:
+    msg: |
+      Smoke Test Summary:
+      {% for result in smoke_test_results.results %}
+      - {{ result.item.description }}: {{ 'PASSED' if result.status in result.item.expected_status else 'FAILED' }} ({{ result.status }})
+      {% endfor %}

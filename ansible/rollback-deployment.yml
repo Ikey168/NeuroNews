@@ -1,0 +1,159 @@
+---
+# Rollback Deployment Playbook
+# Handles rollback scenarios for failed deployments
+
+- name: Rollback NeuroNews Deployment
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    environment: "{{ environment | default('staging') }}"
+    namespace: "neuronews-{{ environment }}"
+    app_name: neuronews
+    rollback_reason: "{{ rollback_reason | default('Deployment failure') }}"
+
+  tasks:
+    - name: Display rollback information
+      debug:
+        msg: |
+          Initiating rollback for {{ app_name }}
+          Environment: {{ environment }}
+          Reason: {{ rollback_reason }}
+          Namespace: {{ namespace }}
+
+    - name: Get deployment history
+      kubernetes.core.k8s_info:
+        api_version: apps/v1
+        kind: ReplicaSet
+        namespace: "{{ namespace }}"
+        label_selectors:
+          - "app={{ app_name }}"
+      register: replica_sets
+
+    - name: Sort replica sets by creation time
+      set_fact:
+        sorted_replica_sets: "{{ replica_sets.resources | sort(attribute='metadata.creationTimestamp', reverse=true) }}"
+
+    - name: Find previous stable version
+      set_fact:
+        previous_replica_set: "{{ sorted_replica_sets[1] if sorted_replica_sets | length > 1 else sorted_replica_sets[0] }}"
+      when: sorted_replica_sets | length > 0
+
+    - name: Get current deployment
+      kubernetes.core.k8s_info:
+        api_version: apps/v1
+        kind: Deployment
+        name: "{{ app_name }}"
+        namespace: "{{ namespace }}"
+      register: current_deployment
+
+    - name: Confirm rollback
+      pause:
+        prompt: |
+          Ready to rollback deployment?
+          Current deployment: {{ current_deployment.resources[0].metadata.labels.version | default('unknown') }}
+          Target version: {{ previous_replica_set.metadata.labels.version | default('previous') }}
+          
+          Type 'yes' to proceed with rollback
+      register: rollback_confirm
+      when: environment == "production"
+
+    - name: Validate rollback confirmation
+      assert:
+        that:
+          - rollback_confirm.user_input == "yes"
+        fail_msg: "Rollback cancelled by user"
+      when: environment == "production"
+
+    - name: Scale down current deployment
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: "{{ app_name }}"
+            namespace: "{{ namespace }}"
+          spec:
+            replicas: 0
+
+    - name: Wait for current deployment to scale down
+      kubernetes.core.k8s_info:
+        api_version: apps/v1
+        kind: Deployment
+        name: "{{ app_name }}"
+        namespace: "{{ namespace }}"
+        wait: true
+        wait_condition:
+          type: Progressing
+          status: "True"
+          reason: NewReplicaSetAvailable
+        wait_timeout: 300
+
+    - name: Rollback to previous version
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: "{{ app_name }}"
+            namespace: "{{ namespace }}"
+            annotations:
+              deployment.kubernetes.io/revision: "{{ previous_replica_set.metadata.annotations['deployment.kubernetes.io/revision'] | default('1') }}"
+          spec:
+            replicas: "{{ previous_replica_set.spec.replicas | default(2) }}"
+            template: "{{ previous_replica_set.spec.template }}"
+
+    - name: Wait for rollback to complete
+      kubernetes.core.k8s_info:
+        api_version: apps/v1
+        kind: Deployment
+        name: "{{ app_name }}"
+        namespace: "{{ namespace }}"
+        wait: true
+        wait_condition:
+          type: Progressing
+          status: "True"
+          reason: NewReplicaSetAvailable
+        wait_timeout: 600
+
+    - name: Verify rollback health
+      uri:
+        url: "http://{{ app_name }}.{{ namespace }}.svc.cluster.local/health"
+        method: GET
+        status_code: 200
+      register: rollback_health
+      retries: 10
+      delay: 30
+
+    - name: Record rollback in history
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: "{{ app_name }}-rollback-history"
+            namespace: "{{ namespace }}"
+          data:
+            "{{ ansible_date_time.epoch }}": |
+              rolled_back_at: {{ ansible_date_time.iso8601 }}
+              rollback_reason: {{ rollback_reason }}
+              environment: {{ environment }}
+              target_version: {{ previous_replica_set.metadata.labels.version | default('previous') }}
+              status: success
+
+    - name: Display rollback summary
+      debug:
+        msg: |
+          ========================================
+          ROLLBACK COMPLETED SUCCESSFULLY
+          ========================================
+          Environment: {{ environment }}
+          Application: {{ app_name }}
+          Rollback Reason: {{ rollback_reason }}
+          Target Version: {{ previous_replica_set.metadata.labels.version | default('previous') }}
+          Health Check: {{ 'PASSED' if rollback_health.status == 200 else 'FAILED' }}
+          Timestamp: {{ ansible_date_time.iso8601 }}
+          ========================================

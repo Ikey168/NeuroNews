@@ -1,11 +1,23 @@
-# NeuroNews Application Variables
+# NeuroNews Application Variables with CI/CD Integration
 ---
+# Global Configuration
+ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+ansible_python_interpreter: /usr/bin/python3
+
 # Application Configuration
 app:
   name: "neuronews"
   version: "{{ app_version | default('latest') }}"
-  namespace: "neuronews"
-  environment: "{{ deployment_env | default('production') }}"
+  namespace: "neuronews-{{ environment | default('production') }}"
+  environment: "{{ environment | default('production') }}"
+  
+# CI/CD Configuration
+cicd:
+  deployment_type: "{{ deployment_type | default('rolling') }}"
+  health_check_retries: "{{ health_check_retries | default(10) }}"
+  rollback_on_failure: "{{ rollback_on_failure | default(true) }}"
+  registry_url: "ghcr.io/ikey168/neuronews"
+  image_pull_policy: "Always"
   
 # FastAPI Configuration
 fastapi:

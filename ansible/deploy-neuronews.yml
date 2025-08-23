@@ -1,0 +1,538 @@
+---
+# NeuroNews Automated Deployment Playbook with CI/CD Integration
+# This playbook handles rolling deployments, blue-green deployments, and canary deployments
+
+- name: Deploy NeuroNews to Kubernetes with CI/CD Integration
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    # Default values - can be overridden by CI/CD pipeline
+    environment: "{{ environment | default('staging') }}"
+    deployment_type: "{{ deployment_type | default('rolling') }}"
+    image_tag: "{{ image_tag | default('latest') }}"
+    health_check_retries: "{{ health_check_retries | default(10) }}"
+    rollback_on_failure: "{{ rollback_on_failure | default(true) }}"
+    namespace: "neuronews-{{ environment }}"
+    
+    # Application configuration
+    app_name: neuronews
+    app_version: "{{ image_tag }}"
+    replicas: "{{ environment == 'production' and 3 or 2 }}"
+    
+    # Registry configuration
+    registry_url: "ghcr.io/ikey168/neuronews"
+    image_pull_policy: "Always"
+    
+    # Resource limits
+    cpu_requests: "{{ environment == 'production' and '500m' or '250m' }}"
+    cpu_limits: "{{ environment == 'production' and '1000m' or '500m' }}"
+    memory_requests: "{{ environment == 'production' and '512Mi' or '256Mi' }}"
+    memory_limits: "{{ environment == 'production' and '1Gi' or '512Mi' }}"
+    
+    # Health check configuration
+    health_check_path: "/health"
+    readiness_probe_delay: 30
+    liveness_probe_delay: 60
+    probe_timeout: 10
+    probe_period: 30
+    
+    # Deployment strategy configuration
+    max_unavailable: "{{ deployment_type == 'rolling' and '25%' or '0%' }}"
+    max_surge: "{{ deployment_type == 'rolling' and '25%' or '100%' }}"
+
+  tasks:
+    - name: Display deployment information
+      debug:
+        msg: |
+          Starting {{ deployment_type }} deployment of {{ app_name }}
+          Environment: {{ environment }}
+          Image: {{ registry_url }}:{{ image_tag }}
+          Replicas: {{ replicas }}
+          Namespace: {{ namespace }}
+
+    - name: Ensure namespace exists
+      kubernetes.core.k8s:
+        name: "{{ namespace }}"
+        api_version: v1
+        kind: Namespace
+        state: present
+        definition:
+          metadata:
+            labels:
+              environment: "{{ environment }}"
+              app: "{{ app_name }}"
+
+    - name: Create ConfigMap for application configuration
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: "{{ app_name }}-config"
+            namespace: "{{ namespace }}"
+            labels:
+              app: "{{ app_name }}"
+              environment: "{{ environment }}"
+              version: "{{ app_version }}"
+          data:
+            ENVIRONMENT: "{{ environment }}"
+            LOG_LEVEL: "{{ environment == 'production' and 'INFO' or 'DEBUG' }}"
+            DATABASE_URL: "{{ vault_database_url[environment] }}"
+            REDIS_URL: "{{ vault_redis_url[environment] }}"
+            APP_VERSION: "{{ app_version }}"
+
+    - name: Create Secret for sensitive configuration
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: "{{ app_name }}-secrets"
+            namespace: "{{ namespace }}"
+            labels:
+              app: "{{ app_name }}"
+              environment: "{{ environment }}"
+          type: Opaque
+          data:
+            SECRET_KEY: "{{ vault_secret_key[environment] | b64encode }}"
+            DATABASE_PASSWORD: "{{ vault_database_password[environment] | b64encode }}"
+            REDIS_PASSWORD: "{{ vault_redis_password[environment] | b64encode }}"
+            API_KEY: "{{ vault_api_key[environment] | b64encode }}"
+
+    - name: Deploy application using rolling deployment
+      when: deployment_type == "rolling"
+      block:
+        - name: Apply rolling deployment
+          kubernetes.core.k8s:
+            state: present
+            definition:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: "{{ app_name }}"
+                namespace: "{{ namespace }}"
+                labels:
+                  app: "{{ app_name }}"
+                  environment: "{{ environment }}"
+                  version: "{{ app_version }}"
+                annotations:
+                  deployment.kubernetes.io/revision: "{{ ansible_date_time.epoch }}"
+              spec:
+                replicas: "{{ replicas }}"
+                strategy:
+                  type: RollingUpdate
+                  rollingUpdate:
+                    maxUnavailable: "{{ max_unavailable }}"
+                    maxSurge: "{{ max_surge }}"
+                selector:
+                  matchLabels:
+                    app: "{{ app_name }}"
+                    environment: "{{ environment }}"
+                template:
+                  metadata:
+                    labels:
+                      app: "{{ app_name }}"
+                      environment: "{{ environment }}"
+                      version: "{{ app_version }}"
+                    annotations:
+                      prometheus.io/scrape: "true"
+                      prometheus.io/port: "8000"
+                      prometheus.io/path: "/metrics"
+                  spec:
+                    containers:
+                    - name: "{{ app_name }}"
+                      image: "{{ registry_url }}:{{ image_tag }}"
+                      imagePullPolicy: "{{ image_pull_policy }}"
+                      ports:
+                      - containerPort: 8000
+                        name: http
+                      - containerPort: 9090
+                        name: metrics
+                      env:
+                      - name: POD_NAME
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.name
+                      - name: POD_NAMESPACE
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.namespace
+                      envFrom:
+                      - configMapRef:
+                          name: "{{ app_name }}-config"
+                      - secretRef:
+                          name: "{{ app_name }}-secrets"
+                      resources:
+                        requests:
+                          cpu: "{{ cpu_requests }}"
+                          memory: "{{ memory_requests }}"
+                        limits:
+                          cpu: "{{ cpu_limits }}"
+                          memory: "{{ memory_limits }}"
+                      livenessProbe:
+                        httpGet:
+                          path: "{{ health_check_path }}"
+                          port: 8000
+                        initialDelaySeconds: "{{ liveness_probe_delay }}"
+                        periodSeconds: "{{ probe_period }}"
+                        timeoutSeconds: "{{ probe_timeout }}"
+                        failureThreshold: 3
+                      readinessProbe:
+                        httpGet:
+                          path: "{{ health_check_path }}"
+                          port: 8000
+                        initialDelaySeconds: "{{ readiness_probe_delay }}"
+                        periodSeconds: 10
+                        timeoutSeconds: "{{ probe_timeout }}"
+                        failureThreshold: 3
+                    restartPolicy: Always
+
+    - name: Deploy application using blue-green deployment
+      when: deployment_type == "blue-green"
+      block:
+        - name: Get current deployment color
+          kubernetes.core.k8s_info:
+            api_version: v1
+            kind: Service
+            name: "{{ app_name }}"
+            namespace: "{{ namespace }}"
+          register: current_service
+          failed_when: false
+
+        - name: Determine deployment colors
+          set_fact:
+            current_color: "{{ current_service.resources[0].spec.selector.color | default('blue') }}"
+            new_color: "{{ 'green' if (current_service.resources[0].spec.selector.color | default('blue')) == 'blue' else 'blue' }}"
+          when: current_service.resources
+
+        - name: Set default colors for first deployment
+          set_fact:
+            current_color: "blue"
+            new_color: "green"
+          when: not current_service.resources
+
+        - name: Deploy new version ({{ new_color }})
+          kubernetes.core.k8s:
+            state: present
+            definition:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: "{{ app_name }}-{{ new_color }}"
+                namespace: "{{ namespace }}"
+                labels:
+                  app: "{{ app_name }}"
+                  environment: "{{ environment }}"
+                  version: "{{ app_version }}"
+                  color: "{{ new_color }}"
+              spec:
+                replicas: "{{ replicas }}"
+                selector:
+                  matchLabels:
+                    app: "{{ app_name }}"
+                    environment: "{{ environment }}"
+                    color: "{{ new_color }}"
+                template:
+                  metadata:
+                    labels:
+                      app: "{{ app_name }}"
+                      environment: "{{ environment }}"
+                      version: "{{ app_version }}"
+                      color: "{{ new_color }}"
+                  spec:
+                    containers:
+                    - name: "{{ app_name }}"
+                      image: "{{ registry_url }}:{{ image_tag }}"
+                      imagePullPolicy: "{{ image_pull_policy }}"
+                      ports:
+                      - containerPort: 8000
+                        name: http
+                      envFrom:
+                      - configMapRef:
+                          name: "{{ app_name }}-config"
+                      - secretRef:
+                          name: "{{ app_name }}-secrets"
+                      resources:
+                        requests:
+                          cpu: "{{ cpu_requests }}"
+                          memory: "{{ memory_requests }}"
+                        limits:
+                          cpu: "{{ cpu_limits }}"
+                          memory: "{{ memory_limits }}"
+                      livenessProbe:
+                        httpGet:
+                          path: "{{ health_check_path }}"
+                          port: 8000
+                        initialDelaySeconds: "{{ liveness_probe_delay }}"
+                        periodSeconds: "{{ probe_period }}"
+                        timeoutSeconds: "{{ probe_timeout }}"
+                      readinessProbe:
+                        httpGet:
+                          path: "{{ health_check_path }}"
+                          port: 8000
+                        initialDelaySeconds: "{{ readiness_probe_delay }}"
+                        periodSeconds: 10
+                        timeoutSeconds: "{{ probe_timeout }}"
+
+        - name: Wait for new deployment to be ready
+          kubernetes.core.k8s_info:
+            api_version: apps/v1
+            kind: Deployment
+            name: "{{ app_name }}-{{ new_color }}"
+            namespace: "{{ namespace }}"
+            wait: true
+            wait_condition:
+              type: Progressing
+              status: "True"
+              reason: NewReplicaSetAvailable
+            wait_timeout: 600
+
+    - name: Create or update service
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: "{{ app_name }}"
+            namespace: "{{ namespace }}"
+            labels:
+              app: "{{ app_name }}"
+              environment: "{{ environment }}"
+          spec:
+            type: ClusterIP
+            ports:
+            - port: 80
+              targetPort: 8000
+              protocol: TCP
+              name: http
+            - port: 9090
+              targetPort: 9090
+              protocol: TCP
+              name: metrics
+            selector:
+              app: "{{ app_name }}"
+              environment: "{{ environment }}"
+              "{{ deployment_type == 'blue-green' and 'color' or 'version' }}": "{{ deployment_type == 'blue-green' and new_color or app_version }}"
+
+    - name: Create ingress for external access
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: "{{ app_name }}"
+            namespace: "{{ namespace }}"
+            labels:
+              app: "{{ app_name }}"
+              environment: "{{ environment }}"
+            annotations:
+              nginx.ingress.kubernetes.io/rewrite-target: /
+              nginx.ingress.kubernetes.io/ssl-redirect: "true"
+              cert-manager.io/cluster-issuer: "letsencrypt-prod"
+          spec:
+            tls:
+            - hosts:
+              - "{{ app_name }}-{{ environment }}.{{ domain_name }}"
+              secretName: "{{ app_name }}-tls"
+            rules:
+            - host: "{{ app_name }}-{{ environment }}.{{ domain_name }}"
+              http:
+                paths:
+                - path: /
+                  pathType: Prefix
+                  backend:
+                    service:
+                      name: "{{ app_name }}"
+                      port:
+                        number: 80
+
+    - name: Wait for deployment to be ready
+      kubernetes.core.k8s_info:
+        api_version: apps/v1
+        kind: Deployment
+        name: "{{ deployment_type == 'blue-green' and app_name + '-' + new_color or app_name }}"
+        namespace: "{{ namespace }}"
+        wait: true
+        wait_condition:
+          type: Progressing
+          status: "True"
+          reason: NewReplicaSetAvailable
+        wait_timeout: 600
+
+    - name: Perform health checks
+      uri:
+        url: "http://{{ app_name }}.{{ namespace }}.svc.cluster.local{{ health_check_path }}"
+        method: GET
+        status_code: 200
+      register: health_check
+      retries: "{{ health_check_retries }}"
+      delay: 30
+      until: health_check.status == 200
+
+    - name: Run smoke tests
+      include_tasks: smoke-tests.yml
+      vars:
+        test_url: "http://{{ app_name }}.{{ namespace }}.svc.cluster.local"
+
+    - name: Switch traffic to new version (blue-green only)
+      when: deployment_type == "blue-green"
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: "{{ app_name }}"
+            namespace: "{{ namespace }}"
+          spec:
+            selector:
+              app: "{{ app_name }}"
+              environment: "{{ environment }}"
+              color: "{{ new_color }}"
+
+    - name: Clean up old blue-green deployment
+      when: deployment_type == "blue-green"
+      kubernetes.core.k8s:
+        state: absent
+        api_version: apps/v1
+        kind: Deployment
+        name: "{{ app_name }}-{{ current_color }}"
+        namespace: "{{ namespace }}"
+      delay: 300  # Wait 5 minutes before cleanup
+
+    - name: Create HorizontalPodAutoscaler
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: autoscaling/v2
+          kind: HorizontalPodAutoscaler
+          metadata:
+            name: "{{ app_name }}-hpa"
+            namespace: "{{ namespace }}"
+            labels:
+              app: "{{ app_name }}"
+              environment: "{{ environment }}"
+          spec:
+            scaleTargetRef:
+              apiVersion: apps/v1
+              kind: Deployment
+              name: "{{ deployment_type == 'blue-green' and app_name + '-' + new_color or app_name }}"
+            minReplicas: "{{ replicas }}"
+            maxReplicas: "{{ environment == 'production' and 10 or 5 }}"
+            metrics:
+            - type: Resource
+              resource:
+                name: cpu
+                target:
+                  type: Utilization
+                  averageUtilization: 70
+            - type: Resource
+              resource:
+                name: memory
+                target:
+                  type: Utilization
+                  averageUtilization: 80
+
+    - name: Deploy ServiceMonitor for Prometheus
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: monitoring.coreos.com/v1
+          kind: ServiceMonitor
+          metadata:
+            name: "{{ app_name }}"
+            namespace: "{{ namespace }}"
+            labels:
+              app: "{{ app_name }}"
+              environment: "{{ environment }}"
+          spec:
+            selector:
+              matchLabels:
+                app: "{{ app_name }}"
+            endpoints:
+            - port: metrics
+              interval: 30s
+              path: /metrics
+
+    - name: Record deployment in ConfigMap
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: "{{ app_name }}-deployment-history"
+            namespace: "{{ namespace }}"
+          data:
+            last_deployment: "{{ ansible_date_time.iso8601 }}"
+            last_version: "{{ app_version }}"
+            deployment_type: "{{ deployment_type }}"
+            deployer: "{{ ansible_user_id | default('ci-cd') }}"
+
+    - name: Display deployment summary
+      debug:
+        msg: |
+          ========================================
+          Deployment completed successfully!
+          ========================================
+          Application: {{ app_name }}
+          Environment: {{ environment }}
+          Version: {{ app_version }}
+          Deployment Type: {{ deployment_type }}
+          Replicas: {{ replicas }}
+          Namespace: {{ namespace }}
+          Health Check: {{ health_check.status == 200 and 'PASSED' or 'FAILED' }}
+          ========================================
+
+  rescue:
+    - name: Deployment failed - initiating rollback
+      debug:
+        msg: "Deployment failed. Initiating rollback procedure..."
+      when: rollback_on_failure | bool
+
+    - name: Rollback to previous version
+      when: rollback_on_failure | bool
+      block:
+        - name: Get previous deployment
+          kubernetes.core.k8s_info:
+            api_version: apps/v1
+            kind: ReplicaSet
+            namespace: "{{ namespace }}"
+            label_selectors:
+              - "app={{ app_name }}"
+          register: replica_sets
+
+        - name: Rollback deployment
+          kubernetes.core.k8s:
+            state: present
+            definition:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: "{{ app_name }}"
+                namespace: "{{ namespace }}"
+                annotations:
+                  deployment.kubernetes.io/revision: "{{ ansible_date_time.epoch }}"
+          when: replica_sets.resources | length > 1
+
+        - name: Wait for rollback to complete
+          kubernetes.core.k8s_info:
+            api_version: apps/v1
+            kind: Deployment
+            name: "{{ app_name }}"
+            namespace: "{{ namespace }}"
+            wait: true
+            wait_condition:
+              type: Progressing
+              status: "True"
+              reason: NewReplicaSetAvailable
+            wait_timeout: 300
+
+    - name: Fail the playbook
+      fail:
+        msg: "Deployment failed and rollback completed"
