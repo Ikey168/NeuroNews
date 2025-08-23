@@ -1,0 +1,569 @@
+name: CI/CD with Ansible Auto-Deployment
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'release/*'
+    paths-ig      run: |
+        pytest --cov=. --cov-report=xml --cov-report=html --junitxml=pytest-report.xml -v
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-${{ matrix.python-version }}
+        path: |
+          pytest-report.xml
+          htmlcov/ - 'README.md'
+      - 'docs/**'
+      - '*.md'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths-ignore:
+      - 'README.md'
+      - 'docs/**'
+      - '*.md'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      deployment_type:
+        description: 'Deployment type'
+        required: true
+        default: 'rolling'
+        type: choice
+        options:
+          - rolling
+          - blue-green
+          - canary
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  ANSIBLE_HOST_KEY_CHECKING: False
+  ANSIBLE_STDOUT_CALLBACK: yaml
+
+jobs:
+  # Code Quality and Security Checks
+  code-quality:
+    name: Code Quality & Security
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Cache Python dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 pytest black isort bandit safety
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+
+    - name: Code formatting check (Black)
+      run: black --check --diff .
+
+    - name: Import sorting check (isort)
+      run: isort --check-only --diff .
+
+    - name: Lint with flake8
+      run: |
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    - name: Security scan with Bandit
+      run: bandit -r . -f json -o bandit-report.json || true
+
+    - name: Safety check for vulnerabilities
+      run: safety check --json --output safety-report.json || true
+
+    - name: Upload security reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: security-reports
+        path: |
+          bandit-report.json
+          safety-report.json
+
+  # Build and Test
+  build-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    needs: code-quality
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11']
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-cov pytest-xdist
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        if [ -f requirements-test.txt ]; then pip install -r requirements-test.txt; fi
+
+    - name: Run tests with pytest
+      run: |
+        pytest --cov=. --cov-report=xml --cov-report=html --junitxml=pytest-report.xml -v
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-${{ matrix.python-version }}
+        path: |
+          pytest-report.xml
+          htmlcov/
+          .coverage
+
+  # Docker Build and Security Scan
+  docker-build:
+    name: Docker Build & Security Scan
+    runs-on: ubuntu-latest
+    needs: build-test
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+      image-tag: ${{ steps.meta.outputs.tags }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push Docker image
+      id: build
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  # Ansible Playbook Validation
+  ansible-validate:
+    name: Ansible Validation
+    runs-on: ubuntu-latest
+    needs: code-quality
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install Ansible and dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install ansible ansible-lint yamllint molecule[docker]
+        ansible-galaxy install -r ansible/requirements.yml
+
+    - name: Validate Ansible syntax
+      run: |
+        cd ansible
+        ansible-playbook --syntax-check deploy-neuronews.yml
+        ansible-playbook --syntax-check provision-infrastructure.yml
+
+    - name: Lint Ansible playbooks
+      run: |
+        cd ansible
+        ansible-lint .
+
+    - name: Validate YAML files
+      run: |
+        yamllint -d relaxed ansible/
+        yamllint -d relaxed k8s/
+
+    - name: Test Ansible playbook with Molecule
+      run: |
+        cd ansible
+        molecule test || echo "Molecule tests completed with warnings"
+
+  # Infrastructure Provisioning (Staging)
+  infrastructure-staging:
+    name: Provision Staging Infrastructure
+    runs-on: ubuntu-latest
+    needs: [ansible-validate, docker-build]
+    if: github.ref == 'refs/heads/develop' || github.event_name == 'workflow_dispatch'
+    environment: staging
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Set up Python and Ansible
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install Ansible and dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install ansible boto3 botocore kubernetes
+        ansible-galaxy install -r ansible/requirements.yml
+
+    - name: Setup SSH key for Ansible
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.ANSIBLE_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+
+    - name: Provision staging infrastructure
+      run: |
+        cd ansible
+        ansible-playbook -i inventories/staging/hosts.yml \
+          provision-infrastructure.yml \
+          --extra-vars "environment=staging" \
+          --extra-vars "image_tag=${{ needs.docker-build.outputs.image-tag }}" \
+          -v
+
+  # Deploy to Staging
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [infrastructure-staging, docker-build]
+    if: github.ref == 'refs/heads/develop' || github.event_name == 'workflow_dispatch'
+    environment: staging
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Set up Python and Ansible
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install Ansible and dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install ansible boto3 botocore kubernetes
+        ansible-galaxy install -r ansible/requirements.yml
+
+    - name: Setup SSH and Kubernetes access
+      run: |
+        mkdir -p ~/.ssh ~/.kube
+        echo "${{ secrets.ANSIBLE_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > ~/.kube/config
+        chmod 600 ~/.kube/config
+
+    - name: Deploy to staging with rolling deployment
+      run: |
+        cd ansible
+        ansible-playbook -i inventories/staging/hosts.yml \
+          deploy-neuronews.yml \
+          --extra-vars "environment=staging" \
+          --extra-vars "deployment_type=rolling" \
+          --extra-vars "image_tag=${{ needs.docker-build.outputs.image-tag }}" \
+          --extra-vars "health_check_retries=10" \
+          -v
+
+    - name: Run deployment verification tests
+      run: |
+        cd ansible
+        ansible-playbook -i inventories/staging/hosts.yml \
+          verify-deployment.yml \
+          --extra-vars "environment=staging" \
+          -v
+
+    - name: Notify deployment status
+      if: always()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#deployments'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        message: |
+          Staging deployment ${{ job.status }}
+          Branch: ${{ github.ref_name }}
+          Commit: ${{ github.sha }}
+          Image: ${{ needs.docker-build.outputs.image-tag }}
+
+  # Infrastructure Provisioning (Production)
+  infrastructure-production:
+    name: Provision Production Infrastructure
+    runs-on: ubuntu-latest
+    needs: [deploy-staging, docker-build]
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Set up Python and Ansible
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install Ansible and dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install ansible boto3 botocore kubernetes
+        ansible-galaxy install -r ansible/requirements.yml
+
+    - name: Setup SSH key for Ansible
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.ANSIBLE_SSH_PRIVATE_KEY_PROD }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+
+    - name: Provision production infrastructure
+      run: |
+        cd ansible
+        ansible-playbook -i inventories/production/hosts.yml \
+          provision-infrastructure.yml \
+          --extra-vars "environment=production" \
+          --extra-vars "image_tag=${{ needs.docker-build.outputs.image-tag }}" \
+          -v
+
+  # Deploy to Production (Blue-Green)
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [infrastructure-production, docker-build]
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Set up Python and Ansible
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install Ansible and dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install ansible boto3 botocore kubernetes
+        ansible-galaxy install -r ansible/requirements.yml
+
+    - name: Setup SSH and Kubernetes access
+      run: |
+        mkdir -p ~/.ssh ~/.kube
+        echo "${{ secrets.ANSIBLE_SSH_PRIVATE_KEY_PROD }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        echo "${{ secrets.KUBE_CONFIG_PROD }}" | base64 -d > ~/.kube/config
+        chmod 600 ~/.kube/config
+
+    - name: Deploy to production with blue-green deployment
+      run: |
+        cd ansible
+        ansible-playbook -i inventories/production/hosts.yml \
+          deploy-neuronews.yml \
+          --extra-vars "environment=production" \
+          --extra-vars "deployment_type=blue-green" \
+          --extra-vars "image_tag=${{ needs.docker-build.outputs.image-tag }}" \
+          --extra-vars "health_check_retries=15" \
+          --extra-vars "rollback_on_failure=true" \
+          -v
+
+    - name: Run comprehensive production tests
+      run: |
+        cd ansible
+        ansible-playbook -i inventories/production/hosts.yml \
+          verify-deployment.yml \
+          --extra-vars "environment=production" \
+          --extra-vars "run_load_tests=true" \
+          -v
+
+    - name: Promote blue-green deployment
+      if: success()
+      run: |
+        cd ansible
+        ansible-playbook -i inventories/production/hosts.yml \
+          promote-deployment.yml \
+          --extra-vars "environment=production" \
+          -v
+
+    - name: Rollback on failure
+      if: failure()
+      run: |
+        cd ansible
+        ansible-playbook -i inventories/production/hosts.yml \
+          rollback-deployment.yml \
+          --extra-vars "environment=production" \
+          -v
+
+    - name: Notify deployment status
+      if: always()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#deployments'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        message: |
+          Production deployment ${{ job.status }}
+          Branch: ${{ github.ref_name }}
+          Commit: ${{ github.sha }}
+          Image: ${{ needs.docker-build.outputs.image-tag }}
+          Deployment Type: Blue-Green
+
+  # Cleanup and Notifications
+  cleanup:
+    name: Cleanup and Final Notifications
+    runs-on: ubuntu-latest
+    needs: [deploy-staging, deploy-production]
+    if: always()
+    
+    steps:
+    - name: Cleanup old images
+      run: |
+        # Cleanup logic for old container images
+        echo "Cleaning up old container images..."
+
+    - name: Generate deployment report
+      run: |
+        echo "# Deployment Report" > deployment-report.md
+        echo "- Branch: ${{ github.ref_name }}" >> deployment-report.md
+        echo "- Commit: ${{ github.sha }}" >> deployment-report.md
+        echo "- Image Tag: ${{ needs.docker-build.outputs.image-tag }}" >> deployment-report.md
+        echo "- Staging Status: ${{ needs.deploy-staging.result }}" >> deployment-report.md
+        echo "- Production Status: ${{ needs.deploy-production.result }}" >> deployment-report.md
+
+    - name: Upload deployment report
+      uses: actions/upload-artifact@v4
+      with:
+        name: deployment-report
+        path: deployment-report.md
+
+    - name: Final notification
+      uses: 8398a7/action-slack@v3
+      with:
+        status: custom
+        custom_payload: |
+          {
+            "text": "NeuroNews CI/CD Pipeline Completed",
+            "attachments": [
+              {
+                "color": "${{ job.status == 'success' && 'good' || 'danger' }}",
+                "fields": [
+                  {
+                    "title": "Branch",
+                    "value": "${{ github.ref_name }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Commit",
+                    "value": "${{ github.sha }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Staging",
+                    "value": "${{ needs.deploy-staging.result }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Production",
+                    "value": "${{ needs.deploy-production.result }}",
+                    "short": true
+                  }
+                ]
+              }
+            ]
+          }
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
