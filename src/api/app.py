@@ -47,6 +47,14 @@ try:
 except ImportError:
     GRAPH_SEARCH_AVAILABLE = False
 
+# Try to import influence analysis routes (Issue #40)
+try:
+    from src.api import influence_routes
+
+    INFLUENCE_ANALYSIS_AVAILABLE = True
+except ImportError:
+    INFLUENCE_ANALYSIS_AVAILABLE = False
+
 # Try to import rate limiting components (Issue #59)
 try:
     from src.api.middleware.rate_limit_middleware import (
@@ -176,27 +184,30 @@ if TOPIC_ROUTES_AVAILABLE:
 if GRAPH_SEARCH_AVAILABLE:
     app.include_router(graph_search_routes.router)
 
+# Include influence analysis routes if available (Issue #40)
+if INFLUENCE_ANALYSIS_AVAILABLE:
+    app.include_router(influence_routes.router)
+
 
 @app.get("/")
 async def root():
     """Root endpoint."""
-    return {
-        "status": "ok",
-        "message": "NeuroNews API is running",
-        "features": {
-            "rate_limiting": RATE_LIMITING_AVAILABLE,
-            "rbac": RBAC_AVAILABLE,
-            "api_key_management": API_KEY_MANAGEMENT_AVAILABLE,
-            "waf_security": WAF_SECURITY_AVAILABLE,
-            "enhanced_kg": ENHANCED_KG_AVAILABLE,
-            "event_timeline": EVENT_TIMELINE_AVAILABLE,
-            "quicksight": QUICKSIGHT_AVAILABLE,
-            "topic_routes": TOPIC_ROUTES_AVAILABLE,
-            "graph_search": GRAPH_SEARCH_AVAILABLE,
-        },
-    }
-
-
+        return {
+            "status": "ok",
+            "message": "NeuroNews API is running",
+            "features": {
+                "rate_limiting": RATE_LIMITING_AVAILABLE,
+                "rbac": RBAC_AVAILABLE,
+                "api_key_management": API_KEY_MANAGEMENT_AVAILABLE,
+                "waf_security": WAF_SECURITY_AVAILABLE,
+                "enhanced_kg": ENHANCED_KG_AVAILABLE,
+                "event_timeline": EVENT_TIMELINE_AVAILABLE,
+                "quicksight": QUICKSIGHT_AVAILABLE,
+                "topic_routes": TOPIC_ROUTES_AVAILABLE,
+                "graph_search": GRAPH_SEARCH_AVAILABLE,
+                "influence_analysis": INFLUENCE_ANALYSIS_AVAILABLE,
+            },
+        }
 @app.get("/health")
 async def health_check():
     """Health check endpoint for monitoring."""
@@ -214,6 +225,7 @@ async def health_check():
             "waf_security": "operational" if WAF_SECURITY_AVAILABLE else "disabled",
             "topic_routes": "operational" if TOPIC_ROUTES_AVAILABLE else "disabled",
             "graph_search": "operational" if GRAPH_SEARCH_AVAILABLE else "disabled",
+            "influence_analysis": "operational" if INFLUENCE_ANALYSIS_AVAILABLE else "disabled",
             "database": "unknown",  # Would check actual DB connection
             "cache": "unknown",  # Would check Redis connection
         },
