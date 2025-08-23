@@ -134,6 +134,9 @@ def news_pipeline():
         """
         Clean and standardize scraped articles.
         
+        SLA: 15 minutes (Issue #190)
+        This task should complete within 15 minutes of its scheduled time.
+        
         Args:
             scrape_result: Output from scrape task
             
@@ -433,3 +436,33 @@ def news_pipeline():
 
 # Create the DAG instance
 news_pipeline_dag = news_pipeline()
+
+# Configure SLA for the clean task (Issue #190)
+# Set SLA to 15 minutes to demonstrate SLA monitoring
+if hasattr(news_pipeline_dag, 'get_task') and news_pipeline_dag.get_task('clean', None):
+    clean_task = news_pipeline_dag.get_task('clean')
+    clean_task.sla = timedelta(minutes=15)
+    
+    # Add SLA miss callback for logging
+    def sla_miss_callback(dag, task_list, blocking_task_list, slas, blocking_tis):
+        """
+        Callback function for SLA misses.
+        Logs SLA violations for monitoring and alerting.
+        """
+        from airflow.utils.log.logging_mixin import LoggingMixin
+        logger = LoggingMixin().log
+        
+        for sla in slas:
+            logger.warning(
+                f"🚨 SLA MISS: Task '{sla.task_id}' in DAG '{sla.dag_id}' "
+                f"missed SLA. Expected by: {sla.execution_date + sla.sla}, "
+                f"Actual completion: Not completed yet"
+            )
+            
+        for blocking_ti in blocking_tis:
+            logger.warning(
+                f"⏳ BLOCKING: Task '{blocking_ti.task_id}' is blocking SLA compliance"
+            )
+    
+    # Apply SLA miss callback to the DAG
+    news_pipeline_dag.sla_miss_callback = sla_miss_callback

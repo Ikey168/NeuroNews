@@ -15,6 +15,11 @@ x-airflow-common:
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
+    # Timezone configuration (Issue #190)
+    AIRFLOW__CORE__DEFAULT_TIMEZONE: Europe/Berlin
+    # SLA configuration (Issue #190)
+    AIRFLOW__CORE__CHECK_SLAS: 'true'
+    AIRFLOW__EMAIL__EMAIL_BACKEND: airflow.providers.sendgrid.utils.emailer.send_email
     # OpenLineage configuration for automatic lineage tracking (Issue #188)
     OPENLINEAGE_URL: ${OPENLINEAGE_URL:-http://marquez:5000}
     OPENLINEAGE_NAMESPACE: ${OPENLINEAGE_NAMESPACE:-neuro_news_dev}
