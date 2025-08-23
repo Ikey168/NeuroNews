@@ -31,6 +31,22 @@ try:
 except ImportError:
     QUICKSIGHT_AVAILABLE = False
 
+# Try to import topic routes (Issue #29)
+try:
+    from src.api.routes import topic_routes
+
+    TOPIC_ROUTES_AVAILABLE = True
+except ImportError:
+    TOPIC_ROUTES_AVAILABLE = False
+
+# Try to import graph search routes (Issue #39)
+try:
+    from src.api.routes import graph_search_routes
+
+    GRAPH_SEARCH_AVAILABLE = True
+except ImportError:
+    GRAPH_SEARCH_AVAILABLE = False
+
 # Try to import rate limiting components (Issue #59)
 try:
     from src.api.middleware.rate_limit_middleware import (
@@ -152,6 +168,14 @@ if EVENT_TIMELINE_AVAILABLE:
 if QUICKSIGHT_AVAILABLE:
     app.include_router(quicksight_routes.router)
 
+# Include topic routes if available (Issue #29)
+if TOPIC_ROUTES_AVAILABLE:
+    app.include_router(topic_routes.router)
+
+# Include graph search routes if available (Issue #39)
+if GRAPH_SEARCH_AVAILABLE:
+    app.include_router(graph_search_routes.router)
+
 
 @app.get("/")
 async def root():
@@ -167,6 +191,8 @@ async def root():
             "enhanced_kg": ENHANCED_KG_AVAILABLE,
             "event_timeline": EVENT_TIMELINE_AVAILABLE,
             "quicksight": QUICKSIGHT_AVAILABLE,
+            "topic_routes": TOPIC_ROUTES_AVAILABLE,
+            "graph_search": GRAPH_SEARCH_AVAILABLE,
         },
     }
 
@@ -186,6 +212,8 @@ async def health_check():
                 "operational" if API_KEY_MANAGEMENT_AVAILABLE else "disabled"
             ),
             "waf_security": "operational" if WAF_SECURITY_AVAILABLE else "disabled",
+            "topic_routes": "operational" if TOPIC_ROUTES_AVAILABLE else "disabled",
+            "graph_search": "operational" if GRAPH_SEARCH_AVAILABLE else "disabled",
             "database": "unknown",  # Would check actual DB connection
             "cache": "unknown",  # Would check Redis connection
         },
