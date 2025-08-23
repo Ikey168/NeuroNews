@@ -40,27 +40,27 @@ class SimpleS3Demo:
                 "content": "Scientists have achieved a major breakthrough in quantum computing, developing a new quantum processor that can solve complex problems exponentially faster than classical computers.",
                 "url": "https://techtoday.com/quantum-breakthrough",
                 "source": "TechToday",
-                "published_date": "2025-8-13",
+                "published_date": "2025-08-13",
                 "author": "Dr. Sarah Chen",
-                "tags": ["quantum computing", "technology", "science"},
+                "tags": ["quantum computing", "technology", "science"],
             },
             {
                 "title": "Climate Action: New Carbon Capture Method",
                 "content": "Researchers have developed an innovative carbon capture technology that can remove CO2 from the atmosphere at unprecedented efficiency levels.",
                 "url": "https://climatescience.org/carbon-capture-innovation",
                 "source": "Climate Science",
-                "published_date": "2025-8-13",
+                "published_date": "2025-08-13",
                 "author": "Prof. Michael Green",
-                "tags": ["climate change", "carbon capture", "environment"},
+                "tags": ["climate change", "carbon capture", "environment"],
             },
             {
                 "title": "AI Advances in Medical Diagnosis",
                 "content": "A new AI system has shown remarkable accuracy in diagnosing rare diseases, potentially revolutionizing medical diagnostics worldwide.",
                 "url": "https://medtech.news/ai-diagnosis-breakthrough",
                 "source": "MedTech News",
-                "published_date": "2025-8-13",
+                "published_date": "2025-08-13",
                 "author": "Dr. Jennifer Liu",
-                "tags": ["AI", "medical", "healthcare", "diagnosis"},
+                "tags": ["AI", "medical", "healthcare", "diagnosis"],
             },
         ]
 
@@ -73,63 +73,62 @@ class SimpleS3Demo:
         storage = S3ArticleStorage(self.s3_config)
 
         print(" S3 Storage initialized")
-        print(f"   Bucket: {self.s3_config.bucket_name})"
-        print(f"   Region: {self.s3_config.region})
+        print("   Bucket: {0}".format(self.s3_config.bucket_name))
+        print("   Region: {0}".format(self.s3_config.region))
 
-        # Test key generation"
+        # Test key generation
         print(""
  Testing S3 key generation: ")"
         for i, article in enumerate(self.sample_articles[:2]):
             raw_key=storage._generate_s3_key(article, ArticleType.RAW)
-            processed_key=storage._generate_s3_key(article, ArticleType.PROCESSED)
+            processed_key=storage._generate_s3_key(
+                article, ArticleType.PROCESSED)
 
-            print(f"   Article {i + 1}:)"
-            print(f"     Raw: {raw_key})"
-            print(f"     Processed: {processed_key})
+            print("   Article {0}:".format(i + 1))
+            print("     Raw: {0}".format(raw_key))
+            print("     Processed: {0}".format(processed_key))
 
-        # Test content hashing"
+        # Test content hashing
         print(""
 🔐 Testing content integrity: ")"
         for i, article in enumerate(self.sample_articles[:2]):
             content_hash=storage._calculate_content_hash(article["content"])
             article_id=storage._generate_article_id(article)
 
-            print(f"   Article {i + 1}: {article['title'][:30}}...)"
-            print(f"     ID: {article_id})"
-            print(f"     Hash: {content_hash[:16}}...)
+            print(f"   Article {i + 1}: {article['title'][:30]}...")
+            print("     ID: {0}".format(article_id))
+            print("     Hash: {0}...".format(content_hash[:16]))
 
         return storage
 
-    async def demo_ingestion_pipeline(self):"
+    async def demo_ingestion_pipeline(self):
         """Demonstrate the ingestion pipeline."""
         print(""
  DEMO: Article Ingestion Pipeline")
         print("=" * 50)"
 
-        print(f"📥 Simulating ingestion of {len(self.sample_articles)} articles...)
+        print("📥 Simulating ingestion of {0} articles...".format(len(self.sample_articles)))
 
         try:
             # Simulate ingestion (will fail gracefully without AWS credentials)
-except Exception:
-    pass
             result = await ingest_scraped_articles_to_s3(
                 self.sample_articles, self.s3_config
             )
-"
+
             print(" Ingestion pipeline executed")
-            print(f"   Status: {result['status'}})"
-            print(f"   Total articles: {result['total_articles'}})
-"
+            print(f"   Status: {result['status']}")
+            print(f"   Total articles: {result['total_articles']}")
+
             if result["status"] == "error":
                 print(
-                    f"   Expected error (no AWS credentials): {result['errors'][0] if result['errors'} else 'Connection failed'}
+                    f"   Expected error (no AWS credentials): {result['errors'][0] if result['errors'] else 'Connection failed'}"
                 )
 
-        except Exception as e:"
-            print(f"⚠️  Expected error without AWS credentials: {str(e)[:100}}...)
+        except Exception as e:
+            print("⚠️  Expected error without AWS credentials: {0}...".format(str(e)[:100]))
 
 
-    async def demo_data_organization(self):"
+    async def demo_data_organization(self):
         """Demonstrate S3 data organization structure."""
         print(""
  DEMO: S3 Data Organization")
@@ -139,14 +138,14 @@ except Exception:
         print("neuronews-articles-demo/")
         print("├── raw_articles/")
         print("│   └── 2025/")
-        print("│       └── 8/")
+        print("│       └── 08/")
         print("│           └── 13/")
         print("│               ├── article1_hash.json")
         print("│               ├── article2_hash.json")
         print("│               └── article3_hash.json")
         print("└── processed_articles/")
         print("    └── 2025/")
-        print("        └── 8/")
+        print("        └── 08/")
         print("            └── 13/")
         print("                ├── article1_hash.json")
         print("                ├── article2_hash.json")
@@ -156,20 +155,20 @@ except Exception:
         storage = S3ArticleStorage(self.s3_config)
 
         print(
-            f""
+            f"
 📝 Generated S3 keys for today ({datetime.now().strftime('%Y-%m-%d')}):"
         )
         for i, article in enumerate(self.sample_articles):
             raw_key = storage._generate_s3_key(article, ArticleType.RAW)
             processed_key = storage._generate_s3_key(article, ArticleType.PROCESSED)
 
-            print(f"   {article['title'][:40}}...)"
-            print(f"     Raw: {raw_key})"
-            print(f"     Processed: {processed_key})
+            print(f"   {article['title'][:40]}...")
+            print("     Raw: {0}".format(raw_key))
+            print("     Processed: {0}".format(processed_key))
             print()
 
 
-    async def demo_article_processing(self):"
+    async def demo_article_processing(self):
         """Demonstrate article processing workflow."""
         print(""
 ⚙️  DEMO: Article Processing Workflow")
@@ -178,41 +177,41 @@ except Exception:
         # Simulate the processing workflow
         article = self.sample_articles[0]
 
-        print(f"📄 Processing article: {article['title'}})"
-        print(f"   Source: {article['source'}})"
-        print(f"   URL: {article['url'}})"
-        print(f"   Content length: {len(article['content'})} characters)
+        print(f"📄 Processing article: {article['title']}")
+        print(f"   Source: {article['source']}")
+        print(f"   URL: {article['url']}")
+        print(f"   Content length: {len(article['content'])} characters")
 
-        # Simulate processing steps"
+        # Simulate processing steps
         print(""
 🔄 Processing steps:")"
 
         # 1. Content analysis
         word_count = len(article["content"].split())
-        print(f"    Content analysis: {word_count} words)
+        print("    Content analysis: {0} words".format(word_count))
 
         # 2. Sentiment analysis (simulated)
-        sentiment_score = 0.75  # Simulated positive sentiment"
-        print(f"    Sentiment analysis: {sentiment_score} (positive))
+        sentiment_score = 0.75  # Simulated positive sentiment
+        print("    Sentiment analysis: {0} (positive)".format(sentiment_score))
 
-        # 3. Entity extraction (simulated)"
+        # 3. Entity extraction (simulated)
         entities = ["quantum computing", "scientists", "technology"]
-        print(f"    Entity extraction: {entities})
+        print("    Entity extraction: {0}".format(entities))
 
-        # 4. Topic classification (simulated)"
+        # 4. Topic classification (simulated)
         topics = ["technology", "science", "innovation"]
-        print(f"    Topic classification: {topics})
+        print("    Topic classification: {0}".format(topics))
 
         # 5. Create processed article
         processed_article = {
-            **article,"
+            **article,
             "processed": True,
             "processing_date": datetime.now(timezone.utc).isoformat(),
             "word_count": word_count,
             "sentiment_score": sentiment_score,
             "entities": entities,
             "topics": topics,
-            "summary": article["content"][:200} + "...",
+            "summary": article["content"][:200] + "...",
             "processing_metadata": {
                 "nlp_model": "demo-nlp-v1.0",
                 "processing_time": 2.3,
@@ -222,7 +221,7 @@ except Exception:
 
         print(""
  Article processing completed")
-        print(f"   Enhanced with {len(processed_article) - len(article)} new fields")""
+        print("   Enhanced with {0} new fields".format(len(processed_article) - len(article)))"
 
         return processed_article
 
@@ -234,48 +233,46 @@ except Exception:
 
         try:
             # Simulate verification (will handle missing AWS credentials gracefully)
-except Exception:
-    pass
             result = await verify_s3_data_consistency(self.s3_config, sample_size=10)
 
             print(" Data verification pipeline executed")
-            print(f"   Status: {result['status'}})
-"
+            print(f"   Status: {result['status']}")
+
             if "total_checked" in result:
-                print(f"   Articles checked: {result['total_checked'}})"
-                print(f"   Valid articles: {result['valid_articles'}})"
-                print(f"   Invalid articles: {result['invalid_articles'}})
-"
+                print(f"   Articles checked: {result['total_checked']}")
+                print(f"   Valid articles: {result['valid_articles']}")
+                print(f"   Invalid articles: {result['invalid_articles']}")
+
             if result["status"] == "error":
                 print(
-                    f"   Expected error (no AWS credentials): {result.get('message', 'Connection failed')}
+                    f"   Expected error (no AWS credentials): {result.get('message', 'Connection failed')}"
                 )
 
-        except Exception as e:"
-            print(f"⚠️  Expected error without AWS credentials: {str(e)[:100}}...)
+        except Exception as e:
+            print("⚠️  Expected error without AWS credentials: {0}...".format(str(e)[:100]))
 
 
-    def demo_configuration(self):"
+    def demo_configuration(self):
         """Show configuration options."""
         print(""
 ⚙️  DEMO: S3 Storage Configuration")
         print("=" * 50)"
 
         print(" Current configuration:")
-        print(f"   🪣 Bucket Name: {self.s3_config.bucket_name})"
-        print(f"   🌍 AWS Region: {self.s3_config.region})"
-        print(f"    Raw Prefix: {self.s3_config.raw_prefix})"
-        print(f"   ⚙️  Processed Prefix: {self.s3_config.processed_prefix})
-        print("
-            f"   🔒 Encryption: {'Enabled' if self.s3_config.enable_encryption else 'Disabled'}
+        print("   🪣 Bucket Name: {0}".format(self.s3_config.bucket_name))
+        print("   🌍 AWS Region: {0}".format(self.s3_config.region))
+        print("    Raw Prefix: {0}".format(self.s3_config.raw_prefix))
+        print("   ⚙️  Processed Prefix: {0}".format(self.s3_config.processed_prefix))
+        print(
+            f"   🔒 Encryption: {'Enabled' if self.s3_config.enable_encryption else 'Disabled'}"
         )
-        print("
-            f"   📝 Versioning: {'Enabled' if self.s3_config.enable_versioning else 'Disabled'}
-        )"
-        print(f"   💾 Storage Class: {self.s3_config.storage_class})"
-        print(f"   📅 Lifecycle Days: {self.s3_config.lifecycle_days})"
-        print(f"   📏 Max File Size: {self.s3_config.max_file_size_mb} MB)
-"
+        print(
+            f"   📝 Versioning: {'Enabled' if self.s3_config.enable_versioning else 'Disabled'}"
+        )
+        print("   💾 Storage Class: {0}".format(self.s3_config.storage_class))
+        print("   📅 Lifecycle Days: {0}".format(self.s3_config.lifecycle_days))
+        print("   📏 Max File Size: {0} MB".format(self.s3_config.max_file_size_mb))
+
         print(""
 🔧 Configuration can be customized for:")
         print("   • Different AWS regions and storage classes")
@@ -382,9 +379,9 @@ if __name__ == "__main__":
 
 ⏹️  Demo interrupted by user")"
     except Exception as e:
-        print(f"
-"
-❌ Demo error: {e}")"
+        print(""
+
+❌ Demo error: {0}".format(e))"
         import traceback
 
         traceback.print_exc()

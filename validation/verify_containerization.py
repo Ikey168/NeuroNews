@@ -11,29 +11,29 @@ import time
 
 def run_command(cmd, description):
     """Run a command and return success status."""
-    print(f"🔧 {description}...")
+    print("🔧 {0}...".format(description))
     try:
         result = subprocess.run(
             cmd, shell=True, capture_output=True, text=True, timeout=30
         )
         if result.returncode == 0:
-            print(f"✅ {description} - SUCCESS")
+            print(" {0} - SUCCESS".format(description))
             return True
         else:
-            print(f"❌ {description} - FAILED")
-            print(f"Error: {result.stderr}")
+            print("❌ {0} - FAILED".format(description))
+            print("Error: {0}".format(result.stderr))
             return False
     except subprocess.TimeoutExpired:
-        print(f"⏰ {description} - TIMEOUT (30s)")
+        print("⏰ {0} - TIMEOUT (30s)".format(description))
         return False
     except Exception as e:
-        print(f"❌ {description} - ERROR: {e}")
+        print("❌ {0} - ERROR: {1}".format(description, e))
         return False
 
 
 def main():
     """Main verification function."""
-    print("🚀 NeuroNews Containerization Verification")
+    print(" NeuroNews Containerization Verification")
     print("=" * 50)
 
     tests = [
@@ -57,12 +57,12 @@ def main():
         results.append(success)
         time.sleep(1)  # Brief pause between tests
 
-    print("\n" + "=" * 50)
-    print("📊 VERIFICATION RESULTS:")
-    print(f"✅ Passed: {sum(results)}/{len(results)} tests")
+    print("=" * 50)
+    print("VERIFICATION RESULTS:")
+    print("Passed: {0}/{1} tests".format(sum(results), len(results)))
 
     if all(results):
-        print("🎉 CONTAINERIZATION VERIFICATION COMPLETE!")
+        print(" CONTAINERIZATION VERIFICATION COMPLETE!")
         print("✨ The containerized solution is ready for deployment!")
         return True
     else:

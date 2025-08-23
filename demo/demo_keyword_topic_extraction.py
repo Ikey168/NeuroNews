@@ -188,21 +188,21 @@ class KeywordTopicDemo:
                 extraction_summary["total_topics"] += len(result.topics)
 
                 # Display sample result
-                logger.info(f""
-📄 Article: {result.title[:60]}...")"
+                logger.info(""
+📄 Article: {0}...".format(result.title[:60]))"
                 logger.info(
-                    f"   Keywords ({len(result.keywords)}): {[kw.keyword for kw in result.keywords[:5]]}"
+                    "   Keywords ({0}): {1}".format(len(result.keywords), [kw.keyword for kw in result.keywords[:5]])
                 )
 
                 if result.dominant_topic:
                     logger.info(
-                        f"   Dominant Topic: {result.dominant_topic.topic_name}"
+                        "   Dominant Topic: {0}".format(result.dominant_topic.topic_name)
                     )
                     logger.info(
-                        f"   Topic Probability: {result.dominant_topic.probability:.3f}"
+                        "   Topic Probability: {0}".format(
                     )
 
-                logger.info(f"   Processing Time: {result.processing_time:.2f}s")
+                logger.info("   Processing Time: {0}s".format(result.processing_time:.2f))
 
                 # Store sample for summary
                 extraction_summary["sample_results"].append(
@@ -412,7 +412,7 @@ class KeywordTopicDemo:
             return demo_results
 
         except Exception as e:
-            logger.error(f"❌ Demo failed: {e}")
+            logger.error("❌ Demo failed: {0}".format(e))
             raise
 
 

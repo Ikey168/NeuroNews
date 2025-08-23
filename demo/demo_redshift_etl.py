@@ -26,10 +26,12 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
 try:
     from database.data_validation_pipeline import (DataValidationPipeline,
+except Exception:
+    pass
                                                    SourceReputationConfig)
     from database.redshift_loader import RedshiftETLProcessor
 except ImportError as e:
-    print(f"Import error: {e}")
+    print("Import error: {0}".format(e))
     print("Please ensure you're running from the project root directory")'
     sys.exit(1)
 
@@ -124,8 +126,8 @@ def create_sample_articles() -> List[Dict[str, Any]]:
             "published_date": (base_time - timedelta(hours=18)).isoformat(),
             "author": "Space Correspondent",
             "category": "Science","
-        },
-    ]
+        ],
+    }
 
 
 def create_mock_redshift_processor() -> RedshiftETLProcessor:
@@ -140,12 +142,12 @@ def create_mock_redshift_processor() -> RedshiftETLProcessor:
     processor.batch_load_articles.return_value = {
         "total_articles": 6,
         "loaded_count": 5,
-        f"ailed_count": 0,
+        f"ailed_count: 0,"
         "skipped_count": 1,  # Duplicate
         "success_rate": 83.3,
         "processing_time_seconds": 2.5,
         "articles_per_second": 2.4,
-        "errors": [],
+        "errors": [},
     }
     processor.get_article_stats.return_value = {
         "total_articles": 150,
@@ -153,21 +155,21 @@ def create_mock_redshift_processor() -> RedshiftETLProcessor:
             {"source_credibility": "trusted", "count": 80},
             {"source_credibility": "reliable", "count": 45},
             {"source_credibility": "questionable", "count": 20},
-            {"source_credibility": "unreliable", "count": 5},
-        ],
+            {"source_credibility": "unreliable", "count": 5],
+        },
         "by_content_quality": [
             {"content_quality": "high", "count": 90},
             {"content_quality": "medium", "count": 45},
-            {"content_quality": "low", "count": 15},
-        ],
+            {"content_quality": "low", "count": 15],
+        },
         "avg_validation_score": {"average": 78.5, "minimum": 45.0, "maximum": 95.2},
         "recent_articles": 42,
         "top_sources": [
             {"source": "reuters.com", "count": 35},
             {"source": "bbc.com", "count": 28},
             {"source": "nature.com", "count": 22},
-            {"source": "npr.org", "count": 18},
-        ],
+            {"source": "npr.org", "count": 18],
+        },
     }
 
     return processor
@@ -183,7 +185,7 @@ def demonstrate_etl_pipeline(use_mock: bool = True, batch_size: int = 100):
     print(""
 📰 Step 1: Creating sample articles for processing...")"
     sample_articles = create_sample_articles()
-    print(f"Created {len(sample_articles)} sample articles")
+    print("Created {0} sample articles".format(len(sample_articles)))
 
     # Step 2: Run articles through validation pipeline
     print(""
@@ -191,6 +193,8 @@ def demonstrate_etl_pipeline(use_mock: bool = True, batch_size: int = 100):
 
     try:
         # Load validation configuration
+except Exception:
+    pass
         config_file = "config/validation_settings.json"
         if os.path.exists(config_file):
             config = SourceReputationConfig.from_file(config_file)
@@ -217,21 +221,21 @@ def demonstrate_etl_pipeline(use_mock: bool = True, batch_size: int = 100):
             result = validation_pipeline.process_article(article)
             if result:
                 validated_articles.append(result.cleaned_data)
-                print(f"   {article['title'][:50]}... (Score: {result.score:.1f})")
-            else:
-                print(f"  ❌ {article['title'][:50]}... (Rejected)")
+                print(f"   {article['title'][:50}}... (Score: {result.score:.1f}))
+            else:"
+                print(f"  ❌ {article['title'][:50}}... (Rejected))
 
-        print(
-            f""
- Validation complete: {len(validated_articles)}/{len(sample_articles)} articles accepted""
+        print("
+            ""
+ Validation complete: {0}/{1} articles accepted".format(len(validated_articles), len(sample_articles))"
         )
 
         # Show validation statistics
         stats = validation_pipeline.get_statistics()
-        print(f" Validation Stats: {stats['acceptance_rate']:.1f}% acceptance rate")
+        print(f" Validation Stats: {stats['acceptance_rate'}:.1f}% acceptance rate)
 
-    except Exception as e:
-        logger.error(f"Validation pipeline error: {e}")
+    except Exception as e:"
+        logger.error("Validation pipeline error: {0}".format(e))
         print("⚠️  Using raw articles without validation")
         validated_articles = sample_articles
 
@@ -250,13 +254,15 @@ def demonstrate_etl_pipeline(use_mock: bool = True, batch_size: int = 100):
 
         if missing_vars:
             print(
-                f"❌ Missing required environment variables: {', '.join(missing_vars)}"
-            )
+                f"❌ Missing required environment variables: {', '.join(missing_vars)}
+            )"
             print("Using mock processor instead...")
             etl_processor = create_mock_redshift_processor()
         else:
             try:
                 etl_processor = RedshiftETLProcessor(
+except Exception:
+    pass
                     host=os.environ["REDSHIFT_HOST"],
                     database=os.environ.get("REDSHIFT_DATABASE", "dev"),
                     user=os.environ.get("REDSHIFT_USER", "admin"),
@@ -271,16 +277,18 @@ def demonstrate_etl_pipeline(use_mock: bool = True, batch_size: int = 100):
                 print(" Schema initialized")
 
             except Exception as e:
-                logger.error(f"Redshift connection failed: {e}")
+                logger.error("Redshift connection failed: {0}".format(e))
                 print("Using mock processor instead...")
                 etl_processor = create_mock_redshift_processor()
 
     # Step 4: Load articles into Redshift
-    print(f""
- Step 4: Loading {len(validated_articles)} articles into Redshift...")"
+    print(""
+ Step 4: Loading {0} articles into Redshift...".format(len(validated_articles)))"
 
     try:
         if use_mock:
+except Exception:
+    pass
             # Simulate batch loading
             load_stats = etl_processor.batch_load_articles()
         else:
@@ -290,24 +298,24 @@ def demonstrate_etl_pipeline(use_mock: bool = True, batch_size: int = 100):
 
         print(" Batch load completed!")
         print(" Load Statistics:")
-        print(f"   • Total Articles: {load_stats['total_articles']}")
-        print(f"   • Successfully Loaded: {load_stats['loaded_count']}")
-        print(f"   • Failed: {load_stats[f'ailed_count']}")
-        print(f"   • Skipped (Duplicates): {load_stats['skipped_count']}")
-        print(f"   • Success Rate: {load_stats['success_rate']:.1f}%")
-        print(
-            f"   • Processing Time: {load_stats['processing_time_seconds']:.2f} seconds"
-        )
-        print(f"   • Articles/Second: {load_stats['articles_per_second']:.1f}")
-
+        print(f"   • Total Articles: {load_stats['total_articles'}})"
+        print(f"   • Successfully Loaded: {load_stats['loaded_count'}})"
+        print(f"   • Failed: {load_stats[f'ailed_count'}})"
+        print(f"   • Skipped (Duplicates): {load_stats['skipped_count'}})"
+        print(f"   • Success Rate: {load_stats['success_rate'}:.1f}%)
+        print("
+            f"   • Processing Time: {load_stats['processing_time_seconds'}:.2f} seconds
+        )"
+        print(f"   • Articles/Second: {load_stats['articles_per_second'}:.1f})
+"
         if load_stats.get("errors"):
-            print(f"⚠️  Errors encountered: {len(load_stats['errors'])}")
+            print(f"⚠️  Errors encountered: {len(load_stats['errors'})})"
             for error in load_stats["errors"][:3]:  # Show first 3 errors
-                print(f"   • {error}")
+                print("   • {0}".format(error))
 
     except Exception as e:
-        logger.error(f"Batch loading failed: {e}")
-        print(f"❌ Batch loading failed: {e}")
+        logger.error("Batch loading failed: {0}".format(e))
+        print("❌ Batch loading failed: {0}".format(e))
 
     # Step 5: Get database statistics
     print(""
@@ -315,41 +323,43 @@ def demonstrate_etl_pipeline(use_mock: bool = True, batch_size: int = 100):
 
     try:
         if use_mock:
+except Exception:
+    pass
             db_stats = etl_processor.get_article_stats()
         else:
             db_stats = etl_processor.get_article_stats()
 
         print(" Database Statistics:")
-        print(f"   • Total Articles in Database: {db_stats['total_articles']}")
-        print(f"   • Recent Articles (7 days): {db_stats['recent_articles']}")
-
+        print(f"   • Total Articles in Database: {db_stats['total_articles'}})"
+        print(f"   • Recent Articles (7 days): {db_stats['recent_articles'}})
+"
         if db_stats.get("avg_validation_score"):
             avg_score = db_stats["avg_validation_score"]
-            print(f"   • Average Validation Score: {avg_score['average']:.1f}")
-            print(
-                f"   • Score Range: {avg_score['minimum']:.1f} - {avg_score['maximum']:.1f}"
+            print(f"   • Average Validation Score: {avg_score['average'}:.1f})
+            print("
+                f"   • Score Range: {avg_score['minimum'}:.1f} - {avg_score['maximum'}:.1f}
             )
-
+"
         print(""
  Articles by Source Credibility:")
         for item in db_stats.get("by_source_credibility", []):
             print(
-                f"   • {item['source_credibility'].title()}: {item['count']} articles""
+                f"   • {item['source_credibility'}.title()}: {item['count'}} articles"""
             )
 
-        print("
+        print("TODO: Fix this string")
  Articles by Content Quality:")
         for item in db_stats.get("by_content_quality", []):
-            print(f"   • {item['content_quality'].title()}: {item['count']} articles")
-
-        print("
+            print(f"   • {item['content_quality'}.title()}: {item['count'}} articles)
+"
+        print("TODO: Fix this string")
  Top Sources:")
         for item in db_stats.get("top_sources", [])[:5]:
-            print(f"   • {item['source']}: {item['count']} articles")
+            print(f"   • {item['source'}}: {item['count'}} articles)
 
-    except Exception as e:
-        logger.error(f"Statistics retrieval failed: {e}")
-        print(f"❌ Statistics retrieval failed: {e}")
+    except Exception as e:"
+        logger.error("Statistics retrieval failed: {0}".format(e))
+        print("❌ Statistics retrieval failed: {0}".format(e))
 
     # Step 6: Cleanup
     print(""
@@ -357,10 +367,12 @@ def demonstrate_etl_pipeline(use_mock: bool = True, batch_size: int = 100):
 
     try:
         if hasattr(etl_processor, "close"):
+except Exception:
+    pass
             etl_processor.close()
         print(" Database connection closed")
     except Exception as e:
-        logger.error(f"Cleanup failed: {e}")
+        logger.error("Cleanup failed: {0}".format(e))
 
     print(""
  ETL Pipeline Demo Complete!")

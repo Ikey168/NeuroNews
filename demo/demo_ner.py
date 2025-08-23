@@ -112,87 +112,84 @@ class NERDemo:
                 "url": "https://example.com/quantum-breakthrough",
                 "source": "MIT Technology Review",
                 "category": "Science","
-            ],
-        }
+            },
+        ]
 
         logger.info(
-            f"Loaded {len(self.sample_articles)} sample articles for demonstration
+            "Loaded {0} sample articles for demonstration".format(
+                len(self.sample_articles))
         )
 
-    def demo_basic_ner(self):"
+    def demo_basic_ner(self):
         """Demonstrate basic NER functionality."""
         logger.info("=== Basic NER Demonstration ===")
 
         try:
             # Create NER processor
-except Exception:
-    pass
             ner_processor = create_ner_processor(confidence_threshold=0.7)
 
             # Process first article
             article = self.sample_articles[0]
-            full_text = f"{article['title'}}. {article['content'}}
-"
-            logger.info(f"Processing article: {article['title'}})"
-            logger.info(f"Text length: {len(full_text)} characters)
+            full_text = f"{article['title']}. {article['content']}"
+
+            logger.info(f"Processing article: {article['title']}")
+            logger.info("Text length: {0} characters".format(len(full_text)))
 
             # Extract entities
-            entities = ner_processor.extract_entities("
+            entities = ner_processor.extract_entities(
                 full_text, article["article_id"])
 
             # Display results
-            logger.info(f"Extracted {len(entities)} entities:)
+            logger.info("Extracted {0} entities:".format(len(entities)))
 
             entity_types = {}
-            for entity in entities:"
+            for entity in entities:
                 entity_type = entity["type"]
                 if entity_type not in entity_types:
                     entity_types[entity_type] = []
                 entity_types[entity_type].append(entity)
 
                 logger.info(
-                    f"  {entity['text'}} ({entity['type'}}) - Confidence: {entity['confidence'}:.2f}
+                    f"  {entity['text']} ({entity['type']}) - Confidence: {entity['confidence']:.2f}"
                 )
 
-            # Show entity type distribution"
+            # Show entity type distribution
             logger.info(""
 Entity Type Distribution:")"
             for entity_type, type_entities in entity_types.items():
-                logger.info(f"  {entity_type}: {len(type_entities)} entities)
+                logger.info("  {0}: {1} entities".format(entity_type, len(type_entities)))
 
             # Show statistics
-            stats = ner_processor.get_statistics()"
+            stats = ner_processor.get_statistics()
             logger.info("
 Processing Statistics:")
-            logger.info(f"  Total texts processed: {stats['total_texts_processed'}})
-            logger.info("
-                f"  Total entities extracted: {stats['total_entities_extracted'}}
+            logger.info(f"  Total texts processed: {stats['total_texts_processed']}")
+            logger.info(
+                f"  Total entities extracted: {stats['total_entities_extracted']}"
             )
-            logger.info("
-                f"  Average entities per text: {stats['average_entities_per_text'}:.2f}
+            logger.info(
+                f"  Average entities per text: {stats['average_entities_per_text']:.2f}"
             )
 
             return entities
 
-        except Exception as e:"
-            logger.error(f"Error in basic NER demo: {e})
+        except Exception as e:
+            logger.error("Error in basic NER demo: {0}".format(e))
             return []
 
 
-    def demo_entity_types(self):"
+    def demo_entity_types(self):
         """Demonstrate different entity types across all articles."""
         logger.info(""
 === Entity Types Demonstration ===")"
 
         try:
             ner_processor = create_ner_processor(confidence_threshold=0.6)
-except Exception:
-    pass
 
             all_entities = []
             for article in self.sample_articles:
-                full_text = f"{article['title'}}. {article['content'}}
-                entities = ner_processor.extract_entities("
+                full_text = f"{article['title']}. {article['content']}"
+                entities = ner_processor.extract_entities(
                     full_text, article["article_id"]
                 )
 
@@ -212,8 +209,8 @@ except Exception:
 
             # Display by type
             for entity_type, entities in sorted(entity_groups.items()):
-                logger.info(f""
-{entity_type} Entities ({len(entities)} found):")"
+                logger.info(""
+{0} Entities ({1} found):".format(entity_type, len(entities)))"
 
                 # Show top entities by confidence
                 sorted_entities = sorted(
@@ -221,35 +218,33 @@ except Exception:
                 )
                 for entity in sorted_entities[:5]:  # Top 5
                     logger.info(
-                        f"  • {entity['text'}} (Confidence: {entity['confidence'}:.2f}) "
-                        ff"rom '{entity['article_title'}}'
+                        f"  • {entity['text']} (Confidence: {entity['confidence']:.2f}) "
+                        ff"rom '{entity['article_title']}'"
                     )
 
-                if len(entities) > 5:"
-                    logger.info(f"  ... and {len(entities) - 5} more)
+                if len(entities) > 5:
+                    logger.info("  ... and {0} more".format(len(entities) - 5))
 
             return entity_groups
 
-        except Exception as e:"
-            logger.error(f"Error in entity types demo: {e})
+        except Exception as e:
+            logger.error("Error in entity types demo: {0}".format(e))
             return {}
 
 
-    def demo_technology_detection(self):"
+    def demo_technology_detection(self):
         """Demonstrate technology-specific entity detection."""
         logger.info(""
 === Technology Entity Detection ===")"
 
         try:
             ner_processor = create_ner_processor(confidence_threshold=0.5)
-except Exception:
-    pass
 
             # Focus on technology article
             tech_article = self.sample_articles[0]  # Apple AI chip article
-            full_text = f"{tech_article['title'}}. {tech_article['content'}}
+            full_text = f"{tech_article['title']}. {tech_article['content']}"
 
-            entities = ner_processor.extract_entities("
+            entities = ner_processor.extract_entities(
                 full_text, tech_article["article_id"]
             )
 
@@ -266,25 +261,25 @@ except Exception:
             logger.info("Technology-Related Entities:")
             for entity in tech_entities:
                 logger.info(
-                    f"  🔧 {entity['text'}} ({entity['type'}}) - {entity['confidence'}:.2f}
+                    f"  🔧 {entity['text']} ({entity['type']}) - {entity['confidence']:.2f}"
                 )
-"
+
             logger.info(""
 Organizations:")"
             for entity in org_entities:
                 logger.info(
-                    f"  🏢 {entity['text'}} ({entity['type'}}) - {entity['confidence'}:.2f}
+                    f"  🏢 {entity['text']} ({entity['type']}) - {entity['confidence']:.2f}"
                 )
-"
+
             logger.info(""
 Key People:")
             for entity in person_entities:
-                logger.info(f"  👤 {entity['text'}} - {entity['confidence'}:.2f}")""
+                logger.info(f"  👤 {entity['text']} - {entity['confidence']:.2f}")"
 
             logger.info(""
 Locations:")
             for entity in location_entities:
-                logger.info(f"  📍 {entity['text'}} - {entity['confidence'}:.2f}")""
+                logger.info(f"  📍 {entity['text']} - {entity['confidence']:.2f}")"
 
             return {
                 "technology": tech_entities,
@@ -294,25 +289,23 @@ Locations:")
             }
 
         except Exception as e:
-            logger.error(f"Error in technology detection demo: {e})
+            logger.error("Error in technology detection demo: {0}".format(e))
             return {}
 
 
-    def demo_policy_detection(self):"
+    def demo_policy_detection(self):
         """Demonstrate policy and regulation entity detection."""
         logger.info(""
 === Policy & Regulation Detection ===")"
 
         try:
             ner_processor = create_ner_processor(confidence_threshold=0.5)
-except Exception:
-    pass
 
             # Focus on policy article
             policy_article = self.sample_articles[1]  # EU AI regulation article
-            full_text = f"{policy_article['title'}}. {policy_article['content'}}
+            full_text = f"{policy_article['title']}. {policy_article['content']}"
 
-            entities = ner_processor.extract_entities("
+            entities = ner_processor.extract_entities(
                 full_text, policy_article["article_id"]
             )
 
@@ -324,33 +317,33 @@ except Exception:
 
             logger.info("Policy/Regulation Entities:")
             for entity in policy_entities:
-                logger.info(f"   {entity['text'}} - {entity['confidence'}:.2f})
-"
+                logger.info(f"   {entity['text']} - {entity['confidence']:.2f}")
+
             logger.info(""
 Regulatory Bodies & Organizations:")"
             for entity in org_entities:
                 logger.info(
-                    f"  🏛️ {entity['text'}} ({entity['type'}}) - {entity['confidence'}:.2f}
+                    f"  🏛️ {entity['text']} ({entity['type']}) - {entity['confidence']:.2f}"
                 )
-"
+
             logger.info(""
 Key Officials:")
             for entity in person_entities:
-                logger.info(f"  👥 {entity['text'}} - {entity['confidence'}:.2f}")""
+                logger.info(f"  👥 {entity['text']} - {entity['confidence']:.2f}")"
 
             logger.info(""
 Jurisdictions:")
             for entity in location_entities:
-                logger.info(f"  🌍 {entity['text'}} - {entity['confidence'}:.2f}")""
+                logger.info(f"  🌍 {entity['text']} - {entity['confidence']:.2f}")"
 
             return entities
 
         except Exception as e:
-            logger.error(f"Error in policy detection demo: {e})
+            logger.error("Error in policy detection demo: {0}".format(e))
             return []
 
 
-    def demo_full_pipeline(self):"
+    def demo_full_pipeline(self):
         """Demonstrate the full NER article processing pipeline."""
         logger.info(""
 === Full NER Pipeline Demonstration ===")"
@@ -361,8 +354,6 @@ Jurisdictions:")
 
         try:
             # Mock database configuration
-except Exception:
-    pass
             config = {
                 "redshift_host": "demo-cluster.us-west-2.redshift.amazonaws.com",
                 "redshift_port": 5439,
@@ -377,16 +368,16 @@ except Exception:
             # This would normally create a real processor, but we'll demonstrate the structure
             logger.info("Creating NER Article Processor...")
             logger.info(
-                f"Configuration: NER enabled, confidence threshold: {config['ner_confidence_threshold'}}'
+                f"Configuration: NER enabled, confidence threshold: {config['ner_confidence_threshold']}"'
             )
 
             # Simulate processing results
             results = []
             for i, article in enumerate(self.sample_articles):
                 # Simulate entity extraction
-                ner_processor = create_ner_processor(confidence_threshold=0.7)"
-                full_text = f"{article['title'}}. {article['content'}}
-                entities = ner_processor.extract_entities("
+                ner_processor = create_ner_processor(confidence_threshold=0.7)
+                full_text = f"{article['title']}. {article['content']}"
+                entities = ner_processor.extract_entities(
                     full_text, article["article_id"]
                 )
 
@@ -401,24 +392,24 @@ except Exception:
                     "confidence": 0.85,
                     "entities": entities,
                     "entity_count": len(entities),
-                    "entity_types": list(set(e["type"} for e in entities)),
+                    "entity_types": list(set(e["type"] for e in entities)),
                     "processed_at": datetime.now(timezone.utc).isoformat(),
                 }
                 results.append(result)
 
-                logger.info(f"Processed article '{article['title'}}':)
-                logger.info("
-                    f"  - Sentiment: {result['sentiment'}} ({result['confidence'}:.2f})
-                )"
-                logger.info(f"  - Entities: {result['entity_count'}} extracted)"
-                logger.info(f"  - Entity types: {', '.join(result['entity_types'})})
-"
-            logger.info(f""
-Pipeline completed: {len(results)} articles processed")"
+                logger.info(f"Processed article '{article['title']}':")
+                logger.info(
+                    f"  - Sentiment: {result['sentiment']} ({result['confidence']:.2f})"
+                )
+                logger.info(f"  - Entities: {result['entity_count']} extracted")
+                logger.info(f"  - Entity types: {', '.join(result['entity_types'])}")
+
+            logger.info(""
+Pipeline completed: {0} articles processed".format(len(results)))"
 
             # Simulate database storage summary
             total_entities = sum(r["entity_count"] for r in results)
-            logger.info(f"Would store {total_entities} entities in database tables:)"
+            logger.info("Would store {0} entities in database tables:".format(total_entities))
             logger.info("  - article_sentiment: sentiment analysis results")
             logger.info("  - article_entities: detailed entity information")
             logger.info("  - news_articles: updated with entities JSON")
@@ -426,25 +417,23 @@ Pipeline completed: {len(results)} articles processed")"
             return results
 
         except Exception as e:
-            logger.error(f"Error in full pipeline demo: {e})
+            logger.error("Error in full pipeline demo: {0}".format(e))
             return []
 
 
-    def demo_statistics_and_search(self):"
+    def demo_statistics_and_search(self):
         """Demonstrate statistics and search capabilities."""
         logger.info(""
 === Statistics & Search Demo ===")"
 
         try:
             ner_processor = create_ner_processor(confidence_threshold=0.6)
-except Exception:
-    pass
 
             # Process all articles
             all_entities = []
             for article in self.sample_articles:
-                full_text = f"{article['title'}}. {article['content'}}
-                entities = ner_processor.extract_entities("
+                full_text = f"{article['title']}. {article['content']}"
+                entities = ner_processor.extract_entities(
                     full_text, article["article_id"]
                 )
                 all_entities.extend(entities)
@@ -453,15 +442,15 @@ except Exception:
             stats = ner_processor.get_statistics()
 
             logger.info("Overall NER Statistics:")
-            logger.info(f"   Total texts processed: {stats['total_texts_processed'}})
-            logger.info("
-                f"   Total entities extracted: {stats['total_entities_extracted'}}
+            logger.info(f"   Total texts processed: {stats['total_texts_processed']}")
+            logger.info(
+                f"   Total entities extracted: {stats['total_entities_extracted']}"
             )
-            logger.info("
-                f"   Average entities per text: {stats['average_entities_per_text'}:.2f}
-            )"
-            logger.info(f"  ⚠️ Processing errors: {stats['processing_errors'}})
-"
+            logger.info(
+                f"   Average entities per text: {stats['average_entities_per_text']:.2f}"
+            )
+            logger.info(f"  ⚠️ Processing errors: {stats['processing_errors']}")
+
             logger.info(""
 Entity Type Distribution:")"
             for entity_type, count in sorted(
@@ -470,59 +459,57 @@ Entity Type Distribution:")"
                 reverse=True,
             ):
                 percentage = (count / stats["total_entities_extracted"]) * 100
-                logger.info(f"  {entity_type}: {count} ({percentage:.1f}%))
+                logger.info("  {0}: {1} ({2}%)".format(entity_type, count, percentage:.1f))
 
-            # Demonstrate search functionality"
+            # Demonstrate search functionality
             logger.info(""
 Entity Search Examples:")"
 
             # Search for Apple entities
             apple_entities = [e for e in all_entities if "apple" in e["text"].lower()]
             if apple_entities:
-                logger.info(f"   Found {len(apple_entities)} Apple-related entities:)
+                logger.info("   Found {0} Apple-related entities:".format(len(apple_entities)))
                 for entity in apple_entities[:3]:
-                    logger.info("
-                        f"    • {entity['text'}} ({entity['type'}}) - {entity['confidence'}:.2f}
+                    logger.info(
+                        f"    • {entity['text']} ({entity['type']}) - {entity['confidence']:.2f}"
                     )
 
-            # Search for high-confidence entities"
+            # Search for high-confidence entities
             high_conf_entities = [e for e in all_entities if e["confidence"] >= 0.9]
             logger.info(
-                f"  🏆 High-confidence entities (≥0.9): {len(high_conf_entities)}
+                "  🏆 High-confidence entities (≥0.9): {0}".format(len(high_conf_entities))
             )
-            for entity in sorted("
+            for entity in sorted(
                 high_conf_entities, key=lambda x: x["confidence"], reverse=True
             )[:5]:
                 logger.info(
-                    f"    • {entity['text'}} ({entity['type'}}) - {entity['confidence'}:.2f}
+                    f"    • {entity['text']} ({entity['type']}) - {entity['confidence']:.2f}"
                 )
 
-            # Search by entity type"
+            # Search by entity type
             org_entities = [e for e in all_entities if "ORGANIZATION" in e["type"]]
-            logger.info(f"  🏢 Organization entities: {len(org_entities)})
-            for entity in sorted("
+            logger.info("  🏢 Organization entities: {0}".format(len(org_entities)))
+            for entity in sorted(
                 org_entities, key=lambda x: x["confidence"], reverse=True
             )[:5]:
                 logger.info(
-                    f"    • {entity['text'}} ({entity['type'}}) - {entity['confidence'}:.2f}
+                    f"    • {entity['text']} ({entity['type']}) - {entity['confidence']:.2f}"
                 )
 
             return stats
 
-        except Exception as e:"
-            logger.error(f"Error in statistics demo: {e})
+        except Exception as e:
+            logger.error("Error in statistics demo: {0}".format(e))
             return {}
 
 
-    def run_all_demos(self):"
+    def run_all_demos(self):
         """Run all demonstration scenarios."""
         logger.info(" Starting NER Demo Suite")
         logger.info("=" * 50)
 
         try:
             # Run individual demos
-except Exception:
-    pass
             self.demo_basic_ner()
             self.demo_entity_types()
             self.demo_technology_detection()
@@ -544,45 +531,41 @@ Key Features Demonstrated:")
             logger.info("   Database storage simulation")"
 
         except Exception as e:
-            logger.error(f"Error running demo suite: {e})
+            logger.error("Error running demo suite: {0}".format(e))
             raise
 
-"
+
 def save_demo_results(results: List[Dict], filename: str = "ner_demo_results.json"):
     """Save demo results to JSON file."""
     try:
         with open(filename, "w") as f:
-except Exception:
-    pass
             json.dump(results, f, indent=2, default=str)
-        logger.info(f"Demo results saved to {filename})
-    except Exception as e:"
-        logger.error(f"Failed to save results: {e})
+        logger.info("Demo results saved to {0}".format(filename))
+    except Exception as e:
+        logger.error("Failed to save results: {0}".format(e))
 
-"
+
 if __name__ == "__main__":
     """Run the NER demonstration."""
 
     # Check if running in an environment that supports transformers
     try:
         import torch
-except Exception:
-    pass
         import transformers
 
-        logger.info(f"PyTorch version: {torch.__version__})"
-        logger.info(f"Transformers version: {transformers.__version__})
+        logger.info("PyTorch version: {0}".format(torch.__version__))
+        logger.info("Transformers version: {0}".format(transformers.__version__))
 
         # Run the demo
         demo = NERDemo()
         demo.run_all_demos()
 
-    except ImportError as e:"
+    except ImportError as e:
         logger.error("Missing required dependencies for NER demo")
         logger.error("Please install: pip install torch transformers")
-        logger.error(f"Import error: {e})
+        logger.error("Import error: {0}".format(e))
 
-        # Show what the demo would do"
+        # Show what the demo would do
         logger.info(""
 " + "=" * 50)
         logger.info("NER Demo Overview (Dependencies Missing)")
@@ -597,6 +580,5 @@ except Exception:
         logger.info("7. Statistics and search capabilities")"
 
     except Exception as e:
-        logger.error(f"Demo failed with error: {e})
+        logger.error("Demo failed with error: {0}".format(e))
         raise
-"

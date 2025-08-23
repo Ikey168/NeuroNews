@@ -144,10 +144,10 @@ class S3StorageDemo:
             with open(config_path, "r") as f:
                 return json.load(f)
         except FileNotFoundError:
-            print(f"⚠️  Configuration file not found: {config_path}")
+            print("⚠️  Configuration file not found: {0}".format(config_path))
             return self._get_default_config()
         except json.JSONDecodeError as e:
-            print(f"⚠️  Error parsing configuration file: {e}")
+            print("⚠️  Error parsing configuration file: {0}".format(e))
             return self._get_default_config()
 
     def _get_default_config(self) -> Dict[str, Any]:
@@ -177,7 +177,7 @@ class S3StorageDemo:
                 print("⚠️  S3 client not available (missing credentials)")
                 return False
         except Exception as e:
-            print(f"❌ Failed to initialize S3 storage: {e}")
+            print("❌ Failed to initialize S3 storage: {0}".format(e))
             return False
 
     async def demo_basic_functionality(self):
@@ -198,10 +198,10 @@ class S3StorageDemo:
 📥 Demo 1: Storing Raw Article")"
             sample_article = SAMPLE_ARTICLES[0]
             metadata = await self.storage.store_raw_article(sample_article)
-            print(f" Stored raw article: {metadata.s3_key}")
-            print(f"   Article ID: {metadata.article_id}")
-            print(f"   Content Hash: {metadata.content_hash[:16]}...")
-            print(f"   File Size: {metadata.file_size} bytes")
+            print(" Stored raw article: {0}".format(metadata.s3_key))
+            print("   Article ID: {0}".format(metadata.article_id))
+            print("   Content Hash: {0}...".format(metadata.content_hash[:16]))
+            print("   File Size: {0} bytes".format(metadata.file_size))
 
             # Demo 2: Retrieve and verify article
             print(""
@@ -210,7 +210,7 @@ class S3StorageDemo:
             print(f" Retrieved article: {retrieved_article['title']}")"
 
             is_valid = await self.storage.verify_article_integrity(metadata.s3_key)
-            print(f" Article integrity verified: {is_valid}")
+            print(" Article integrity verified: {0}".format(is_valid))
 
             # Demo 3: Store processed article
             print(""
@@ -232,10 +232,10 @@ class S3StorageDemo:
             processed_metadata = await self.storage.store_processed_article(
                 processed_article, processing_metadata
             )
-            print(f" Stored processed article: {processed_metadata.s3_key}")
+            print(" Stored processed article: {0}".format(processed_metadata.s3_key))
 
         except Exception as e:
-            print(f"❌ Error in basic functionality demo: {e}")
+            print("❌ Error in basic functionality demo: {0}".format(e))
 
 
     def _demo_functionality_without_aws(self):
@@ -251,16 +251,16 @@ class S3StorageDemo:
             sample_article, ArticleType.PROCESSED
         )
 
-        print(f" Raw article S3 key: {raw_key}")
-        print(f" Processed article S3 key: {processed_key}")
+        print(" Raw article S3 key: {0}".format(raw_key))
+        print(" Processed article S3 key: {0}".format(processed_key))
 
         # Test content hash
         content_hash = self.storage._calculate_content_hash(sample_article["content"])
-        print(f" Content hash: {content_hash[:16]}...")
+        print(" Content hash: {0}...".format(content_hash[:16]))
 
         # Test article ID generation
         article_id = self.storage._generate_article_id(sample_article)
-        print(f" Article ID: {article_id}")
+        print(" Article ID: {0}".format(article_id))
 
 
     async def demo_batch_ingestion(self):
@@ -275,8 +275,8 @@ class S3StorageDemo:
             return
 
         try:
-            print(f""
-📥 Ingesting {len(SAMPLE_ARTICLES)} articles...")"
+            print(""
+📥 Ingesting {0} articles...".format(len(SAMPLE_ARTICLES)))"
 
             # Use the ingestion function
             result = await ingest_scraped_articles_to_s3(
@@ -291,16 +291,16 @@ class S3StorageDemo:
             if result["errors"]:
                 print(f"   Errors: {len(result['errors'])}")
                 for error in result["errors"][:3]:  # Show first 3 errors
-                    print(f"     - {error}")
+                    print("     - {0}".format(error))
 
             if result["stored_keys"]:
                 print(""
  Sample stored keys:")
                 for key in result["stored_keys"][:3]:  # Show first 3 keys
-                    print(f"   - {key}")"
+                    print("   - {0}".format(key))"
 
         except Exception as e:
-            print(f"❌ Error in batch ingestion demo: {e}")
+            print("❌ Error in batch ingestion demo: {0}".format(e))
 
 
     async def demo_data_organization(self):
@@ -337,8 +337,8 @@ class S3StorageDemo:
             # List articles by date
             today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-            print(f""
- Listing articles for {today}:")"
+            print(""
+ Listing articles for {0}:".format(today))"
 
             raw_articles = await self.storage.list_articles_by_date(
                 today, ArticleType.RAW
@@ -347,16 +347,16 @@ class S3StorageDemo:
                 today, ArticleType.PROCESSED
             )
 
-            print(f"   Raw articles: {len(raw_articles)}")
+            print("   Raw articles: {0}".format(len(raw_articles)))
             for article in raw_articles[:3]:  # Show first 3
-                print(f"     - {article}")
+                print("     - {0}".format(article))
 
-            print(f"   Processed articles: {len(processed_articles)}")
+            print("   Processed articles: {0}".format(len(processed_articles)))
             for article in processed_articles[:3]:  # Show first 3
-                print(f"     - {article}")
+                print("     - {0}".format(article))
 
         except Exception as e:
-            print(f"❌ Error demonstrating data organization: {e}")
+            print("❌ Error demonstrating data organization: {0}".format(e))
 
 
     async def demo_data_consistency_verification(self):
@@ -388,7 +388,7 @@ class S3StorageDemo:
                 print(""
 ⚠️  Integrity Issues Found:")
                 for error in result["errors"][:5]:  # Show first 5 errors
-                    print(f"     - {error}")"
+                    print("     - {0}".format(error))"
 
             # Storage statistics
             if "storage_statistics" in result:
@@ -404,7 +404,7 @@ class S3StorageDemo:
                 )
 
         except Exception as e:
-            print(f"❌ Error in data consistency verification: {e}")
+            print("❌ Error in data consistency verification: {0}".format(e))
 
 
     async def demo_storage_statistics(self):
@@ -446,7 +446,7 @@ class S3StorageDemo:
 🕒 Last Updated: {stats['last_updated']}")
 
         except Exception as e:
-            print(f"❌ Error retrieving storage statistics: {e}")
+            print("❌ Error retrieving storage statistics: {0}".format(e))
 
 
     async def demo_cleanup_operations(self):
@@ -477,8 +477,8 @@ class S3StorageDemo:
 
             # Demonstrate what cleanup would do (without actually doing it)
             print(
-                f""
-📅 Simulating cleanup for articles older than {self.s3_config.lifecycle_days} days...""
+                ""
+📅 Simulating cleanup for articles older than {0} days...".format(self.s3_config.lifecycle_days)"
             )
 
             # Get current statistics
@@ -489,7 +489,7 @@ class S3StorageDemo:
             print("    Cleanup simulation completed")
 
         except Exception as e:
-            print(f"❌ Error in cleanup demonstration: {e}")
+            print("❌ Error in cleanup demonstration: {0}".format(e))
 
 
     def print_configuration_summary(self):
@@ -499,19 +499,19 @@ class S3StorageDemo:
         print("⚙️  S3 STORAGE CONFIGURATION SUMMARY")
         print("=" * 60)"
 
-        print(f"🪣 Bucket: {self.s3_config.bucket_name}")
-        print(f"🌍 Region: {self.s3_config.region}")
-        print(f" Raw Prefix: {self.s3_config.raw_prefix}")
-        print(f"⚙️  Processed Prefix: {self.s3_config.processed_prefix}")
+        print("🪣 Bucket: {0}".format(self.s3_config.bucket_name))
+        print("🌍 Region: {0}".format(self.s3_config.region))
+        print(" Raw Prefix: {0}".format(self.s3_config.raw_prefix))
+        print("⚙️  Processed Prefix: {0}".format(self.s3_config.processed_prefix))
         print(
             f"🔒 Encryption: {'Enabled' if self.s3_config.enable_encryption else 'Disabled'}"
         )
         print(
             f"📝 Versioning: {'Enabled' if self.s3_config.enable_versioning else 'Disabled'}"
         )
-        print(f"💾 Storage Class: {self.s3_config.storage_class}")
-        print(f"🗓️  Lifecycle: {self.s3_config.lifecycle_days} days")
-        print(f"📏 Max File Size: {self.s3_config.max_file_size_mb} MB")
+        print("💾 Storage Class: {0}".format(self.s3_config.storage_class))
+        print("🗓️  Lifecycle: {0} days".format(self.s3_config.lifecycle_days))
+        print("📏 Max File Size: {0} MB".format(self.s3_config.max_file_size_mb))
 
 
     async def run_complete_demo(self):
@@ -577,9 +577,9 @@ if __name__ == "__main__":
 
 ⏹️  Demo interrupted by user")"
     except Exception as e:
-        print(f""
+        print(""
 
-❌ Demo failed with error: {e}")"
+❌ Demo failed with error: {0}".format(e))"
         import traceback
 
         traceback.print_exc()

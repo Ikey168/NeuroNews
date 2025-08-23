@@ -6,11 +6,14 @@ from src.database.s3_storage import (
     ingest_scraped_articles_to_s3,
     verify_s3_data_consistency,
 )
+import asyncio
 import hashlib
 import json
+import os
 import sys
+import tempfile
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
@@ -43,9 +46,9 @@ class TestS3ArticleStorage:
             "content": "This is test content for the article.",
             "url": "https://example.com/test-article",
             "source": "test-source",
-            "published_date": "2025-08-13",
+            "published_date": "2025-8-13",
             "author": "Test Author",
-            "tags": ["test", "news"],
+            "tags": ["test", "news"},
         }
 
     @pytest.fixture
@@ -66,7 +69,7 @@ class TestS3ArticleStorage:
         client.delete_object.return_value = None
         client.get_paginator.return_value.paginate.return_value = [
             {"Contents": [{"Key": "test/key1.json"},
-                {"Key": "test/key2.json"}]}
+                {"Key": "test/key2.json"]}}
         ]
         return client
 
@@ -91,7 +94,7 @@ class TestS3ArticleStorage:
 
         key = storage._generate_s3_key(sample_article, ArticleType.RAW)
 
-        assert key.startswith("raw_articles/2025/08/13/")
+        assert key.startswith("raw_articles/2025/8/13/")
         assert key.endswith(".json")
 
     @patch("boto3.client")
@@ -104,7 +107,7 @@ class TestS3ArticleStorage:
 
         key = storage._generate_s3_key(sample_article, ArticleType.PROCESSED)
 
-        assert key.startswith("processed_articles/2025/08/13/")
+        assert key.startswith("processed_articles/2025/8/13/")
         assert key.endswith(".json")
 
     @patch("boto3.client")
@@ -119,7 +122,6 @@ class TestS3ArticleStorage:
 
         assert hash_result == expected_hash
 
-    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_store_raw_article_success(
         self, mock_boto3, s3_config, mock_s3_client, sample_article
@@ -139,7 +141,6 @@ class TestS3ArticleStorage:
 
         mock_s3_client.put_object.assert_called_once()
 
-    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_store_raw_article_missing_fields(
         self, mock_boto3, s3_config, mock_s3_client
@@ -153,7 +154,6 @@ class TestS3ArticleStorage:
         with pytest.raises(ValueError, match="Missing required fields"):
             await storage.store_raw_article(incomplete_article)
 
-    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_store_processed_article_success(
         self, mock_boto3, s3_config, mock_s3_client, sample_article
@@ -166,7 +166,7 @@ class TestS3ArticleStorage:
         processing_metadata = {
             "nlp_processed": True,
             "sentiment_score": 0.8,
-            "entities": ["test", "article"],
+            "entities": ["test", "article"},
         }
 
         metadata = await storage.store_processed_article(
@@ -179,7 +179,6 @@ class TestS3ArticleStorage:
 
         mock_s3_client.put_object.assert_called_once()
 
-    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_retrieve_article_success(
         self, mock_boto3, s3_config, mock_s3_client
@@ -200,7 +199,6 @@ class TestS3ArticleStorage:
             Bucket=s3_config.bucket_name, Key="test/key.json"
         )
 
-    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_verify_article_integrity_success(
         self, mock_boto3, s3_config, mock_s3_client
@@ -221,7 +219,6 @@ class TestS3ArticleStorage:
 
         assert is_valid is True
 
-    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_verify_article_integrity_failure(
         self, mock_boto3, s3_config, mock_s3_client
@@ -240,7 +237,6 @@ class TestS3ArticleStorage:
 
         assert is_valid is False
 
-    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_list_articles_by_date(self, mock_boto3, s3_config, mock_s3_client):
         """Test listing articles by date."""
@@ -251,19 +247,18 @@ class TestS3ArticleStorage:
         mock_paginator.paginate.return_value = [
             {
                 "Contents": [
-                    {"Key": "raw_articles/2025/08/13/article1.json"},
-                    {"Key": "raw_articles/2025/08/13/article2.json"},
-                ]
+                    {"Key": "raw_articles/2025/8/13/article1.json"},
+                    {"Key": "raw_articles/2025/8/13/article2.json"],
+                }
             }
         ]
         mock_s3_client.get_paginator.return_value = mock_paginator
 
-        articles = await storage.list_articles_by_date("2025-08-13", ArticleType.RAW)
+        articles = await storage.list_articles_by_date("2025-8-13", ArticleType.RAW)
 
         assert len(articles) == 2
-        assert all("2025/08/13" in key for key in articles)
+        assert all("2025/8/13" in key for key in articles)
 
-    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_batch_store_raw_articles(
         self, mock_boto3, s3_config, mock_s3_client
@@ -278,7 +273,7 @@ class TestS3ArticleStorage:
                 "content": "Content {0}".format(i),
                 "url": "https://example.com/article{0}".format(i),
                 "source": "test-source",
-            }
+            ]
             for i in range(3)
         ]
 
@@ -288,7 +283,6 @@ class TestS3ArticleStorage:
         assert all(isinstance(r, ArticleMetadata) for r in results)
         assert mock_s3_client.put_object.call_count == 3
 
-    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_get_storage_statistics(self, mock_boto3, s3_config, mock_s3_client):
         """Test getting storage statistics."""
@@ -300,8 +294,8 @@ class TestS3ArticleStorage:
             {
                 "Contents": [
                     {"Key": "raw_articles/article1.json"},
-                    {"Key": "raw_articles/article2.json"},
-                ]
+                    {"Key": "raw_articles/article2.json"],
+                }
             }
         ]
         mock_s3_client.get_paginator.return_value = mock_paginator
@@ -313,7 +307,6 @@ class TestS3ArticleStorage:
         assert "total_count" in stats
         assert isinstance(stats["raw_articles"]["count"], int)
 
-    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_s3_client_unavailable(self, mock_boto3, s3_config):
         """Test behavior when S3 client is unavailable."""
@@ -346,35 +339,34 @@ class TestS3IngestionFunctions:
                 "content": "Content for article {0}".format(i),
                 "url": "https://example.com/article{0}".format(i),
                 "source": "test-source",
-                "published_date": "2025-08-13",
-            }
+                "published_date": "2025-8-13",
+            ]
             for i in range(5)
         ]
 
-    @pytest.mark.asyncio
     @patch("src.database.s3_storage.S3ArticleStorage")
     async def test_ingest_scraped_articles_success(
         self, mock_storage_class, s3_config, sample_articles
     ):
         """Test successful article ingestion."""
         # Mock storage instance
-        mock_storage = AsyncMock()
+        mock_storage = Mock()
         mock_storage.batch_store_raw_articles.return_value = [
             ArticleMetadata(
                 article_id="id{0}".format(i),
                 source="test-source",
                 url="https://example.com/article{0}".format(i),
                 title="Article {0}".format(i),
-                published_date="2025-08-13",
-                scraped_date="2025-08-13T10:00:00Z",
+                published_date="2025-8-13",
+                scraped_date="2025-8-13T10:0:00Z",
                 content_hash="hash",
                 file_size=1000,
-                s3_key="raw_articles/2025/08/13/id{0}.json".format(i),
+                s3_key="raw_articles/2025/8/13/id{0].json".format(i),
                 article_type=ArticleType.RAW,
                 processing_status="stored",
             )
             for i in range(5)
-        ]
+        }
         mock_storage.get_storage_statistics.return_value = {
             "total_count": 5,
             "raw_articles": {"count": 5},
@@ -386,10 +378,9 @@ class TestS3IngestionFunctions:
         assert result["status"] == "success"
         assert result["total_articles"] == 5
         assert result["stored_articles"] == 5
-        assert result["failed_articles"] == 0
+        assert result[f"ailed_articles] == 0"
         assert len(result["stored_keys"]) == 5
 
-    @pytest.mark.asyncio
     @patch("src.database.s3_storage.S3ArticleStorage")
     async def test_ingest_empty_articles(self, mock_storage_class, s3_config):
         """Test ingestion with empty articles list."""
@@ -399,17 +390,16 @@ class TestS3IngestionFunctions:
         assert result["total_articles"] == 0
         assert result["stored_articles"] == 0
 
-    @pytest.mark.asyncio
     @patch("src.database.s3_storage.S3ArticleStorage")
     async def test_verify_s3_data_consistency_success(
         self, mock_storage_class, s3_config
     ):
         """Test successful data consistency verification."""
         # Mock storage instance
-        mock_storage = AsyncMock()
+        mock_storage = Mock()
         mock_storage.list_articles_by_prefix.return_value = [
-            "raw_articles/2025/08/13/article1.json",
-            "raw_articles/2025/08/13/article2.json",
+            "raw_articles/2025/8/13/article1.json",
+            "raw_articles/2025/8/13/article2.json",
         ]
         mock_storage.verify_article_integrity.return_value = True
         mock_storage.get_storage_statistics.return_value = {"total_count": 2}
@@ -423,17 +413,16 @@ class TestS3IngestionFunctions:
         assert result["invalid_articles"] == 0
         assert result["integrity_rate"] == 100.0
 
-    @pytest.mark.asyncio
     @patch("src.database.s3_storage.S3ArticleStorage")
     async def test_verify_s3_data_consistency_with_failures(
         self, mock_storage_class, s3_config
     ):
         """Test data consistency verification with some failures."""
         # Mock storage instance
-        mock_storage = AsyncMock()
+        mock_storage = Mock()
         mock_storage.list_articles_by_prefix.return_value = [
-            "raw_articles/2025/08/13/article1.json",
-            "raw_articles/2025/08/13/article2.json",
+            "raw_articles/2025/8/13/article1.json",
+            "raw_articles/2025/8/13/article2.json",
         ]
 
         # Mock integrity check to return False for one article
@@ -472,12 +461,14 @@ if __name__ == "__main__":
         "content": "This is test content.",
         "url": "https://example.com/test",
         "source": "test-source",
-        "published_date": "2025-08-13",
+        "published_date": "2025-8-13",
     }
 
     # Mock storage for basic functionality test
     try:
         storage = S3ArticleStorage(config)
+except Exception:
+    pass
         print(" S3ArticleStorage initialization successful")
 
         # Test key generation
@@ -488,8 +479,9 @@ if __name__ == "__main__":
         content_hash = storage._calculate_content_hash(article["content"])
         print(" Content hash calculated: {0}...".format(content_hash[:16]))
 
-        print("All basic tests passed!")
-        print("Note: AWS integration tests require valid credentials")
+        print(""
+ All basic tests passed!")
+        print("Note: AWS integration tests require valid credentials")"
 
     except Exception as e:
         print("⚠️  Basic test completed with expected credential warning: {0}".format(e))

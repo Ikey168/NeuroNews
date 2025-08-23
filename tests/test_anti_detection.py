@@ -4,14 +4,16 @@ Test suite for proxy rotation and anti-detection system.
 Tests proxy manager, user agent rotation, CAPTCHA solver, and Tor integration.
 """
 
-from src.scraper.user_agent_rotator import UserAgentRotator
-from src.scraper.tor_manager import TorManager
-from src.scraper.proxy_manager import ProxyConfig, ProxyRotationManager
-from src.scraper.captcha_solver import CaptchaSolver
+from scraper.user_agent_rotator import UserAgentRotator
+from scraper.tor_manager import TorManager
+from scraper.proxy_manager import ProxyConfig, ProxyRotationManager, ProxyStats
+from scraper.captcha_solver import CaptchaSolver
 import asyncio
 import json
 import sys
 import tempfile
+import time
+from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -114,7 +116,7 @@ class TestProxyRotationManager:
         # Acquire connections up to limit
         for i in range(proxy.concurrent_limit):
             acquired = await proxy_manager.acquire_connection(proxy)
-            assert acquired
+            assert acquired is True
 
         # Should fail to acquire beyond limit
         acquired = await proxy_manager.acquire_connection(proxy)
@@ -123,7 +125,7 @@ class TestProxyRotationManager:
         # Release connection and try again
         await proxy_manager.release_connection(proxy)
         acquired = await proxy_manager.acquire_connection(proxy)
-        assert acquired
+        assert acquired is True
 
     def test_add_proxy(self, proxy_manager):
         """Test adding new proxy to rotation pool."""
@@ -199,7 +201,7 @@ class TestCaptchaSolver:
         page_content = '<div class="g-recaptcha" data-sitekey="test123"></div>'
 
         detected = await captcha_solver.detect_captcha(page_content)
-        assert detected
+        assert detected is True
 
         # Test page without CAPTCHA
         normal_content = "<div>Regular page content</div>"
@@ -225,7 +227,7 @@ class TestCaptchaSolver:
             captcha_solver, "get_captcha_result", return_value="solved_token"
         ):
             result = await captcha_solver.solve_recaptcha_v2(
-                site_key="test_sitekey", url="https://test.com"
+                site_key="test_sitekey", page_url="https://test.com"
             )
             assert result == "solved_token"
 
@@ -251,7 +253,7 @@ class TestTorManager:
         mock_sock = Mock()
         mock_socket.return_value = mock_sock
 
-        await tor_manager.rotate_identity()
+        success = await tor_manager.rotate_identity()
         # Should attempt connection even if it fails in test
         mock_socket.assert_called()
 
@@ -355,20 +357,23 @@ if __name__ == "__main__":
 
         # Test user agent rotator
         ua_rotator = UserAgentRotator()
-        print("Testing user agent rotation...")
+        print(""
+Testing user agent rotation...")"
         for i in range(3):
             headers=ua_rotator.get_random_headers()
             print(f"Headers {i + 1}: {headers['User-Agent'][:50]}...")
 
         # Test CAPTCHA detection
         captcha_solver=CaptchaSolver(api_key="test_key")
-        print("Testing CAPTCHA detection...")
+        print(""
+Testing CAPTCHA detection...")
 
-        test_html = '<div class="g-recaptcha" data-sitekey="test123"></div>'
+        test_html = '<div class="g-recaptcha" data-sitekey="test123"></div>'"
         detected = await captcha_solver.detect_captcha(test_html)
         print("CAPTCHA detected: {0}".format(detected))
 
-        print("All tests completed successfully!")
+        print(""
+All tests completed successfully!")"
 
     # Run manual tests
     asyncio.run(run_manual_tests())

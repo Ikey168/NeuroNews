@@ -67,11 +67,11 @@ class DynamoDBMetadataDemo:
 
         return [
             {
-                "id": "ai-healthcare-breakthrough-1",
+                "id": "ai-healthcare-breakthrough-001",
                 "title": "AI Revolution Transforms Healthcare Diagnostics",
                 "source": "HealthTech Weekly",
                 "published_date": (base_date - timedelta(days=1)).strftime("%Y-%m-%d"),
-                "tags": ["AI", "Healthcare", "Diagnostics", "Innovation"},
+                "tags": ["AI", "Healthcare", "Diagnostics", "Innovation"],
                 "url": "https://healthtech.com/ai-diagnostics-revolution",
                 "author": "Dr. Sarah Chen",
                 "category": "Technology",
@@ -88,11 +88,11 @@ class DynamoDBMetadataDemo:
                 "content_quality": "high", "
             },
             {
-                "id": "quantum-computing-milestone-2",
+                "id": "quantum-computing-milestone-002",
                 "title": "Quantum Computing Achieves New Milestone in Error Correction",
                 "source": "Science Frontier",
                 "published_date": (base_date - timedelta(days=2)).strftime("%Y-%m-%d"),
-                "tags": ["Quantum Computing", "Science", "Research", "Technology"},
+                "tags": ["Quantum Computing", "Science", "Research", "Technology"],
                 "url": "https://sciencefrontier.com/quantum-error-correction",
                 "author": "Prof. Michael Rodriguez",
                 "category": "Science",
@@ -109,11 +109,11 @@ class DynamoDBMetadataDemo:
                 "content_quality": "high","
             },
             {
-                "id": "climate-tech-innovation-3",
+                "id": "climate-tech-innovation-003",
                 "title": "Revolutionary Solar Panel Technology Doubles Efficiency",
                 "source": "Green Energy Today",
                 "published_date": (base_date - timedelta(days=3)).strftime("%Y-%m-%d"),
-                "tags": ["Solar Energy", "Climate", "Renewable Energy", "Innovation"},
+                "tags": ["Solar Energy", "Climate", "Renewable Energy", "Innovation"],
                 "url": "https://greenenergy.com/solar-efficiency-breakthrough",
                 "author": "Emma Watson",
                 "category": "Environment",
@@ -130,11 +130,11 @@ class DynamoDBMetadataDemo:
                 "content_quality": "high","
             },
             {
-                "id": "space-exploration-mars-4",
+                "id": "space-exploration-mars-004",
                 "title": "NASA Mars Mission Discovers Evidence of Ancient Water Systems",
                 "source": "Space News Network",
                 "published_date": (base_date - timedelta(days=4)).strftime("%Y-%m-%d"),
-                "tags": ["Space", "Mars", "NASA", "Exploration", "Discovery"},
+                "tags": ["Space", "Mars", "NASA", "Exploration", "Discovery"],
                 "url": "https://spacenews.com/mars-water-discovery",
                 "author": "Dr. James Thompson",
                 "category": "Science",
@@ -151,11 +151,11 @@ class DynamoDBMetadataDemo:
                 "content_quality": "high","
             },
             {
-                "id": "cybersecurity-ai-defense-5",
+                "id": "cybersecurity-ai-defense-005",
                 "title": "AI-Powered Cybersecurity Defense Blocks 99.9% of Attacks",
                 "source": "CyberSec Today",
                 "published_date": (base_date - timedelta(days=5)).strftime("%Y-%m-%d"),
-                "tags": ["Cybersecurity", "AI", "Defense", "Technology"},
+                "tags": ["Cybersecurity", "AI", "Defense", "Technology"],
                 "url": "https://cybersec.com/ai-defense-system",
                 "author": "Alex Rivera",
                 "category": "Technology",
@@ -172,11 +172,11 @@ class DynamoDBMetadataDemo:
                 "content_quality": "high","
             },
             {
-                "id": "biotech-gene-therapy-6",
+                "id": "biotech-gene-therapy-006",
                 "title": "Gene Therapy Breakthrough Offers Hope for Rare Diseases",
                 "source": "BioTech Review",
                 "published_date": (base_date - timedelta(days=6)).strftime("%Y-%m-%d"),
-                "tags": ["Biotechnology", "Gene Therapy", "Medicine", "Research"},
+                "tags": ["Biotechnology", "Gene Therapy", "Medicine", "Research"],
                 "url": "https://biotechreview.com/gene-therapy-breakthrough",
                 "author": "Dr. Lisa Park",
                 "category": "Medicine",
@@ -201,8 +201,6 @@ class DynamoDBMetadataDemo:
 
         try:
             # Initialize manager
-except Exception:
-    pass
             await self._demo_initialization()
 
             # Demo 1: Article metadata indexing
@@ -233,11 +231,11 @@ except Exception:
             print(" Enable full-text search capabilities")
 
         except Exception as e:
-            logger.error(f"Demo failed: {e})
+            logger.error("Demo failed: {0}".format(e))
             raise
 
 
-    async def _demo_initialization(self):"
+    async def _demo_initialization(self):
         """Demo manager initialization and table setup."""
         print(""
 1️⃣ DynamoDB Manager Initialization")
@@ -254,16 +252,16 @@ except Exception:
 
         setup_time = (time.time() - start_time) * 1000
 
-        print(f" Manager initialized successfully ({setup_time:.2f}ms))"
-        print(f" Table: {self.config.table_name})"
-        print(f"🌍 Region: {self.config.region})
-        print("
-            f" Full-text search: {'Enabled' if self.config.enable_full_text_search else 'Disabled'}
-        )"
-        print(f" Indexes: {'Enabled' if self.config.create_indexes else 'Disabled'})
+        print(" Manager initialized successfully ({0}ms)".format(setup_time:.2f))
+        print(" Table: {0}".format(self.config.table_name))
+        print("🌍 Region: {0}".format(self.config.region))
+        print(
+            f" Full-text search: {'Enabled' if self.config.enable_full_text_search else 'Disabled'}"
+        )
+        print(f" Indexes: {'Enabled' if self.config.create_indexes else 'Disabled'}")
 
 
-    async def _demo_article_indexing(self):"
+    async def _demo_article_indexing(self):
         """Demo article metadata indexing functionality."""
         print(""
 2️⃣ Article Metadata Indexing")
@@ -279,14 +277,14 @@ except Exception:
 
         indexing_time = (time.time() - start_time) * 1000
 
-        print(f" Article indexed: {metadata.article_id})"
-        print(f"📝 Title: {metadata.title})"
-        print(f"📰 Source: {metadata.source})"
-        print(f"📅 Published: {metadata.published_date})"
-        print(f"🏷️ Tags: {', '.join(metadata.tags)})"
-        print(f"⚡ Indexing time: {indexing_time:.2f}ms)
+        print(" Article indexed: {0}".format(metadata.article_id))
+        print("📝 Title: {0}".format(metadata.title))
+        print("📰 Source: {0}".format(metadata.source))
+        print("📅 Published: {0}".format(metadata.published_date))
+        print(f"🏷️ Tags: {', '.join(metadata.tags)}")
+        print("⚡ Indexing time: {0}ms".format(indexing_time:.2f))
 
-        # Demo batch indexing"
+        # Demo batch indexing
         print(""
 📚 Batch indexing multiple articles...")"
         start_time = time.time()
@@ -297,20 +295,20 @@ except Exception:
         batch_time = (time.time() - start_time) * 1000
 
         print(" Batch indexing completed")
-        print(f" Total articles: {batch_result['total_articles'}})"
-        print(f" Successfully indexed: {batch_result['indexed_count'}})"
-        print(f"❌ Failed: {batch_result[f'ailed_count'}})"
-        print(f"⚡ Batch time: {batch_time:.2f}ms)"
-        print(f" Indexing rate: {batch_result['indexing_rate'}:.1f} articles/second)
+        print(f" Total articles: {batch_result['total_articles']}")
+        print(f" Successfully indexed: {batch_result['indexed_count']}")
+        print(f"❌ Failed: {batch_result[f'ailed_count']}")
+        print("⚡ Batch time: {0}ms".format(batch_time:.2f))
+        print(f" Indexing rate: {batch_result['indexing_rate']:.1f} articles/second")
 
-        # Show tokenization example"
-        print("TODO: Fix this string")
+        # Show tokenization example
+        print("
 🔤 Title tokenization example:")
-        print(f"Original: '{metadata.title}')"
-        print(f"Tokens: {metadata.title_tokens})
+        print(f"Original: '{metadata.title}'")
+        print("Tokens: {0}".format(metadata.title_tokens))
 
 
-    async def _demo_query_api(self):"
+    async def _demo_query_api(self):
         """Demo query API for quick lookups."""
         print(""
 3️⃣ Query API for Quick Lookups")
@@ -326,9 +324,9 @@ except Exception:
         query_time = (time.time() - start_time) * 1000
 
         if article:
-            print(f" Found article: {article.title})"
-            print(f"⚡ Query time: {query_time:.2f}ms)
-        else:"
+            print(" Found article: {0}".format(article.title))
+            print("⚡ Query time: {0}ms".format(query_time:.2f))
+        else:
             print("❌ Article not found")
 
         # Query by source
@@ -340,13 +338,13 @@ except Exception:
         source_result = await self.manager.get_articles_by_source(source, limit=10)
         query_time = (time.time() - start_time) * 1000
 
-        print(f" Found {source_result.count} articles from '{source}')"
-        print(f"⚡ Query time: {query_time:.2f}ms)
+        print(f" Found {source_result.count} articles from '{source}'")
+        print("⚡ Query time: {0}ms".format(query_time:.2f))
 
-        for article in source_result.items[:3]:  # Show first 3"
-            print(f"  📄 {article.title})
+        for article in source_result.items[:3]:  # Show first 3
+            print("  📄 {0}".format(article.title))
 
-        # Query by date range"
+        # Query by date range
         print(""
 📅 Get articles by date range...")"
         start_date = (datetime.now(timezone.utc) - timedelta(days=7)).strftime(
@@ -360,10 +358,10 @@ except Exception:
         )
         query_time = (time.time() - start_time) * 1000
 
-        print(f" Found {date_result.count} articles from {start_date} to {end_date})"
-        print(f"⚡ Query time: {query_time:.2f}ms)
+        print(" Found {0} articles from {1} to {2}".format(date_result.count, start_date, end_date))
+        print("⚡ Query time: {0}ms".format(query_time:.2f))
 
-        # Query by tags"
+        # Query by tags
         print(""
 🏷️ Get articles by tags...")
         tags = ["AI", "Technology"]"
@@ -372,10 +370,10 @@ except Exception:
         tag_result = await self.manager.get_articles_by_tags(tags, match_all=False)
         query_time = (time.time() - start_time) * 1000
 
-        print(f" Found {tag_result.count} articles with tags: {', '.join(tags)})"
-        print(f"⚡ Query time: {query_time:.2f}ms)
+        print(f" Found {tag_result.count} articles with tags: {', '.join(tags)}")
+        print("⚡ Query time: {0}ms".format(query_time:.2f))
 
-        # Query by category"
+        # Query by category
         print(""
 📂 Get articles by category...")
         category = "Technology""
@@ -384,11 +382,11 @@ except Exception:
         category_result = await self.manager.get_articles_by_category(category)
         query_time = (time.time() - start_time) * 1000
 
-        print(f" Found {category_result.count} articles in '{category}' category)"
-        print(f"⚡ Query time: {query_time:.2f}ms)
+        print(f" Found {category_result.count} articles in '{category}' category")
+        print("⚡ Query time: {0}ms".format(query_time:.2f))
 
 
-    async def _demo_full_text_search(self):"
+    async def _demo_full_text_search(self):
         """Demo full-text search capabilities."""
         print(""
 4️⃣ Full-Text Search Capabilities")
@@ -408,15 +406,15 @@ except Exception:
         search_result = await self.manager.search_articles(search_query)
         search_time = (time.time() - start_time) * 1000
 
-        print(f" Search completed: '{search_query.query_text}')"
-        print(f" Found {search_result.count} matching articles)"
-        print(f"⚡ Search time: {search_time:.2f}ms)"
-        print(f"🔤 Search tokens: {search_result.query_info.get('tokens', [})})
+        print(f" Search completed: '{search_query.query_text}'")
+        print(" Found {0} matching articles".format(search_result.count))
+        print("⚡ Search time: {0}ms".format(search_time:.2f))
+        print(f"🔤 Search tokens: {search_result.query_info.get('tokens', [])}")
 
-        for i, article in enumerate(search_result.items[:3], 1):"
-            print(f"  {i}. {article.title} (Source: {article.source}))
+        for i, article in enumerate(search_result.items[:3], 1):
+            print("  {0}. {1} (Source: {2})".format(i, article.title, article.source))
 
-        # Search with filters"
+        # Search with filters
         print(""
  Search with filters...")"
         filtered_search = SearchQuery(
@@ -438,8 +436,8 @@ except Exception:
         search_time = (time.time() - start_time) * 1000
 
         print(" Filtered search completed")
-        print(f" Found {filtered_result.count} matching articles)"
-        print(f"⚡ Search time: {search_time:.2f}ms)"
+        print(" Found {0} matching articles".format(filtered_result.count))
+        print("⚡ Search time: {0}ms".format(search_time:.2f))
         print("🔧 Filters applied: category=Technology, date range")
 
         # Exact search mode
@@ -457,10 +455,10 @@ except Exception:
         search_time = (time.time() - start_time) * 1000
 
         print(" Exact search completed")
-        print(f" Found {exact_result.count} exact matches)"
-        print(f"⚡ Search time: {search_time:.2f}ms)
+        print(" Found {0} exact matches".format(exact_result.count))
+        print("⚡ Search time: {0}ms".format(search_time:.2f))
 
-        # Starts-with search mode"
+        # Starts-with search mode
         print(""
  Starts-with search mode...")"
         prefix_search = SearchQuery(
@@ -475,11 +473,11 @@ except Exception:
         search_time = (time.time() - start_time) * 1000
 
         print(" Prefix search completed")
-        print(f" Found {prefix_result.count} articles starting with 'AI')"
-        print(f"⚡ Search time: {search_time:.2f}ms)
+        print(f" Found {prefix_result.count} articles starting with 'AI'")
+        print("⚡ Search time: {0}ms".format(search_time:.2f))
 
 
-    async def _demo_system_integration(self):"
+    async def _demo_system_integration(self):
         """Demo integration with existing systems."""
         print(""
 5️⃣ System Integration")
@@ -489,12 +487,12 @@ except Exception:
         print(""
 ☁️ S3 Storage Integration...")"
         s3_metadata = {
-            "article_id": "integration-test-1",
+            "article_id": "integration-test-001",
             "title": "Integration Test Article",
             "source": "Integration Source",
-            "published_date": "2025-8-13",
+            "published_date": "2025-08-13",
             "url": "https://example.com/integration-test",
-            "s3_key": "raw_articles/2025/8/13/integration-test.json",
+            "s3_key": "raw_articles/2025/08/13/integration-test.json",
             "content_hash": "sha256-integration-hash",
             "scraped_date": datetime.now(timezone.utc).isoformat(),
             "processing_status": "stored",
@@ -505,11 +503,11 @@ except Exception:
         integration_time = (time.time() - start_time) * 1000
 
         print(" S3 integration successful")
-        print(f"📄 Article: {s3_result.title})"
-        print(f"🗂️ S3 Key: {s3_result.s3_key})"
-        print(f"⚡ Integration time: {integration_time:.2f}ms)
+        print("📄 Article: {0}".format(s3_result.title))
+        print("🗂️ S3 Key: {0}".format(s3_result.s3_key))
+        print("⚡ Integration time: {0}ms".format(integration_time:.2f))
 
-        # Redshift integration"
+        # Redshift integration
         print(""
  Redshift ETL Integration...")"
         redshift_record = {
@@ -524,24 +522,24 @@ except Exception:
         )
         integration_time = (time.time() - start_time) * 1000
 
-        print(f" Redshift integration: {'Success' if redshift_success else 'Failed'})"
-        print(f"⚡ Integration time: {integration_time:.2f}ms)
+        print(f" Redshift integration: {'Success' if redshift_success else 'Failed'}")
+        print("⚡ Integration time: {0}ms".format(integration_time:.2f))
 
-        # Scraper sync"
+        # Scraper sync
         print(""
 🕷️ Scraper Sync...")"
         scraper_articles = [
             {
                 "title": "Scraper Article 1",
                 "source": "Scraped Source",
-                "published_date": "2025-8-13",
-                "tags": ["Scraper", "Test"},
+                "published_date": "2025-08-13",
+                "tags": ["Scraper", "Test"],
             },
             {
                 "title": "Scraper Article 2",
                 "source": "Scraped Source",
-                "published_date": "2025-8-13",
-                "tags": ["Scraper", "Demo"},
+                "published_date": "2025-08-13",
+                "tags": ["Scraper", "Demo"],
             },
         ]
 
@@ -551,12 +549,12 @@ except Exception:
 
         print(" Scraper sync completed")
         print(
-            f" Articles synced: {sync_result['indexed_count'}}/{sync_result['total_articles'}}
-        )"
-        print(f"⚡ Sync time: {sync_time:.2f}ms)
+            f" Articles synced: {sync_result['indexed_count']}/{sync_result['total_articles']}"
+        )
+        print("⚡ Sync time: {0}ms".format(sync_time:.2f))
 
 
-    async def _demo_performance_monitoring(self):"
+    async def _demo_performance_monitoring(self):
         """Demo performance monitoring and statistics."""
         print(""
 6️⃣ Performance Monitoring & Statistics")
@@ -570,35 +568,35 @@ except Exception:
         stats = await self.manager.get_metadata_statistics()
         stats_time = (time.time() - start_time) * 1000
 
-        print(f" Statistics generated ({stats_time:.2f}ms))"
-        print(f"📄 Total articles: {stats['total_articles'}})"
-        print(f"🔬 Sample size: {stats['sample_size'}})
-"
+        print(" Statistics generated ({0}ms)".format(stats_time:.2f))
+        print(f"📄 Total articles: {stats['total_articles']}")
+        print(f"🔬 Sample size: {stats['sample_size']}")
+
         print(""
 📰 Top sources:")
         for source, count in list(stats["source_distribution"].items())[:5]:
-            print(f"  • {source}: {count} articles")""
+            print("  • {0}: {1} articles".format(source, count))"
 
         print(""
 📂 Categories:")
         for category, count in stats["category_distribution"].items():
-            print(f"  • {category}: {count} articles")""
+            print("  • {0}: {1} articles".format(category, count))"
 
         print(""
 📅 Monthly distribution:")
         for month, count in list(stats["monthly_distribution"].items())[:6]:
-            print(f"  • {month}: {count} articles")""
+            print("  • {0}: {1} articles".format(month, count))"
 
-        print("TODO: Fix this string")
-🏗️ Table info:")
-        print(f"  • Table: {stats['table_info']['table_name'}})"
-        print(f"  • Region: {stats['table_info']['region'}})
         print("
-            f"  • Indexes: {'Enabled' if stats['table_info']['indexes_enabled'} else 'Disabled'}
+🏗️ Table info:")
+        print(f"  • Table: {stats['table_info']['table_name']}")
+        print(f"  • Region: {stats['table_info']['region']}")
+        print(
+            f"  • Indexes: {'Enabled' if stats['table_info']['indexes_enabled'] else 'Disabled'}"
         )
 
 
-    async def _demo_health_monitoring(self):"
+    async def _demo_health_monitoring(self):
         """Demo health checks and error handling."""
         print(""
 7️⃣ Health Monitoring & Error Handling")
@@ -612,16 +610,16 @@ except Exception:
         health = await self.manager.health_check()
         health_time = (time.time() - start_time) * 1000
 
-        print(f" Health check completed ({health_time:.2f}ms))"
-        print(f"🔋 Status: {health['status'}})"
-        print(f" Table status: {health.get('table_status', 'Unknown')})"
-        print(f"📖 Read capacity: {health.get('read_capacity', 'N/A')})"
-        print(f"✏️ Write capacity: {health.get('write_capacity', 'N/A')})"
-        print(f"📄 Item count: {health.get('item_count', 'N/A')})"
-        print(f"💾 Table size: {health.get('table_size_bytes', 'N/A')} bytes)"
-        print(f" Indexes: {health.get('indexes', 'N/A')})
+        print(" Health check completed ({0}ms)".format(health_time:.2f))
+        print(f"🔋 Status: {health['status']}")
+        print(f" Table status: {health.get('table_status', 'Unknown')}")
+        print(f"📖 Read capacity: {health.get('read_capacity', 'N/A')}")
+        print(f"✏️ Write capacity: {health.get('write_capacity', 'N/A')}")
+        print(f"📄 Item count: {health.get('item_count', 'N/A')}")
+        print(f"💾 Table size: {health.get('table_size_bytes', 'N/A')} bytes")
+        print(f" Indexes: {health.get('indexes', 'N/A')}")
 
-        # Test update functionality"
+        # Test update functionality
         print(""
 🔄 Testing metadata updates...")
         test_article_id = self.sample_articles[0]["id"]"
@@ -637,19 +635,19 @@ except Exception:
         )
         update_time = (time.time() - start_time) * 1000
 
-        print(f" Update test: {'Success' if update_success else 'Failed'})"
-        print(f"⚡ Update time: {update_time:.2f}ms)
+        print(f" Update test: {'Success' if update_success else 'Failed'}")
+        print("⚡ Update time: {0}ms".format(update_time:.2f))
 
         # Verify update
         updated_article = await self.manager.get_article_by_id(test_article_id)
         if updated_article:
-            print("
-                f" Verified updated sentiment score: {updated_article.sentiment_score}
-            )"
-            print(f" Verified updated quality: {updated_article.content_quality})
+            print(
+                " Verified updated sentiment score: {0}".format(updated_article.sentiment_score)
+            )
+            print(" Verified updated quality: {0}".format(updated_article.content_quality))
 
 
-class MockDynamoDBManager:"
+class MockDynamoDBManager:
     """Mock DynamoDB manager for demo without AWS resources."""
 
 
@@ -681,8 +679,6 @@ class MockDynamoDBManager:"
         for article in articles:
             try:
                 await self.index_article_metadata(article)
-except Exception:
-    pass
                 indexed_count += 1
             except:
                 pass
@@ -691,10 +687,10 @@ except Exception:
             "status": "completed",
             "total_articles": len(articles),
             "indexed_count": indexed_count,
-            f"ailed_count: len(articles) - indexed_count,"
-            f"ailed_articles: [},"
+            f"ailed_count": len(articles) - indexed_count,
+            f"ailed_articles": [],
             "execution_time_ms": 50.0,
-            "indexing_rate": len(articles) / 0.5,
+            "indexing_rate": len(articles) / 0.05,
         }
 
 
@@ -762,12 +758,12 @@ except Exception:
                 "query": search_query.query_text,
                 "tokens": query_tokens,
                 "search_mode": search_query.search_mode.value,
-                f"ields: search_query.fields,
+                f"ields": search_query.fields,
             },
         )
 
 
-    async def get_metadata_statistics(self):"
+    async def get_metadata_statistics(self):
         """Mock metadata statistics."""
         items = list(self.mock_data.values())
 
@@ -833,10 +829,10 @@ except Exception:
         article_id = article_data.get("id") or article_data.get("article_id")
         if not article_id:
             content_for_id = (
-                f"{article_data.get('url', '')}{article_data.get('title', '')}
+                f"{article_data.get('url', '')}{article_data.get('title', '')}"
             )
             article_id = hashlib.md5(content_for_id.encode()).hexdigest()
-"
+
         content_hash = article_data.get("content_hash")
         if not content_hash:
             content_for_hash = article_data.get("content", "") or article_data.get(

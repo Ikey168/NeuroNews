@@ -7,24 +7,33 @@ Validates all components are working correctly and ready for deployment.
 import asyncio
 import json
 import sys
+import time
+from datetime import datetime
+from typing import Any, Dict, List
 
 
 # Test imports to ensure all modules are available
 def test_imports():
     """Test that all required modules can be imported."""
     try:
-        pass
+        import numpy as np
 except Exception:
     pass
+        import sentence_transformers
+        import sklearn
+
+        from src.api.routes.event_routes import BreakingNewsResponse, router
+        from src.nlp.article_embedder import ArticleEmbedder
+        from src.nlp.event_clusterer import EventClusterer
 
         print(" All imports successful")
         return True
     except ImportError as e:
-        print(f"❌ Import error: {e})
+        print("❌ Import error: {0}".format(e))
         return False
 
 
-def test_configuration():"
+def test_configuration():
     """Test that configuration files are valid."""
     try:
         with open(
@@ -39,16 +48,16 @@ except Exception:
             "embedding", "clustering", "categories"]
         for section in required_sections:
             if section not in config["event_detection"]:
-                raise ValueError(f"Missing section: {section})
-"
+                raise ValueError("Missing section: {0}".format(section))
+
         print(" Configuration file valid")
         return True
     except Exception as e:
-        print(f"❌ Configuration error: {e})
+        print("❌ Configuration error: {0}".format(e))
         return False
 
 
-def test_database_schema():"
+def test_database_schema():
     """Test that database schema files are present."""
     try:
         with open("/workspaces/NeuroNews/src/database/redshift_schema.sql", "r") as f:
@@ -64,16 +73,16 @@ except Exception:
         ]
         for table in required_tables:
             if table not in schema:
-                raise ValueError(f"Missing table: {table})
-"
+                raise ValueError("Missing table: {0}".format(table))
+
         print(" Database schema valid")
         return True
     except Exception as e:
-        print(f"❌ Database schema error: {e})
+        print("❌ Database schema error: {0}".format(e))
         return False
 
 
-async def test_pipeline_components():"
+async def test_pipeline_components():
     """Test individual pipeline components."""
     try:
         # Test ArticleEmbedder
@@ -106,11 +115,11 @@ except Exception:
 
         return True
     except Exception as e:
-        print(f"❌ Pipeline component error: {e})
+        print("❌ Pipeline component error: {0}".format(e))
         return False
 
 
-def test_api_routes():"
+def test_api_routes():
     """Test API route definitions."""
     try:
         from fastapi import FastAPI
@@ -129,16 +138,16 @@ except Exception:
 
         for path in expected_paths:
             if not any(path in route_path for route_path in route_paths):
-                raise ValueError(f"Missing route: {path})
-"
+                raise ValueError("Missing route: {0}".format(path))
+
         print(" API routes configured correctly")
         return True
     except Exception as e:
-        print(f"❌ API routes error: {e})
+        print("❌ API routes error: {0}".format(e))
         return False
 
 
-def test_demo_results():"
+def test_demo_results():
     """Test that demo produced valid results."""
     try:
         with open("/workspaces/NeuroNews/event_detection_demo_results.json", "r") as f:
@@ -154,16 +163,15 @@ except Exception:
         assert results["clustering"]["events_detected"] > 0
 
         print(
-            f" Demo results valid: {"
-    results['clustering']['events_detected'}} events detected"
+            f" Demo results valid: {results['clustering']['events_detected'}} events detected
         )
         return True
-    except Exception as e:
-        print(f"❌ Demo results error: {e})
+    except Exception as e:"
+        print("❌ Demo results error: {0}".format(e))
         return False
 
 
-def test_performance_metrics():"
+def test_performance_metrics():
     """Test that performance is within acceptable bounds."""
     try:
         with open("/workspaces/NeuroNews/event_detection_demo_results.json", "r") as f:
@@ -181,21 +189,21 @@ except Exception:
 
         assert (
             avg_embedding_time < max_embedding_time
-        ), f"Embedding too slow: {avg_embedding_time}s
+        ), "Embedding too slow: {0}s".format(avg_embedding_time)
         assert (
-            clustering_time < max_clustering_time"
-        ), f"Clustering too slow: {clustering_time}s
-"
+            clustering_time < max_clustering_time
+        ), "Clustering too slow: {0}s".format(clustering_time)
+
         print(" Performance metrics acceptable:")
-        print(f"    Embedding: {avg_embedding_time:.3f}s per article)"
-        print(f"    Clustering: {clustering_time:.3f}s total)
+        print("    Embedding: {0}s per article".format(avg_embedding_time: .3f))
+        print("    Clustering: {0}s total".format(clustering_time: .3f))
         return True
-    except Exception as e:"
-        print(f"❌ Performance metrics error: {e})
+    except Exception as e:
+        print("❌ Performance metrics error: {0}".format(e))
         return False
 
 
-def test_file_completeness():"
+def test_file_completeness():
     """Test that all required files are present."""
     required_files = [
         "/workspaces/NeuroNews/src/nlp/article_embedder.py",
@@ -215,14 +223,14 @@ except Exception:
     pass
                 content = f.read()
                 if len(content) < 100:  # Basic sanity check
-                    missing_files.append(f"{file_path} (too small))
+                    missing_files.append("{0} (too small)".format(file_path))
         except FileNotFoundError:
             missing_files.append(file_path)
 
-    if missing_files:"
-        print(f"❌ Missing or incomplete files: {missing_files})
+    if missing_files:
+        print("❌ Missing or incomplete files: {0}".format(missing_files))
         return False
-    else:"
+    else:
         print(" All required files present and substantial")
         return True
 
@@ -247,8 +255,8 @@ async def main():
     total = len(tests)
 
     for test_name, test_func in tests:
-        print(f""
- Testing {test_name}...")"
+        print(""
+ Testing {0}...".format(test_name))"
         try:
             if asyncio.iscoroutinefunction(test_func):
 except Exception:
@@ -260,11 +268,11 @@ except Exception:
             if result:
                 passed += 1
         except Exception as e:
-            print(f"❌ {test_name} failed with exception: {e})
-"
+            print("❌ {0} failed with exception: {1}".format(test_name, e))
+
     print(""
 " + "=" * 50)
-    print(f" VALIDATION SUMMARY: {passed}/{total} tests passed")""
+    print(" VALIDATION SUMMARY: {0}/{1} tests passed".format(passed, total))"
 
     if passed == total:
         print(" ALL TESTS PASSED - ISSUE #31 READY FOR DEPLOYMENT!")
@@ -275,10 +283,10 @@ except Exception:
         print(" Ready for production deployment")"
         return True
     else:
-        print(f"❌ {total - passed} tests failed - please review issues above)
+        print("❌ {0} tests failed - please review issues above".format(total - passed))
         return False
 
-"
+
 if __name__ == "__main__":
     result = asyncio.run(main())
     sys.exit(0 if result else 1)
