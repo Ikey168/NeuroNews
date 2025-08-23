@@ -23,6 +23,11 @@ from airflow.decorators import dag, task
 from airflow.models import Variable
 from airflow.utils.dates import days_ago
 
+# Import NeuroNews lineage utilities (Issue #193)
+import sys
+sys.path.append("/opt/airflow/plugins")
+from lineage_utils import LineageHelper, build_uri
+
 
 # Default arguments for all tasks
 default_args = {
@@ -77,16 +82,34 @@ def news_pipeline():
         from datetime import datetime
         import os
         
-        # Load IO paths configuration
-        io_paths = load_io_paths()
+        # Use LineageHelper for standardized dataset URIs (Issue #193)
+        lineage_helper = LineageHelper()
         ds = context['ds']
         
-        # Resolve paths with date
-        articles_path = io_paths['raw']['news_articles'].replace('{{ ds }}', ds)
-        metadata_path = io_paths['raw']['scraping_metadata'].replace('{{ ds }}', ds)
+        # Generate standardized dataset URIs using naming convention
+        articles_uri = lineage_helper.create_dataset_uri(
+            layer="raw",
+            entity="news_articles", 
+            partition_date=ds,
+            sequence="001",
+            file_format="json"
+        )
+        
+        metadata_uri = lineage_helper.create_dataset_uri(
+            layer="raw",
+            entity="scraping_metadata",
+            partition_date=ds, 
+            sequence="001",
+            file_format="json"
+        )
+        
+        # Convert URIs to local file paths
+        articles_path = articles_uri.replace('file://', '')
+        metadata_path = metadata_uri.replace('file://', '')
         
         # Ensure directories exist
         os.makedirs(os.path.dirname(articles_path), exist_ok=True)
+        os.makedirs(os.path.dirname(metadata_path), exist_ok=True)
         
         # Mock scraped data - in production this would call real scrapers
         mock_articles = [
@@ -122,10 +145,14 @@ def news_pipeline():
         print(f"✅ Scraped {len(mock_articles)} articles")
         print(f"📄 Articles saved to: {articles_path}")
         print(f"📊 Metadata saved to: {metadata_path}")
+        print(f"🔗 Articles URI: {articles_uri}")
+        print(f"🔗 Metadata URI: {metadata_uri}")
         
         return {
             "articles_path": articles_path,
             "metadata_path": metadata_path,
+            "articles_uri": articles_uri,
+            "metadata_uri": metadata_uri,
             "article_count": len(mock_articles)
         }
     
@@ -147,17 +174,37 @@ def news_pipeline():
         import pandas as pd
         from datetime import datetime
         
-        # Load IO paths configuration
-        io_paths = load_io_paths()
+        # Use LineageHelper for standardized dataset URIs (Issue #193)
+        lineage_helper = LineageHelper()
         ds = context['ds']
         
-        # Input and output paths
+        # Input path from scrape task
         articles_path = scrape_result["articles_path"]
-        clean_articles_path = io_paths['bronze']['clean_articles'].replace('{{ ds }}', ds)
-        metadata_path = io_paths['bronze']['article_metadata'].replace('{{ ds }}', ds)
+        
+        # Generate standardized output URIs using naming convention
+        clean_articles_uri = lineage_helper.create_dataset_uri(
+            layer="bronze",
+            entity="clean_articles",
+            partition_date=ds,
+            sequence="001", 
+            file_format="parquet"
+        )
+        
+        metadata_uri = lineage_helper.create_dataset_uri(
+            layer="bronze",
+            entity="article_metadata",
+            partition_date=ds,
+            sequence="001",
+            file_format="parquet"
+        )
+        
+        # Convert URIs to local file paths
+        clean_articles_path = clean_articles_uri.replace('file://', '')
+        metadata_path = metadata_uri.replace('file://', '')
         
         # Ensure directories exist
         os.makedirs(os.path.dirname(clean_articles_path), exist_ok=True)
+        os.makedirs(os.path.dirname(metadata_path), exist_ok=True)
         
         # Load raw articles
         with open(articles_path, 'r') as f:
@@ -204,10 +251,14 @@ def news_pipeline():
         print(f"📄 Clean articles saved to: {clean_articles_path}")
         print(f"📊 Metadata saved to: {metadata_path}")
         print(f"📈 Valid articles: {metadata['valid_articles']}/{metadata['total_articles']}")
+        print(f"🔗 Clean articles URI: {clean_articles_uri}")
+        print(f"🔗 Metadata URI: {metadata_uri}")
         
         return {
             "clean_articles_path": clean_articles_path,
             "metadata_path": metadata_path,
+            "clean_articles_uri": clean_articles_uri,
+            "metadata_uri": metadata_uri,
             "valid_article_count": metadata['valid_articles']
         }
     
