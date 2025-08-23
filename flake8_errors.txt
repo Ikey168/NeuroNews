@@ -1,0 +1,232 @@
+src/api/app.py:84:101: E501 line too long (137 > 100 characters)
+src/api/auth/api_key_manager.py:419:9: F841 local variable 'key_prefix' is assigned to but never used
+src/api/auth/api_key_middleware.py:153:13: F841 local variable 'key_prefix' is assigned to but never used
+src/api/event_timeline_service.py:376:101: E501 line too long (106 > 100 characters)
+src/api/event_timeline_service.py:459:101: E501 line too long (141 > 100 characters)
+src/api/event_timeline_service.py:537:13: F841 local variable 'title_escaped' is assigned to but never used
+src/api/event_timeline_service.py:538:13: F841 local variable 'description_escaped' is assigned to but never used
+src/api/event_timeline_service.py:679:101: E501 line too long (114 > 100 characters)
+src/api/routes/article_routes.py:100:5: F841 local variable 'where_clause' is assigned to but never used
+src/api/routes/enhanced_kg_routes.py:669:27: F821 undefined name 'containing'
+src/api/routes/enhanced_kg_routes.py:671:35: F821 undefined name 'descending'
+src/api/routes/enhanced_kg_routes.py:810:17: F821 undefined name 'T'
+src/api/routes/enhanced_kg_routes.py:811:17: F821 undefined name 'inV'
+src/api/routes/enhanced_kg_routes.py:812:17: F821 undefined name 'valueMap'
+src/api/routes/enhanced_kg_routes.py:822:17: F821 undefined name 'T'
+src/api/routes/enhanced_kg_routes.py:823:17: F821 undefined name 'outV'
+src/api/routes/enhanced_kg_routes.py:824:17: F821 undefined name 'valueMap'
+src/api/routes/enhanced_kg_routes.py:944:72: F821 undefined name 'containing'
+src/api/routes/enhanced_kg_routes.py:947:25: F821 undefined name 'has'
+src/api/routes/enhanced_kg_routes.py:947:48: F821 undefined name 'containing'
+src/api/routes/enhanced_kg_routes.py:954:66: F821 undefined name 'desc'
+src/api/routes/enhanced_kg_routes.py:956:66: F821 undefined name 'desc'
+src/api/routes/enhanced_kg_routes.py:958:69: F821 undefined name 'desc'
+src/api/routes/enhanced_kg_routes.py:1005:17: F821 undefined name 'T'
+src/api/routes/enhanced_kg_routes.py:1006:17: F821 undefined name 'outV'
+src/api/routes/enhanced_kg_routes.py:1007:17: F821 undefined name 'inV'
+src/api/routes/enhanced_kg_routes.py:1008:17: F821 undefined name 'valueMap'
+src/api/routes/enhanced_kg_routes.py:1051:21: F821 undefined name 'bothE'
+src/api/routes/enhanced_kg_routes.py:1052:20: F821 undefined name 'has'
+src/api/routes/enhanced_kg_routes.py:1147:17: F821 undefined name 'valueMap'
+src/api/routes/enhanced_kg_routes.py:1148:17: F821 undefined name 'bothE'
+src/api/routes/enhanced_kg_routes.py:1150:17: F821 undefined name 'select'
+src/api/routes/enhanced_kg_routes.py:1150:35: F821 undefined name 'desc'
+src/api/routes/enhanced_kg_routes.py:1192:17: F821 undefined name 'otherV'
+src/api/routes/enhanced_kg_routes.py:1193:20: F821 undefined name 'local'
+src/api/routes/enhanced_kg_routes.py:1194:17: F821 undefined name 'values'
+src/api/routes/enhanced_kg_routes.py:1194:25: F821 undefined name 'desc'
+src/api/routes/enhanced_kg_routes.py:1195:20: F821 undefined name 'local'
+src/api/routes/event_routes.py:611:101: E501 line too long (104 > 100 characters)
+src/api/routes/graph_routes.py:12:1: F401 'gremlin_python.process.graph_traversal.__' imported but unused
+src/api/routes/news_routes.py:136:9: F841 local variable 'where_clause' is assigned to but never used
+src/api/routes/sentiment_routes.py:96:9: F841 local variable 'where_clause' is assigned to but never used
+src/api/routes/sentiment_routes.py:104:13: F841 local variable 'date_trunc' is assigned to but never used
+src/api/routes/sentiment_routes.py:222:9: F841 local variable 'where_clause' is assigned to but never used
+src/api/routes/sentiment_trends_routes.py:693:9: F841 local variable 'test_alerts' is assigned to but never used
+src/api/routes/sentiment_trends_routes.py:696:14: F821 undefined name 'psycopg2'
+src/api/routes/summary_routes.py:166:13: F841 local variable 'from_cache' is assigned to but never used
+src/api/routes/topic_routes.py:250:101: E501 line too long (105 > 100 characters)
+src/api/routes/veracity_routes.py:394:101: E501 line too long (104 > 100 characters)
+src/api/security/aws_waf_manager.py:133:101: E501 line too long (110 > 100 characters)
+src/dashboards/quicksight_service.py:223:17: F841 local variable 'existing' is assigned to but never used
+src/dashboards/quicksight_service.py:284:21: F841 local variable 'existing' is assigned to but never used
+src/dashboards/quicksight_service.py:539:21: F841 local variable 'existing' is assigned to but never used
+src/dashboards/quicksight_service.py:834:21: F841 local variable 'existing' is assigned to but never used
+src/dashboards/quicksight_service.py:913:101: E501 line too long (103 > 100 characters)
+src/dashboards/quicksight_service.py:919:101: E501 line too long (107 > 100 characters)
+src/dashboards/quicksight_service.py:925:101: E501 line too long (101 > 100 characters)
+src/dashboards/quicksight_service.py:1180:21: F841 local variable 'refresh_params' is assigned to but never used
+src/database/data_validation_pipeline.py:730:101: E501 line too long (105 > 100 characters)
+src/database/data_validation_pipeline_fixed.py:731:101: E501 line too long (105 > 100 characters)
+src/database/dynamodb_metadata_manager.py:418:35: E203 whitespace before ':'
+src/database/dynamodb_metadata_manager.py:875:13: F402 import 'field' from line 19 shadowed by loop variable
+src/database/dynamodb_metadata_manager.py:917:13: F402 import 'field' from line 19 shadowed by loop variable
+src/database/dynamodb_metadata_manager.py:987:13: F402 import 'field' from line 19 shadowed by loop variable
+src/database/dynamodb_metadata_manager.py:1076:17: F402 import 'field' from line 19 shadowed by loop variable
+src/database/dynamodb_metadata_manager.py:1119:13: F841 local variable 'test_response' is assigned to but never used
+src/database/redshift_loader.py:379:35: E203 whitespace before ':'
+src/database/redshift_loader.py:486:101: E501 line too long (102 > 100 characters)
+src/ingestion/optimized_pipeline.py:436:101: E501 line too long (114 > 100 characters)
+src/ingestion/optimized_pipeline.py:463:27: E203 whitespace before ':'
+src/ingestion/optimized_pipeline.py:616:13: F402 import 'field' from line 21 shadowed by loop variable
+src/ingestion/scrapy_integration.py:164:9: F841 local variable 'future' is assigned to but never used
+src/ingestion/scrapy_integration.py:447:101: E501 line too long (122 > 100 characters)
+src/ingestion/scrapy_integration.py:559:29: F821 undefined name 'json'
+src/knowledge_graph/enhanced_entity_extractor.py:218:101: E501 line too long (109 > 100 characters)
+src/knowledge_graph/enhanced_entity_extractor.py:219:101: E501 line too long (115 > 100 characters)
+src/knowledge_graph/enhanced_entity_extractor.py:223:101: E501 line too long (114 > 100 characters)
+src/knowledge_graph/enhanced_entity_extractor.py:224:101: E501 line too long (104 > 100 characters)
+src/knowledge_graph/enhanced_entity_extractor.py:236:101: E501 line too long (104 > 100 characters)
+src/knowledge_graph/enhanced_entity_extractor.py:244:101: E501 line too long (109 > 100 characters)
+src/knowledge_graph/enhanced_entity_extractor.py:247:101: E501 line too long (104 > 100 characters)
+src/knowledge_graph/enhanced_entity_extractor.py:494:55: E203 whitespace before ':'
+src/knowledge_graph/enhanced_entity_extractor.py:636:42: E203 whitespace before ':'
+src/knowledge_graph/enhanced_entity_extractor.py:709:67: E203 whitespace before ':'
+src/knowledge_graph/enhanced_entity_extractor.py:860:101: E501 line too long (114 > 100 characters)
+src/knowledge_graph/enhanced_entity_extractor.py:861:101: E501 line too long (114 > 100 characters)
+src/knowledge_graph/enhanced_entity_extractor.py:863:101: E501 line too long (112 > 100 characters)
+src/knowledge_graph/enhanced_entity_extractor.py:864:101: E501 line too long (104 > 100 characters)
+src/knowledge_graph/enhanced_entity_extractor.py:866:101: E501 line too long (106 > 100 characters)
+src/knowledge_graph/enhanced_entity_extractor.py:867:101: E501 line too long (110 > 100 characters)
+src/knowledge_graph/enhanced_entity_extractor.py:870:101: E501 line too long (108 > 100 characters)
+src/knowledge_graph/enhanced_entity_extractor.py:871:101: E501 line too long (115 > 100 characters)
+src/knowledge_graph/enhanced_graph_populator.py:126:101: E501 line too long (102 > 100 characters)
+src/knowledge_graph/enhanced_graph_populator.py:252:31: E203 whitespace before ':'
+src/knowledge_graph/enhanced_graph_populator.py:511:13: F841 local variable 'query' is assigned to but never used
+src/knowledge_graph/enhanced_graph_populator.py:838:48: F821 undefined name '__'
+src/knowledge_graph/enhanced_graph_populator.py:945:101: E501 line too long (102 > 100 characters)
+src/knowledge_graph/enhanced_graph_populator.py:948:101: E501 line too long (102 > 100 characters)
+src/knowledge_graph/enhanced_graph_populator.py:949:101: E501 line too long (101 > 100 characters)
+src/knowledge_graph/graph_builder.py:47:101: E501 line too long (120 > 100 characters)
+src/knowledge_graph/graph_builder.py:65:101: E501 line too long (102 > 100 characters)
+src/knowledge_graph/nlp_populator.py:105:101: E501 line too long (102 > 100 characters)
+src/knowledge_graph/nlp_populator.py:131:13: F841 local variable 'article_node' is assigned to but never used
+src/knowledge_graph/nlp_populator.py:313:46: E203 whitespace before ':'
+src/nlp/__init__.py:3:101: E501 line too long (113 > 100 characters)
+src/nlp/ai_summarizer.py:473:101: E501 line too long (547 > 100 characters)
+src/nlp/ai_summarizer.py:475:101: E501 line too long (471 > 100 characters)
+src/nlp/ai_summarizer.py:477:101: E501 line too long (582 > 100 characters)
+src/nlp/aws_sentiment.py:162:52: E203 whitespace before ':'
+src/nlp/event_clusterer.py:1003:101: E501 line too long (107 > 100 characters)
+src/nlp/fake_news_detector.py:396:5: F841 local variable 'metrics' is assigned to but never used
+src/nlp/fake_news_detector.py:402:101: E501 line too long (101 > 100 characters)
+src/nlp/keyword_topic_database.py:223:101: E501 line too long (109 > 100 characters)
+src/nlp/keyword_topic_database.py:273:101: E501 line too long (130 > 100 characters)
+src/nlp/keyword_topic_database.py:348:9: F841 local variable 'where_clause' is assigned to but never used
+src/nlp/keyword_topic_extractor.py:1080:101: E501 line too long (242 > 100 characters)
+src/nlp/keyword_topic_extractor.py:1086:101: E501 line too long (232 > 100 characters)
+src/nlp/kubernetes/ner_processor.py:473:101: E501 line too long (102 > 100 characters)
+src/nlp/kubernetes/ner_processor.py:506:31: E203 whitespace before ':'
+src/nlp/kubernetes/sentiment_processor.py:509:31: E203 whitespace before ':'
+src/nlp/multi_language_processor.py:405:101: E501 line too long (108 > 100 characters)
+src/nlp/multi_language_processor.py:449:101: E501 line too long (106 > 100 characters)
+src/nlp/multi_language_processor.py:450:101: E501 line too long (113 > 100 characters)
+src/nlp/ner_article_processor.py:395:13: F841 local variable 'where_clause' is assigned to but never used
+src/nlp/nlp_integration.py:371:65: E203 whitespace before ':'
+src/nlp/nlp_integration.py:431:101: E501 line too long (113 > 100 characters)
+src/nlp/optimized_nlp_pipeline.py:29:1: F811 redefinition of unused 'time' from line 23
+src/nlp/optimized_nlp_pipeline.py:30:1: F811 redefinition of unused 'Dict' from line 27
+src/nlp/optimized_nlp_pipeline.py:30:1: F811 redefinition of unused 'List' from line 27
+src/nlp/optimized_nlp_pipeline.py:30:1: F811 redefinition of unused 'Any' from line 27
+src/nlp/optimized_nlp_pipeline.py:30:1: F811 redefinition of unused 'Optional' from line 27
+src/nlp/optimized_nlp_pipeline.py:30:1: F401 'typing.Tuple' imported but unused
+src/nlp/optimized_nlp_pipeline.py:31:1: F401 'datetime.datetime' imported but unused
+src/nlp/optimized_nlp_pipeline.py:31:1: F401 'datetime.timedelta' imported but unused
+src/nlp/optimized_nlp_pipeline.py:32:1: F811 redefinition of unused 'logging' from line 20
+src/nlp/optimized_nlp_pipeline.py:33:1: F811 redefinition of unused 'gc' from line 18
+src/nlp/optimized_nlp_pipeline.py:35:1: F401 'os' imported but unused
+src/nlp/optimized_nlp_pipeline.py:36:1: F811 redefinition of unused 'ThreadPoolExecutor' from line 24
+src/nlp/optimized_nlp_pipeline.py:36:1: F401 'concurrent.futures.as_completed' imported but unused
+src/nlp/optimized_nlp_pipeline.py:37:1: F811 redefinition of unused 'dataclass' from line 25
+src/nlp/optimized_nlp_pipeline.py:38:1: F401 'enum.Enum' imported but unused
+src/nlp/optimized_nlp_pipeline.py:41:1: F811 redefinition of unused 'psutil' from line 34
+src/nlp/optimized_nlp_pipeline.py:485:27: E203 whitespace before ':'
+src/nlp/sentiment_pipeline.py:345:17: F841 local variable 'placeholders' is assigned to but never used
+src/nlp/sentiment_trend_analyzer.py:934:101: E501 line too long (104 > 100 characters)
+src/scraper/async_pipelines.py:491:101: E501 line too long (135 > 100 characters)
+src/scraper/async_scraper_engine.py:546:101: E501 line too long (109 > 100 characters)
+src/scraper/async_scraper_engine.py:596:101: E501 line too long (113 > 100 characters)
+src/scraper/async_scraper_runner.py:3:101: E501 line too long (116 > 100 characters)
+src/scraper/async_scraper_runner.py:5:101: E501 line too long (123 > 100 characters)
+src/scraper/async_scraper_runner.py:7:101: E501 line too long (123 > 100 characters)
+src/scraper/dynamodb_failure_manager.py:288:101: E501 line too long (102 > 100 characters)
+src/scraper/enhanced_pipelines.py:213:101: E501 line too long (104 > 100 characters)
+src/scraper/enhanced_pipelines.py:334:9: F841 local variable 'total' is assigned to but never used
+src/scraper/enhanced_pipelines.py:340:101: E501 line too long (101 > 100 characters)
+src/scraper/enhanced_pipelines.py:341:101: E501 line too long (104 > 100 characters)
+src/scraper/enhanced_pipelines.py:342:101: E501 line too long (116 > 100 characters)
+src/scraper/enhanced_pipelines.py:343:101: E501 line too long (110 > 100 characters)
+src/scraper/enhanced_pipelines.py:344:101: E501 line too long (101 > 100 characters)
+src/scraper/run.py:199:101: E501 line too long (112 > 100 characters)
+src/scraper/sns_alert_manager.py:194:101: E501 line too long (105 > 100 characters)
+src/scraper/sns_alert_manager.py:273:101: E501 line too long (113 > 100 characters)
+src/scraper/sns_alert_manager.py:302:101: E501 line too long (135 > 100 characters)
+src/scraper/sns_alert_manager.py:330:101: E501 line too long (102 > 100 characters)
+src/scraper/user_agent_rotator.py:134:101: E501 line too long (141 > 100 characters)
+src/scraper/user_agent_rotator.py:135:101: E501 line too long (122 > 100 characters)
+src/scraper/user_agent_rotator.py:145:101: E501 line too long (147 > 100 characters)
+src/scraper/user_agent_rotator.py:146:101: E501 line too long (122 > 100 characters)
+src/scraper/user_agent_rotator.py:156:101: E501 line too long (131 > 100 characters)
+src/scraper/user_agent_rotator.py:157:101: E501 line too long (122 > 100 characters)
+src/scraper/user_agent_rotator.py:171:101: E501 line too long (110 > 100 characters)
+src/scraper/user_agent_rotator.py:172:101: E501 line too long (135 > 100 characters)
+src/scraper/user_agent_rotator.py:182:101: E501 line too long (114 > 100 characters)
+src/scraper/user_agent_rotator.py:183:101: E501 line too long (135 > 100 characters)
+src/scraper/user_agent_rotator.py:197:101: E501 line too long (147 > 100 characters)
+src/scraper/user_agent_rotator.py:212:101: E501 line too long (155 > 100 characters)
+src/scraper/user_agent_rotator.py:213:101: E501 line too long (122 > 100 characters)
+src/scraper/user_agent_rotator.py:227:101: E501 line too long (165 > 100 characters)
+src/scraper/user_agent_rotator.py:239:101: E501 line too long (148 > 100 characters)
+src/scraper/user_agent_rotator.py:240:101: E501 line too long (122 > 100 characters)
+src/scraper/user_agent_rotator.py:325:5: F811 redefinition of unused '_rotate_profile' from line 104
+tests/integration/test_data_validation_pipeline.py:220:101: E501 line too long (201 > 100 characters)
+tests/knowledge_graph/test_graph_builder.py:1:1: F401 'unittest.mock.call' imported but unused
+tests/knowledge_graph/test_graph_builder.py:6:1: F401 'gremlin_python.driver.connection.Connection as GremlinConnection' imported but unused
+tests/knowledge_graph/test_graph_queries.py:115:101: E501 line too long (120 > 100 characters)
+tests/test_ai_summarization_simple.py:164:101: E501 line too long (122 > 100 characters)
+tests/test_anti_detection.py:121:25: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
+tests/test_anti_detection.py:207:25: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
+tests/test_anti_detection.py:302:33: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
+tests/test_anti_detection.py:311:5: F811 redefinition of unused 'asyncio' from line 11
+tests/test_async_scraper.py:165:101: E501 line too long (107 > 100 characters)
+tests/test_async_scraper.py:451:1: F811 redefinition of unused 'TestAsyncPipelines' from line 109
+tests/test_async_scraper.py:491:101: E501 line too long (107 > 100 characters)
+tests/test_async_scraper.py:542:5: F811 redefinition of unused 'test_article_enhancement' from line 487
+tests/test_async_scraper.py:573:5: F811 redefinition of unused 'test_process_batch' from line 518
+tests/test_async_scraper.py:594:1: F811 redefinition of unused 'TestPerformanceMonitor' from line 209
+tests/test_async_scraper.py:663:1: F811 redefinition of unused 'TestIntegration' from line 324
+tests/test_event_detection.py:92:101: E501 line too long (120 > 100 characters)
+tests/test_event_detection.py:102:101: E501 line too long (106 > 100 characters)
+tests/test_event_detection.py:112:101: E501 line too long (109 > 100 characters)
+tests/test_fake_news_detection.py:343:101: E501 line too long (107 > 100 characters)
+tests/test_keyword_topic_extraction.py:118:101: E501 line too long (190 > 100 characters)
+tests/test_keyword_topic_extraction.py:119:101: E501 line too long (194 > 100 characters)
+tests/test_keyword_topic_extraction.py:120:101: E501 line too long (183 > 100 characters)
+tests/test_keyword_topic_extraction.py:121:101: E501 line too long (188 > 100 characters)
+tests/test_keyword_topic_extraction.py:122:101: E501 line too long (190 > 100 characters)
+tests/test_keyword_topic_extraction.py:123:101: E501 line too long (172 > 100 characters)
+tests/test_keyword_topic_extraction.py:124:101: E501 line too long (197 > 100 characters)
+tests/test_keyword_topic_extraction.py:159:101: E501 line too long (106 > 100 characters)
+tests/test_keyword_topic_extraction_clean.py:118:101: E501 line too long (190 > 100 characters)
+tests/test_keyword_topic_extraction_clean.py:119:101: E501 line too long (194 > 100 characters)
+tests/test_keyword_topic_extraction_clean.py:120:101: E501 line too long (183 > 100 characters)
+tests/test_keyword_topic_extraction_clean.py:121:101: E501 line too long (188 > 100 characters)
+tests/test_keyword_topic_extraction_clean.py:122:101: E501 line too long (190 > 100 characters)
+tests/test_keyword_topic_extraction_clean.py:123:101: E501 line too long (172 > 100 characters)
+tests/test_keyword_topic_extraction_clean.py:124:101: E501 line too long (197 > 100 characters)
+tests/test_keyword_topic_extraction_clean.py:159:101: E501 line too long (106 > 100 characters)
+tests/test_knowledge_graph_population.py:127:9: F841 local variable 'result' is assigned to but never used
+tests/test_knowledge_graph_population.py:264:101: E501 line too long (105 > 100 characters)
+tests/test_minimal_keyword_topic.py:48:101: E501 line too long (190 > 100 characters)
+tests/test_minimal_keyword_topic.py:49:101: E501 line too long (194 > 100 characters)
+tests/test_minimal_keyword_topic.py:50:101: E501 line too long (183 > 100 characters)
+tests/test_minimal_keyword_topic.py:51:101: E501 line too long (188 > 100 characters)
+tests/test_minimal_keyword_topic.py:52:101: E501 line too long (190 > 100 characters)
+tests/test_minimal_keyword_topic.py:53:101: E501 line too long (172 > 100 characters)
+tests/test_minimal_keyword_topic.py:54:101: E501 line too long (197 > 100 characters)
+tests/test_monitoring.py:228:28: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
+tests/test_monitoring.py:309:54: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
+tests/test_monitoring.py:390:5: F811 redefinition of unused 'asyncio' from line 14
+tests/test_monitoring.py:435:13: F841 local variable 'alert_manager' is assigned to but never used
+tests/test_monitoring.py:440:13: F841 local variable 'alert' is assigned to but never used
+tests/test_optimized_pipeline.py:451:45: E203 whitespace before ':'

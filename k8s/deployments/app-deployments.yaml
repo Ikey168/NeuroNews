@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neuronews-api
+  namespace: neuronews
+  labels:
+    app: neuronews-api
+    component: backend
+    tier: api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: neuronews-api
+  template:
+    metadata:
+      labels:
+        app: neuronews-api
+        component: backend
+        tier: api
+    spec:
+      serviceAccountName: neuronews-api-sa
+      containers:
+      - name: api
+        image: neuronews/api:latest
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-secrets
+              key: database-url
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: neuronews-config
+              key: redis-url
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neuronews-scraper
+  namespace: neuronews
+  labels:
+    app: neuronews-scraper
+    component: scraper
+    tier: worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: neuronews-scraper
+  template:
+    metadata:
+      labels:
+        app: neuronews-scraper
+        component: scraper
+        tier: worker
+    spec:
+      serviceAccountName: neuronews-scraper-sa
+      containers:
+      - name: scraper
+        image: neuronews/scraper:latest
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-secrets
+              key: database-url
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: neuronews-config
+              key: redis-url
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"

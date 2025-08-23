@@ -1,0 +1,145 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neuronews-scraper
+  namespace: neuronews-staging
+  labels:
+    app: neuronews-scraper
+    component: scraper
+    environment: staging
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: neuronews-scraper
+  template:
+    metadata:
+      labels:
+        app: neuronews-scraper
+        component: scraper
+        environment: staging
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: neuronews-scraper
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: neuronews-scraper
+        image: ghcr.io/ikey168/neuronews/scraper:staging
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: metrics
+          protocol: TCP
+        env:
+        - name: ENVIRONMENT
+          value: "staging"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: SCRAPE_INTERVAL
+          value: "300" # 5 minutes for staging
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-db-secrets
+              key: database-url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-redis-secrets
+              key: redis-url
+        - name: NEWS_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-api-keys
+              key: news-api-key
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: cache
+          mountPath: /app/cache
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: cache
+        emptyDir: {}
+      nodeSelector:
+        kubernetes.io/os: linux
+      tolerations:
+      - key: node.kubernetes.io/not-ready
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 300
+      - key: node.kubernetes.io/unreachable
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 300
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: neuronews-scraper
+  namespace: neuronews-staging
+  labels:
+    app: neuronews-scraper
+    component: scraper
+    environment: staging
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: metrics
+  selector:
+    app: neuronews-scraper
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: neuronews-scraper
+  namespace: neuronews-staging
+  labels:
+    app: neuronews-scraper
+    component: scraper
+    environment: staging
+automountServiceAccountToken: false
