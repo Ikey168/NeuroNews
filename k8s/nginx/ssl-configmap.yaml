@@ -5,7 +5,6 @@ metadata:
   namespace: neuronews
   labels:
     app: nginx-ssl
-    component: ssl-proxy
 
 data:
   nginx.conf: |
@@ -32,14 +31,6 @@ data:
       
       access_log  /var/log/nginx/access.log  main;
       
-      # Security headers
-      add_header X-Frame-Options "SAMEORIGIN" always;
-      add_header X-Content-Type-Options "nosniff" always;
-      add_header X-XSS-Protection "1; mode=block" always;
-      add_header Referrer-Policy "no-referrer-when-downgrade" always;
-      add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
-      add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-      
       # Performance optimizations
       sendfile        on;
       tcp_nopush      on;
@@ -62,31 +53,47 @@ data:
         application/xml+rss
         application/atom+xml;
       
+      # SSL/TLS Security Headers
+      add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+      add_header X-Frame-Options "SAMEORIGIN" always;
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header X-XSS-Protection "1; mode=block" always;
+      add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+      
       # Rate limiting
       limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
+      
+      # Connection limiting
       limit_conn_zone $binary_remote_addr zone=addr:10m;
       
-      # Upstream configuration for FastAPI
+      # Cache settings
+      proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=api_cache:10m max_size=100m inactive=60m use_temp_path=off;
+      
+      # Upstream configuration for FastAPI replicas
       upstream fastapi_backend {
-        least_conn;
+        least_conn;  # Load balancing method
+        
+        # Health check configuration
         keepalive 32;
         keepalive_requests 100;
         keepalive_timeout 60s;
         
+        # FastAPI replicas
         server neuronews-fastapi-service.neuronews.svc.cluster.local:80 max_fails=3 fail_timeout=30s;
       }
       
-      # HTTP server - redirect to HTTPS
+      # HTTP to HTTPS redirect server
       server {
         listen 80;
         server_name _;
         
-        # Let's Encrypt ACME challenge
+        # ACME Challenge for Let's Encrypt
         location /.well-known/acme-challenge/ {
           root /var/www/certbot;
+          try_files $uri =404;
         }
         
-        # Redirect all HTTP to HTTPS
+        # Redirect all HTTP traffic to HTTPS
         location / {
           return 301 https://$host$request_uri;
         }
@@ -95,46 +102,40 @@ data:
       # HTTPS server
       server {
         listen 443 ssl http2;
-        server_name _;
+        server_name api.neuronews.com;
         
-        # SSL configuration
+        # SSL certificate paths (will be mounted from Kubernetes secrets)
         ssl_certificate /etc/ssl/certs/tls.crt;
         ssl_certificate_key /etc/ssl/private/tls.key;
         
-        # SSL optimization
+        # SSL configuration
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-SHA384;
+        ssl_prefer_server_ciphers off;
         ssl_session_cache shared:SSL:10m;
         ssl_session_timeout 10m;
         ssl_session_tickets off;
         
-        # Modern SSL configuration
-        ssl_protocols TLSv1.2 TLSv1.3;
-        ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
-        ssl_prefer_server_ciphers off;
-        
         # OCSP stapling
         ssl_stapling on;
         ssl_stapling_verify on;
+        resolver 8.8.8.8 8.8.4.4 valid=300s;
+        resolver_timeout 5s;
         
         # Rate limiting
         limit_req zone=api burst=20 nodelay;
         limit_conn addr 10;
         
-        # Health check endpoint for NGINX
+        # Health check endpoint for NGINX itself
         location /nginx-health {
           access_log off;
           return 200 "healthy\n";
           add_header Content-Type text/plain;
         }
         
-        # SSL test endpoint
-        location /ssl-test {
-          access_log off;
-          return 200 "SSL working correctly\n";
-          add_header Content-Type text/plain;
-        }
-        
-        # Main API proxy
+        # Main API proxy with caching
         location / {
+          # Proxy settings
           proxy_pass http://fastapi_backend;
           proxy_http_version 1.1;
           proxy_set_header Upgrade $http_upgrade;
@@ -143,7 +144,6 @@ data:
           proxy_set_header X-Real-IP $remote_addr;
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
           proxy_set_header X-Forwarded-Proto $scheme;
-          proxy_set_header X-Forwarded-Host $host;
           proxy_set_header X-Forwarded-Port $server_port;
           proxy_cache_bypass $http_upgrade;
           
@@ -157,6 +157,26 @@ data:
           proxy_buffer_size 128k;
           proxy_buffers 4 256k;
           proxy_busy_buffers_size 256k;
+          
+          # Cache configuration for GET requests
+          proxy_cache api_cache;
+          proxy_cache_valid 200 302 1m;
+          proxy_cache_valid 404 1m;
+          proxy_cache_use_stale error timeout updating http_500 http_502 http_503 http_504;
+          proxy_cache_lock on;
+          proxy_cache_key $scheme$proxy_host$request_uri;
+          
+          # Add cache status header
+          add_header X-Cache-Status $upstream_cache_status;
+          
+          # Only cache GET requests
+          proxy_cache_methods GET HEAD;
+          
+          # Don't cache certain paths
+          location ~* ^/(docs|redoc|openapi.json|health)$ {
+            proxy_pass http://fastapi_backend;
+            proxy_cache off;
+          }
         }
         
         # Status page for monitoring
