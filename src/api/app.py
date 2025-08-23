@@ -208,8 +208,6 @@ async def root():
             "influence_analysis": INFLUENCE_ANALYSIS_AVAILABLE,
         },
     }
-
-
 @app.get("/health")
 async def health_check():
     """Health check endpoint for monitoring."""
