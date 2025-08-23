@@ -1,0 +1,336 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluentd-security-config
+  namespace: neuronews
+  labels:
+    app: fluentd
+    component: security-logging
+    issue: "86"
+data:
+  fluent.conf: |
+    <system>
+      log_level info
+      workers 1
+    </system>
+
+    # NGINX access logs
+    <source>
+      @type tail
+      @id nginx_access_log
+      path /var/log/nginx/access.log
+      pos_file /var/log/fluentd-positions/nginx-access.log.pos
+      tag nginx.access
+      format nginx
+      types size:integer,reqtime:float,uct:float,uht:float,urt:float
+      keep_time_key true
+      read_from_head true
+    </source>
+
+    # NGINX security logs
+    <source>
+      @type tail
+      @id nginx_security_log
+      path /var/log/nginx/security.log
+      pos_file /var/log/fluentd-positions/nginx-security.log.pos
+      tag nginx.security
+      format /^(?<remote>[^ ]*) - (?<user>[^ ]*) \[(?<time>[^\]]*)\] "(?<method>\S+)(?: +(?<path>[^\"]*?)(?: +\S*)?)?" (?<code>[^ ]*) (?<size>[^ ]*) "(?<referer>[^\"]*)" "(?<agent>[^\"]*)" "(?<forwarded>[^\"]*)" rt=(?<request_time>[^ ]*) uct="(?<upstream_connect_time>[^\"]*)" uht="(?<upstream_header_time>[^\"]*)" urt="(?<upstream_response_time>[^\"]*)" country="(?<country>[^\"]*)" rate_limited="(?<rate_limited>[^\"]*)"$/
+      time_format %d/%b/%Y:%H:%M:%S %z
+      types code:integer,size:integer,request_time:float
+      keep_time_key true
+      read_from_head true
+    </source>
+
+    # NGINX authentication logs
+    <source>
+      @type tail
+      @id nginx_auth_log
+      path /var/log/nginx/auth.log
+      pos_file /var/log/fluentd-positions/nginx-auth.log.pos
+      tag nginx.auth
+      format /^(?<remote>[^ ]*) - (?<user>[^ ]*) \[(?<time>[^\]]*)\] "(?<method>\S+)(?: +(?<path>[^\"]*?)(?: +\S*)?)?" (?<code>[^ ]*) (?<size>[^ ]*) "(?<referer>[^\"]*)" "(?<agent>[^\"]*)" "(?<forwarded>[^\"]*)" rt=(?<request_time>[^ ]*) uct="(?<upstream_connect_time>[^\"]*)" uht="(?<upstream_header_time>[^\"]*)" urt="(?<upstream_response_time>[^\"]*)" country="(?<country>[^\"]*)" rate_limited="(?<rate_limited>[^\"]*)"$/
+      time_format %d/%b/%Y:%H:%M:%S %z
+      types code:integer,size:integer,request_time:float
+      keep_time_key true
+      read_from_head true
+    </source>
+
+    # NGINX bot logs
+    <source>
+      @type tail
+      @id nginx_bot_log
+      path /var/log/nginx/bot.log
+      pos_file /var/log/fluentd-positions/nginx-bot.log.pos
+      tag nginx.bot
+      format /^(?<remote>[^ ]*) - \[(?<time>[^\]]*)\] "(?<method>\S+)(?: +(?<path>[^\"]*?)(?: +\S*)?)?" (?<code>[^ ]*) "(?<agent>[^\"]*)" country="(?<country>[^\"]*)" rate_limited="(?<rate_limited>[^\"]*)" conn_limit="(?<conn_limit>[^\"]*)"$/
+      time_format %d/%b/%Y:%H:%M:%S %z
+      types code:integer
+      keep_time_key true
+      read_from_head true
+    </source>
+
+    # NGINX error logs
+    <source>
+      @type tail
+      @id nginx_error_log
+      path /var/log/nginx/error.log
+      pos_file /var/log/fluentd-positions/nginx-error.log.pos
+      tag nginx.error
+      format /^(?<time>\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}) \[(?<log_level>\w+)\] (?<pid>\d+)#(?<tid>\d+): (?<message>.*)$/
+      time_format %Y/%m/%d %H:%M:%S
+      keep_time_key true
+      read_from_head true
+    </source>
+
+    # Fail2ban logs
+    <source>
+      @type tail
+      @id fail2ban_log
+      path /var/log/fail2ban/fail2ban.log
+      pos_file /var/log/fluentd-positions/fail2ban.log.pos
+      tag fail2ban.action
+      format /^(?<time>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) (?<log_level>\w+)\s+\[(?<process>[^\]]+)\]: (?<action>\w+)\s+(?<ip>[\d\.]+).*$/
+      time_format %Y-%m-%d %H:%M:%S
+      keep_time_key true
+      read_from_head true
+    </source>
+
+    # Add Kubernetes metadata
+    <filter nginx.**>
+      @type kubernetes_metadata
+      @id nginx_kubernetes_metadata
+      kubernetes_url "#{ENV['KUBERNETES_SERVICE_HOST']}:#{ENV['KUBERNETES_SERVICE_PORT_HTTPS']}"
+      verify_ssl false
+      ca_file /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      bearer_token_file /var/run/secrets/kubernetes.io/serviceaccount/token
+      annotation_match [ ".*" ]
+      allow_orphans false
+      cache_size 1000
+      cache_ttl 3600
+      tag_to_kubernetes_name_regexp (?<tag_prefix>[^.]+)\.(?<container_name>[^_]+)(?<_>[^.]*)?\.(?<pod_name>[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)_(?<namespace>[^_]+)_.*
+    </filter>
+
+    <filter fail2ban.**>
+      @type kubernetes_metadata
+      @id fail2ban_kubernetes_metadata
+      kubernetes_url "#{ENV['KUBERNETES_SERVICE_HOST']}:#{ENV['KUBERNETES_SERVICE_PORT_HTTPS']}"
+      verify_ssl false
+      ca_file /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      bearer_token_file /var/run/secrets/kubernetes.io/serviceaccount/token
+      annotation_match [ ".*" ]
+      allow_orphans false
+      cache_size 1000
+      cache_ttl 3600
+    </filter>
+
+    # Parse and enrich NGINX access logs
+    <filter nginx.access>
+      @type record_transformer
+      @id nginx_access_transformer
+      enable_ruby true
+      <record>
+        service "nginx"
+        component "rate-limiting"
+        log_type "access"
+        severity "info"
+        timestamp ${time}
+        client_ip ${record["remote"]}
+        request_method ${record["method"]}
+        request_path ${record["path"]}
+        response_code ${record["code"]}
+        response_size ${record["size"]}
+        request_time ${record["reqtime"]}
+        user_agent ${record["agent"]}
+        referer ${record["referer"]}
+        upstream_response_time ${record["urt"]}
+        is_bot ${record["agent"] =~ /bot|crawler|spider|scraper/i ? true : false}
+        is_suspicious ${record["path"] =~ /admin|wp-|\.php|\.asp/i ? true : false}
+        response_category ${
+          case record["code"].to_i
+          when 200..299 then "success"
+          when 300..399 then "redirect"
+          when 400..499 then "client_error"
+          when 500..599 then "server_error"
+          else "unknown"
+          end
+        }
+      </record>
+    </filter>
+
+    # Parse and enrich NGINX security logs
+    <filter nginx.security>
+      @type record_transformer
+      @id nginx_security_transformer
+      enable_ruby true
+      <record>
+        service "nginx"
+        component "security"
+        log_type "security"
+        severity ${record["rate_limited"] == "" ? "info" : "warning"}
+        timestamp ${time}
+        client_ip ${record["remote"]}
+        request_method ${record["method"]}
+        request_path ${record["path"]}
+        response_code ${record["code"]}
+        response_size ${record["size"]}
+        request_time ${record["request_time"]}
+        user_agent ${record["agent"]}
+        country ${record["country"]}
+        rate_limited ${record["rate_limited"] != "" ? true : false}
+        rate_limit_status ${record["rate_limited"]}
+        is_blocked ${record["code"].to_i == 403 || record["code"].to_i == 429}
+        threat_level ${
+          case 
+          when record["rate_limited"] != "" then "medium"
+          when record["code"].to_i == 403 then "high"
+          when record["code"].to_i == 429 then "medium"
+          else "low"
+          end
+        }
+      </record>
+    </filter>
+
+    # Parse and enrich NGINX authentication logs
+    <filter nginx.auth>
+      @type record_transformer
+      @id nginx_auth_transformer
+      enable_ruby true
+      <record>
+        service "nginx"
+        component "authentication"
+        log_type "auth"
+        severity ${record["code"].to_i >= 400 ? "warning" : "info"}
+        timestamp ${time}
+        client_ip ${record["remote"]}
+        request_method ${record["method"]}
+        request_path ${record["path"]}
+        response_code ${record["code"]}
+        country ${record["country"]}
+        auth_success ${record["code"].to_i == 200}
+        auth_failed ${record["code"].to_i == 401 || record["code"].to_i == 403}
+        rate_limited ${record["rate_limited"] != "" ? true : false}
+        suspicious_auth ${record["code"].to_i >= 400 && record["rate_limited"] != ""}
+      </record>
+    </filter>
+
+    # Parse and enrich NGINX bot logs
+    <filter nginx.bot>
+      @type record_transformer
+      @id nginx_bot_transformer
+      enable_ruby true
+      <record>
+        service "nginx"
+        component "bot-detection"
+        log_type "bot"
+        severity "warning"
+        timestamp ${time}
+        client_ip ${record["remote"]}
+        request_method ${record["method"]}
+        request_path ${record["path"]}
+        response_code ${record["code"]}
+        user_agent ${record["agent"]}
+        country ${record["country"]}
+        rate_limited ${record["rate_limited"] != "" ? true : false}
+        connection_limited ${record["conn_limit"] != "" ? true : false}
+        bot_type ${
+          case record["agent"]
+          when /googlebot/i then "search_engine"
+          when /bingbot|slurp/i then "search_engine"
+          when /bot|crawler|spider/i then "legitimate_bot"
+          when /curl|wget|python/i then "script"
+          else "unknown_bot"
+          end
+        }
+      </record>
+    </filter>
+
+    # Parse and enrich NGINX error logs
+    <filter nginx.error>
+      @type record_transformer
+      @id nginx_error_transformer
+      enable_ruby true
+      <record>
+        service "nginx"
+        component "error"
+        log_type "error"
+        severity ${record["log_level"]}
+        timestamp ${time}
+        process_id ${record["pid"]}
+        thread_id ${record["tid"]}
+        error_message ${record["message"]}
+        is_rate_limit_error ${record["message"] =~ /limiting requests/i ? true : false}
+        is_connection_error ${record["message"] =~ /connection/i ? true : false}
+        error_category ${
+          case record["message"]
+          when /limiting requests/i then "rate_limiting"
+          when /connection/i then "connection"
+          when /upstream/i then "backend"
+          when /ssl|tls/i then "ssl"
+          else "general"
+          end
+        }
+      </record>
+    </filter>
+
+    # Parse and enrich Fail2ban logs
+    <filter fail2ban.action>
+      @type record_transformer
+      @id fail2ban_transformer
+      enable_ruby true
+      <record>
+        service "fail2ban"
+        component "ddos-protection"
+        log_type "security_action"
+        severity ${record["action"] =~ /ban/i ? "warning" : "info"}
+        timestamp ${time}
+        action_type ${record["action"]}
+        client_ip ${record["ip"]}
+        jail_name ${record["process"]}
+        is_ban_action ${record["action"] =~ /ban$/i ? true : false}
+        is_unban_action ${record["action"] =~ /unban/i ? true : false}
+        threat_level ${record["action"] =~ /ban$/i ? "high" : "low"}
+      </record>
+    </filter>
+
+    # Output to stdout for development/debugging
+    <match nginx.** fail2ban.**>
+      @type stdout
+      @id security_stdout
+      format json
+    </match>
+
+    # Output to Elasticsearch (configure as needed)
+    # <match nginx.** fail2ban.**>
+    #   @type elasticsearch
+    #   @id security_elasticsearch
+    #   host elasticsearch.monitoring.svc.cluster.local
+    #   port 9200
+    #   index_name security-logs
+    #   type_name _doc
+    #   logstash_format true
+    #   logstash_prefix security
+    #   logstash_dateformat %Y.%m.%d
+    #   include_tag_key true
+    #   tag_key @log_name
+    #   flush_interval 10s
+    #   reload_connections false
+    #   reload_on_failure false
+    #   request_timeout 30s
+    # </match>
+
+    # Output to file for local storage
+    <match nginx.** fail2ban.**>
+      @type file
+      @id security_file
+      path /var/log/fluentd/security
+      time_slice_format %Y%m%d
+      time_slice_wait 10m
+      time_format %Y%m%dT%H%M%S%z
+      compress gzip
+      format json
+      include_time_key true
+      include_tag_key true
+      buffer_chunk_limit 256m
+      buffer_queue_limit 128
+      flush_interval 60s
+    </match>
