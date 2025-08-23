@@ -13,6 +13,7 @@ help:
 	@echo "  airflow-status   - Show status of all services"
 	@echo "  airflow-test-openlineage - Test OpenLineage integration"
 	@echo "  airflow-test-env-config  - Test environment configuration (Issue #188)"
+	@echo "  airflow-test-news-pipeline - Test news pipeline DAG (Issue #189)"
 	@echo "  marquez-ui       - Open Marquez UI in browser"
 	@echo ""
 	@echo "URLs:"
@@ -77,6 +78,11 @@ airflow-test-openlineage:
 airflow-test-env-config:
 	@echo "🔧 Testing Airflow → Marquez environment configuration..."
 	@python3 demo/demo_airflow_marquez_env_config.py
+
+# Test news pipeline DAG (Issue #189)
+airflow-test-news-pipeline:
+	@echo "📰 Testing news pipeline DAG..."
+	@python3 demo/demo_news_pipeline_dag.py
 
 marquez-ui:
 	@echo "🌐 Opening Marquez UI..."
