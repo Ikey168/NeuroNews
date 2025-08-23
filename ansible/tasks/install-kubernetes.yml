@@ -1,0 +1,205 @@
+---
+# Kubernetes Installation Tasks
+# Installs kubeadm, kubelet, and kubectl on target nodes
+
+- name: Disable swap
+  command: swapoff -a
+  when: ansible_swaptotal_mb > 0
+
+- name: Remove swap from fstab
+  lineinfile:
+    path: /etc/fstab
+    regexp: '.*swap.*'
+    state: absent
+
+- name: Load required kernel modules
+  modprobe:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - br_netfilter
+    - overlay
+
+- name: Ensure kernel modules load on boot
+  lineinfile:
+    path: /etc/modules-load.d/k8s.conf
+    line: "{{ item }}"
+    create: yes
+  loop:
+    - br_netfilter
+    - overlay
+
+- name: Configure sysctl for Kubernetes
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+    sysctl_file: /etc/sysctl.d/k8s.conf
+    reload: yes
+  loop:
+    - { name: "net.bridge.bridge-nf-call-iptables", value: "1" }
+    - { name: "net.bridge.bridge-nf-call-ip6tables", value: "1" }
+    - { name: "net.ipv4.ip_forward", value: "1" }
+
+- name: Add Kubernetes GPG key (Ubuntu/Debian)
+  apt_key:
+    url: "https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version.split('.')[0] }}.{{ kubernetes_version.split('.')[1] }}/deb/Release.key"
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: Add Kubernetes repository (Ubuntu/Debian)
+  apt_repository:
+    repo: "deb https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version.split('.')[0] }}.{{ kubernetes_version.split('.')[1] }}/deb/ /"
+    state: present
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+- name: Add Kubernetes repository (RedHat/CentOS)
+  yum_repository:
+    name: kubernetes
+    description: Kubernetes
+    baseurl: "https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version.split('.')[0] }}.{{ kubernetes_version.split('.')[1] }}/rpm/"
+    enabled: yes
+    gpgcheck: yes
+    gpgkey: "https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version.split('.')[0] }}.{{ kubernetes_version.split('.')[1] }}/rpm/repodata/repomd.xml.key"
+    exclude: "kubelet kubeadm kubectl cri-tools kubernetes-cni"
+  when: ansible_os_family == "RedHat"
+
+- name: Install Kubernetes packages (Ubuntu/Debian)
+  package:
+    name:
+      - "kubelet={{ kubernetes_version }}-1.1"
+      - "kubeadm={{ kubernetes_version }}-1.1"
+      - "kubectl={{ kubernetes_version }}-1.1"
+    state: present
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+- name: Install Kubernetes packages (RedHat/CentOS)
+  package:
+    name:
+      - "kubelet-{{ kubernetes_version }}"
+      - "kubeadm-{{ kubernetes_version }}"
+      - "kubectl-{{ kubernetes_version }}"
+    state: present
+    disable_excludes: kubernetes
+  when: ansible_os_family == "RedHat"
+
+- name: Hold Kubernetes packages (Ubuntu/Debian)
+  dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  loop:
+    - kubelet
+    - kubeadm
+    - kubectl
+  when: ansible_os_family == "Debian"
+
+- name: Configure kubelet
+  template:
+    src: kubelet.j2
+    dest: /etc/default/kubelet
+    mode: '0644'
+  vars:
+    kubelet_extra_args: |
+      --cgroup-driver=systemd
+      --container-runtime-endpoint=unix:///var/run/containerd/containerd.sock
+      --pod-infra-container-image=registry.k8s.io/pause:3.9
+  notify:
+    - restart kubelet
+
+- name: Create kubelet systemd drop-in directory
+  file:
+    path: /etc/systemd/system/kubelet.service.d
+    state: directory
+    mode: '0755'
+
+- name: Configure kubelet systemd service
+  copy:
+    content: |
+      [Service]
+      Environment="KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf"
+      Environment="KUBELET_CONFIG_ARGS=--config=/var/lib/kubelet/config.yaml"
+      Environment="KUBELET_KUBEADM_ARGS=--container-runtime-endpoint=unix:///var/run/containerd/containerd.sock --pod-infra-container-image=registry.k8s.io/pause:3.9"
+      Environment="KUBELET_EXTRA_ARGS="
+      ExecStart=
+      ExecStart=/usr/bin/kubelet $KUBELET_KUBECONFIG_ARGS $KUBELET_CONFIG_ARGS $KUBELET_KUBEADM_ARGS $KUBELET_EXTRA_ARGS
+    dest: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+    mode: '0644'
+  notify:
+    - restart kubelet
+
+- name: Configure containerd
+  copy:
+    content: |
+      version = 2
+      [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+        runtime_type = "io.containerd.runc.v2"
+        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+          SystemdCgroup = true
+      [plugins."io.containerd.grpc.v1.cri"]
+        [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+          [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
+            endpoint = ["https://registry-1.docker.io"]
+    dest: /etc/containerd/config.toml
+    mode: '0644'
+  notify:
+    - restart containerd
+
+- name: Start and enable kubelet
+  systemd:
+    name: kubelet
+    daemon_reload: yes
+    state: started
+    enabled: yes
+
+- name: Start and enable containerd
+  systemd:
+    name: containerd
+    daemon_reload: yes
+    state: started
+    enabled: yes
+
+- name: Pull Kubernetes images
+  command: kubeadm config images pull --kubernetes-version={{ kubernetes_version }}
+  register: images_pull
+  changed_when: false
+  failed_when: images_pull.rc != 0
+
+- name: Display Kubernetes installation status
+  debug:
+    msg: |
+      Kubernetes Installation Complete!
+      ================================
+      Kubernetes Version: {{ kubernetes_version }}
+      
+      Installed Components:
+      - kubelet: {{ kubernetes_version }}
+      - kubeadm: {{ kubernetes_version }}
+      - kubectl: {{ kubernetes_version }}
+      
+      Configuration:
+      - Swap disabled
+      - Required kernel modules loaded
+      - Sysctl parameters configured
+      - containerd configured with systemd cgroup driver
+      
+      Container Images:
+      {{ images_pull.stdout_lines | join('\n') if images_pull.stdout_lines else 'Images pulled successfully' }}
+      
+      Ready for cluster initialization!
+
+# Handlers for service management
+- name: restart kubelet
+  systemd:
+    name: kubelet
+    state: restarted
+    daemon_reload: yes
+  listen: "restart kubelet"
+
+- name: restart containerd
+  systemd:
+    name: containerd
+    state: restarted
+    daemon_reload: yes
+  listen: "restart containerd"

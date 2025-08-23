@@ -1,0 +1,322 @@
+---
+# NeuroNews Application Deployment Tasks
+# Deploys FastAPI, NLP services, and Scrapers to Kubernetes
+
+- name: Create NeuroNews namespace
+  kubernetes.core.k8s:
+    name: "{{ app.namespace }}"
+    api_version: v1
+    kind: Namespace
+    state: present
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config"
+
+- name: Create Docker registry secret
+  kubernetes.core.k8s:
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: docker-registry-secret
+        namespace: "{{ app.namespace }}"
+      type: kubernetes.io/dockerconfigjson
+      data:
+        .dockerconfigjson: "{{ docker_registry_auth | b64encode }}"
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config"
+  when: docker_registry_auth is defined
+
+- name: Deploy PostgreSQL database
+  kubernetes.core.k8s:
+    definition:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: postgres
+        namespace: "{{ app.namespace }}"
+        labels:
+          app: postgres
+      spec:
+        replicas: 1
+        selector:
+          matchLabels:
+            app: postgres
+        template:
+          metadata:
+            labels:
+              app: postgres
+          spec:
+            containers:
+            - name: postgres
+              image: postgres:15-alpine
+              ports:
+              - containerPort: 5432
+              env:
+              - name: POSTGRES_DB
+                value: "{{ database.name }}"
+              - name: POSTGRES_USER
+                value: "{{ database.user }}"
+              - name: POSTGRES_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: postgres-secret
+                    key: password
+              volumeMounts:
+              - name: postgres-storage
+                mountPath: /var/lib/postgresql/data
+              resources:
+                requests:
+                  cpu: "100m"
+                  memory: "256Mi"
+                limits:
+                  cpu: "500m"
+                  memory: "1Gi"
+            volumes:
+            - name: postgres-storage
+              persistentVolumeClaim:
+                claimName: postgres-pvc
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config"
+
+- name: Create PostgreSQL service
+  kubernetes.core.k8s:
+    definition:
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: postgres-service
+        namespace: "{{ app.namespace }}"
+        labels:
+          app: postgres
+      spec:
+        selector:
+          app: postgres
+        ports:
+        - port: 5432
+          targetPort: 5432
+          protocol: TCP
+        type: ClusterIP
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config"
+
+- name: Deploy Redis cache
+  kubernetes.core.k8s:
+    definition:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: redis
+        namespace: "{{ app.namespace }}"
+        labels:
+          app: redis
+      spec:
+        replicas: 1
+        selector:
+          matchLabels:
+            app: redis
+        template:
+          metadata:
+            labels:
+              app: redis
+          spec:
+            containers:
+            - name: redis
+              image: redis:7-alpine
+              ports:
+              - containerPort: 6379
+              args:
+              - redis-server
+              - --appendonly
+              - "yes"
+              volumeMounts:
+              - name: redis-storage
+                mountPath: /data
+              resources:
+                requests:
+                  cpu: "50m"
+                  memory: "128Mi"
+                limits:
+                  cpu: "200m"
+                  memory: "512Mi"
+            volumes:
+            - name: redis-storage
+              persistentVolumeClaim:
+                claimName: redis-pvc
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config"
+
+- name: Create Redis service
+  kubernetes.core.k8s:
+    definition:
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: redis-service
+        namespace: "{{ app.namespace }}"
+        labels:
+          app: redis
+      spec:
+        selector:
+          app: redis
+        ports:
+        - port: 6379
+          targetPort: 6379
+          protocol: TCP
+        type: ClusterIP
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config"
+
+- name: Apply existing FastAPI manifests
+  kubernetes.core.k8s:
+    src: "{{ playbook_dir }}/../k8s/fastapi/"
+    state: present
+    namespace: "{{ app.namespace }}"
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config"
+  when: fastapi_manifests_exist.stat.exists
+
+- name: Check if FastAPI manifests exist
+  stat:
+    path: "{{ playbook_dir }}/../k8s/fastapi/"
+  register: fastapi_manifests_exist
+
+- name: Apply existing Scrapers manifests
+  kubernetes.core.k8s:
+    src: "{{ playbook_dir }}/../k8s/scrapers/"
+    state: present
+    namespace: "{{ app.namespace }}"
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config"
+  when: scrapers_manifests_exist.stat.exists
+
+- name: Check if Scrapers manifests exist
+  stat:
+    path: "{{ playbook_dir }}/../k8s/scrapers/"
+  register: scrapers_manifests_exist
+
+- name: Apply existing NLP manifests
+  kubernetes.core.k8s:
+    src: "{{ playbook_dir }}/../k8s/nlp/"
+    state: present
+    namespace: "{{ app.namespace }}"
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config"
+  when: nlp_manifests_exist.stat.exists
+
+- name: Check if NLP manifests exist
+  stat:
+    path: "{{ playbook_dir }}/../k8s/nlp/"
+  register: nlp_manifests_exist
+
+- name: Apply NGINX manifests
+  kubernetes.core.k8s:
+    src: "{{ playbook_dir }}/../k8s/nginx/"
+    state: present
+    namespace: "{{ app.namespace }}"
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config"
+  when: nginx_manifests_exist.stat.exists
+
+- name: Check if NGINX manifests exist
+  stat:
+    path: "{{ playbook_dir }}/../k8s/nginx/"
+  register: nginx_manifests_exist
+
+- name: Create persistent volume claims
+  kubernetes.core.k8s:
+    definition:
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: "{{ item.name }}"
+        namespace: "{{ app.namespace }}"
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: "{{ item.size }}"
+        storageClassName: "{{ item.storage_class | default('standard') }}"
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config"
+  loop:
+    - { name: "postgres-pvc", size: "10Gi" }
+    - { name: "redis-pvc", size: "5Gi" }
+
+- name: Create configuration secrets
+  kubernetes.core.k8s:
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: "{{ item.name }}"
+        namespace: "{{ app.namespace }}"
+      type: Opaque
+      stringData: "{{ item.data }}"
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config"
+  loop:
+    - name: postgres-secret
+      data:
+        password: "{{ database_password | default('neuronews123') }}"
+    - name: app-secrets
+      data:
+        database_url: "postgresql://{{ database.user }}:{{ database_password | default('neuronews123') }}@postgres-service:5432/{{ database.name }}"
+        redis_url: "redis://redis-service:6379/{{ redis.db }}"
+        secret_key: "{{ app_secret_key | default('neuronews-secret-key-change-in-production') }}"
+
+- name: Wait for database to be ready
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ app.namespace }}"
+    label_selectors:
+      - app=postgres
+    wait: true
+    wait_condition:
+      type: Ready
+      status: "True"
+    wait_timeout: 300
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config"
+
+- name: Wait for Redis to be ready
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ app.namespace }}"
+    label_selectors:
+      - app=redis
+    wait: true
+    wait_condition:
+      type: Ready
+      status: "True"
+    wait_timeout: 300
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config"
+
+- name: Get application pods status
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ app.namespace }}"
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config"
+  register: app_pods
+
+- name: Get services status
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Service
+    namespace: "{{ app.namespace }}"
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config"
+  register: app_services
+
+- name: Display deployment status
+  debug:
+    msg: |
+      NeuroNews Application Deployment Complete!
+      =========================================
+      Namespace: {{ app.namespace }}
+      
+      Deployed Components:
+      - PostgreSQL Database (Ready)
+      - Redis Cache (Ready)
+      {% if fastapi_manifests_exist.stat.exists %}- FastAPI Application{% endif %}
+      {% if scrapers_manifests_exist.stat.exists %}- News Scrapers{% endif %}
+      {% if nlp_manifests_exist.stat.exists %}- NLP Services{% endif %}
+      {% if nginx_manifests_exist.stat.exists %}- NGINX Reverse Proxy{% endif %}
+      
+      Running Pods: {{ app_pods.resources | length }}
+      Active Services: {{ app_services.resources | length }}
+      
+      Next Steps:
+      1. Verify pod status: kubectl get pods -n {{ app.namespace }}
+      2. Check services: kubectl get svc -n {{ app.namespace }}
+      3. View logs: kubectl logs -n {{ app.namespace }} -l app=fastapi
+      4. Access application: kubectl port-forward -n {{ app.namespace }} svc/fastapi-service 8000:8000
