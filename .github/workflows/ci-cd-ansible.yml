@@ -6,8 +6,17 @@ on:
       - main
       - develop
       - 'release/*'
-    paths-ignore:
-      - 'README.md'
+    paths-ig      run: |
+        pytest --cov=. --cov-report=xml --cov-report=html --junitxml=pytest-report.xml -v
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-${{ matrix.python-version }}
+        path: |
+          pytest-report.xml
+          htmlcov/ - 'README.md'
       - 'docs/**'
       - '*.md'
   pull_request:
@@ -93,7 +102,7 @@ jobs:
       run: safety check --json --output safety-report.json || true
 
     - name: Upload security reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: security-reports
@@ -131,7 +140,7 @@ jobs:
         pytest --cov=. --cov-report=xml --cov-report=html --junitxml=pytest-report.xml -v
 
     - name: Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: test-results-${{ matrix.python-version }}
@@ -517,7 +526,7 @@ jobs:
         echo "- Production Status: ${{ needs.deploy-production.result }}" >> deployment-report.md
 
     - name: Upload deployment report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: deployment-report
         path: deployment-report.md
