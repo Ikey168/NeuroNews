@@ -2,7 +2,11 @@ version: '3.8'
 
 x-airflow-common:
   &airflow-common
-  image: apache/airflow:2.8.1
+  # Use custom NeuroNews Airflow image with OpenLineage provider (Issue #187)
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: neuronews/airflow:2.8.1-openlineage
   environment:
     &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
@@ -11,10 +15,13 @@ x-airflow-common:
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
-    # OpenLineage configuration for Marquez integration
+    # OpenLineage configuration for automatic lineage tracking (Issue #187)
     AIRFLOW__OPENLINEAGE__TRANSPORT: '{"type": "http", "url": "http://marquez:5000", "endpoint": "/api/v1/lineage"}'
     AIRFLOW__OPENLINEAGE__NAMESPACE: neuronews
-    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
+    AIRFLOW__OPENLINEAGE__DISABLED: 'false'
+    AIRFLOW__OPENLINEAGE__DEBUG: 'true'
+    # Remove pip additional requirements since we use custom image
+    # _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
   volumes:
     - ${AIRFLOW_PROJ_DIR:-.}/../../airflow/dags:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-.}/../../airflow/logs:/opt/airflow/logs

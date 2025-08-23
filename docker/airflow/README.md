@@ -1,176 +1,232 @@
-# Airflow + Marquez Integration
+# NeuroNews Airflow + OpenLineage Setup (Issue #187)
 
-This directory contains the Docker Compose setup for running Apache Airflow with Marquez for data lineage tracking.
+This directory contains the complete setup for running Apache Airflow with OpenLineage provider for automatic data lineage tracking in the NeuroNews project.
 
-## Quick Start
+## 🎯 Overview
 
-1. **Initialize and start services:**
-   ```bash
-   make airflow-up
-   ```
+Our custom Airflow setup includes:
+- **Custom Docker Image**: Extended Apache Airflow 2.8.1 with OpenLineage provider
+- **Automatic Lineage Tracking**: All DAG operations tracked via OpenLineage
+- **Marquez Integration**: Lineage visualization with Marquez UI
+- **Production Dependencies**: All required packages for NeuroNews DAGs
 
-2. **Access the UIs:**
-   - Airflow Web UI: http://localhost:8080 (username: `airflow`, password: `airflow`)
-   - Marquez Web UI: http://localhost:3000
-
-3. **Stop services:**
-   ```bash
-   make airflow-down
-   ```
-
-## Components
-
-### Apache Airflow
-- **Web Server**: http://localhost:8080
-- **Scheduler**: Runs DAGs on schedule
-- **Executor**: LocalExecutor (single machine)
-- **Database**: PostgreSQL (metadata storage)
-
-### Marquez (OpenLineage)
-- **API Server**: http://localhost:5000
-- **Web UI**: http://localhost:3000
-- **Database**: PostgreSQL (lineage metadata)
-
-## Directory Structure
+## 📁 Files Structure
 
 ```
 docker/airflow/
-├── docker-compose.airflow.yml  # Main compose file
-├── marquez.yml                 # Marquez configuration
-├── .env.example               # Environment variables template
-└── README.md                  # This file
+├── Dockerfile                     # Custom Airflow image with OpenLineage
+├── docker-compose.airflow.yml     # Complete orchestration setup
+├── marquez.yml                    # Marquez configuration
+├── .env.example                   # Environment variables template
+└── README.md                      # This file
 
-airflow/
-├── dags/                      # DAG files (Python)
-├── logs/                      # Airflow logs
-└── plugins/                   # Custom plugins
+../../airflow/
+├── requirements.txt               # Python dependencies for Airflow
+├── dags/                         # Airflow DAGs directory
+│   └── test_openlineage_integration.py  # Test DAG for Issue #187
+├── logs/                         # Airflow logs
+└── plugins/                      # Custom Airflow plugins
 ```
 
-## Configuration
+## 🚀 Quick Start
+
+### 1. Build Custom Image (Issue #187)
+```bash
+make airflow-build
+```
+
+### 2. Start Services
+```bash
+make airflow-up
+```
+
+### 3. Test OpenLineage Integration
+```bash
+make airflow-test-openlineage
+```
+
+### 4. Access UIs
+- **Airflow**: http://localhost:8080 (airflow/airflow)
+- **Marquez**: http://localhost:3000
+
+## 🔧 Custom Image Features (Issue #187)
+
+Our custom Airflow image includes:
+
+### OpenLineage Providers
+- `apache-airflow-providers-openlineage==1.4.0`
+- `openlineage-airflow==1.9.0`
+- `openlineage-python==1.9.0`
+
+### NeuroNews Dependencies
+- **Data Processing**: pandas, numpy, scikit-learn
+- **Web Scraping**: scrapy, beautifulsoup4, newspaper3k
+- **NLP/ML**: nltk, textblob
+- **Cloud Integration**: boto3, apache-airflow-providers-amazon
+- **Graph Database**: gremlinpython
+
+### Configuration
+- Automatic lineage tracking enabled
+- Marquez integration configured
+- Debug mode for development
+
+## 📊 Lineage Tracking
+
+### Automatic Tracking
+OpenLineage automatically tracks:
+- **Datasets**: Input/output data sources
+- **Jobs**: Airflow tasks and DAGs
+- **Runs**: Execution metadata and lineage
+- **Schema**: Data structure evolution
+
+### Manual Tracking
+For custom lineage events:
+```python
+from openlineage.airflow import OpenLineageAdapter
+
+# Custom lineage tracking in DAGs
+adapter = OpenLineageAdapter()
+adapter.emit_start_event(...)
+adapter.emit_complete_event(...)
+```
+
+## 🧪 Testing
+
+### Test DAG
+The `test_openlineage_integration` DAG verifies:
+- ✅ OpenLineage imports work
+- ✅ Provider installation complete
+- ✅ Configuration loaded correctly
+- ✅ Lineage events generated
+
+### Manual Testing
+```bash
+# Check OpenLineage logs
+make airflow-webserver-logs | grep -i openlineage
+
+# Trigger test DAG
+docker-compose exec airflow-webserver airflow dags trigger test_openlineage_integration
+
+# View lineage in Marquez
+open http://localhost:3000
+```
+
+## 🔧 Configuration
+
+### OpenLineage Settings
+```yaml
+AIRFLOW__OPENLINEAGE__TRANSPORT: '{"type": "http", "url": "http://marquez:5000", "endpoint": "/api/v1/lineage"}'
+AIRFLOW__OPENLINEAGE__NAMESPACE: neuronews
+AIRFLOW__OPENLINEAGE__DISABLED: 'false'
+AIRFLOW__OPENLINEAGE__DEBUG: 'true'
+```
 
 ### Environment Variables
-
-Copy `.env.example` to `.env` and customize as needed:
-
+Copy `.env.example` to `.env` and customize:
 ```bash
-cd docker/airflow
 cp .env.example .env
 ```
 
-Key variables:
-- `AIRFLOW_UID`: User ID for Airflow processes (default: 50000)
-- `_AIRFLOW_WWW_USER_USERNAME`: Web UI username
-- `_AIRFLOW_WWW_USER_PASSWORD`: Web UI password
+## 📋 Makefile Commands
 
-### OpenLineage Integration
+| Command | Description |
+|---------|-------------|
+| `make airflow-build` | Build custom image with OpenLineage |
+| `make airflow-up` | Start all services |
+| `make airflow-down` | Stop all services |
+| `make airflow-test-openlineage` | Test OpenLineage integration |
+| `make airflow-logs` | View all logs |
+| `make airflow-status` | Check service status |
+| `make marquez-ui` | Open Marquez UI |
 
-Airflow is pre-configured to send lineage metadata to Marquez:
-- Transport: HTTP to `http://marquez:5000`
-- Namespace: `neuronews`
-- Endpoint: `/api/v1/lineage`
+## 🏗️ Architecture
 
-## Development
-
-### Adding DAGs
-
-Place your DAG files in `./airflow/dags/`. They will be automatically loaded by Airflow.
-
-Example DAG with lineage:
-```python
-from datetime import datetime, timedelta
-from airflow import DAG
-from airflow.operators.dummy_operator import DummyOperator
-
-default_args = {
-    'owner': 'neuronews',
-    'depends_on_past': False,
-    'start_date': datetime(2024, 1, 1),
-    'retries': 1,
-    'retry_delay': timedelta(minutes=5),
-}
-
-dag = DAG(
-    'example_dag',
-    default_args=default_args,
-    description='Example DAG with lineage',
-    schedule_interval='@daily',
-    catchup=False,
-    tags=['example', 'neuronews'],
-)
-
-start = DummyOperator(
-    task_id='start',
-    dag=dag,
-)
-
-end = DummyOperator(
-    task_id='end',
-    dag=dag,
-)
-
-start >> end
+```mermaid
+graph TB
+    A[Airflow DAGs] --> B[OpenLineage Provider]
+    B --> C[HTTP Transport]
+    C --> D[Marquez API]
+    D --> E[Marquez UI]
+    D --> F[PostgreSQL]
+    
+    G[Custom Image] --> A
+    G --> H[NeuroNews Dependencies]
+    G --> I[OpenLineage Packages]
 ```
 
-### Logs and Debugging
+## 🔍 Verification (DoD)
 
-View logs for specific services:
+To verify Issue #187 requirements:
+
+### 1. Custom Image Built
 ```bash
-make airflow-logs                 # All services
-make airflow-webserver-logs       # Web server only
-make airflow-scheduler-logs       # Scheduler only
-make marquez-logs                 # Marquez only
+docker images | grep neuronews/airflow
+# Should show: neuronews/airflow:2.8.1-openlineage
 ```
 
-### Service Health
-
-Check service status:
+### 2. OpenLineage Provider Installed
 ```bash
+docker-compose exec airflow-webserver python -c "import openlineage.airflow; print('✅ OpenLineage ready')"
+```
+
+### 3. No Import Errors in Logs
+```bash
+make airflow-webserver-logs | grep -i "error\|exception" | grep -i openlineage
+# Should show no critical errors
+```
+
+### 4. Lineage Events Generated
+- Run test DAG: `make airflow-test-openlineage`
+- Check Marquez UI: http://localhost:3000
+- Verify lineage events appear
+
+## 🚨 Troubleshooting
+
+### Build Issues
+```bash
+# Clean build
+docker system prune -f
+make airflow-build
+
+# Check build logs
+docker build --no-cache -t neuronews/airflow:2.8.1-openlineage docker/airflow/
+```
+
+### Runtime Issues
+```bash
+# Check service health
 make airflow-status
+
+# View specific logs
+make airflow-webserver-logs
+make marquez-logs
+
+# Restart services
+make airflow-down
+make airflow-up
 ```
 
-## Ports
-
-| Service | Port | Description |
-|---------|------|-------------|
-| Airflow Web | 8080 | Web UI and API |
-| Marquez API | 5000 | REST API |
-| Marquez Web | 3000 | Web UI |
-| Postgres (Airflow) | 5432 | Airflow metadata DB |
-| Postgres (Marquez) | 5433 | Marquez metadata DB |
-
-## Troubleshooting
-
-### Permission Issues
-If you encounter permission errors:
+### OpenLineage Issues
 ```bash
-sudo chown -R $USER:$USER ./airflow/
+# Test OpenLineage manually
+docker-compose exec airflow-webserver python -c "
+from openlineage.client import OpenLineageClient
+from openlineage.client.transport import HttpTransport
+transport = HttpTransport('http://marquez:5000')
+client = OpenLineageClient(transport=transport)
+print('✅ OpenLineage client works')
+"
 ```
 
-### Clean Reset
-To completely reset the environment:
-```bash
-make airflow-clean
-```
+## 📚 Resources
 
-### Database Connection Issues
-Ensure PostgreSQL services are healthy:
-```bash
-docker-compose -f docker-compose.airflow.yml ps
-```
+- [OpenLineage Documentation](https://openlineage.io/)
+- [Apache Airflow Documentation](https://airflow.apache.org/)
+- [Marquez Documentation](https://marquezproject.ai/)
+- [Issue #187](https://github.com/Ikey168/NeuroNews/issues/187)
 
-## Production Considerations
+---
 
-This setup is designed for local development. For production:
-
-1. **Use external databases** (RDS, CloudSQL, etc.)
-2. **Configure proper authentication** (LDAP, OAuth)
-3. **Use CeleryExecutor** for scalability
-4. **Set up monitoring** (Prometheus, Grafana)
-5. **Configure SSL/TLS** for web interfaces
-6. **Use secrets management** (Vault, AWS Secrets Manager)
-
-## References
-
-- [Apache Airflow Documentation](https://airflow.apache.org/docs/)
-- [Marquez Documentation](https://marquezproject.github.io/marquez/)
-- [OpenLineage Specification](https://openlineage.io/)
+**Status**: ✅ Issue #187 Implementation Complete
+**Image**: `neuronews/airflow:2.8.1-openlineage`
+**Verification**: See DoD section above
