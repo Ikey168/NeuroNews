@@ -1,0 +1,227 @@
+# NeuroNews AWS Configuration
+---
+# Amazon Web Services specific variables
+
+# Regional Configuration
+aws_region: "{{ aws_deployment_region | default('us-east-1') }}"
+aws_availability_zones:
+  - "{{ aws_region }}a"
+  - "{{ aws_region }}b"
+  - "{{ aws_region }}c"
+
+# VPC Configuration
+aws_vpc:
+  name: "neuronews-vpc"
+  cidr_block: "10.0.0.0/16"
+  enable_dns_hostnames: true
+  enable_dns_support: true
+
+# Subnet Configuration
+aws_subnets:
+  public:
+    - name: "neuronews-public-1"
+      cidr: "10.0.1.0/24"
+      az: "{{ aws_region }}a"
+      map_public: true
+    - name: "neuronews-public-2"
+      cidr: "10.0.2.0/24"
+      az: "{{ aws_region }}b"
+      map_public: true
+  private:
+    - name: "neuronews-private-1"
+      cidr: "10.0.3.0/24"
+      az: "{{ aws_region }}c"
+      map_public: false
+
+# Internet Gateway
+aws_internet_gateway:
+  name: "neuronews-igw"
+
+# Security Group Configuration
+aws_security_groups:
+  masters:
+    name: "neuronews-k8s-masters"
+    description: "Security group for Kubernetes master nodes"
+    rules:
+      inbound:
+        - protocol: "tcp"
+          port: 22
+          cidr: "0.0.0.0/0"
+          description: "SSH access"
+        - protocol: "tcp"
+          port: 6443
+          cidr: "10.0.0.0/16"
+          description: "Kubernetes API server"
+        - protocol: "tcp"
+          ports: "2379-2380"
+          cidr: "10.0.0.0/16"
+          description: "etcd server client API"
+        - protocol: "tcp"
+          port: 10250
+          cidr: "10.0.0.0/16"
+          description: "Kubelet API"
+        - protocol: "tcp"
+          ports: "10259,10257"
+          cidr: "10.0.0.0/16"
+          description: "kube-scheduler and controller-manager"
+        - protocol: "tcp"
+          ports: "80,443"
+          cidr: "0.0.0.0/0"
+          description: "HTTP/HTTPS"
+        - protocol: "tcp"
+          ports: "30000-32767"
+          cidr: "0.0.0.0/0"
+          description: "NodePort services"
+  workers:
+    name: "neuronews-k8s-workers"
+    description: "Security group for Kubernetes worker nodes"
+    rules:
+      inbound:
+        - protocol: "tcp"
+          port: 22
+          cidr: "0.0.0.0/0"
+          description: "SSH access"
+        - protocol: "tcp"
+          port: 10250
+          cidr: "10.0.0.0/16"
+          description: "Kubelet API"
+        - protocol: "tcp"
+          ports: "30000-32767"
+          cidr: "0.0.0.0/0"
+          description: "NodePort services"
+        - protocol: "tcp"
+          ports: "80,443"
+          cidr: "0.0.0.0/0"
+          description: "HTTP/HTTPS"
+
+# EC2 Instance Configuration
+aws_instances:
+  masters:
+    name_prefix: "neuronews-k8s-master"
+    ami_id: "ami-0c7217cdde317cfec"  # Ubuntu 22.04 LTS
+    instance_type: "{{ aws_master_instance_type | default('t3.medium') }}"
+    key_name: "{{ aws_key_name | default('neuronews-key') }}"
+    count: 3
+    volume_size: 20
+    volume_type: "gp3"
+    security_groups: ["neuronews-k8s-masters"]
+    subnets: ["neuronews-public-1", "neuronews-public-2"]
+  workers:
+    name_prefix: "neuronews-k8s-worker"
+    ami_id: "ami-0c7217cdde317cfec"  # Ubuntu 22.04 LTS
+    instance_type: "{{ aws_worker_instance_type | default('t3.large') }}"
+    key_name: "{{ aws_key_name | default('neuronews-key') }}"
+    count: 3
+    volume_size: 30
+    volume_type: "gp3"
+    security_groups: ["neuronews-k8s-workers"]
+    subnets: ["neuronews-public-2"]
+
+# Load Balancer Configuration
+aws_load_balancer:
+  application:
+    name: "neuronews-alb"
+    scheme: "internet-facing"
+    type: "application"
+    subnets: ["neuronews-public-1", "neuronews-public-2"]
+    security_groups: ["neuronews-k8s-masters"]
+  target_group:
+    name: "neuronews-targets"
+    protocol: "HTTP"
+    port: 80
+    health_check:
+      enabled: true
+      path: "/health"
+      port: "30000"
+      protocol: "HTTP"
+      interval: 30
+      timeout: 10
+      healthy_threshold: 2
+      unhealthy_threshold: 5
+
+# Route53 Configuration (Optional)
+aws_route53:
+  hosted_zone: "neuronews.com"
+  records:
+    - name: "api.neuronews.com"
+      type: "A"
+      alias: true
+      target: "{{ aws_load_balancer.application.name }}"
+
+# S3 Configuration
+aws_s3:
+  buckets:
+    - name: "{{ aws_account_id | default('neuronews') }}-neuronews-data"
+      region: "{{ aws_region }}"
+      versioning: true
+      encryption: true
+    - name: "{{ aws_account_id | default('neuronews') }}-neuronews-backups"
+      region: "{{ aws_region }}"
+      versioning: true
+      encryption: true
+      lifecycle:
+        transition_to_ia: 30
+        transition_to_glacier: 90
+        expiration: 365
+
+# RDS Configuration (Optional)
+aws_rds:
+  instance_class: "db.t3.micro"
+  engine: "postgres"
+  engine_version: "15.4"
+  allocated_storage: 20
+  storage_type: "gp2"
+  storage_encrypted: true
+  multi_az: false
+  backup_retention_period: 7
+  backup_window: "03:00-04:00"
+  maintenance_window: "sun:04:00-sun:05:00"
+
+# ElastiCache Configuration (Optional)
+aws_elasticache:
+  node_type: "cache.t3.micro"
+  engine: "redis"
+  engine_version: "7.0"
+  num_cache_nodes: 1
+  parameter_group_name: "default.redis7"
+  port: 6379
+
+# CloudWatch Configuration
+aws_cloudwatch:
+  log_groups:
+    - name: "/aws/ec2/neuronews"
+      retention_in_days: 14
+    - name: "/kubernetes/neuronews"
+      retention_in_days: 30
+  alarms:
+    - name: "neuronews-high-cpu"
+      metric_name: "CPUUtilization"
+      namespace: "AWS/EC2"
+      statistic: "Average"
+      period: 300
+      evaluation_periods: 2
+      threshold: 80
+      comparison_operator: "GreaterThanThreshold"
+
+# IAM Configuration
+aws_iam:
+  roles:
+    - name: "neuronews-ec2-role"
+      assume_role_policy: "ec2"
+      policies:
+        - "AmazonEC2ReadOnlyAccess"
+        - "AmazonS3ReadOnlyAccess"
+    - name: "neuronews-k8s-role"
+      assume_role_policy: "ec2"
+      policies:
+        - "AmazonEKSWorkerNodePolicy"
+        - "AmazonEKS_CNI_Policy"
+        - "AmazonEC2ContainerRegistryReadOnly"
+
+# Tags
+aws_tags:
+  Project: "NeuroNews"
+  Environment: "{{ deployment_env | default('production') }}"
+  ManagedBy: "Ansible"
+  Team: "DevOps"
+  Owner: "{{ aws_resource_owner | default('neuronews-team') }}"

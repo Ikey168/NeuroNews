@@ -1,0 +1,272 @@
+---
+# Deployment Validation Tasks
+# Validates the complete NeuroNews deployment
+
+- name: Get cluster node status
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Node
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config"
+  register: cluster_nodes
+
+- name: Get namespace information
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Namespace
+    name: "{{ app.namespace }}"
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config"
+  register: namespace_info
+
+- name: Get all pods in namespace
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ app.namespace }}"
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config"
+  register: all_pods
+
+- name: Get all services in namespace
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Service
+    namespace: "{{ app.namespace }}"
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config"
+  register: all_services
+
+- name: Get all deployments in namespace
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    namespace: "{{ app.namespace }}"
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config"
+  register: all_deployments
+
+- name: Get ingress controllers
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: ingress-nginx
+    label_selectors:
+      - app.kubernetes.io/component=controller
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config"
+  register: ingress_controllers
+
+- name: Get cert-manager pods
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: cert-manager
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config"
+  register: cert_manager_pods
+
+- name: Check database connectivity
+  kubernetes.core.k8s_exec:
+    namespace: "{{ app.namespace }}"
+    pod: "{{ all_pods.resources | selectattr('metadata.labels.app', 'equalto', 'postgres') | map(attribute='metadata.name') | first }}"
+    command: pg_isready -U {{ database.user }} -d {{ database.name }}
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config"
+  register: db_connectivity
+  ignore_errors: yes
+  when: all_pods.resources | selectattr('metadata.labels.app', 'equalto', 'postgres') | list | length > 0
+
+- name: Check Redis connectivity
+  kubernetes.core.k8s_exec:
+    namespace: "{{ app.namespace }}"
+    pod: "{{ all_pods.resources | selectattr('metadata.labels.app', 'equalto', 'redis') | map(attribute='metadata.name') | first }}"
+    command: redis-cli ping
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config"
+  register: redis_connectivity
+  ignore_errors: yes
+  when: all_pods.resources | selectattr('metadata.labels.app', 'equalto', 'redis') | list | length > 0
+
+- name: Test FastAPI health endpoint
+  uri:
+    url: "http://{{ all_services.resources | selectattr('metadata.name', 'equalto', 'fastapi-service') | map(attribute='spec.clusterIP') | first }}:8000/health"
+    method: GET
+    timeout: 10
+  register: fastapi_health
+  ignore_errors: yes
+  when: all_services.resources | selectattr('metadata.name', 'equalto', 'fastapi-service') | list | length > 0
+
+- name: Get persistent volumes status
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: PersistentVolume
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config"
+  register: persistent_volumes
+
+- name: Get persistent volume claims status
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: PersistentVolumeClaim
+    namespace: "{{ app.namespace }}"
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config"
+  register: pv_claims
+
+- name: Check resource usage
+  shell: kubectl top nodes --no-headers
+  register: node_resources
+  ignore_errors: yes
+  environment:
+    KUBECONFIG: "/home/{{ ansible_user }}/.kube/config"
+
+- name: Check pod resource usage
+  shell: kubectl top pods -n {{ app.namespace }} --no-headers
+  register: pod_resources
+  ignore_errors: yes
+  environment:
+    KUBECONFIG: "/home/{{ ansible_user }}/.kube/config"
+
+- name: Validate DNS resolution
+  kubernetes.core.k8s_exec:
+    namespace: "{{ app.namespace }}"
+    pod: "{{ all_pods.resources[0].metadata.name }}"
+    command: nslookup kubernetes.default.svc.cluster.local
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config"
+  register: dns_resolution
+  ignore_errors: yes
+  when: all_pods.resources | length > 0
+
+- name: Calculate deployment health score
+  set_fact:
+    healthy_pods: "{{ all_pods.resources | selectattr('status.phase', 'equalto', 'Running') | list | length }}"
+    total_pods: "{{ all_pods.resources | length }}"
+    ready_deployments: "{{ all_deployments.resources | selectattr('status.readyReplicas', 'defined') | selectattr('status.readyReplicas', 'equalto', all_deployments.resources | selectattr('status.readyReplicas', 'defined') | map(attribute='status.replicas') | first) | list | length }}"
+    total_deployments: "{{ all_deployments.resources | length }}"
+
+- name: Generate validation report
+  copy:
+    content: |
+      NeuroNews Deployment Validation Report
+      =====================================
+      Generated: {{ ansible_date_time.iso8601 }}
+      Cluster: {{ kubernetes_cluster_name }}
+      Namespace: {{ app.namespace }}
+      
+      CLUSTER STATUS
+      --------------
+      Total Nodes: {{ cluster_nodes.resources | length }}
+      Ready Nodes: {{ cluster_nodes.resources | selectattr('status.conditions', 'selectattr', 'type', 'equalto', 'Ready') | selectattr('status.conditions', 'selectattr', 'status', 'equalto', 'True') | list | length }}
+      
+      Nodes:
+      {% for node in cluster_nodes.resources %}
+      - {{ node.metadata.name }}: {{ node.status.conditions | selectattr('type', 'equalto', 'Ready') | map(attribute='status') | first | default('Unknown') }}
+      {% endfor %}
+      
+      APPLICATION STATUS
+      ------------------
+      Total Pods: {{ total_pods }}
+      Healthy Pods: {{ healthy_pods }}
+      Health Score: {{ (healthy_pods|int * 100 / total_pods|int) | round(1) if total_pods|int > 0 else 0 }}%
+      
+      Total Deployments: {{ total_deployments }}
+      Ready Deployments: {{ ready_deployments }}
+      Deployment Score: {{ (ready_deployments|int * 100 / total_deployments|int) | round(1) if total_deployments|int > 0 else 0 }}%
+      
+      PODS STATUS
+      -----------
+      {% for pod in all_pods.resources %}
+      - {{ pod.metadata.name }}: {{ pod.status.phase }} ({{ pod.status.conditions | selectattr('type', 'equalto', 'Ready') | map(attribute='status') | first | default('Unknown') }})
+      {% endfor %}
+      
+      SERVICES STATUS
+      ---------------
+      {% for service in all_services.resources %}
+      - {{ service.metadata.name }}: {{ service.spec.type }} ({{ service.spec.clusterIP | default('None') }})
+      {% endfor %}
+      
+      INFRASTRUCTURE VALIDATION
+      -------------------------
+      Database Connectivity: {{ 'PASS' if db_connectivity.rc == 0 else 'FAIL' if db_connectivity is defined else 'N/A' }}
+      Redis Connectivity: {{ 'PASS' if redis_connectivity.stdout == 'PONG' else 'FAIL' if redis_connectivity is defined else 'N/A' }}
+      FastAPI Health: {{ 'PASS' if fastapi_health.status == 200 else 'FAIL' if fastapi_health is defined else 'N/A' }}
+      DNS Resolution: {{ 'PASS' if dns_resolution.rc == 0 else 'FAIL' if dns_resolution is defined else 'N/A' }}
+      
+      INGRESS CONTROLLERS
+      -------------------
+      NGINX Controllers: {{ ingress_controllers.resources | length }}
+      {% for controller in ingress_controllers.resources %}
+      - {{ controller.metadata.name }}: {{ controller.status.phase }}
+      {% endfor %}
+      
+      CERT-MANAGER
+      ------------
+      Cert-Manager Pods: {{ cert_manager_pods.resources | length }}
+      {% for pod in cert_manager_pods.resources %}
+      - {{ pod.metadata.name }}: {{ pod.status.phase }}
+      {% endfor %}
+      
+      STORAGE
+      -------
+      Persistent Volumes: {{ persistent_volumes.resources | length }}
+      Persistent Volume Claims: {{ pv_claims.resources | length }}
+      
+      {% if node_resources.stdout_lines is defined %}
+      RESOURCE USAGE
+      --------------
+      Node Resources:
+      {{ node_resources.stdout }}
+      
+      {% if pod_resources.stdout_lines is defined %}
+      Pod Resources:
+      {{ pod_resources.stdout }}
+      {% endif %}
+      {% endif %}
+      
+      VALIDATION SUMMARY
+      ==================
+      Overall Status: {{ 'HEALTHY' if (healthy_pods|int * 100 / total_pods|int) >= 80 and (ready_deployments|int * 100 / total_deployments|int) >= 80 else 'DEGRADED' if total_pods|int > 0 else 'INCOMPLETE' }}
+      
+      Recommendations:
+      {% if (healthy_pods|int * 100 / total_pods|int) < 80 %}
+      - Check pod logs for unhealthy containers
+      - Verify resource limits and requests
+      {% endif %}
+      {% if db_connectivity is defined and db_connectivity.rc != 0 %}
+      - Investigate database connectivity issues
+      {% endif %}
+      {% if redis_connectivity is defined and redis_connectivity.stdout != 'PONG' %}
+      - Check Redis service and pod status
+      {% endif %}
+      {% if fastapi_health is defined and fastapi_health.status != 200 %}
+      - Verify FastAPI application health
+      {% endif %}
+      
+      Next Steps:
+      1. Monitor application logs: kubectl logs -n {{ app.namespace }} -l app=fastapi
+      2. Check resource usage: kubectl top pods -n {{ app.namespace }}
+      3. Verify external access: kubectl get ingress -n {{ app.namespace }}
+      4. Test API endpoints: kubectl port-forward -n {{ app.namespace }} svc/fastapi-service 8000:8000
+    dest: "/tmp/neuronews-validation-{{ ansible_date_time.epoch }}.txt"
+    mode: '0644'
+
+- name: Display comprehensive validation results
+  debug:
+    msg: |
+      ===================================================
+      NeuroNews Deployment Validation Complete!
+      ===================================================
+      
+      CLUSTER HEALTH
+      Total Nodes: {{ cluster_nodes.resources | length }}
+      Ready Nodes: {{ cluster_nodes.resources | selectattr('status.conditions', 'selectattr', 'type', 'equalto', 'Ready') | selectattr('status.conditions', 'selectattr', 'status', 'equalto', 'True') | list | length }}
+      
+      APPLICATION HEALTH
+      Total Pods: {{ total_pods }}
+      Healthy Pods: {{ healthy_pods }}
+      Health Score: {{ (healthy_pods|int * 100 / total_pods|int) | round(1) if total_pods|int > 0 else 0 }}%
+      
+      SERVICE VALIDATION
+      Database: {{ 'PASS' if db_connectivity.rc == 0 else 'FAIL' if db_connectivity is defined else 'N/A' }}
+      Redis: {{ 'PASS' if redis_connectivity.stdout == 'PONG' else 'FAIL' if redis_connectivity is defined else 'N/A' }}
+      FastAPI: {{ 'PASS' if fastapi_health.status == 200 else 'FAIL' if fastapi_health is defined else 'N/A' }}
+      
+      INFRASTRUCTURE
+      NGINX Ingress: {{ ingress_controllers.resources | length }} controllers
+      cert-manager: {{ cert_manager_pods.resources | length }} pods
+      Storage: {{ pv_claims.resources | length }} PVCs
+      
+      OVERALL STATUS: {{ 'HEALTHY' if (healthy_pods|int * 100 / total_pods|int) >= 80 and (ready_deployments|int * 100 / total_deployments|int) >= 80 else 'DEGRADED' if total_pods|int > 0 else 'INCOMPLETE' }}
+      
+      Detailed report saved to: /tmp/neuronews-validation-{{ ansible_date_time.epoch }}.txt
+      ===================================================

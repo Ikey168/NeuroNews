@@ -1,0 +1,181 @@
+---
+# Docker Installation Tasks
+# Installs Docker CE and Docker Compose on target nodes
+
+- name: Remove old Docker packages (Ubuntu/Debian)
+  package:
+    name:
+      - docker
+      - docker-engine
+      - docker.io
+      - containerd
+      - runc
+    state: absent
+  when: ansible_os_family == "Debian"
+
+- name: Remove old Docker packages (RedHat/CentOS)
+  package:
+    name:
+      - docker
+      - docker-client
+      - docker-client-latest
+      - docker-common
+      - docker-latest
+      - docker-latest-logrotate
+      - docker-logrotate
+      - docker-engine
+    state: absent
+  when: ansible_os_family == "RedHat"
+
+- name: Add Docker GPG key (Ubuntu/Debian)
+  apt_key:
+    url: "https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg"
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: Add Docker repository (Ubuntu/Debian)
+  apt_repository:
+    repo: "deb [arch=amd64] https://download.docker.com/linux/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} stable"
+    state: present
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+- name: Add Docker repository (RedHat/CentOS)
+  yum_repository:
+    name: docker-ce-stable
+    description: Docker CE Stable - $basearch
+    baseurl: "https://download.docker.com/linux/centos/{{ ansible_distribution_major_version }}/$basearch/stable"
+    enabled: yes
+    gpgcheck: yes
+    gpgkey: "https://download.docker.com/linux/centos/gpg"
+  when: ansible_os_family == "RedHat"
+
+- name: Install Docker CE (Ubuntu/Debian)
+  package:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+- name: Install Docker CE (RedHat/CentOS)
+  package:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Create docker group
+  group:
+    name: docker
+    state: present
+
+- name: Add user to docker group
+  user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: yes
+
+- name: Create Docker daemon configuration directory
+  file:
+    path: /etc/docker
+    state: directory
+    mode: '0755'
+
+- name: Configure Docker daemon
+  copy:
+    content: |
+      {
+        "exec-opts": ["native.cgroupdriver=systemd"],
+        "log-driver": "json-file",
+        "log-opts": {
+          "max-size": "100m",
+          "max-file": "3"
+        },
+        "storage-driver": "overlay2",
+        "insecure-registries": ["{{ docker_registry_url | default('localhost:5000') }}"],
+        "registry-mirrors": [],
+        "dns": ["8.8.8.8", "8.8.4.4"],
+        "metrics-addr": "0.0.0.0:9323",
+        "experimental": false,
+        "features": {
+          "buildkit": true
+        }
+      }
+    dest: /etc/docker/daemon.json
+    mode: '0644'
+  notify:
+    - restart docker
+
+- name: Create systemd directory for Docker service
+  file:
+    path: /etc/systemd/system/docker.service.d
+    state: directory
+    mode: '0755'
+
+- name: Start and enable Docker service
+  systemd:
+    name: docker
+    daemon_reload: yes
+    state: started
+    enabled: yes
+
+- name: Install Docker Compose standalone (legacy)
+  get_url:
+    url: "https://github.com/docker/compose/releases/download/v{{ docker_compose_version }}/docker-compose-linux-x86_64"
+    dest: /usr/local/bin/docker-compose
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Create symbolic link for docker-compose
+  file:
+    src: /usr/local/bin/docker-compose
+    dest: /usr/bin/docker-compose
+    state: link
+
+- name: Test Docker installation
+  command: docker run --rm hello-world
+  register: docker_test
+  changed_when: false
+  failed_when: docker_test.rc != 0
+
+- name: Test Docker Compose installation
+  command: docker-compose --version
+  register: compose_test
+  changed_when: false
+  failed_when: compose_test.rc != 0
+
+- name: Display Docker installation status
+  debug:
+    msg: |
+      Docker Installation Complete!
+      ============================
+      Docker Version: {{ docker_test.stdout_lines[0] if docker_test.stdout_lines else 'Unknown' }}
+      Docker Compose Version: {{ compose_test.stdout if compose_test.stdout else 'Unknown' }}
+      
+      Docker daemon configuration:
+      - Cgroup driver: systemd
+      - Storage driver: overlay2
+      - Log driver: json-file (max 100MB, 3 files)
+      - Metrics enabled on port 9323
+      - BuildKit enabled
+      
+      User '{{ ansible_user }}' added to docker group.
+      Please log out and back in for group changes to take effect.
+
+# Handlers for Docker service management
+- name: restart docker
+  systemd:
+    name: docker
+    state: restarted
+    daemon_reload: yes
+  listen: "restart docker"

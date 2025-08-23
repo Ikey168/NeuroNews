@@ -1,0 +1,120 @@
+# NeuroNews GCP Configuration
+---
+# Google Cloud Platform specific variables
+
+# Project Configuration
+gcp_project: "{{ gcp_project_id | default('neuronews-project') }}"
+gcp_auth_kind: "serviceaccount"
+gcp_service_account_file: "{{ gcp_credentials_file | default('~/.config/gcloud/application_default_credentials.json') }}"
+
+# Regional Configuration
+gcp_region: "{{ gcp_deployment_region | default('us-central1') }}"
+gcp_zones:
+  - "{{ gcp_region }}-a"
+  - "{{ gcp_region }}-b"
+  - "{{ gcp_region }}-c"
+
+# Network Configuration
+gcp_network:
+  name: "neuronews-vpc"
+  description: "NeuroNews VPC Network"
+  auto_create_subnetworks: false
+
+gcp_subnet:
+  name: "neuronews-subnet"
+  ip_cidr_range: "10.0.0.0/16"
+  region: "{{ gcp_region }}"
+
+# Instance Configuration
+gcp_master_machine_type: "e2-standard-2"
+gcp_worker_machine_type: "e2-standard-4"
+gcp_boot_disk_size: 20
+gcp_boot_disk_type: "pd-standard"
+
+# Instance Templates
+gcp_instance_template:
+  masters:
+    name_prefix: "neuronews-k8s-master"
+    machine_type: "{{ gcp_master_machine_type }}"
+    disk_size: "{{ gcp_boot_disk_size }}"
+    zones: ["{{ gcp_region }}-a", "{{ gcp_region }}-b", "{{ gcp_region }}-c"]
+    count: 3
+    tags:
+      - "neuronews-k8s"
+      - "neuronews-k8s-master"
+  workers:
+    name_prefix: "neuronews-k8s-worker"
+    machine_type: "{{ gcp_worker_machine_type }}"
+    disk_size: 30
+    zones: ["{{ gcp_region }}-a", "{{ gcp_region }}-b"]
+    count: 3
+    tags:
+      - "neuronews-k8s"
+      - "neuronews-k8s-worker"
+
+# Firewall Rules
+gcp_firewall_rules:
+  - name: "neuronews-allow-ssh"
+    description: "Allow SSH access"
+    direction: "INGRESS"
+    allowed:
+      - ip_protocol: "tcp"
+        ports: ["22"]
+    source_ranges: ["0.0.0.0/0"]
+    target_tags: ["neuronews-k8s"]
+  
+  - name: "neuronews-allow-k8s-api"
+    description: "Allow Kubernetes API access"
+    direction: "INGRESS"
+    allowed:
+      - ip_protocol: "tcp"
+        ports: ["6443"]
+    source_ranges: ["10.0.0.0/16"]
+    target_tags: ["neuronews-k8s-master"]
+  
+  - name: "neuronews-allow-http-https"
+    description: "Allow HTTP and HTTPS traffic"
+    direction: "INGRESS"
+    allowed:
+      - ip_protocol: "tcp"
+        ports: ["80", "443", "30000-32767"]
+    source_ranges: ["0.0.0.0/0"]
+    target_tags: ["neuronews-k8s"]
+
+# Load Balancer Configuration
+gcp_load_balancer:
+  name: "neuronews-lb"
+  health_check:
+    name: "neuronews-health-check"
+    port: 30000
+    request_path: "/health"
+  backend_service:
+    name: "neuronews-backend"
+    protocol: "HTTP"
+    port: 80
+  url_map:
+    name: "neuronews-url-map"
+  proxy:
+    name: "neuronews-proxy"
+  forwarding_rule:
+    name: "neuronews-forwarding-rule"
+    port_range: "80"
+
+# Storage Configuration
+gcp_storage:
+  bucket_name: "{{ gcp_project }}-neuronews-data"
+  location: "{{ gcp_region }}"
+  storage_class: "REGIONAL"
+
+# Monitoring Configuration
+gcp_monitoring:
+  enable_logging: true
+  enable_monitoring: true
+  log_retention_days: 30
+
+# Labels
+gcp_labels:
+  project: "neuronews"
+  environment: "{{ deployment_env | default('production') }}"
+  managed_by: "ansible"
+  team: "devops"
