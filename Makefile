@@ -15,6 +15,7 @@ help:
 	@echo "  airflow-test-env-config  - Test environment configuration (Issue #188)"
 	@echo "  airflow-test-news-pipeline - Test news pipeline DAG (Issue #189)"
 	@echo "  airflow-test-timezone-sla - Test timezone and SLA configuration (Issue #190)"
+	@echo "  airflow-test-lineage-naming - Test lineage naming convention (Issue #193)"
 	@echo "  marquez-ui       - Open Marquez UI in browser"
 	@echo ""
 	@echo "URLs:"
@@ -89,6 +90,11 @@ airflow-test-news-pipeline:
 airflow-test-timezone-sla:
 	@echo "🕰️ Testing timezone and SLA configuration..."
 	@python3 demo/demo_timezone_sla_config.py
+
+# Test lineage naming convention (Issue #193)
+airflow-test-lineage-naming:
+	@echo "🔗 Testing lineage naming convention..."
+	@python3 demo/demo_lineage_naming.py
 
 marquez-ui:
 	@echo "🌐 Opening Marquez UI..."
