@@ -1,0 +1,255 @@
+---
+# Deploy monitoring and logging tasks
+- name: "Create monitoring namespace"
+  k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: monitoring
+        labels:
+          name: monitoring
+
+- name: "Install Prometheus via Helm (if enabled)"
+  kubernetes.core.helm:
+    name: prometheus
+    chart_ref: prometheus-community/kube-prometheus-stack
+    release_namespace: monitoring
+    create_namespace: true
+    values:
+      prometheus:
+        prometheusSpec:
+          serviceMonitorSelectorNilUsesHelmValues: false
+          podMonitorSelectorNilUsesHelmValues: false
+          retention: 30d
+          storageSpec:
+            volumeClaimTemplate:
+              spec:
+                storageClassName: gp2
+                accessModes: ["ReadWriteOnce"]
+                resources:
+                  requests:
+                    storage: 50Gi
+      grafana:
+        adminPassword: "{{ grafana_admin_password | default('admin123') }}"
+        service:
+          type: LoadBalancer
+        persistence:
+          enabled: true
+          size: 10Gi
+      alertmanager:
+        alertmanagerSpec:
+          storage:
+            volumeClaimTemplate:
+              spec:
+                storageClassName: gp2
+                accessModes: ["ReadWriteOnce"]
+                resources:
+                  requests:
+                    storage: 10Gi
+  when: monitoring.prometheus.enabled | bool
+
+- name: "Wait for Prometheus to be ready"
+  k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    name: prometheus-kube-prometheus-stack-operator
+    namespace: monitoring
+    wait: true
+    wait_condition:
+      type: Available
+      status: "True"
+    wait_timeout: 300
+  when: monitoring.prometheus.enabled | bool
+
+- name: "Create ServiceMonitor for FastAPI"
+  k8s:
+    state: present
+    definition:
+      apiVersion: monitoring.coreos.com/v1
+      kind: ServiceMonitor
+      metadata:
+        name: "{{ fastapi.name }}-monitor"
+        namespace: "{{ app.namespace }}"
+        labels:
+          app: "{{ fastapi.name }}"
+          component: "monitoring"
+      spec:
+        selector:
+          matchLabels:
+            app: "{{ fastapi.name }}"
+        endpoints:
+        - port: http
+          path: /metrics
+          interval: 30s
+          scrapeTimeout: 10s
+  when: monitoring.prometheus.enabled | bool
+
+- name: "Create Grafana Dashboard ConfigMap"
+  k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: "{{ fastapi.name }}-dashboard"
+        namespace: monitoring
+        labels:
+          grafana_dashboard: "1"
+      data:
+        dashboard.json: |
+          {
+            "dashboard": {
+              "id": null,
+              "title": "NeuroNews FastAPI Dashboard",
+              "tags": ["neuronews", "fastapi"],
+              "style": "dark",
+              "timezone": "browser",
+              "panels": [
+                {
+                  "id": 1,
+                  "title": "HTTP Requests",
+                  "type": "graph",
+                  "targets": [
+                    {
+                      "expr": "rate(http_requests_total{job=\"{{ fastapi.name }}-monitor\"}[5m])",
+                      "legendFormat": "{{ "{{" }}method{{ "}}" }} {{ "{{" }}status{{ "}}" }}"
+                    }
+                  ],
+                  "yAxes": [
+                    {
+                      "label": "Requests/sec"
+                    }
+                  ]
+                },
+                {
+                  "id": 2,
+                  "title": "Response Time",
+                  "type": "graph",
+                  "targets": [
+                    {
+                      "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"{{ fastapi.name }}-monitor\"}[5m]))",
+                      "legendFormat": "95th percentile"
+                    }
+                  ]
+                },
+                {
+                  "id": 3,
+                  "title": "CPU Usage",
+                  "type": "graph",
+                  "targets": [
+                    {
+                      "expr": "rate(container_cpu_usage_seconds_total{pod=~\"{{ fastapi.name }}-.*\"}[5m])",
+                      "legendFormat": "{{ "{{" }}pod{{ "}}" }}"
+                    }
+                  ]
+                },
+                {
+                  "id": 4,
+                  "title": "Memory Usage",
+                  "type": "graph",
+                  "targets": [
+                    {
+                      "expr": "container_memory_usage_bytes{pod=~\"{{ fastapi.name }}-.*\"}",
+                      "legendFormat": "{{ "{{" }}pod{{ "}}" }}"
+                    }
+                  ]
+                }
+              ],
+              "time": {
+                "from": "now-1h",
+                "to": "now"
+              },
+              "refresh": "30s"
+            }
+          }
+  when: monitoring.grafana.enabled | bool
+
+- name: "Create PrometheusRule for alerts"
+  k8s:
+    state: present
+    definition:
+      apiVersion: monitoring.coreos.com/v1
+      kind: PrometheusRule
+      metadata:
+        name: "{{ fastapi.name }}-alerts"
+        namespace: "{{ app.namespace }}"
+        labels:
+          app: "{{ fastapi.name }}"
+          component: "alerts"
+      spec:
+        groups:
+        - name: "{{ fastapi.name }}.rules"
+          rules:
+          - alert: HighErrorRate
+            expr: rate(http_requests_total{job="{{ fastapi.name }}-monitor",status=~"5.."}[5m]) > 0.1
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High error rate on {{ fastapi.name }}"
+              description: "Error rate is {{ "{{" }} $value {{ "}}" }} requests per second"
+          
+          - alert: HighResponseTime
+            expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="{{ fastapi.name }}-monitor"}[5m])) > 1
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High response time on {{ fastapi.name }}"
+              description: "95th percentile response time is {{ "{{" }} $value {{ "}}" }} seconds"
+          
+          - alert: PodDown
+            expr: up{job="{{ fastapi.name }}-monitor"} == 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "{{ fastapi.name }} pod is down"
+              description: "{{ fastapi.name }} pod has been down for more than 1 minute"
+          
+          - alert: HighCPUUsage
+            expr: rate(container_cpu_usage_seconds_total{pod=~"{{ fastapi.name }}-.*"}[5m]) > 0.8
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High CPU usage on {{ fastapi.name }}"
+              description: "CPU usage is {{ "{{" }} $value {{ "}}" }} on pod {{ "{{" }} $labels.pod {{ "}}" }}"
+          
+          - alert: HighMemoryUsage
+            expr: container_memory_usage_bytes{pod=~"{{ fastapi.name }}-.*"} / container_spec_memory_limit_bytes{pod=~"{{ fastapi.name }}-.*"} > 0.9
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High memory usage on {{ fastapi.name }}"
+              description: "Memory usage is {{ "{{" }} $value | humanizePercentage {{ "}}" }} on pod {{ "{{" }} $labels.pod {{ "}}" }}"
+  when: monitoring.alerts.enabled | bool
+
+- name: "Get Grafana service details"
+  k8s_info:
+    api_version: v1
+    kind: Service
+    name: prometheus-grafana
+    namespace: monitoring
+  register: grafana_service
+  when: monitoring.grafana.enabled | bool
+
+- name: "Display monitoring information"
+  debug:
+    msg: |
+      ============================================
+      Monitoring Setup Complete
+      ============================================
+      {% if monitoring.prometheus.enabled %}
+      Prometheus: Available in monitoring namespace
+      {% endif %}
+      {% if monitoring.grafana.enabled and grafana_service.resources | length > 0 %}
+      Grafana: {{ grafana_service.resources[0].status.loadBalancer.ingress[0].ip | default('Internal access only') }}
+      Grafana Port: {{ monitoring.grafana.port }}
+      {% endif %}
+      ServiceMonitor: {{ fastapi.name }}-monitor
+      Alerts: {{ 'Enabled' if monitoring.alerts.enabled else 'Disabled' }}
+      ============================================

@@ -1,0 +1,187 @@
+---
+# Deploy ingress and load balancing tasks
+- name: "Install NGINX Ingress Controller (if not present)"
+  k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: ingress-nginx
+        labels:
+          app.kubernetes.io/name: ingress-nginx
+          app.kubernetes.io/instance: ingress-nginx
+
+- name: "Check if NGINX Ingress Controller is installed"
+  k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    name: ingress-nginx-controller
+    namespace: ingress-nginx
+  register: nginx_controller
+
+- name: "Install NGINX Ingress Controller via Helm"
+  kubernetes.core.helm:
+    name: ingress-nginx
+    chart_ref: ingress-nginx/ingress-nginx
+    release_namespace: ingress-nginx
+    create_namespace: true
+    values:
+      controller:
+        service:
+          type: LoadBalancer
+        config:
+          use-proxy-protocol: "true"
+        metrics:
+          enabled: true
+          serviceMonitor:
+            enabled: true
+  when: nginx_controller.resources | length == 0
+
+- name: "Wait for NGINX Ingress Controller to be ready"
+  k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    name: ingress-nginx-controller
+    namespace: ingress-nginx
+    wait: true
+    wait_condition:
+      type: Available
+      status: "True"
+    wait_timeout: 300
+
+- name: "Create TLS certificate secret (if TLS enabled)"
+  k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: "{{ ingress.tls.secret_name }}"
+        namespace: "{{ app.namespace }}"
+      type: kubernetes.io/tls
+      data:
+        tls.crt: "{{ tls_certificate | b64encode }}"
+        tls.key: "{{ tls_private_key | b64encode }}"
+  when: 
+    - ingress.tls.enabled | bool
+    - tls_certificate is defined
+    - tls_private_key is defined
+
+- name: "Create Ingress resource"
+  k8s:
+    state: present
+    definition:
+      apiVersion: networking.k8s.io/v1
+      kind: Ingress
+      metadata:
+        name: "{{ fastapi.name }}-ingress"
+        namespace: "{{ app.namespace }}"
+        labels:
+          app: "{{ fastapi.name }}"
+          component: "ingress"
+        annotations:
+          kubernetes.io/ingress.class: "{{ ingress.class }}"
+          nginx.ingress.kubernetes.io/rewrite-target: /
+          nginx.ingress.kubernetes.io/ssl-redirect: "{{ ingress.tls.enabled | string }}"
+          nginx.ingress.kubernetes.io/force-ssl-redirect: "{{ ingress.tls.enabled | string }}"
+          nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+          nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+          nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+          nginx.ingress.kubernetes.io/enable-cors: "true"
+          nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+          nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+          nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization"
+          {% if ingress.annotations.rate_limiting %}
+          nginx.ingress.kubernetes.io/rate-limit: "100"
+          nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+          {% endif %}
+          {% if ingress.annotations.cert_manager %}
+          cert-manager.io/cluster-issuer: "letsencrypt-prod"
+          {% endif %}
+      spec:
+        {% if ingress.tls.enabled %}
+        tls:
+        - hosts:
+          - "{{ ingress.host }}"
+          secretName: "{{ ingress.tls.secret_name }}"
+        {% endif %}
+        rules:
+        - host: "{{ ingress.host }}"
+          http:
+            paths:
+            - path: /
+              pathType: Prefix
+              backend:
+                service:
+                  name: "{{ fastapi.name }}-service"
+                  port:
+                    number: 80
+            - path: /api
+              pathType: Prefix
+              backend:
+                service:
+                  name: "{{ fastapi.name }}-service"
+                  port:
+                    number: 80
+            - path: /docs
+              pathType: Prefix
+              backend:
+                service:
+                  name: "{{ fastapi.name }}-service"
+                  port:
+                    number: 80
+            - path: /health
+              pathType: Prefix
+              backend:
+                service:
+                  name: "{{ fastapi.name }}-service"
+                  port:
+                    number: 80
+  when: ingress.enabled | bool
+
+- name: "Get LoadBalancer external IP"
+  k8s_info:
+    api_version: v1
+    kind: Service
+    name: "{{ fastapi.name }}-service"
+    namespace: "{{ app.namespace }}"
+  register: loadbalancer_service
+
+- name: "Wait for LoadBalancer to get external IP"
+  k8s_info:
+    api_version: v1
+    kind: Service
+    name: "{{ fastapi.name }}-service"
+    namespace: "{{ app.namespace }}"
+    wait: true
+    wait_condition:
+      type: LoadBalancer
+    wait_timeout: 300
+  register: lb_ready
+
+- name: "Get Ingress external IP (if enabled)"
+  k8s_info:
+    api_version: networking.k8s.io/v1
+    kind: Ingress
+    name: "{{ fastapi.name }}-ingress"
+    namespace: "{{ app.namespace }}"
+  register: ingress_info
+  when: ingress.enabled | bool
+
+- name: "Display access information"
+  debug:
+    msg: |
+      ============================================
+      Service Access Information
+      ============================================
+      {% if lb_ready.resources[0].status.loadBalancer.ingress is defined %}
+      LoadBalancer External IP: {{ lb_ready.resources[0].status.loadBalancer.ingress[0].ip | default(lb_ready.resources[0].status.loadBalancer.ingress[0].hostname) }}
+      Direct Access: http://{{ lb_ready.resources[0].status.loadBalancer.ingress[0].ip | default(lb_ready.resources[0].status.loadBalancer.ingress[0].hostname) }}
+      {% endif %}
+      {% if ingress.enabled and ingress_info.resources | length > 0 %}
+      Ingress Host: {{ ingress.host }}
+      Ingress Access: http{% if ingress.tls.enabled %}s{% endif %}://{{ ingress.host }}
+      {% endif %}
+      Internal Service: {{ fastapi.name }}-internal.{{ app.namespace }}.svc.cluster.local:{{ fastapi.port }}
+      ============================================

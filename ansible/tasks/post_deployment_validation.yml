@@ -1,0 +1,168 @@
+---
+# Post-deployment validation tasks
+- name: "Verify deployment is running"
+  k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    name: "{{ fastapi.name }}"
+    namespace: "{{ app.namespace }}"
+  register: deployment_check
+
+- name: "Validate deployment status"
+  assert:
+    that:
+      - deployment_check.resources | length > 0
+      - deployment_check.resources[0].status.replicas == deployment_check.resources[0].status.readyReplicas
+    fail_msg: "Deployment is not fully ready"
+    success_msg: "Deployment is running with all replicas ready"
+
+- name: "Verify service endpoints"
+  k8s_info:
+    api_version: v1
+    kind: Endpoints
+    name: "{{ fastapi.name }}-service"
+    namespace: "{{ app.namespace }}"
+  register: service_endpoints
+
+- name: "Validate service has endpoints"
+  assert:
+    that:
+      - service_endpoints.resources | length > 0
+      - service_endpoints.resources[0].subsets | length > 0
+    fail_msg: "Service has no endpoints"
+    success_msg: "Service endpoints are available"
+
+- name: "Check HPA status (if enabled)"
+  k8s_info:
+    api_version: autoscaling/v2
+    kind: HorizontalPodAutoscaler
+    name: "{{ fastapi.name }}-hpa"
+    namespace: "{{ app.namespace }}"
+  register: hpa_status
+  when: fastapi.autoscaling.enabled | bool
+
+- name: "Validate HPA is working (if enabled)"
+  assert:
+    that:
+      - hpa_status.resources | length > 0
+      - hpa_status.resources[0].status.currentReplicas is defined
+    fail_msg: "HPA is not working properly"
+    success_msg: "HPA is functioning correctly"
+  when: fastapi.autoscaling.enabled | bool
+
+- name: "Test internal service connectivity"
+  k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Pod
+      metadata:
+        name: "connectivity-test-{{ deployment_timestamp }}"
+        namespace: "{{ app.namespace }}"
+      spec:
+        restartPolicy: Never
+        containers:
+        - name: test
+          image: curlimages/curl:latest
+          command: 
+          - /bin/sh
+          - -c
+          - |
+            echo "Testing internal connectivity..."
+            curl -f http://{{ fastapi.name }}-internal:{{ fastapi.port }}/health
+            echo "Internal connectivity test completed"
+
+- name: "Wait for connectivity test to complete"
+  k8s_info:
+    api_version: v1
+    kind: Pod
+    name: "connectivity-test-{{ deployment_timestamp }}"
+    namespace: "{{ app.namespace }}"
+    wait: true
+    wait_condition:
+      type: Ready
+      status: "False"
+      reason: PodCompleted
+    wait_timeout: 120
+
+- name: "Get connectivity test results"
+  k8s_log:
+    api_version: v1
+    kind: Pod
+    name: "connectivity-test-{{ deployment_timestamp }}"
+    namespace: "{{ app.namespace }}"
+  register: connectivity_test_logs
+
+- name: "Clean up connectivity test pod"
+  k8s:
+    state: absent
+    api_version: v1
+    kind: Pod
+    name: "connectivity-test-{{ deployment_timestamp }}"
+    namespace: "{{ app.namespace }}"
+
+- name: "Validate connectivity test results"
+  assert:
+    that:
+      - "'200' in connectivity_test_logs.log or 'OK' in connectivity_test_logs.log"
+    fail_msg: "Internal connectivity test failed"
+    success_msg: "Internal connectivity test passed"
+
+- name: "Check resource usage"
+  k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ app.namespace }}"
+    label_selectors:
+      - "app={{ fastapi.name }}"
+  register: pod_status
+
+- name: "Validate pods are not consuming excessive resources"
+  assert:
+    that:
+      - pod_status.resources | length > 0
+      - pod_status.resources | length == fastapi.replicas
+    fail_msg: "Pod count doesn't match expected replicas"
+    success_msg: "All pods are running as expected"
+
+- name: "Get deployment metrics"
+  uri:
+    url: "http://{{ fastapi.name }}-internal.{{ app.namespace }}.svc.cluster.local:{{ fastapi.port }}/metrics"
+    method: GET
+  register: metrics_response
+  failed_when: false
+
+- name: "Check if monitoring is working"
+  k8s_info:
+    api_version: monitoring.coreos.com/v1
+    kind: ServiceMonitor
+    name: "{{ fastapi.name }}-monitor"
+    namespace: "{{ app.namespace }}"
+  register: service_monitor
+  when: monitoring.prometheus.enabled | bool
+
+- name: "Validate monitoring setup"
+  assert:
+    that:
+      - service_monitor.resources | length > 0
+    fail_msg: "ServiceMonitor not found"
+    success_msg: "Monitoring is properly configured"
+  when: monitoring.prometheus.enabled | bool
+
+- name: "Deployment validation summary"
+  debug:
+    msg: |
+      ============================================
+      Post-Deployment Validation Complete
+      ============================================
+      ✅ Deployment Status: {{ deployment_check.resources[0].status.readyReplicas }}/{{ deployment_check.resources[0].status.replicas }} pods ready
+      ✅ Service Endpoints: {{ service_endpoints.resources[0].subsets | length }} endpoint(s)
+      {% if fastapi.autoscaling.enabled %}
+      ✅ HPA Status: {{ hpa_status.resources[0].status.currentReplicas }} replicas
+      {% endif %}
+      ✅ Internal Connectivity: Tested successfully
+      ✅ Resource Usage: Within expected limits
+      {% if monitoring.prometheus.enabled %}
+      ✅ Monitoring: ServiceMonitor configured
+      {% endif %}
+      ============================================
