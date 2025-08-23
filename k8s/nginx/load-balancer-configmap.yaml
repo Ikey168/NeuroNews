@@ -1,0 +1,152 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-load-balancer-config
+  namespace: neuronews
+  labels:
+    app: nginx-load-balancer
+
+data:
+  nginx.conf: |
+    user  nginx;
+    worker_processes  auto;
+    error_log  /var/log/nginx/error.log warn;
+    pid        /var/run/nginx.pid;
+    
+    events {
+      worker_connections  4096;
+      use epoll;
+      multi_accept on;
+    }
+    
+    http {
+      include       /etc/nginx/mime.types;
+      default_type  application/octet-stream;
+      
+      log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                        '$status $body_bytes_sent "$http_referer" '
+                        '"$http_user_agent" "$http_x_forwarded_for" '
+                        'rt=$request_time uct="$upstream_connect_time" '
+                        'uht="$upstream_header_time" urt="$upstream_response_time"';
+      
+      access_log  /var/log/nginx/access.log  main;
+      
+      # Performance optimizations
+      sendfile        on;
+      tcp_nopush      on;
+      tcp_nodelay     on;
+      keepalive_timeout  65;
+      keepalive_requests 1000;
+      
+      # Gzip compression
+      gzip on;
+      gzip_vary on;
+      gzip_min_length 1024;
+      gzip_comp_level 6;
+      gzip_types
+        text/plain
+        text/css
+        text/xml
+        text/javascript
+        application/json
+        application/javascript
+        application/xml+rss
+        application/atom+xml;
+      
+      # Rate limiting
+      limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
+      
+      # Connection limiting
+      limit_conn_zone $binary_remote_addr zone=addr:10m;
+      
+      # Cache settings
+      proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=api_cache:10m max_size=100m inactive=60m use_temp_path=off;
+      
+      # Upstream configuration for FastAPI replicas
+      upstream fastapi_backend {
+        least_conn;  # Load balancing method
+        
+        # Health check configuration
+        keepalive 32;
+        keepalive_requests 100;
+        keepalive_timeout 60s;
+        
+        # FastAPI replicas - these will be dynamically discovered
+        server neuronews-fastapi-service.neuronews.svc.cluster.local:80 max_fails=3 fail_timeout=30s;
+        
+        # Additional upstream servers can be added here
+        # server fastapi-replica-1:8000 max_fails=3 fail_timeout=30s;
+        # server fastapi-replica-2:8000 max_fails=3 fail_timeout=30s;
+      }
+      
+      server {
+        listen 80;
+        server_name _;
+        
+        # Rate limiting
+        limit_req zone=api burst=20 nodelay;
+        limit_conn addr 10;
+        
+        # Health check endpoint for NGINX itself
+        location /nginx-health {
+          access_log off;
+          return 200 "healthy\n";
+          add_header Content-Type text/plain;
+        }
+        
+        # Main API proxy with caching
+        location / {
+          # Proxy settings
+          proxy_pass http://fastapi_backend;
+          proxy_http_version 1.1;
+          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection 'upgrade';
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+          proxy_cache_bypass $http_upgrade;
+          
+          # Timeout settings
+          proxy_connect_timeout 5s;
+          proxy_send_timeout 60s;
+          proxy_read_timeout 60s;
+          
+          # Buffer settings
+          proxy_buffering on;
+          proxy_buffer_size 128k;
+          proxy_buffers 4 256k;
+          proxy_busy_buffers_size 256k;
+          
+          # Cache configuration for GET requests
+          proxy_cache api_cache;
+          proxy_cache_valid 200 302 1m;
+          proxy_cache_valid 404 1m;
+          proxy_cache_use_stale error timeout updating http_500 http_502 http_503 http_504;
+          proxy_cache_lock on;
+          proxy_cache_key $scheme$proxy_host$request_uri;
+          
+          # Add cache status header
+          add_header X-Cache-Status $upstream_cache_status;
+          
+          # Only cache GET requests
+          proxy_cache_methods GET HEAD;
+          
+          # Don't cache certain paths
+          location ~* ^/(docs|redoc|openapi.json|health)$ {
+            proxy_pass http://fastapi_backend;
+            proxy_cache off;
+          }
+        }
+        
+        # Status page for monitoring
+        location /nginx-status {
+          stub_status on;
+          access_log off;
+          allow 10.0.0.0/8;
+          allow 172.16.0.0/12;
+          allow 192.168.0.0/16;
+          deny all;
+        }
+      }
+    }

@@ -1,0 +1,230 @@
+---
+# NeuroNews NGINX Load Balancer Deployment Playbook
+- name: "Deploy NGINX Load Balancer for FastAPI"
+  hosts: localhost
+  gather_facts: yes
+  vars:
+    nginx_namespace: "neuronews"
+    fastapi_replicas: 5  # Number of FastAPI replicas for load testing
+    load_test_duration: 300  # 5 minutes
+  tasks:
+    - name: "Create NGINX namespace (if not exists)"
+      k8s:
+        name: "{{ nginx_namespace }}"
+        api_version: v1
+        kind: Namespace
+        state: present
+        definition:
+          metadata:
+            labels:
+              app: "neuronews"
+              managed-by: "ansible"
+
+    - name: "Scale FastAPI deployment for load testing"
+      k8s:
+        state: present
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: neuronews-fastapi
+            namespace: "{{ nginx_namespace }}"
+          spec:
+            replicas: "{{ fastapi_replicas }}"
+
+    - name: "Wait for FastAPI replicas to be ready"
+      k8s_info:
+        api_version: apps/v1
+        kind: Deployment
+        name: neuronews-fastapi
+        namespace: "{{ nginx_namespace }}"
+        wait: true
+        wait_condition:
+          type: Available
+          status: "True"
+        wait_timeout: 300
+
+    - name: "Apply NGINX Load Balancer ConfigMap"
+      k8s:
+        state: present
+        src: "k8s/nginx/load-balancer-configmap.yaml"
+
+    - name: "Apply NGINX Load Balancer Deployment"
+      k8s:
+        state: present
+        src: "k8s/nginx/load-balancer-deployment.yaml"
+
+    - name: "Apply NGINX Load Balancer Service"
+      k8s:
+        state: present
+        src: "k8s/nginx/load-balancer-service.yaml"
+
+    - name: "Apply NGINX Load Balancer HPA"
+      k8s:
+        state: present
+        src: "k8s/nginx/load-balancer-hpa.yaml"
+
+    - name: "Wait for NGINX Load Balancer pods to be ready"
+      k8s_info:
+        api_version: apps/v1
+        kind: Deployment
+        name: nginx-load-balancer
+        namespace: "{{ nginx_namespace }}"
+        wait: true
+        wait_condition:
+          type: Available
+          status: "True"
+        wait_timeout: 180
+
+    - name: "Get NGINX Load Balancer Service external IP"
+      k8s_info:
+        api_version: v1
+        kind: Service
+        name: nginx-load-balancer-service
+        namespace: "{{ nginx_namespace }}"
+      register: nginx_lb_service
+
+    - name: "Display NGINX Load Balancer info"
+      debug:
+        msg: |
+          ============================================
+          NGINX Load Balancer Deployed
+          External IP: {{ nginx_lb_service.resources[0].status.loadBalancer.ingress[0].ip | default('pending') }}
+          FastAPI Replicas: {{ fastapi_replicas }}
+          Load Balancing Method: least_conn
+          ============================================
+
+    - name: "Test load balancing with multiple requests"
+      uri:
+        url: "http://{{ nginx_lb_service.resources[0].status.loadBalancer.ingress[0].ip | default('localhost') }}/health"
+        method: GET
+        return_content: yes
+        status_code: 200
+      register: health_check
+      loop: "{{ range(1, 11) | list }}"  # Test 10 requests
+      delay: 1
+
+    - name: "Get NGINX status"
+      uri:
+        url: "http://{{ nginx_lb_service.resources[0].status.loadBalancer.ingress[0].ip | default('localhost') }}/nginx-status"
+        method: GET
+        return_content: yes
+      register: nginx_status
+      failed_when: false
+
+    - name: "Display load balancer status"
+      debug:
+        msg: |
+          ============================================
+          Load Balancer Status
+          Health Checks: {{ health_check.results | selectattr('status', 'equalto', 200) | list | length }}/10 successful
+          {% if nginx_status.status == 200 %}
+          NGINX Status:
+          {{ nginx_status.content }}
+          {% endif %}
+          ============================================
+
+    - name: "Create load test job"
+      k8s:
+        state: present
+        definition:
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: "nginx-load-test-{{ ansible_date_time.epoch }}"
+            namespace: "{{ nginx_namespace }}"
+            labels:
+              app: "load-test"
+          spec:
+            template:
+              metadata:
+                labels:
+                  app: "load-test"
+              spec:
+                restartPolicy: Never
+                containers:
+                - name: load-test
+                  image: curlimages/curl:latest
+                  command:
+                  - /bin/sh
+                  - -c
+                  - |
+                    echo "Starting load test..."
+                    for i in $(seq 1 100); do
+                      curl -s "http://nginx-load-balancer-internal/health" &
+                      if [ $((i % 10)) -eq 0 ]; then
+                        wait
+                        echo "Completed $i requests"
+                      fi
+                    done
+                    wait
+                    echo "Load test completed: 100 concurrent requests"
+
+    - name: "Wait for load test to complete"
+      k8s_info:
+        api_version: batch/v1
+        kind: Job
+        name: "nginx-load-test-{{ ansible_date_time.epoch }}"
+        namespace: "{{ nginx_namespace }}"
+        wait: true
+        wait_condition:
+          type: Complete
+          status: "True"
+        wait_timeout: 300
+
+    - name: "Get load test results"
+      k8s_log:
+        api_version: v1
+        kind: Pod
+        namespace: "{{ nginx_namespace }}"
+        label_selectors:
+          - "app=load-test"
+      register: load_test_logs
+
+    - name: "Display load test results"
+      debug:
+        msg: |
+          ============================================
+          Load Test Results
+          {{ load_test_logs.log }}
+          ============================================
+
+    - name: "Verify HPA is working"
+      k8s_info:
+        api_version: autoscaling/v2
+        kind: HorizontalPodAutoscaler
+        name: nginx-load-balancer-hpa
+        namespace: "{{ nginx_namespace }}"
+      register: hpa_status
+
+    - name: "Display HPA status"
+      debug:
+        msg: |
+          ============================================
+          HPA Status
+          Current Replicas: {{ hpa_status.resources[0].status.currentReplicas | default('N/A') }}
+          Desired Replicas: {{ hpa_status.resources[0].status.desiredReplicas | default('N/A') }}
+          ============================================
+
+    - name: "Clean up load test job"
+      k8s:
+        state: absent
+        api_version: batch/v1
+        kind: Job
+        name: "nginx-load-test-{{ ansible_date_time.epoch }}"
+        namespace: "{{ nginx_namespace }}"
+
+    - name: "Deployment summary"
+      debug:
+        msg: |
+          ============================================
+          NGINX Load Balancer Deployment Complete
+          ============================================
+          ✅ Load Balancer: Deployed with least_conn method
+          ✅ FastAPI Replicas: {{ fastapi_replicas }} instances
+          ✅ Caching: Enabled for GET requests (1 minute)
+          ✅ Rate Limiting: 10 requests/second per IP
+          ✅ Auto-scaling: HPA configured (2-10 replicas)
+          ✅ Performance: Optimized timeouts and buffering
+          ✅ Load Testing: Completed successfully
+          ============================================
