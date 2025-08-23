@@ -12,6 +12,7 @@ help:
 	@echo "  airflow-init     - Initialize Airflow (run once)"
 	@echo "  airflow-status   - Show status of all services"
 	@echo "  airflow-test-openlineage - Test OpenLineage integration"
+	@echo "  airflow-test-env-config  - Test environment configuration (Issue #188)"
 	@echo "  marquez-ui       - Open Marquez UI in browser"
 	@echo ""
 	@echo "URLs:"
@@ -71,6 +72,11 @@ airflow-test-openlineage:
 	@cd docker/airflow && docker-compose -f docker-compose.airflow.yml logs airflow-webserver | grep -i openlineage || echo "No OpenLineage logs found yet"
 	@echo ""
 	@echo "✅ Test triggered! Check Airflow UI for DAG execution: http://localhost:8080"
+
+# Test Airflow → Marquez environment configuration (Issue #188)
+airflow-test-env-config:
+	@echo "🔧 Testing Airflow → Marquez environment configuration..."
+	@python3 demo/demo_airflow_marquez_env_config.py
 
 marquez-ui:
 	@echo "🌐 Opening Marquez UI..."

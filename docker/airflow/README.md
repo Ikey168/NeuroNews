@@ -113,11 +113,59 @@ open http://localhost:3000
 
 ## 🔧 Configuration
 
-### OpenLineage Settings
+### OpenLineage Environment Variables (Issue #188)
+
+The following environment variables control OpenLineage behavior:
+
+```bash
+# Core OpenLineage Configuration
+OPENLINEAGE_URL=http://marquez:5000           # Marquez endpoint URL
+OPENLINEAGE_NAMESPACE=neuro_news_dev          # Default namespace for lineage events  
+OPENLINEAGE_DISABLED=false                    # Enable/disable lineage tracking
+```
+
+### Changing Namespace Per Branch
+
+To use different namespaces for different git branches (e.g., dev, staging, prod):
+
+1. **Copy environment template**:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Set branch-specific namespace**:
+   ```bash
+   # For development branch
+   echo "OPENLINEAGE_NAMESPACE=neuro_news_dev" >> .env
+   
+   # For staging branch  
+   echo "OPENLINEAGE_NAMESPACE=neuro_news_staging" >> .env
+   
+   # For production branch
+   echo "OPENLINEAGE_NAMESPACE=neuro_news_prod" >> .env
+   ```
+
+3. **Or set dynamically based on git branch**:
+   ```bash
+   # Get current branch name
+   BRANCH_NAME=$(git branch --show-current)
+   echo "OPENLINEAGE_NAMESPACE=neuro_news_${BRANCH_NAME}" >> .env
+   ```
+
+4. **Restart services to apply changes**:
+   ```bash
+   make airflow-down
+   make airflow-up
+   ```
+
+### Airflow OpenLineage Provider Settings
+
+The following Airflow configuration is automatically set from environment variables:
+
 ```yaml
-AIRFLOW__OPENLINEAGE__TRANSPORT: '{"type": "http", "url": "http://marquez:5000", "endpoint": "/api/v1/lineage"}'
-AIRFLOW__OPENLINEAGE__NAMESPACE: neuronews
-AIRFLOW__OPENLINEAGE__DISABLED: 'false'
+AIRFLOW__OPENLINEAGE__TRANSPORT: '{"type": "http", "url": "${OPENLINEAGE_URL}", "endpoint": "/api/v1/lineage"}'
+AIRFLOW__OPENLINEAGE__NAMESPACE: ${OPENLINEAGE_NAMESPACE}
+AIRFLOW__OPENLINEAGE__DISABLED: ${OPENLINEAGE_DISABLED}
 AIRFLOW__OPENLINEAGE__DEBUG: 'true'
 ```
 
@@ -154,31 +202,76 @@ graph TB
     G --> I[OpenLineage Packages]
 ```
 
-## 🔍 Verification (DoD)
+## 🔍 Verification
 
-To verify Issue #187 requirements:
+### Issue #187 Requirements (Custom Image)
 
-### 1. Custom Image Built
+#### 1. Custom Image Built
 ```bash
 docker images | grep neuronews/airflow
 # Should show: neuronews/airflow:2.8.1-openlineage
 ```
 
-### 2. OpenLineage Provider Installed
+#### 2. OpenLineage Provider Installed
 ```bash
 docker-compose exec airflow-webserver python -c "import openlineage.airflow; print('✅ OpenLineage ready')"
 ```
 
-### 3. No Import Errors in Logs
+#### 3. No Import Errors in Logs
 ```bash
 make airflow-webserver-logs | grep -i "error\|exception" | grep -i openlineage
 # Should show no critical errors
 ```
 
-### 4. Lineage Events Generated
+#### 4. Lineage Events Generated
 - Run test DAG: `make airflow-test-openlineage`
 - Check Marquez UI: http://localhost:3000
 - Verify lineage events appear
+
+### Issue #188 Requirements (Environment Configuration)
+
+#### DoD: Trigger any example DAG → run appears in Marquez UI under neuro_news_dev
+
+1. **Verify environment variables are loaded**:
+   ```bash
+   docker-compose exec airflow-webserver env | grep OPENLINEAGE
+   # Should show:
+   # OPENLINEAGE_URL=http://marquez:5000
+   # OPENLINEAGE_NAMESPACE=neuro_news_dev
+   # OPENLINEAGE_DISABLED=false
+   ```
+
+2. **Check Airflow configuration**:
+   ```bash
+   docker-compose exec airflow-webserver airflow config get-value openlineage namespace
+   # Should output: neuro_news_dev
+   ```
+
+3. **Trigger test DAG and verify in Marquez**:
+   ```bash
+   # Start services
+   make airflow-up
+   
+   # Trigger example DAG  
+   docker-compose exec airflow-webserver airflow dags trigger test_openlineage_integration
+   
+   # Check Marquez UI at http://localhost:3000
+   # Should see runs under "neuro_news_dev" namespace
+   ```
+
+4. **Verify namespace can be changed per branch**:
+   ```bash
+   # Update .env file
+   echo "OPENLINEAGE_NAMESPACE=neuro_news_test" > .env
+   
+   # Restart services
+   make airflow-down && make airflow-up
+   
+   # Trigger DAG again
+   docker-compose exec airflow-webserver airflow dags trigger test_openlineage_integration
+   
+   # Check Marquez UI - should see runs under "neuro_news_test" namespace
+   ```
 
 ## 🚨 Troubleshooting
 
