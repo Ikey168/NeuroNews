@@ -16,6 +16,8 @@ help:
 	@echo "  airflow-test-news-pipeline - Test news pipeline DAG (Issue #189)"
 	@echo "  airflow-test-timezone-sla - Test timezone and SLA configuration (Issue #190)"
 	@echo "  airflow-test-lineage-naming - Test lineage naming convention (Issue #193)"
+	@echo "  airflow-bootstrap - Bootstrap Airflow connections and variables (Issue #194)"
+	@echo "  airflow-test-bootstrap - Test bootstrap script functionality (Issue #194)"
 	@echo "  marquez-ui       - Open Marquez UI in browser"
 	@echo ""
 	@echo "URLs:"
@@ -95,6 +97,16 @@ airflow-test-timezone-sla:
 airflow-test-lineage-naming:
 	@echo "🔗 Testing lineage naming convention..."
 	@python3 demo/demo_lineage_naming.py
+
+# Bootstrap Airflow connections and variables (Issue #194)
+airflow-bootstrap:
+	@echo "🚀 Bootstrapping Airflow connections and variables..."
+	@docker exec $$(docker-compose -f docker/airflow/docker-compose.airflow.yml ps -q airflow-webserver) bash -c 'cd /opt/airflow && ./scripts/airflow_bootstrap.sh --verbose'
+
+# Test bootstrap script functionality (Issue #194)
+airflow-test-bootstrap:
+	@echo "🧪 Testing bootstrap script..."
+	@python3 demo/demo_airflow_bootstrap.py
 
 marquez-ui:
 	@echo "🌐 Opening Marquez UI..."
