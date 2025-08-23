@@ -1,0 +1,206 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-monitoring
+  namespace: neuronews
+  labels:
+    app: nginx-monitoring
+    component: proxy
+    tier: frontend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx-monitoring
+  template:
+    metadata:
+      labels:
+        app: nginx-monitoring
+        component: proxy
+        tier: frontend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9113"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      # Main NGINX container with monitoring
+      - name: nginx
+        image: nginx:1.25-alpine
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        - containerPort: 9113
+          name: metrics
+          protocol: TCP
+        
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+        - name: nginx-logs
+          mountPath: /var/log/nginx
+        - name: nginx-cache
+          mountPath: /var/cache/nginx
+        - name: nginx-run
+          mountPath: /var/run
+        
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 9113
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 9113
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/bin/sh", "-c", "nginx -s quit; while killall -0 nginx; do sleep 1; done"]
+      
+      # NGINX Prometheus Exporter sidecar
+      - name: nginx-exporter
+        image: nginx/nginx-prometheus-exporter:0.11.0
+        ports:
+        - containerPort: 9113
+          name: exporter
+          protocol: TCP
+        
+        args:
+        - -nginx.scrape-uri=http://localhost:9113/nginx_status
+        - -web.listen-address=0.0.0.0:9113
+        - -web.telemetry-path=/metrics
+        - -nginx.ssl-verify=false
+        - -nginx.timeout=10s
+        - -nginx.retries=3
+        
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 50m
+            memory: 64Mi
+        
+        livenessProbe:
+          httpGet:
+            path: /metrics
+            port: 9113
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /metrics
+            port: 9113
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+      
+      # Log aggregator sidecar
+      - name: fluentd-nginx
+        image: fluent/fluentd:v1.16-debian-1
+        volumeMounts:
+        - name: nginx-logs
+          mountPath: /var/log/nginx
+          readOnly: true
+        - name: fluentd-config
+          mountPath: /fluentd/etc/fluent.conf
+          subPath: fluent.conf
+        
+        env:
+        - name: FLUENTD_CONF
+          value: fluent.conf
+        - name: FLUENTD_OPT
+          value: "-v"
+        
+        resources:
+          requests:
+            cpu: 20m
+            memory: 64Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+      
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: nginx-monitoring-config
+          items:
+          - key: nginx.conf
+            path: nginx.conf
+      
+      - name: fluentd-config
+        configMap:
+          name: fluentd-nginx-config
+      
+      - name: nginx-logs
+        emptyDir: {}
+      
+      - name: nginx-cache
+        emptyDir: {}
+      
+      - name: nginx-run
+        emptyDir: {}
+      
+      # Affinity rules for better distribution
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - nginx-monitoring
+              topologyKey: kubernetes.io/hostname
+        
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            preference:
+              matchExpressions:
+              - key: node-role.kubernetes.io/worker
+                operator: Exists
+      
+      # Security context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
+      
+      # Termination grace period
+      terminationGracePeriodSeconds: 30
+      
+      # DNS configuration for service discovery
+      dnsPolicy: ClusterFirst
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+        - name: edns0

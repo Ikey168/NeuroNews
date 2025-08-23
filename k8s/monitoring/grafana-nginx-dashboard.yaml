@@ -1,0 +1,359 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-nginx-dashboard
+  namespace: neuronews
+  labels:
+    app: grafana
+    component: dashboard
+    grafana_dashboard: "true"
+data:
+  nginx-performance-dashboard.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "NeuroNews NGINX Performance Dashboard",
+        "tags": ["nginx", "performance", "api", "neuronews"],
+        "style": "dark",
+        "timezone": "browser",
+        "refresh": "30s",
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "timepicker": {
+          "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d"]
+        },
+        "templating": {
+          "list": [
+            {
+              "name": "instance",
+              "type": "query",
+              "query": "label_values(nginx_http_requests_total, instance)",
+              "refresh": 1,
+              "includeAll": true,
+              "allValue": ".*",
+              "multi": true
+            },
+            {
+              "name": "status_code",
+              "type": "query", 
+              "query": "label_values(nginx_http_requests_total, status)",
+              "refresh": 1,
+              "includeAll": true,
+              "allValue": ".*",
+              "multi": true
+            }
+          ]
+        },
+        "panels": [
+          {
+            "id": 1,
+            "title": "Request Rate (req/sec)",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "sum(rate(nginx_http_requests_total{instance=~\"$instance\"}[5m]))",
+                "legendFormat": "Total Requests/sec"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "thresholds"
+                },
+                "thresholds": {
+                  "steps": [
+                    {"color": "green", "value": null},
+                    {"color": "yellow", "value": 100},
+                    {"color": "red", "value": 1000}
+                  ]
+                },
+                "unit": "reqps"
+              }
+            },
+            "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "Error Rate (%)",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "(sum(rate(nginx_http_requests_total{instance=~\"$instance\",status=~\"5..\"}[5m])) / sum(rate(nginx_http_requests_total{instance=~\"$instance\"}[5m]))) * 100",
+                "legendFormat": "5xx Error Rate"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "thresholds"
+                },
+                "thresholds": {
+                  "steps": [
+                    {"color": "green", "value": null},
+                    {"color": "yellow", "value": 1},
+                    {"color": "red", "value": 5}
+                  ]
+                },
+                "unit": "percent",
+                "max": 100
+              }
+            },
+            "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0}
+          },
+          {
+            "id": 3,
+            "title": "Response Time (95th percentile)",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, sum(rate(nginx_http_request_duration_seconds_bucket{instance=~\"$instance\"}[5m])) by (le))",
+                "legendFormat": "95th Percentile"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "thresholds"
+                },
+                "thresholds": {
+                  "steps": [
+                    {"color": "green", "value": null},
+                    {"color": "yellow", "value": 1},
+                    {"color": "red", "value": 2}
+                  ]
+                },
+                "unit": "s"
+              }
+            },
+            "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0}
+          },
+          {
+            "id": 4,
+            "title": "Active Connections",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "sum(nginx_connections_active{instance=~\"$instance\"})",
+                "legendFormat": "Active Connections"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "thresholds"
+                },
+                "thresholds": {
+                  "steps": [
+                    {"color": "green", "value": null},
+                    {"color": "yellow", "value": 500},
+                    {"color": "red", "value": 1000}
+                  ]
+                },
+                "unit": "short"
+              }
+            },
+            "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0}
+          },
+          {
+            "id": 5,
+            "title": "Request Rate Over Time",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum(rate(nginx_http_requests_total{instance=~\"$instance\"}[5m])) by (instance)",
+                "legendFormat": "{{instance}} - Total"
+              },
+              {
+                "expr": "sum(rate(nginx_http_requests_total{instance=~\"$instance\",status=~\"2..\"}[5m])) by (instance)",
+                "legendFormat": "{{instance}} - 2xx"
+              },
+              {
+                "expr": "sum(rate(nginx_http_requests_total{instance=~\"$instance\",status=~\"4..\"}[5m])) by (instance)",
+                "legendFormat": "{{instance}} - 4xx"
+              },
+              {
+                "expr": "sum(rate(nginx_http_requests_total{instance=~\"$instance\",status=~\"5..\"}[5m])) by (instance)",
+                "legendFormat": "{{instance}} - 5xx"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Requests per Second",
+                "min": 0
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+          },
+          {
+            "id": 6,
+            "title": "Response Time Percentiles",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.50, sum(rate(nginx_http_request_duration_seconds_bucket{instance=~\"$instance\"}[5m])) by (le))",
+                "legendFormat": "50th percentile"
+              },
+              {
+                "expr": "histogram_quantile(0.95, sum(rate(nginx_http_request_duration_seconds_bucket{instance=~\"$instance\"}[5m])) by (le))",
+                "legendFormat": "95th percentile"
+              },
+              {
+                "expr": "histogram_quantile(0.99, sum(rate(nginx_http_request_duration_seconds_bucket{instance=~\"$instance\"}[5m])) by (le))",
+                "legendFormat": "99th percentile"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Response Time (seconds)",
+                "min": 0
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+          },
+          {
+            "id": 7,
+            "title": "Status Code Distribution",
+            "type": "piechart",
+            "targets": [
+              {
+                "expr": "sum(rate(nginx_http_requests_total{instance=~\"$instance\",status=~\"$status_code\"}[5m])) by (status)",
+                "legendFormat": "{{status}}"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "hideFrom": {
+                    "legend": false,
+                    "tooltip": false,
+                    "vis": false
+                  }
+                }
+              }
+            },
+            "gridPos": {"h": 8, "w": 8, "x": 0, "y": 16}
+          },
+          {
+            "id": 8,
+            "title": "Connection Metrics",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "nginx_connections_active{instance=~\"$instance\"}",
+                "legendFormat": "{{instance}} - Active"
+              },
+              {
+                "expr": "nginx_connections_reading{instance=~\"$instance\"}",
+                "legendFormat": "{{instance}} - Reading"
+              },
+              {
+                "expr": "nginx_connections_writing{instance=~\"$instance\"}",
+                "legendFormat": "{{instance}} - Writing"
+              },
+              {
+                "expr": "nginx_connections_waiting{instance=~\"$instance\"}",
+                "legendFormat": "{{instance}} - Waiting"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Connections",
+                "min": 0
+              }
+            ],
+            "gridPos": {"h": 8, "w": 8, "x": 8, "y": 16}
+          },
+          {
+            "id": 9,
+            "title": "Bandwidth Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum(rate(nginx_http_request_size_bytes_sum{instance=~\"$instance\"}[5m])) by (instance)",
+                "legendFormat": "{{instance}} - Request Bytes/sec"
+              },
+              {
+                "expr": "sum(rate(nginx_http_response_size_bytes_sum{instance=~\"$instance\"}[5m])) by (instance)",
+                "legendFormat": "{{instance}} - Response Bytes/sec"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Bytes per Second",
+                "min": 0
+              }
+            ],
+            "gridPos": {"h": 8, "w": 8, "x": 16, "y": 16}
+          },
+          {
+            "id": 10,
+            "title": "Top Request Paths",
+            "type": "table",
+            "targets": [
+              {
+                "expr": "topk(10, sum(rate(nginx_http_requests_total{instance=~\"$instance\"}[5m])) by (path))",
+                "format": "table",
+                "instant": true
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "custom": {
+                  "align": "auto",
+                  "displayMode": "auto"
+                }
+              }
+            },
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24}
+          },
+          {
+            "id": 11,
+            "title": "Upstream Response Time",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "nginx_upstream_response_time{instance=~\"$instance\"}",
+                "legendFormat": "{{instance}} - {{upstream}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Response Time (seconds)",
+                "min": 0
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24}
+          },
+          {
+            "id": 12,
+            "title": "NGINX Error Logs",
+            "type": "logs",
+            "targets": [
+              {
+                "expr": "{job=\"nginx\", level=\"error\"}",
+                "refId": "A"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 24, "x": 0, "y": 32}
+          }
+        ],
+        "annotations": {
+          "list": [
+            {
+              "builtIn": 1,
+              "datasource": "-- Grafana --",
+              "enable": true,
+              "hide": true,
+              "iconColor": "rgba(0, 211, 255, 1)",
+              "name": "Annotations & Alerts",
+              "type": "dashboard"
+            }
+          ]
+        }
+      }
+    }

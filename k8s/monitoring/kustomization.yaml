@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: neuronews
+  labels:
+    app: neuronews
+    monitoring: enabled
+
+---
+# Apply all monitoring configurations
+apiVersion: kustomization.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: nginx-performance-monitoring
+  namespace: neuronews
+
+resources:
+- nginx/monitoring-configmap.yaml
+- nginx/monitoring-deployment.yaml
+- nginx/monitoring-service.yaml
+- nginx/fluentd-config.yaml
+- monitoring/prometheus-nginx-config.yaml
+- monitoring/prometheus-deployment.yaml
+- monitoring/grafana-nginx-dashboard.yaml
+
+# Deployment order for dependency management
+patches:
+- target:
+    kind: Deployment
+    name: prometheus-nginx
+  patch: |-
+    - op: add
+      path: /metadata/annotations/deployment.kubernetes.io~1depends-on
+      value: neuronews/nginx-monitoring-configmap
+
+- target:
+    kind: Deployment
+    name: nginx-monitoring
+  patch: |-
+    - op: add
+      path: /metadata/annotations/deployment.kubernetes.io~1depends-on
+      value: neuronews/nginx-monitoring-configmap,neuronews/fluentd-config
+
+# Common labels for all resources
+commonLabels:
+  project: neuronews
+  issue: "85"
+  component: performance-monitoring
+  environment: production
+
+# Environment-specific configurations
+configMapGenerator:
+- name: monitoring-env-config
+  literals:
+  - PROMETHEUS_RETENTION=15d
+  - NGINX_LOG_LEVEL=info
+  - FLUENTD_LOG_LEVEL=info
+  - GRAFANA_DEFAULT_THEME=dark
+
+# Resource naming
+namePrefix: neuronews-
+nameSuffix: -v1
+
+# Image updates
+images:
+- name: nginx
+  newTag: 1.25-alpine
+- name: prom/prometheus
+  newTag: v2.47.0
+- name: fluent/fluentd-kubernetes-daemonset
+  newTag: v1.16-debian-elasticsearch7-1
