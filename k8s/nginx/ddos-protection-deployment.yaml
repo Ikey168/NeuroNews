@@ -1,0 +1,363 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-ddos-protection
+  namespace: neuronews
+  labels:
+    app: nginx
+    component: ddos-protection
+    issue: "86"
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: nginx
+      component: ddos-protection
+  template:
+    metadata:
+      labels:
+        app: nginx
+        component: ddos-protection
+        issue: "86"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9113"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: nginx-ddos-protection
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
+      
+      initContainers:
+      # Initialize GeoIP database
+      - name: geoip-init
+        image: maxmindinc/geoipupdate:latest
+        env:
+        - name: GEOIPUPDATE_ACCOUNT_ID
+          valueFrom:
+            secretKeyRef:
+              name: geoip-credentials
+              key: account-id
+              optional: true
+        - name: GEOIPUPDATE_LICENSE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: geoip-credentials
+              key: license-key
+              optional: true
+        - name: GEOIPUPDATE_EDITION_IDS
+          value: "GeoLite2-Country"
+        volumeMounts:
+        - name: geoip-data
+          mountPath: /usr/share/GeoIP
+        command:
+        - /bin/sh
+        - -c
+        - |
+          if [ -n "$GEOIPUPDATE_ACCOUNT_ID" ] && [ -n "$GEOIPUPDATE_LICENSE_KEY" ]; then
+            echo "Updating GeoIP database..."
+            /usr/bin/geoipupdate -v
+          else
+            echo "GeoIP credentials not provided, using stub database..."
+            mkdir -p /usr/share/GeoIP
+            echo "# Stub GeoIP database" > /usr/share/GeoIP/GeoLite2-Country.mmdb
+          fi
+
+      containers:
+      # Main NGINX container with rate limiting
+      - name: nginx
+        image: nginx:1.25-alpine
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 443
+          name: https
+        
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+        - name: nginx-config
+          mountPath: /etc/nginx/conf.d/blacklist.conf
+          subPath: blacklist.conf
+        - name: nginx-config
+          mountPath: /etc/nginx/conf.d/bot-detection.conf
+          subPath: bot-detection.conf
+        - name: nginx-config
+          mountPath: /etc/nginx/conf.d/security-rules.conf
+          subPath: security-rules.conf
+        - name: nginx-config
+          mountPath: /etc/nginx/conf.d/ddos-protection.conf
+          subPath: ddos-protection.conf
+        - name: nginx-config
+          mountPath: /etc/nginx/conf.d/proxy-headers.conf
+          subPath: proxy-headers.conf
+        - name: error-pages
+          mountPath: /usr/share/nginx/html/429.html
+          subPath: error-pages.html
+        - name: error-pages
+          mountPath: /usr/share/nginx/html/403.html
+          subPath: error-pages.html
+        - name: nginx-logs
+          mountPath: /var/log/nginx
+        - name: geoip-data
+          mountPath: /usr/share/GeoIP
+          readOnly: true
+        - name: nginx-cache
+          mountPath: /var/cache/nginx
+        - name: nginx-run
+          mountPath: /var/run
+        
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            cpu: 1000m
+            memory: 512Mi
+        
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - /bin/sh
+              - -c
+              - sleep 15; nginx -s quit; sleep 10
+      
+      # Prometheus exporter for NGINX metrics
+      - name: prometheus-exporter
+        image: nginx/nginx-prometheus-exporter:0.11.0
+        ports:
+        - containerPort: 9113
+          name: metrics
+        args:
+        - -nginx.scrape-uri=http://localhost:80/nginx_status
+        - -web.listen-address=:9113
+        - -web.telemetry-path=/metrics
+        - -nginx.ssl-verify=false
+        - -nginx.timeout=5s
+        
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+        
+        livenessProbe:
+          httpGet:
+            path: /metrics
+            port: 9113
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        
+        readinessProbe:
+          httpGet:
+            path: /metrics
+            port: 9113
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+      # Fail2ban container for DDoS protection
+      - name: fail2ban
+        image: lscr.io/linuxserver/fail2ban:latest
+        env:
+        - name: PUID
+          value: "1000"
+        - name: PGID
+          value: "1000"
+        - name: TZ
+          value: "UTC"
+        - name: VERBOSITY
+          value: "normal"
+        
+        volumeMounts:
+        - name: fail2ban-config
+          mountPath: /config/fail2ban/jail.local
+          subPath: jail.local
+        - name: fail2ban-config
+          mountPath: /config/fail2ban/fail2ban.conf
+          subPath: fail2ban.conf
+        - name: fail2ban-config
+          mountPath: /config/fail2ban/filter.d/nginx-http-auth.conf
+          subPath: filter.d/nginx-http-auth.conf
+        - name: fail2ban-config
+          mountPath: /config/fail2ban/filter.d/nginx-limit-req.conf
+          subPath: filter.d/nginx-limit-req.conf
+        - name: fail2ban-config
+          mountPath: /config/fail2ban/filter.d/nginx-noscript.conf
+          subPath: filter.d/nginx-noscript.conf
+        - name: fail2ban-config
+          mountPath: /config/fail2ban/filter.d/nginx-badbots.conf
+          subPath: filter.d/nginx-badbots.conf
+        - name: fail2ban-config
+          mountPath: /config/fail2ban/filter.d/nginx-botsearch.conf
+          subPath: filter.d/nginx-botsearch.conf
+        - name: fail2ban-config
+          mountPath: /config/fail2ban/filter.d/nginx-4xx.conf
+          subPath: filter.d/nginx-4xx.conf
+        - name: fail2ban-config
+          mountPath: /config/fail2ban/filter.d/nginx-ddos.conf
+          subPath: filter.d/nginx-ddos.conf
+        - name: fail2ban-config
+          mountPath: /config/fail2ban/action.d/iptables-nginx.conf
+          subPath: action.d/iptables-nginx.conf
+        - name: nginx-logs
+          mountPath: /var/log/nginx
+          readOnly: true
+        - name: fail2ban-data
+          mountPath: /config
+        
+        securityContext:
+          privileged: true
+          capabilities:
+            add:
+            - NET_ADMIN
+            - NET_RAW
+        
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+
+      # Log aggregator for security events
+      - name: fluentd
+        image: fluent/fluentd-kubernetes-daemonset:v1.16-debian-elasticsearch7-1
+        env:
+        - name: FLUENTD_SYSTEMD_CONF
+          value: "disable"
+        - name: FLUENTD_PROMETHEUS_CONF
+          value: "disable"
+        
+        volumeMounts:
+        - name: fluentd-config
+          mountPath: /fluentd/etc/fluent.conf
+          subPath: fluent.conf
+        - name: nginx-logs
+          mountPath: /var/log/nginx
+          readOnly: true
+        - name: fail2ban-logs
+          mountPath: /var/log/fail2ban
+          readOnly: true
+        
+        resources:
+          requests:
+            cpu: 100m
+            memory: 200Mi
+          limits:
+            cpu: 200m
+            memory: 400Mi
+
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: nginx-rate-limiting-config
+          defaultMode: 0644
+      
+      - name: fail2ban-config
+        configMap:
+          name: fail2ban-config
+          defaultMode: 0644
+      
+      - name: fluentd-config
+        configMap:
+          name: fluentd-security-config
+          defaultMode: 0644
+      
+      - name: error-pages
+        configMap:
+          name: nginx-rate-limiting-config
+          items:
+          - key: error-pages.html
+            path: error-pages.html
+      
+      - name: nginx-logs
+        emptyDir: {}
+      
+      - name: fail2ban-logs
+        emptyDir: {}
+      
+      - name: fail2ban-data
+        emptyDir: {}
+      
+      - name: geoip-data
+        emptyDir: {}
+      
+      - name: nginx-cache
+        emptyDir: {}
+      
+      - name: nginx-run
+        emptyDir: {}
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nginx-ddos-protection
+  namespace: neuronews
+  labels:
+    app: nginx
+    component: ddos-protection
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: nginx-ddos-protection
+  labels:
+    app: nginx
+    component: ddos-protection
+rules:
+- apiGroups: [""]
+  resources: ["services", "endpoints"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: nginx-ddos-protection
+  labels:
+    app: nginx
+    component: ddos-protection
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: nginx-ddos-protection
+subjects:
+- kind: ServiceAccount
+  name: nginx-ddos-protection
+  namespace: neuronews
