@@ -34,8 +34,8 @@ class AsyncScraperDemo:
         concurrency_tests = [5, 10, 20]
 
         for max_concurrent in concurrency_tests:
-            print(f""
- Testing with {max_concurrent} concurrent connections...")"
+            print(""
+ Testing with {0} concurrent connections...".format(max_concurrent))"
 
             # Modify config for test
             await self._run_concurrency_test(max_concurrent)
@@ -79,11 +79,11 @@ class AsyncScraperDemo:
                 "success_rate": self._calculate_success_rate(results),
             }
 
-            print(f"    Scraped {len(results)} articles in {duration:.2f}s")
-            print(f"   ⚡ Rate: {len(results) / duration:.2f} articles/second")
+            print("    Scraped {0} articles in {1}s".format(len(results), duration: .2f))
+            print("   ⚡ Rate: {0} articles/second".format(len(results) / duration: .2f))
 
         except Exception as e:
-            print(f"   ❌ Error: {str(e)}")
+            print("   ❌ Error: {0}".format(str(e)))
             self.demo_results[max_concurrent]={"error": str(e)}
 
 
@@ -164,9 +164,9 @@ class AsyncScraperDemo:
         duration = time.time() - start_time
 
         print(
-            f"    Processed {len(results)} articles from {len(http_sources)} sources"
+            "    Processed {0} articles from {1} sources".format(len(results), len(http_sources))
         )
-        print(f"   ⚡ Average: {len(results) / duration:.2f} articles/second")
+        print("   ⚡ Average: {0} articles/second".format(len(results) / duration:.2f))
         print("   🔗 Concurrent connections enabled efficient processing")
 
 
@@ -183,9 +183,9 @@ class AsyncScraperDemo:
         )
         duration = time.time() - start_time
 
-        print(f"    Successfully scraped {len(results)} articles from JS-heavy sites")
+        print("    Successfully scraped {0} articles from JS-heavy sites".format(len(results)))
         print("   🎭 Playwright handled dynamic content loading")
-        print(f"   ⏱️  Processing time: {duration:.2f}s")
+        print("   ⏱️  Processing time: {0}s".format(duration:.2f))
 
 
     async def _demo_thread_pool_processing(self, runner):
@@ -205,8 +205,8 @@ class AsyncScraperDemo:
         # Check for enhanced fields (processed by ThreadPoolExecutor)
         enhanced_count = sum(1 for r in results if "quality_score" in r)
 
-        print(f"    Processed {len(results)} articles with enhancement")
-        print(f"   🧵 {enhanced_count} articles enhanced using ThreadPoolExecutor")
+        print("    Processed {0} articles with enhancement".format(len(results)))
+        print("   🧵 {0} articles enhanced using ThreadPoolExecutor".format(enhanced_count))
         print("   ⚡ Parallel processing improved efficiency")
 
 
@@ -269,7 +269,7 @@ class AsyncScraperDemo:
         for i in range(article_count):
             await asyncio.sleep(0.1)  # Minimal delay for simulation
             if (i + 1) % 5 == 0:
-                print(f"   Processed {i + 1}/{article_count} articles...")
+                print("   Processed {0}/{1} articles...".format(i + 1, article_count))
 
         simulated_duration = article_count * avg_time_per_article
         actual_duration = time.time() - start_time
@@ -281,9 +281,9 @@ class AsyncScraperDemo:
         }
 
         print(
-            f"    Traditional approach: {simulated_duration:.1f}s for {article_count} articles"
+            "    Traditional approach: {0}s for {1} articles".format(simulated_duration:.1f, article_count)
         )
-        print(f"    Rate: {article_count / simulated_duration:.2f} articles/second")
+        print("    Rate: {0} articles/second".format(article_count / simulated_duration:.2f))
 
 
     async def _run_async_scraping(self):
@@ -310,8 +310,8 @@ class AsyncScraperDemo:
             "rate": len(results) / duration if duration > 0 else 0,
         }
 
-        print(f"    AsyncIO approach: {duration:.1f}s for {len(results)} articles")
-        print(f"    Rate: {len(results) / duration:.2f} articles/second")
+        print("    AsyncIO approach: {0}s for {1} articles".format(duration:.1f, len(results)))
+        print("    Rate: {0} articles/second".format(len(results) / duration:.2f))
 
 
     def _display_comparison_results(self):
@@ -334,8 +334,8 @@ class AsyncScraperDemo:
             print(
                 f"AsyncIO:     {async_res['duration']:.1f}s ({async_res['rate']:.2f} art/s)"
             )
-            print(f"Speedup:     {speedup:.1f}x faster")
-            print(f"Improvement: {rate_improvement:.1f}% better throughput")
+            print("Speedup:     {0}x faster".format(speedup:.1f))
+            print("Improvement: {0}% better throughput".format(rate_improvement:.1f))
             print("=" * 50)
 
 

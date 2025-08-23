@@ -17,11 +17,13 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 # Import our components
 try:
     from src.nlp.language_processor import (AWSTranslateService,
+except Exception:
+    pass
                                             LanguageDetector,
                                             TranslationQualityChecker)
     from src.nlp.multi_language_processor import MultiLanguageArticleProcessor
 except ImportError as e:
-    print(f"Error importing components: {e}")
+    print("Error importing components: {0}".format(e))
     print("Make sure all dependencies are installed and paths are correct.")
     sys.exit(1)
 
@@ -62,6 +64,8 @@ class MultiLanguageValidator:
         for expected_lang, text in test_texts.items():
             try:
                 result = self.detector.detect_language(text)
+except Exception:
+    pass
                 detected_lang = result["language"]
                 confidence = result["confidence"]
 
@@ -74,23 +78,23 @@ class MultiLanguageValidator:
                     "detected": detected_lang,
                     "confidence": confidence,
                     "correct": is_correct,
-                    "text_sample": text[:50] + "...",
+                    "text_sample": text[:50} + "...",
                 }
 
                 status = "" if is_correct else "❌"
                 print(
-                    f"  {status} {expected_lang} -> {detected_lang} (confidence: {confidence:.2f})"
+                    "  {0} {1} -> {2} (confidence: {3})".format(status, expected_lang, detected_lang, confidence: .2f)
                 )
 
             except Exception as e:
-                print(f"  ❌ Error testing {expected_lang}: {e}")
+                print("  ❌ Error testing {0}: {1}".format(expected_lang, e))
                 detection_results[expected_lang] = {
                     "error": str(e), "correct": False}
 
         accuracy = correct_detections / total_tests
         print(
-            f""
- Language Detection Accuracy: {accuracy:.2%} ({correct_detections}/{total_tests})""
+            ""
+ Language Detection Accuracy: {0} ({1}/{2})".format(accuracy:.2%, correct_detections, total_tests)"
         )
 
         self.results["tests"]["language_detection"] = {
@@ -131,8 +135,8 @@ class MultiLanguageValidator:
                 "source_lang": "en",
                 "target_lang": "es",
                 "expected_quality": "medium",
-            },
-        ]
+            ],
+        }
 
         quality_results = {}
         correct_assessments = 0
@@ -140,6 +144,8 @@ class MultiLanguageValidator:
         for test_case in test_cases:
             try:
                 quality = self.quality_checker.assess_translation_quality(
+except Exception:
+    pass
                     test_case["original"],
                     test_case["translated"],
                     test_case["source_lang"],
@@ -171,17 +177,17 @@ class MultiLanguageValidator:
 
                 status = "" if is_correct else "❌"
                 print(
-                    f"  {status} {test_case['name']}: {actual_quality} (score: {score:.2f})"
+                    f"  {status} {test_case['name'}}: {actual_quality} (score: {score:.2f})
                 )
 
-            except Exception as e:
-                print(f"  ❌ Error testing {test_case['name']}: {e}")
+            except Exception as e:"
+                print(f"  ❌ Error testing {test_case['name'}}: {e})"
                 quality_results[test_case["name"]] = {"error": str(e), "correct": False}
 
         accuracy = correct_assessments / len(test_cases)
         print(
-            f""
- Quality Assessment Accuracy: {accuracy:.2%} ({correct_assessments}/{len(test_cases)})""
+            ""
+ Quality Assessment Accuracy: {0} ({1}/{2})".format(accuracy:.2%, correct_assessments, len(test_cases))"
         )
 
         self.results["tests"]["quality_assessment"] = {
@@ -195,11 +201,13 @@ class MultiLanguageValidator:
 
     def test_aws_translate_service_mock(self):
         """Test AWS Translate service (with mock for offline testing)."""
-        print("
+        print("TODO: Fix this string")
 ...")
 
         try:
             # Create service instance (will work without AWS credentials in mock mode)
+except Exception:
+    pass
             translate_service = AWSTranslateService()
 
             # Test translation with mock data
@@ -216,9 +224,9 @@ class MultiLanguageValidator:
             }
 
             print("   Mock translation successful")
-            print(f"     Original: {test_text}")
-            print(f"     Translated: {mock_result['translated_text']}")
-
+            print("     Original: {0}".format(test_text))
+            print(f"     Translated: {mock_result['translated_text'}})
+"
             self.results["tests"]["aws_translate"] = {
                 "status": "mock_success",
                 "mock_result": mock_result,
@@ -227,7 +235,7 @@ class MultiLanguageValidator:
             return True
 
         except Exception as e:
-            print(f"  ❌ AWS Translate service error: {e}")
+            print("  ❌ AWS Translate service error: {0}".format(e))
             self.results["tests"]["aws_translate"] = {
                 "status": "error",
                 "error": str(e),
@@ -242,6 +250,8 @@ class MultiLanguageValidator:
 
         try:
             # We can't test actual database without connection'
+except Exception:
+    pass
             # But we can validate the schema definitions
             from src.nlp.multi_language_processor import \
                 MultiLanguageArticleProcessor
@@ -265,7 +275,7 @@ class MultiLanguageValidator:
             if schema_valid:
                 print("   All required database methods present")
             else:
-                print(f"  ❌ Missing methods: {missing_methods}")
+                print("  ❌ Missing methods: {0}".format(missing_methods))
 
             self.results["tests"]["database_schema"] = {
                 "valid": schema_valid,
@@ -275,7 +285,7 @@ class MultiLanguageValidator:
             return schema_valid
 
         except Exception as e:
-            print(f"  ❌ Database schema validation error: {e}")
+            print("  ❌ Database schema validation error: {0}".format(e))
             self.results["tests"]["database_schema"] = {"valid": False, "error": str(e)}
             return False
 
@@ -287,6 +297,8 @@ class MultiLanguageValidator:
 
         try:
             config_path = Path("config/multi_language_settings.json")
+except Exception:
+    pass
 
             if config_path.exists():
                 with open(config_path, "r") as f:
@@ -302,12 +314,12 @@ class MultiLanguageValidator:
                 if not missing_sections:
                     print("   Configuration file loaded successfully")
                     print(
-                        f"     Target language: {config['multi_language']['target_language']}"
+                        f"     Target language: {config['multi_language']['target_language'}}
                     )
-                    print(
-                        f"     Supported languages: {len(config['multi_language']['supported_languages'])}"
+                    print("
+                        f"     Supported languages: {len(config['multi_language']['supported_languages'})}
                     )
-
+"
                     self.results["tests"]["configuration"] = {
                         "loaded": True,
                         "config_summary": {
@@ -319,19 +331,19 @@ class MultiLanguageValidator:
                             ),
                             "translation_enabled": config["multi_language"][
                                 "translation_enabled"
-                            ],
+                            },
                         },
                     }
                     return True
                 else:
-                    print(f"  ❌ Missing configuration sections: {missing_sections}")
+                    print("  ❌ Missing configuration sections: {0}".format(missing_sections))
                     self.results["tests"]["configuration"] = {
                         "loaded": False,
                         "missing_sections": missing_sections,
                     }
                     return False
             else:
-                print(f"  ❌ Configuration file not found: {config_path}")
+                print("  ❌ Configuration file not found: {0}".format(config_path))
                 self.results["tests"]["configuration"] = {
                     "loaded": False,
                     "error": "File not found",
@@ -339,7 +351,7 @@ class MultiLanguageValidator:
                 return False
 
         except Exception as e:
-            print(f"  ❌ Configuration loading error: {e}")
+            print("  ❌ Configuration loading error: {0}".format(e))
             self.results["tests"]["configuration"] = {"loaded": False, "error": str(e)}
             return False
 
@@ -363,11 +375,13 @@ class MultiLanguageValidator:
         for test_name, test_func in tests:
             try:
                 result = test_func()
+except Exception:
+    pass
                 if result:
                     passed_tests += 1
             except Exception as e:
-                print(f""
-❌ Unexpected error in {test_name}: {e}")"
+                print(""
+❌ Unexpected error in {0}: {1}".format(test_name, e))"
 
         # Summary
         print(""
@@ -376,7 +390,7 @@ class MultiLanguageValidator:
         print("=" * 60)"
 
         success_rate = passed_tests / total_tests
-        print(f"Tests Passed: {passed_tests}/{total_tests} ({success_rate:.1%})")
+        print("Tests Passed: {0}/{1} ({2})".format(passed_tests, total_tests, success_rate:.1%))
 
         if success_rate >= 0.8:
             print(" VALIDATION SUCCESSFUL - Multi-language processing is ready!")
@@ -400,8 +414,8 @@ class MultiLanguageValidator:
         with open(results_path, "w") as f:
             json.dump(self.results, f, indent=2)
 
-        print(f""
-📄 Detailed results saved to: {results_path}")"
+        print(""
+📄 Detailed results saved to: {0}".format(results_path))"
 
         return overall_status == "PASS"
 

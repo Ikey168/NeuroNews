@@ -90,6 +90,7 @@ def test_redis_advanced():
     """Test Redis operations that demonstrate real service benefits."""
     try:
         import json
+
         import redis
 
         r = redis.Redis(
@@ -148,6 +149,7 @@ def test_service_integration():
     """Test integration between services (impossible with mocking)."""
     try:
         import json
+
         import psycopg2
         import redis
 
@@ -209,7 +211,7 @@ def test_service_integration():
             cur.execute(
                 "SELECT data FROM integration_test WHERE id = %s", (record_id,))
             db_data = cur.fetchone()[0]
-            assert db_data["integration"]
+            assert db_data["integration"] is True
 
             # Clean up
             cur.execute("DROP TABLE integration_test")
@@ -261,7 +263,7 @@ def run_comprehensive_tests():
             result = test_func()
             results.append(result)
             if result:
-                logger.info("✅ {0} PASSED".format(test_name))
+                logger.info(" {0} PASSED".format(test_name))
             else:
                 logger.error("❌ {0} FAILED".format(test_name))
         except Exception as e:

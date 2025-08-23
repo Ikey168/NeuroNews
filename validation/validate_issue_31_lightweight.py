@@ -5,7 +5,10 @@ Focuses on core functionality without heavy ML dependencies.
 """
 
 import json
+import os
 import sys
+from datetime import datetime
+from typing import Any, Dict, List
 
 
 def test_file_completeness():
@@ -26,12 +29,12 @@ def test_file_completeness():
             with open(file_path, "r") as f:
                 content = f.read()
                 if len(content) < 100:  # Basic sanity check
-                    missing_files.append(f"{file_path} (too small)")
+                    missing_files.append("{0} (too small)".format(file_path))
         except FileNotFoundError:
             missing_files.append(file_path)
 
     if missing_files:
-        print(f"❌ Missing or incomplete files: {missing_files}")
+        print("❌ Missing or incomplete files: {0}".format(missing_files))
         return False
     else:
         print(" All required files present and substantial")
@@ -51,12 +54,12 @@ def test_configuration():
             "embedding", "clustering", "categories"]
         for section in required_sections:
             if section not in config["event_detection"]:
-                raise ValueError(f"Missing section: {section}")
+                raise ValueError("Missing section: {0}".format(section))
 
         print(" Configuration file valid")
         return True
     except Exception as e:
-        print(f"❌ Configuration error: {e}")
+        print("❌ Configuration error: {0}".format(e))
         return False
 
 
@@ -74,12 +77,12 @@ def test_database_schema():
         ]
         for table in required_tables:
             if table not in schema:
-                raise ValueError(f"Missing table: {table}")
+                raise ValueError("Missing table: {0}".format(table))
 
         print(" Database schema valid")
         return True
     except Exception as e:
-        print(f"❌ Database schema error: {e}")
+        print("❌ Database schema error: {0}".format(e))
         return False
 
 
@@ -96,7 +99,7 @@ def test_api_structure():
 
         for endpoint in required_endpoints:
             if endpoint not in api_content:
-                raise ValueError(f"Missing endpoint: {endpoint}")
+                raise ValueError("Missing endpoint: {0}".format(endpoint))
 
         # Check for required response models
         required_models = [
@@ -107,12 +110,12 @@ def test_api_structure():
 
         for model in required_models:
             if model not in api_content:
-                raise ValueError(f"Missing model: {model}")
+                raise ValueError("Missing model: {0}".format(model))
 
         print(" API structure valid")
         return True
     except Exception as e:
-        print(f"❌ API structure error: {e}")
+        print("❌ API structure error: {0}".format(e))
         return False
 
 
@@ -135,7 +138,7 @@ def test_demo_results():
         )
         return True
     except Exception as e:
-        print(f"❌ Demo results error: {e}")
+        print("❌ Demo results error: {0}".format(e))
         return False
 
 
@@ -155,17 +158,17 @@ def test_performance_metrics():
 
         assert (
             avg_embedding_time < max_embedding_time
-        ), f"Embedding too slow: {avg_embedding_time}s"
+        ), "Embedding too slow: {0}s".format(avg_embedding_time)
         assert (
             clustering_time < max_clustering_time
-        ), f"Clustering too slow: {clustering_time}s"
+        ), "Clustering too slow: {0}s".format(clustering_time)
 
         print(" Performance metrics acceptable:")
-        print(f"    Embedding: {avg_embedding_time:.3f}s per article")
-        print(f"    Clustering: {clustering_time:.3f}s total")
+        print("    Embedding: {0}s per article".format(avg_embedding_time: .3f))
+        print("    Clustering: {0}s total".format(clustering_time: .3f))
         return True
     except Exception as e:
-        print(f"❌ Performance metrics error: {e}")
+        print("❌ Performance metrics error: {0}".format(e))
         return False
 
 
@@ -185,7 +188,8 @@ def test_code_quality():
                 lines = len(f.readlines())
                 total_lines += lines
 
-        print(f" Code quality: {total_lines} total lines across core files")
+        print(" Code quality: {0} total lines across core files".format(
+            total_lines))
 
         # Check for key components in embedder
         with open("/workspaces/NeuroNews/src/nlp/article_embedder.py", "r") as f:
@@ -200,7 +204,8 @@ def test_code_quality():
 
         for feature in embedder_features:
             if feature not in embedder_content:
-                raise ValueError(f"Missing embedder feature: {feature}")
+                raise ValueError(
+                    "Missing embedder feature: {0}".format(feature))
 
         # Check for key components in clusterer
         with open("/workspaces/NeuroNews/src/nlp/event_clusterer.py", "r") as f:
@@ -215,11 +220,12 @@ def test_code_quality():
 
         for feature in clusterer_features:
             if feature not in clusterer_content:
-                raise ValueError(f"Missing clusterer feature: {feature}")
+                raise ValueError(
+                    "Missing clusterer feature: {0}".format(feature))
 
         return True
     except Exception as e:
-        print(f"❌ Code quality error: {e}")
+        print("❌ Code quality error: {0}".format(e))
         return False
 
 
@@ -242,18 +248,18 @@ def main():
     total = len(tests)
 
     for test_name, test_func in tests:
-        print(f""
- Testing {test_name}...")"
+        print(""
+ Testing {0}...".format(test_name))"
         try:
             result=test_func()
             if result:
                 passed += 1
         except Exception as e:
-            print(f"❌ {test_name} failed with exception: {e}")
+            print("❌ {0} failed with exception: {1}".format(test_name, e))
 
     print(""
 " + "=" * 50)
-    print(f" VALIDATION SUMMARY: {passed}/{total} tests passed")"
+    print(" VALIDATION SUMMARY: {0}/{1} tests passed".format(passed, total))"
 
     if passed == total:
         print(" ALL TESTS PASSED - ISSUE #31 IMPLEMENTATION VALIDATED!")
@@ -264,7 +270,7 @@ def main():
         print(" Ready for further testing and deployment")"
         return True
     else:
-        print(f"❌ {total - passed} tests failed - please review issues above")
+        print("❌ {0} tests failed - please review issues above".format(total - passed))
         return False
 
 

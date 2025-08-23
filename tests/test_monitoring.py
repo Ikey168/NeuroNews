@@ -4,21 +4,25 @@ Test suite for monitoring and error handling system.
 Tests CloudWatch logging, DynamoDB failure tracking, SNS alerting, and retry logic.
 """
 
-from src.scraper.sns_alert_manager import Alert, AlertSeverity, AlertType, SNSAlertManager
-from src.scraper.enhanced_retry_manager import (
+from scraper.sns_alert_manager import Alert, AlertSeverity, AlertType, SNSAlertManager
+from scraper.enhanced_retry_manager import (
     EnhancedRetryManager,
     RetryConfig,
+    RetryReason,
 )
-from src.scraper.dynamodb_failure_manager import DynamoDBFailureManager
-from src.scraper.cloudwatch_logger import CloudWatchLogger, ScrapingMetrics, ScrapingStatus
+from scraper.dynamodb_failure_manager import DynamoDBFailureManager, FailedUrl
+from scraper.cloudwatch_logger import CloudWatchLogger, ScrapingMetrics, ScrapingStatus
 import asyncio
 import json
 import sys
+import tempfile
 import time
-from unittest.mock import patch, Mock
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
+import boto3
 import pytest
-from moto import mock_aws
+from moto import mock_cloudwatch, mock_dynamodb, mock_sns
 
 sys.path.append("/workspaces/NeuroNews/src")
 
@@ -26,7 +30,7 @@ sys.path.append("/workspaces/NeuroNews/src")
 class TestCloudWatchLogger:
     """Test CloudWatch logging functionality."""
 
-    @mock_aws
+    @mock_cloudwatch
     def test_cloudwatch_logger_initialization(self):
         """Test CloudWatch logger initializes correctly."""
         logger = CloudWatchLogger(region_name="us-east-1")
@@ -34,6 +38,7 @@ class TestCloudWatchLogger:
         assert logger.region_name == "us-east-1"
 
     @pytest.mark.asyncio
+    @mock_cloudwatch
     async def test_log_scraping_attempt(self):
         """Test logging scraping attempts."""
         logger = CloudWatchLogger(region_name="us-east-1")
@@ -56,6 +61,7 @@ class TestCloudWatchLogger:
             mock_metrics.assert_called_once()
 
     @pytest.mark.asyncio
+    @mock_cloudwatch
     async def test_batch_metrics_sending(self):
         """Test batch metrics functionality."""
         logger = CloudWatchLogger(region_name="us-east-1")
@@ -88,7 +94,7 @@ class TestCloudWatchLogger:
 class TestDynamoDBFailureManager:
     """Test DynamoDB failure management functionality."""
 
-    @mock_aws
+    @mock_dynamodb
     def test_dynamodb_manager_initialization(self):
         """Test DynamoDB manager initializes correctly."""
         manager = DynamoDBFailureManager(
@@ -98,6 +104,7 @@ class TestDynamoDBFailureManager:
         assert manager.region_name == "us-east-1"
 
     @pytest.mark.asyncio
+    @mock_dynamodb
     async def test_record_failure(self):
         """Test recording failure attempts."""
         manager = DynamoDBFailureManager(
@@ -124,6 +131,7 @@ class TestDynamoDBFailureManager:
             mock_put.assert_called_once()
 
     @pytest.mark.asyncio
+    @mock_dynamodb
     async def test_get_urls_ready_for_retry(self):
         """Test getting URLs ready for retry."""
         manager = DynamoDBFailureManager(
@@ -135,14 +143,14 @@ class TestDynamoDBFailureManager:
             "Items": [
                 {
                     "url": {"S": "https://test.com"},
-                    "failure_reason": {"S": "timeout"},
-                    "first_failure_time": {"N": str(time.time() - 3600)},
+                    f"ailure_reason": {"S": "timeout"},
+                    f"irst_failure_time": {"N": str(time.time() - 3600)},
                     "last_failure_time": {"N": str(time.time() - 600)},
                     "retry_count": {"N": "2"},
                     "max_retries": {"N": "5"},
                     "next_retry_time": {"N": str(time.time() - 100)},
                     "is_permanent_failure": {"BOOL": False},
-                }
+                ]
             ]
         }
 
@@ -156,7 +164,7 @@ class TestDynamoDBFailureManager:
 class TestSNSAlertManager:
     """Test SNS alerting functionality."""
 
-    @mock_aws
+    @mock_sns
     def test_sns_manager_initialization(self):
         """Test SNS manager initializes correctly."""
         manager = SNSAlertManager(
@@ -167,61 +175,57 @@ class TestSNSAlertManager:
         assert manager.region_name == "us-east-1"
 
     @pytest.mark.asyncio
+    @mock_sns
     async def test_send_alert(self):
         """Test sending alerts."""
-        # Create manager without AWS initialization issues
-        with patch('boto3.client') as mock_boto_client:
-            mock_sns = Mock()
-            mock_boto_client.return_value = mock_sns
-            mock_sns.publish.return_value = {"MessageId": "test-123"}
-            
-            manager = SNSAlertManager(
-                topic_arn="arn:aws:sns:us-east-1:123456789012:test-topic",
-                region_name="us-east-1",
-            )
+        manager = SNSAlertManager(
+            topic_arn="arn:aws:sns:us-east-1:123456789012:test-topic",
+            region_name="us-east-1",
+        )
 
-            alert = Alert(
-                alert_type=AlertType.SCRAPER_FAILURE,
-                severity=AlertSeverity.ERROR,
-                title="Test Alert",
-                message="This is a test alert",
-                timestamp=time.time(),
-                metadata={"test": True},
-            )
+        alert = Alert(
+            alert_type=AlertType.SCRAPER_FAILURE,
+            severity=AlertSeverity.ERROR,
+            title="Test Alert",
+            message="This is a test alert",
+            timestamp=time.time(),
+            metadata={"test": True},
+        )
+
+        with patch.object(manager.sns, "publish") as mock_publish:
+            mock_publish.return_value = {"MessageId": "test-123"}
 
             result = await manager.send_alert(alert)
-            assert result
-            mock_sns.publish.assert_called_once()
+            assert result is True
+            mock_publish.assert_called_once()
 
     @pytest.mark.asyncio
+    @mock_sns
     async def test_rate_limiting(self):
         """Test alert rate limiting."""
-        # Create manager without AWS initialization issues
-        with patch('boto3.client') as mock_boto_client:
-            mock_sns = Mock()
-            mock_boto_client.return_value = mock_sns
-            mock_sns.publish.return_value = {"MessageId": "test-123"}
-            
-            manager = SNSAlertManager(
-                topic_arn="arn:aws:sns:us-east-1:123456789012:test-topic",
-                region_name="us-east-1",
-                max_alerts_per_window=2,
-            )
+        manager = SNSAlertManager(
+            topic_arn="arn:aws:sns:us-east-1:123456789012:test-topic",
+            region_name="us-east-1",
+            max_alerts_per_window=2,
+        )
 
-            alert = Alert(
-                alert_type=AlertType.SCRAPER_FAILURE,
-                severity=AlertSeverity.INFO,
-                title="Test Alert",
-                message="This is a test alert",
-                timestamp=time.time(),
-                metadata={},
-            )
+        alert = Alert(
+            alert_type=AlertType.SCRAPER_FAILURE,
+            severity=AlertSeverity.INFO,
+            title="Test Alert",
+            message="This is a test alert",
+            timestamp=time.time(),
+            metadata={},
+        )
+
+        with patch.object(manager.sns, "publish") as mock_publish:
+            mock_publish.return_value = {"MessageId": "test-123"}
 
             # First two alerts should go through
             result1 = await manager.send_alert(alert)
             result2 = await manager.send_alert(alert)
-            assert result1
-            assert result2
+            assert result1 is True
+            assert result2 is True
 
             # Third alert should be rate limited
             result3 = await manager.send_alert(alert)
@@ -303,7 +307,7 @@ class TestEnhancedRetryManager:
         manager._record_circuit_breaker_failure(url)
 
         # Circuit breaker should be open
-        assert manager._is_circuit_breaker_open(url)
+        assert manager._is_circuit_breaker_open(url) is True
 
         # Reset circuit breaker
         manager._reset_circuit_breaker(url)
@@ -314,6 +318,9 @@ class TestIntegration:
     """Integration tests for monitoring and error handling system."""
 
     @pytest.mark.asyncio
+    @mock_cloudwatch
+    @mock_dynamodb
+    @mock_sns
     async def test_full_monitoring_workflow(self):
         """Test complete monitoring workflow."""
         # Initialize all components
@@ -370,13 +377,15 @@ class TestMonitoringConfiguration:
         # Check if config file exists and is valid JSON
         try:
             with open(config_path, "r") as f:
+except Exception:
+    pass
                 config = json.load(f)
 
             assert "monitoring" in config
             assert "cloudwatch" in config["monitoring"]
             assert "dynamodb" in config["monitoring"]
             assert "sns" in config["monitoring"]
-            assert config["monitoring"]["enabled"]
+            assert config["monitoring"]["enabled"] is True
 
         except FileNotFoundError:
             pytest.skip("Config file not found")
@@ -393,8 +402,9 @@ if __name__ == "__main__":
         print("Testing monitoring and error handling system...")
 
         # Test CloudWatch logger
-        print("1. Testing CloudWatch Logger...")
-        cloudwatch_logger = CloudWatchLogger(region_name="us-east-1")
+        print(""
+1. Testing CloudWatch Logger...")
+        cloudwatch_logger = CloudWatchLogger(region_name="us-east-1")"
 
         metrics = ScrapingMetrics(
             url="https://test.com",
@@ -406,18 +416,23 @@ if __name__ == "__main__":
 
         try:
             await cloudwatch_logger.log_scraping_attempt(metrics)
+except Exception:
+    pass
             print(" CloudWatch logging test passed")
         except Exception as e:
             print("❌ CloudWatch logging test failed: {0}".format(e))
 
         # Test DynamoDB manager
-        print("2. Testing DynamoDB Failure Manager...")
+        print(""
+2. Testing DynamoDB Failure Manager...")"
         failure_manager = DynamoDBFailureManager(
             table_name="test-failed-urls", region_name="us-east-1"
         )
 
         try:
             failed_url = await failure_manager.record_failure(
+except Exception:
+    pass
                 url="https://test-failure.com",
                 failure_reason="timeout",
                 error_details="Connection timeout after 30s",
@@ -429,9 +444,12 @@ if __name__ == "__main__":
             print("❌ DynamoDB failure recording test failed: {0}".format(e))
 
         # Test SNS alert manager
-        print("3. Testing SNS Alert Manager...")
+        print(""
+3. Testing SNS Alert Manager...")"
         try:
             alert_manager = SNSAlertManager(
+except Exception:
+    pass
                 topic_arn="arn:aws:sns:us-east-1:123456789012:test-topic",
                 region_name="us-east-1",
             )
@@ -445,14 +463,14 @@ if __name__ == "__main__":
                 metadata={"test": True},
             )
 
-            # This would fail without proper AWS credentials, but tests the
-            # code path
+            # This would fail without proper AWS credentials, but tests the code path
             print(" SNS alert manager initialization test passed")
         except Exception as e:
             print("⚠️ SNS alert manager test: {0}".format(e))
 
         # Test retry manager
-        print("4. Testing Enhanced Retry Manager...")
+        print(""
+4. Testing Enhanced Retry Manager...")"
         retry_manager = EnhancedRetryManager()
 
         call_count = 0
@@ -466,6 +484,8 @@ if __name__ == "__main__":
 
         try:
             result = await retry_manager.retry_with_backoff(
+except Exception:
+    pass
                 test_function,
                 url="https://test-retry.com",
                 retry_config=RetryConfig(max_retries=3, base_delay=0.1),
@@ -478,7 +498,8 @@ if __name__ == "__main__":
         except Exception as e:
             print("❌ Retry manager test failed: {0}".format(e))
 
-        print("Manual tests completed!")
+        print(""
+ Manual tests completed!")"
 
     # Run manual tests
     asyncio.run(run_manual_tests())

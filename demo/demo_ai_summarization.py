@@ -24,7 +24,7 @@ import logging
 import os
 import sys
 import time
-from typing import Dict
+from typing import Any, Dict
 
 # Add src directory to path for imports
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
@@ -150,10 +150,10 @@ async def demo_basic_summarization():
         enable_caching=True,
     )
 
-    print(f" Summarizer initialized with device: {summarizer.device})
+    print(" Summarizer initialized with device: {0}".format(summarizer.device))
 
     # Test with first article
-    article = SAMPLE_ARTICLES[0]"
+    article = SAMPLE_ARTICLES[0]
     print(f""
 📰 Processing Article: {article['title'}}")
     print(f" Original length: {len(article['content'})} characters")""
@@ -166,16 +166,16 @@ async def demo_basic_summarization():
     print("-" * 40)"
 
     for length, summary in all_summaries.items():
-        print(f""
-{length.value.upper()} SUMMARY:")
-        print(f"Model: {summary.model.value})"
-        print(f"Text: {summary.text})"
+        print(""
+{0} SUMMARY:".format(length.value.upper()))
+        print("Model: {0}".format(summary.model.value))
+        print("Text: {0}".format(summary.text))
         print(" Metrics:")
-        print(f"  - Words: {summary.word_count})"
-        print(f"  - Sentences: {summary.sentence_count})"
-        print(f"  - Compression: {summary.compression_ratio:.1%})"
-        print(f"  - Confidence: {summary.confidence_score:.2f})"
-        print(f"  - Processing time: {summary.processing_time:.2f}s")""
+        print("  - Words: {0}".format(summary.word_count))
+        print("  - Sentences: {0}".format(summary.sentence_count))
+        print("  - Compression: {0}".format(summary.compression_ratio: .1 % ))
+        print("  - Confidence: {0}".format(summary.confidence_score: .2f))
+        print("  - Processing time: {0}s".format(summary.processing_time: .2f))"
 
     return summarizer, all_summaries
 
@@ -192,13 +192,13 @@ async def demo_model_comparison():
 
     print(f""
 📰 Article: {article['title'}}")
-    print(f" Testing {len(models_to_test)} different models...)
+    print(" Testing {0} different models...".format(len(models_to_test)))
 
     results = {}
 
-    for model in models_to_test:"
-        print(f""
-🔄 Testing model: {model.value}")"
+    for model in models_to_test:
+        print(""
+🔄 Testing model: {0}".format(model.value))"
         try:
             summarizer = AIArticleSummarizer(default_model=model)
 except Exception:
@@ -209,27 +209,27 @@ except Exception:
 
             results[model.value] = summary
             print(
-                f" Success - {summary.word_count} words in {summary.processing_time:.2f}s
+                " Success - {0} words in {1}s".format(summary.word_count, summary.processing_time: .2f)
             )
 
-        except Exception as e:"
-            print(f"❌ Failed: {str(e)})
+        except Exception as e:
+            print("❌ Failed: {0}".format(str(e)))
             continue
 
-    # Compare results"
+    # Compare results
     print(""
  Model Comparison Results:")
     print("-" * 50)"
 
     for model_name, summary in results.items():
-        print(f""
-{model_name}:")
-        print(f"Summary: {summary.text[:100}}...)"
+        print(""
+{0}:".format(model_name))
+        print("Summary: {0}...".format(summary.text[:100]))
         print("Quality metrics:")
-        print(f"  - Words: {summary.word_count})"
-        print(f"  - Compression: {summary.compression_ratio:.1%})"
-        print(f"  - Confidence: {summary.confidence_score:.2f})"
-        print(f"  - Speed: {summary.processing_time:.2f}s")""
+        print("  - Words: {0}".format(summary.word_count))
+        print("  - Compression: {0}".format(summary.compression_ratio: .1 % ))
+        print("  - Confidence: {0}".format(summary.confidence_score: .2f))
+        print("  - Speed: {0}s".format(summary.processing_time: .2f))"
 
     return results
 
@@ -241,8 +241,8 @@ async def demo_batch_processing():
     print("⚡ BATCH PROCESSING DEMO")
     print("=" * 60)"
 
-    print(f""
- Processing {len(SAMPLE_ARTICLES)} articles in batch...")"
+    print(""
+ Processing {0} articles in batch...".format(len(SAMPLE_ARTICLES)))"
 
     summarizer = AIArticleSummarizer()
     start_time = time.time()
@@ -282,20 +282,20 @@ except Exception:
 
     print(""
  Batch Processing Results:")
-    print(f" Successful: {successful}/{len(SAMPLE_ARTICLES)})"
-    print(f"⏱️ Total time: {total_time:.2f}s)"
-    print(f" Average per article: {total_time / len(SAMPLE_ARTICLES):.2f}s")""
+    print(" Successful: {0}/{1}".format(successful, len(SAMPLE_ARTICLES)))
+    print("⏱️ Total time: {0}s".format(total_time: .2f))
+    print(" Average per article: {0}s".format(total_time / len(SAMPLE_ARTICLES): .2f))"
 
     for result in results:
         if result["success"]:
             summary = result["summary"]
             print(f""
 📰 {result['title'][:50}}...")
-            print(f"   Summary: {summary.text[:80}}...)
-            print("
-                f"   Metrics: {summary.word_count} words, {summary.processing_time:.2f}s
+            print("   Summary: {0}...".format(summary.text[:80]))
+            print(
+                "   Metrics: {0} words, {1}s".format(summary.word_count, summary.processing_time: .2f)
             )
-        else:"
+        else:
             print(f""
 ❌ {result['title'][:50}}...")
             print(f"   Error: {result['error'}})
@@ -317,7 +317,7 @@ async def demo_performance_metrics():"
 🔄 Generating performance data...")"
 
     for i, article in enumerate(SAMPLE_ARTICLES):
-        print(f"Processing article {i + 1}/{len(SAMPLE_ARTICLES)}...)"
+        print("Processing article {0}/{1}...".format(i + 1, len(SAMPLE_ARTICLES)))
         await summarizer.summarize_article(article["content"], SummaryLength.MEDIUM)
 
     # Get performance metrics
@@ -338,8 +338,8 @@ async def demo_performance_metrics():"
  Model usage breakdown:")
     for model, count in metrics["metrics"]["model_usage_count"].items():"
         if count > 0:
-            print(f"  - {model.value}: {count} times)
-"
+            print("  - {0}: {1} times".format(model.value, count))
+
     print(""
 ⚙️ Configuration:")
     for length, config in metrics["configs"].items():
@@ -384,8 +384,8 @@ async def save_demo_results(summaries: Dict, results: Dict, metrics: Dict):
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(demo_results, f, indent=2, ensure_ascii=False)
 
-    print(f""
-💾 Demo results saved to: {output_file}")"
+    print(""
+💾 Demo results saved to: {0}".format(output_file))"
     return output_file
 
 
@@ -400,7 +400,7 @@ except Exception:
     pass
         summarizer, basic_summaries = await demo_basic_summarization()
         model_results = await demo_model_comparison()
-        await demo_batch_processing()
+        batch_results = await demo_batch_processing()
         performance_metrics = await demo_performance_metrics()
 
         # Save results
@@ -415,8 +415,8 @@ except Exception:
         print(" Summary:")
         print("  - Models tested: DistilBART, T5")
         print("  - Summary lengths: Short, Medium, Long")
-        print(f"  - Articles processed: {len(SAMPLE_ARTICLES)})"
-        print(f"  - Results saved to: {output_file})"
+        print("  - Articles processed: {0}".format(len(SAMPLE_ARTICLES)))
+        print("  - Results saved to: {0}".format(output_file))
         print("TODO: Fix this string")
  Key Features Demonstrated:")
         print("   Multi-length summary generation")
@@ -433,8 +433,8 @@ except Exception:
         print("  - Implement caching strategies")"
 
     except Exception as e:
-        print(f""
-❌ Demo failed with error: {str(e)}")
+        print(""
+❌ Demo failed with error: {0}".format(str(e)))
         logger.exception("Demo execution failed")"
         return 1
 

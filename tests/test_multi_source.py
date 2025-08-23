@@ -32,7 +32,8 @@ def test_spider_imports():
 
 def test_configuration():
     """Test that configuration is loaded correctly."""
-    print("\nTesting configuration...")
+    print(""
+Testing configuration...")"
 
     try:
         config_path="config/settings.json"
@@ -55,7 +56,8 @@ def test_configuration():
 
 def test_data_validator():
     """Test data validator functionality."""
-    print("\nTesting data validator...")
+    print(""
+Testing data validator...")"
 
     try:
         ScrapedDataValidator()
@@ -68,7 +70,8 @@ def test_data_validator():
 
 def test_pipelines():
     """Test pipeline imports."""
-    print("\nTesting pipeline imports...")
+    print(""
+Testing pipeline imports...")"
 
     try:
         # Import the module directly
@@ -106,7 +109,8 @@ def test_pipelines():
 
 def test_items():
     """Test items structure."""
-    print("\nTesting items structure...")
+    print(""
+Testing items structure...")"
 
     try:
         from src.scraper.items import NewsItem
@@ -128,7 +132,8 @@ def test_items():
 
 def run_all_tests():
     """Run all tests."""
-    print("Running Multi-Source Scraper Tests" + "=" * 50)
+    print(" Running Multi-Source Scraper Tests"
+" + "=" * 50)"
 
     tests=[
         test_configuration,
@@ -151,15 +156,17 @@ def run_all_tests():
             print("❌ Test {0} failed with exception: {1}".format(test.__name__, e))
             failed += 1
 
-    print(f"\n{'=' * 50}")
-    print(" Test Results: {0} passed, {1} failed".format(passed, failed))
+    print(f""
+{'=' * 50}")
+    print(" Test Results: {0} passed, {1} failed".format(passed, failed))"
 
     if failed == 0:
-        print("✅ All tests passed! Multi-source scraper is ready to use.")
-        print("\nNext steps:")
+        print(" All tests passed! Multi-source scraper is ready to use.")
+        print(""
+Next steps:")
         print("1. Run a test scraper: python -m src.scraper.run --spider cnn")
         print("2. Run all sources: python -m src.scraper.run --multi-source")
-        print("3. Generate a report: python -m src.scraper.run --report")
+        print("3. Generate a report: python -m src.scraper.run --report")"
     else:
         print("⚠️  Some tests failed. Please fix the issues before using the scraper.")
 

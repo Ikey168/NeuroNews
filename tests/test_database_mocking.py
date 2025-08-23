@@ -71,9 +71,10 @@ def main():
     if test_import_with_mocking():
         success_count += 1
 
-    print("\n" + "=" * 50)
+    print(""
+" + "=" * 50)"
     print(
-        "📊 VALIDATION SUMMARY: {0}/{1} tests passed".format(success_count, total_tests)
+        " VALIDATION SUMMARY: {0}/{1} tests passed".format(success_count, total_tests)
     )
 
     if success_count == total_tests:

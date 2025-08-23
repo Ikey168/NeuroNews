@@ -1,21 +1,14 @@
 """
 Demo script for Sentiment Analysis Pipeline functionality.
-Showcases sentiment analysis across news articles with various analysis providers.
+Showcases sentiment analysis across news articles with various analysis features.
 """
+
+import asyncio
+import logging
+from typing import Any, Dict, List
 
 from src.nlp.sentiment_analysis import create_analyzer
 from src.nlp.article_processor import ArticleProcessor
-import asyncio
-import json
-import logging
-import os
-import sys
-from datetime import datetime, timezone
-from typing import Any, Dict, List
-
-# Add src to path for imports
-sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
-
 
 # Configure logging
 logging.basicConfig(
@@ -30,7 +23,7 @@ SAMPLE_ARTICLES = [
         "title": "Apple Reports Record-Breaking Q4 Earnings",
         "content": """
         Apple Inc. announced outstanding quarterly results today, exceeding analyst expectations
-        with revenue of $94.8 billion. The company's innovative product lineup, including the'
+        with revenue of $94.8 billion. The company's innovative product lineup, including the
         iPhone 15 and new MacBook Pro models, drove exceptional growth across all segments.
         CEO Tim Cook expressed enthusiasm about the future, highlighting strong customer
         satisfaction and expanding market share. The stock price surged 8% in after-hours
@@ -39,7 +32,7 @@ SAMPLE_ARTICLES = [
         "url": "https://example.com/apple-earnings",
         "source": "TechNews Today",
         "published_at": "2024-10-30T16:0:00Z",
-        "topic": "Technology", '
+        "topic": "Technology",
     },
     {
         "id": "sentiment_market_1",
@@ -55,7 +48,7 @@ SAMPLE_ARTICLES = [
         "url": "https://example.com/market-uncertainty",
         "source": "Financial Times",
         "published_at": "2024-10-30T14:30:00Z",
-        "topic": "Finance","
+        "topic": "Finance",
     },
     {
         "id": "sentiment_health_1",
@@ -64,31 +57,31 @@ SAMPLE_ARTICLES = [
         Researchers at Johns Hopkins University have achieved a remarkable breakthrough in
         cancer treatment, developing a new immunotherapy approach that shows promising results
         in clinical trials. The innovative treatment has demonstrated a 78% success rate in
-        early-stage trials, offering new hope to thousands of patients worldwide. Dr. Sarah
-        Chen, lead researcher, expressed optimism about the potential to revolutionize cancer
-        care. The medical community has responded with excitement and support for this
+        treating advanced-stage patients, offering new hope for those with limited options.
+        Medical experts are calling this development revolutionary and a significant step forward
+        in the fight against cancer. The research team expects to begin Phase III trials next year,
+        bringing hope to millions of patients worldwide who could benefit from this
         groundbreaking advancement.
         """,
         "url": "https://example.com/cancer-breakthrough",
         "source": "Medical Journal Today",
         "published_at": "2024-10-30T12:0:00Z",
-        "topic": "Healthcare","
+        "topic": "Healthcare",
     },
     {
         "id": "sentiment_climate_1",
         "title": "Climate Change Report Reveals Alarming Temperature Trends",
         "content": """
-        A disturbing new climate report published by the IPCC reveals accelerating global
-        temperature increases, with 2024 projected to be the hottest year on record. The
-        data shows concerning trends in ice cap melting, rising sea levels, and extreme
-        weather patterns. Scientists warn that without immediate action, the consequences
+        A comprehensive climate study released today shows that global temperatures have risen
+        by 1.2 degrees Celsius since pre-industrial times, with the past decade marking the
+        warmest period on record. Scientists warn that without immediate action, the impact
         could be catastrophic for future generations. Environmental groups are calling for
         urgent policy changes to address this critical crisis facing humanity.
         """,
         "url": "https://example.com/climate-report",
         "source": "Environmental Science Daily",
         "published_at": "2024-10-30T10:15:00Z",
-        "topic": "Environment","
+        "topic": "Environment",
     },
     {
         "id": "sentiment_neutral_1",
@@ -98,14 +91,14 @@ SAMPLE_ARTICLES = [
         that will upgrade transportation networks across three states. The initiative
         includes road improvements, bridge maintenance, and public transit enhancements.
         The project timeline spans five years with an estimated budget of $2.8 billion.
-        Officials provided detailed specifications and implementation phases during today's'
+        Officials provided detailed specifications and implementation phases during today's
         press conference. Construction is scheduled to begin in the first quarter of 2025.
         """,
         "url": "https://example.com/infrastructure-project",
         "source": "Government News",
         "published_at": "2024-10-30T09:0:00Z",
-        "topic": "Infrastructure","
-    ],
+        "topic": "Infrastructure",
+    }
 ]
 
 
@@ -114,320 +107,185 @@ class SentimentPipelineDemo:
 
     def __init__(self):
         self.analyzer = None
-        self.results = [}
+        self.results = []
 
     async def initialize(self):
         """Initialize the sentiment analyzer."""
-        logger.info(" Initializing Sentiment Analysis Pipeline Demo...")
+        logger.info("[INIT] Initializing Sentiment Analysis Pipeline Demo...")
         logger.info("=" * 60)
 
         try:
             self.analyzer = create_analyzer()
-except Exception:
-    pass
             logger.info(
-                f" Sentiment analyzer initialized with model: {self.analyzer.model_name}
+                f"[OK] Sentiment analyzer initialized with model: {self.analyzer.model_name}"
             )
             return True
-        except Exception as e:"
-            logger.error(f"❌ Failed to initialize sentiment analyzer: {e})
+        except Exception as e:
+            logger.error(f"[ERROR] Failed to initialize sentiment analyzer: {e}")
             return False
 
-    async def analyze_single_article(self, article: Dict[str, Any]) -> Dict[str, Any]:"
+    async def analyze_single_article(self, article: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze sentiment for a single article."""
-        logger.info(f""
-📰 Analyzing: '{article['title'}}'")
-        logger.info(f"📅 Published: {article['published_at'}})"
-        logger.info(f"🏷️  Topic: {article['topic'}})"
-        logger.info(f" Content length: {len(article['content'})} characters)
+        logger.info(f"[News] Analyzing: '{article['title']}'")
+        logger.info(f"[Date] Published: {article['published_at']}")
+        logger.info(f"[Topic] Topic: {article['topic']}")
+        logger.info(f"[Content] Content length: {len(article['content'])} characters")
 
-        # Analyze title sentiment"
+        # Analyze title sentiment
         title_result = self.analyzer.analyze(article["title"])
 
         # Analyze content sentiment
         content_result = self.analyzer.analyze(article["content"])
 
-        # Calculate overall sentiment (weighted average)
-        title_weight = 0.3
-        content_weight = 0.7
-
-        if title_result["label"] == content_result["label"]:
-            overall_label = title_result["label"]
-            overall_score = (
-                title_result["score"] * title_weight
-                + content_result["score"] * content_weight
-            )
-        else:
-            # If different, use content sentiment as primary
-            overall_label = content_result["label"]
-            overall_score = content_result["score"]
-
         result = {
             "article_id": article["id"],
             "title": article["title"],
             "topic": article["topic"],
-            "source": article["source"],
-            "published_at": article["published_at"},
             "title_sentiment": {
-                "label": title_result["label"],
-                "score": round(title_result["score"}, 3),
+                "label": title_result.label,
+                "score": title_result.score,
+                "confidence": title_result.confidence,
             },
             "content_sentiment": {
-                "label": content_result["label"],
-                "score": round(content_result["score"}, 3),
+                "label": content_result.label,
+                "score": content_result.score,
+                "confidence": content_result.confidence,
             },
             "overall_sentiment": {
-                "label": overall_label,
-                "score": round(overall_score, 3),
+                "label": content_result.label,  # Use content as primary
+                "score": content_result.score,
+                "confidence": content_result.confidence,
             },
-            "analysis_timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
-        # Log results
-        logger.info(
-            f" Title Sentiment: {title_result['label'}} ({title_result['score'}:.3f})
-        )
-        logger.info("
-            f"📄 Content Sentiment: {content_result['label'}} ({content_result['score'}:.3f})
-        )"
-        logger.info(f" Overall Sentiment: {overall_label} ({overall_score:.3f}))
+        logger.info(f"[Result] Title: {title_result.label} ({title_result.score:.3f})")
+        logger.info(f"[Result] Content: {content_result.label} ({content_result.score:.3f})")
+        logger.info("-" * 60)
 
         return result
 
-    async def analyze_batch_articles(
-        self, articles: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:"
+    async def analyze_batch_articles(self, articles: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Analyze sentiment for multiple articles."""
-        logger.info(
-            f""
-🔄 Starting batch sentiment analysis for {len(articles)} articles...""
-        )
-
+        logger.info(f"[Batch] Starting batch analysis of {len(articles)} articles...")
+        
         results = []
         for i, article in enumerate(articles, 1):
-            logger.info(f""
---- Article {i}/{len(articles)} ---")"
+            logger.info(f"[Progress] Processing article {i}/{len(articles)}")
             result = await self.analyze_single_article(article)
             results.append(result)
-
+            
+        logger.info(f"[Complete] Batch analysis completed: {len(results)} articles processed")
         return results
 
-    def analyze_sentiment_trends(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
+    async def analyze_sentiment_trends(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Analyze overall sentiment trends across articles."""
-        logger.info(f""
- Analyzing Sentiment Trends Across {len(results)} Articles")
-        logger.info("=" * 60)"
+        logger.info("[Trends] Analyzing sentiment trends across articles...")
+        
+        if not results:
+            return {"error": "No results to analyze"}
 
-        # Count sentiments by label
-        sentiment_counts = {"POSITIVE": 0, "NEGATIVE": 0, "NEUTRAL": 0}
-        topic_sentiments = {}
-        source_sentiments = {}
-
+        # Count sentiment labels
+        sentiment_counts = {"positive": 0, "negative": 0, "neutral": 0}
         total_score = 0
+        topic_sentiments = {}
+
         for result in results:
-            overall = result["overall_sentiment"]
-            sentiment_counts[overall["label"]] += 1
-            total_score += overall["score"]
-
-            # Track by topic
+            label = result["overall_sentiment"]["label"]
+            score = result["overall_sentiment"]["score"]
             topic = result["topic"]
+
+            sentiment_counts[label] += 1
+            total_score += score
+
             if topic not in topic_sentiments:
-                topic_sentiments[topic] = {
-                    "POSITIVE": 0,
-                    "NEGATIVE": 0,
-                    "NEUTRAL": 0,
-                    "scores": [},
-                }
-            topic_sentiments[topic][overall["label"]] += 1
-            topic_sentiments[topic]["scores"].append(overall["score"])
+                topic_sentiments[topic] = {"scores": [], "labels": []}
+            
+            topic_sentiments[topic]["scores"].append(score)
+            topic_sentiments[topic]["labels"].append(label)
 
-            # Track by source
-            source = result["source"]
-            if source not in source_sentiments:
-                source_sentiments[source] = {"POSITIVE": 0, "NEGATIVE": 0, "NEUTRAL": 0}
-            source_sentiments[source][overall["label"]] += 1
-
-        # Calculate percentages
+        # Calculate statistics
         total_articles = len(results)
-        sentiment_percentages = {
-            label: (count / total_articles) * 100
-            for label, count in sentiment_counts.items()
-        }
+        avg_score = total_score / total_articles if total_articles > 0 else 0
+        
+        # Determine overall trend
+        if sentiment_counts["positive"] > sentiment_counts["negative"]:
+            overall_trend = "positive"
+        elif sentiment_counts["negative"] > sentiment_counts["positive"]:
+            overall_trend = "negative"
+        else:
+            overall_trend = "neutral"
 
-        # Log overall trends
-        logger.info("Overall Sentiment Distribution:")
-        for label, count in sentiment_counts.items():
-            percentage = sentiment_percentages[label]
-            logger.info(f"  {label}: {count} articles ({percentage:.1f}%))
-"
-        logger.info(f""
-Average Sentiment Score: {total_score / total_articles:.3f}")"
-
-        # Log topic-based trends
-        logger.info(""
-Sentiment by Topic:")"
-        for topic, sentiments in topic_sentiments.items():
-            total_topic = sum(
-                sentiments[label] for label in ["POSITIVE", "NEGATIVE", "NEUTRAL"]
-            )
-            avg_score = sum(sentiments["scores"]) / len(sentiments["scores"])
-            dominant = max(
-                sentiments, key=lambda x: sentiments[x] if x != "scores" else 0
-            )
-            logger.info(
-                f"  📂 {topic}: {dominant} dominant (avg score: {avg_score:.3f})
-            )
-
-        # Log source-based trends"
-        logger.info(""
-Sentiment by Source:")"
-        for source, sentiments in source_sentiments.items():
-            dominant = max(sentiments, key=sentiments.get)
-            logger.info(f"  📰 {source}: {dominant} dominant)
-
-        return {"
+        trend_analysis = {
             "total_articles": total_articles,
+            "overall_trend": overall_trend,
+            "average_score": avg_score,
             "sentiment_distribution": sentiment_counts,
-            "sentiment_percentages": sentiment_percentages,
-            "average_score": total_score / total_articles,
-            "topic_analysis": topic_sentiments,
-            "source_analysis": source_sentiments,
+            "topic_breakdown": {}
         }
 
+        # Analyze by topic
+        for topic, data in topic_sentiments.items():
+            topic_avg = sum(data["scores"]) / len(data["scores"])
+            topic_sentiment_counts = {"positive": 0, "negative": 0, "neutral": 0}
+            for label in data["labels"]:
+                topic_sentiment_counts[label] += 1
+            
+            trend_analysis["topic_breakdown"][topic] = {
+                "average_score": topic_avg,
+                "article_count": len(data["scores"]),
+                "sentiment_distribution": topic_sentiment_counts
+            }
 
-    def save_results(self, results: List[Dict[str, Any]], trends: Dict[str, Any]):
-        """Save analysis results to JSON file."""
-        output_data = {
-            "analysis_metadata": {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "analyzer_model": self.analyzer.model_name,
-                "total_articles_analyzed": len(results),
-            },
-            "article_results": results,
-            "trend_analysis": trends,
+        logger.info(f"[Trends] Overall trend: {overall_trend} (avg score: {avg_score:.3f})")
+        logger.info(f"[Trends] Distribution: {sentiment_counts}")
+        
+        return trend_analysis
+
+    async def run_full_demo(self):
+        """Run the complete sentiment analysis demonstration."""
+        logger.info("[DEMO] Starting Sentiment Analysis Pipeline Demo")
+        logger.info("=" * 80)
+
+        # Initialize
+        if not await self.initialize():
+            logger.error("[DEMO] Failed to initialize. Exiting.")
+            return
+
+        # Analyze all sample articles
+        results = await self.analyze_batch_articles(SAMPLE_ARTICLES)
+        self.results = results
+
+        # Analyze trends
+        trends = await self.analyze_sentiment_trends(results)
+
+        # Summary
+        logger.info("\n" + "=" * 80)
+        logger.info("[SUMMARY] Sentiment Analysis Demo Complete")
+        logger.info("=" * 80)
+        logger.info(f"Articles Processed: {len(results)}")
+        logger.info(f"Overall Sentiment: {trends['overall_trend']}")
+        logger.info(f"Average Score: {trends['average_score']:.3f}")
+        logger.info(f"Distribution: {trends['sentiment_distribution']}")
+        
+        for topic, data in trends["topic_breakdown"].items():
+            logger.info(f"{topic}: {data['article_count']} articles, avg: {data['average_score']:.3f}")
+
+        return {
+            "results": results,
+            "trends": trends,
+            "summary": {
+                "total_processed": len(results),
+                "overall_sentiment": trends["overall_trend"],
+                "average_score": trends["average_score"]
+            }
         }
-
-        output_file = "sentiment_analysis_results.json"
-        with open(output_file, "w") as f:
-            json.dump(output_data, f, indent=2)
-
-        logger.info(f"💾 Results saved to {output_file})
-        return output_file
-
-
-    async def demonstrate_real_time_analysis(self):"
-        """Demonstrate real-time sentiment analysis."""
-        logger.info(""
-⚡ Real-time Sentiment Analysis Demo")
-        logger.info("=" * 50)"
-
-        sample_texts = [
-            "This is absolutely fantastic news! Great job everyone!",
-            "I'm really concerned about these troubling developments.",
-            "The quarterly report shows standard performance metrics.",
-            "Breakthrough technology will revolutionize the industry!",
-            "Market volatility creates uncertainty for investors.",'
-        ]
-
-        for i, text in enumerate(sample_texts, 1):
-            result = self.analyzer.analyze(text)
-            logger.info(f"{i}. Text: '{text}')
-            logger.info("
-                f"   Sentiment: {result['label'}} (confidence: {result['score'}:.3f})
-            )
-
-
-    def generate_summary_report(
-        self, results: List[Dict[str, Any]], trends: Dict[str, Any]
-    ):"
-        """Generate a comprehensive summary report."""
-        logger.info(""
- SENTIMENT ANALYSIS PIPELINE SUMMARY REPORT")
-        logger.info("=" * 70)
-
-        logger.info(" Analysis Overview:")
-        logger.info(f"   • Total articles processed: {trends['total_articles'}})"
-        logger.info(f"   • Analysis model: {self.analyzer.model_name})"
-        logger.info(f"   • Average sentiment score: {trends['average_score'}:.3f}")""
-
-        logger.info(""
- Key Findings:")"
-
-        # Most positive article
-        most_positive = max(
-            results,
-            key=lambda x: (
-                x["overall_sentiment"]["score"]
-                if x["overall_sentiment"]["label"] == "POSITIVE"
-                else 0
-            ),
-        )
-        logger.info(f"    Most Positive: '{most_positive['title'}}')"
-        logger.info(f"      Score: {most_positive['overall_sentiment']['score'}:.3f})
-
-        # Most negative article
-        most_negative = max(
-            results,
-            key=lambda x: ("
-                x["overall_sentiment"]["score"]
-                if x["overall_sentiment"]["label"] == "NEGATIVE"
-                else 0
-            ),
-        )
-        logger.info(f"   📉 Most Negative: '{most_negative['title'}}')"
-        logger.info(f"      Score: {most_negative['overall_sentiment']['score'}:.3f})
-
-        # Sentiment distribution"
-        dist = trends["sentiment_percentages"]
-        logger.info("
- Sentiment Distribution:")
-        logger.info(f"   🟢 Positive: {dist['POSITIVE'}:.1f}%)"
-        logger.info(f"   🔴 Negative: {dist['NEGATIVE'}:.1f}%)"
-        logger.info(f"   ⚪ Neutral: {dist['NEUTRAL'}:.1f}%)
-"
-        logger.info(""
- Analysis completed successfully!")"
 
 
 async def main():
-    """Main demo execution."""
+    """Main demo execution function."""
     demo = SentimentPipelineDemo()
+    await demo.run_full_demo()
 
-    try:
-        # Initialize
-except Exception:
-    pass
-        if not await demo.initialize():
-            return
 
-        logger.info(f"📰 Loaded {len(SAMPLE_ARTICLES)} sample articles for analysis)
-
-        # Analyze articles
-        results = await demo.analyze_batch_articles(SAMPLE_ARTICLES)
-
-        # Analyze trends
-        trends = demo.analyze_sentiment_trends(results)
-
-        # Real-time demo
-        await demo.demonstrate_real_time_analysis()
-
-        # Generate summary
-        demo.generate_summary_report(results, trends)
-
-        # Save results
-        output_file = demo.save_results(results, trends)
-"
-        logger.info(""
- Sentiment Analysis Pipeline Demo Completed Successfully!")
-        logger.info(f"📄 Detailed results available in: {output_file}")""
-
-    except Exception as e:
-        logger.error(f"❌ Demo failed: {e})
-        return 1
-
-    return 0
-
-"
 if __name__ == "__main__":
-    exit_code = asyncio.run(main())
-    sys.exit(exit_code)
+    asyncio.run(main())

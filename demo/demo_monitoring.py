@@ -50,8 +50,6 @@ class MonitoringDemo:
 
         try:
             # CloudWatch Logger
-except Exception:
-    pass
             self.cloudwatch_logger = CloudWatchLogger(
                 region_name=self.aws_region, namespace=self.cloudwatch_namespace
             )
@@ -86,10 +84,10 @@ except Exception:
             logger.info(" Enhanced retry manager initialized")
 
         except Exception as e:
-            logger.error(f"❌ Error initializing monitoring: {e})
+            logger.error("❌ Error initializing monitoring: {0}".format(e))
             raise
 
-    async def demo_successful_scraping(self):"
+    async def demo_successful_scraping(self):
         """Demonstrate successful scraping with monitoring."""
         logger.info(""
  Demo: Successful Scraping Monitoring")"
@@ -110,9 +108,8 @@ except Exception:
         if self.cloudwatch_logger:
             await self.cloudwatch_logger.log_scraping_attempt(metrics)
             logger.info(
-                f" Logged successful scraping: {
-    metrics.articles_scraped} articles in {"
-        metrics.duration_ms}ms"
+                " Logged successful scraping: {0} articles in {1}ms".format(
+                    metrics.articles_scraped, metrics.duration_ms)
             )
 
 
@@ -133,7 +130,8 @@ except Exception:
                 response_code=408,
             )
             logger.info(
-                f" Recorded failure: {failed_url.url} (attempt {failed_url.retry_count})
+                " Recorded failure: {0} (attempt {1})".format(
+                    failed_url.url, failed_url.retry_count)
             )
 
         # Log failure metrics
@@ -144,7 +142,7 @@ except Exception:
                 timestamp=time.time(),
                 duration_ms=30000,
                 articles_scraped=0,
-                retry_count=1,"
+                retry_count=1,
                 error_message="Connection timeout",
                 response_code=408,
             )
@@ -179,26 +177,24 @@ except Exception:
             attempt_count += 1
 
             if attempt_count < 3:
-                logger.info(f"Attempt {attempt_count}: Simulating failure...)"
-                raise Exception(f"Simulated failure {attempt_count})
-"
-            logger.info(f"Attempt {attempt_count}: Success!)"
+                logger.info("Attempt {0}: Simulating failure...".format(attempt_count))
+                raise Exception("Simulated failure {0}".format(attempt_count))
+
+            logger.info("Attempt {0}: Success!".format(attempt_count))
             return {"articles": 15, "status": "success"}
 
         try:
             result=await self.retry_manager.retry_with_backoff(
-except Exception:
-    pass
                 simulated_scraping,
                 url="https://retry-demo.example.com",
                 context={"proxy_used": "proxy3.example.com:8080"},
             )
-            logger.info(f" Retry logic successful: {result})
-        except Exception as e:"
-            logger.error(f"❌ Retry logic failed: {e})
+            logger.info(" Retry logic successful: {0}".format(result))
+        except Exception as e:
+            logger.error("❌ Retry logic failed: {0}".format(e))
 
 
-    async def demo_monitoring_analytics(self):"
+    async def demo_monitoring_analytics(self):
         """Demonstrate monitoring analytics and statistics."""
         logger.info(""
  Demo: Monitoring Analytics")"
@@ -207,40 +203,40 @@ except Exception:
             # Get failure statistics
             stats=await self.failure_manager.get_failure_statistics(hours=24)
             logger.info(" Failure Statistics (24h):")
-            logger.info(f"   Total failures: {stats.get('total_failures', 0)})"
-            logger.info(f"   Permanent failures: {stats.get('permanent_failures', 0)})"
-            logger.info(f"   Pending retries: {stats.get('pending_retries', 0)})
-"
-            failure_reasons=stats.get(f"ailure_reasons, {})
-            if failure_reasons:"
+            logger.info(f"   Total failures: {stats.get('total_failures', 0)}")
+            logger.info(f"   Permanent failures: {stats.get('permanent_failures', 0)}")
+            logger.info(f"   Pending retries: {stats.get('pending_retries', 0)}")
+
+            failure_reasons=stats.get(f"ailure_reasons", {})
+            if failure_reasons:
                 logger.info("   Failure reasons:")
                 for reason, count in failure_reasons.items():
-                    logger.info(f"     {reason}: {count})
+                    logger.info("     {0}: {1}".format(reason, count))
 
         if self.cloudwatch_logger:
             # Get success rate
-            success_rate=await self.cloudwatch_logger.get_success_rate(hours=24)"
-            logger.info(f" Success Rate (24h): {success_rate:.1f}%)
+            success_rate=await self.cloudwatch_logger.get_success_rate(hours=24)
+            logger.info(" Success Rate (24h): {0}%".format(success_rate: .1f))
 
             # Get failure count
-            failure_count=await self.cloudwatch_logger.get_failure_count(hours=1)"
-            logger.info(f"❌ Recent Failures (1h): {failure_count})
+            failure_count=await self.cloudwatch_logger.get_failure_count(hours=1)
+            logger.info("❌ Recent Failures (1h): {0}".format(failure_count))
 
         if self.retry_manager:
             # Get retry statistics
-            retry_stats=await self.retry_manager.get_retry_statistics()"
-            logger.info(f"🔄 Active Retries: {retry_stats.get('active_retries', 0)})
-"
+            retry_stats=await self.retry_manager.get_retry_statistics()
+            logger.info(f"🔄 Active Retries: {retry_stats.get('active_retries', 0)}")
+
             circuit_breakers=retry_stats.get("circuit_breakers", {})
             if circuit_breakers:
                 logger.info("🔌 Circuit Breaker Status:")
                 for domain, status in circuit_breakers.items():
                     logger.info(
-                        f"   {domain}: {status['state'}} (failures: {status[f'ailure_count'}})
+                        f"   {domain}: {status['state']} (failures: {status[f'ailure_count']})"
                     )
 
 
-    async def demo_alerting_scenarios(self):"
+    async def demo_alerting_scenarios(self):
         """Demonstrate various alerting scenarios."""
         logger.info(""
 🚨 Demo: Alerting Scenarios")"
@@ -294,25 +290,23 @@ except Exception:
                     "title": ".titlelink",
                     "url": ".titlelink",
                     "content": ".comment",
-                ],
+                },
                 link_patterns=["https://news.ycombinator.com/item*"],
                 rate_limit=1.0,
             )
-        }
+        ]
 
         try:
             await scraper.start()
-except Exception:
-    pass
             logger.info(" Scraper with monitoring started successfully")
 
             # The scraper will automatically use monitoring for all operations
             logger.info("🔄 Scraper is ready with full monitoring capabilities")
 
         except Exception as e:
-            logger.error(f"❌ Error starting scraper: {e})
+            logger.error("❌ Error starting scraper: {0}".format(e))
         finally:
-            await scraper.close()"
+            await scraper.close()
             logger.info(" Scraper closed")
 
 
@@ -323,8 +317,6 @@ except Exception:
 
         try:
             # Initialize monitoring
-except Exception:
-    pass
             await self.initialize_monitoring()
 
             # Run all demo scenarios
@@ -350,11 +342,11 @@ except Exception:
             logger.info("=" * 60)"
 
         except Exception as e:
-            logger.error(f"❌ Demo failed: {e})
+            logger.error("❌ Demo failed: {0}".format(e))
             raise
 
 
-    async def cleanup(self):"
+    async def cleanup(self):
         """Clean up demo resources."""
         logger.info("🧹 Cleaning up demo resources...")
 
@@ -376,11 +368,11 @@ async def main():
     try:
         await demo.run_complete_demo()
     except Exception as e:
-        logger.error(f"Demo error: {e})
+        logger.error("Demo error: {0}".format(e))
     finally:
         await demo.cleanup()
 
-"
+
 if __name__ == "__main__":
     """Run the monitoring system demo."""
     print(" NeuroNews Monitoring & Error Handling System Demo")
