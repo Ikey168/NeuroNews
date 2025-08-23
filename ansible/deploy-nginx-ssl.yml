@@ -1,0 +1,147 @@
+---
+- name: Deploy NGINX with SSL/TLS and Let's Encrypt
+  hosts: localhost
+  gather_facts: false
+  vars:
+    kubeconfig_path: "~/.kube/config"
+    namespace: "neuronews"
+    
+  tasks:
+    - name: Ensure cert-manager namespace exists
+      kubernetes.core.k8s:
+        name: cert-manager
+        api_version: v1
+        kind: Namespace
+        state: present
+        kubeconfig: "{{ kubeconfig_path }}"
+
+    - name: Install cert-manager CRDs
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: apiextensions.k8s.io/v1
+          kind: CustomResourceDefinition
+          metadata:
+            name: certificates.cert-manager.io
+        kubeconfig: "{{ kubeconfig_path }}"
+      ignore_errors: true
+
+    - name: Apply cert-manager
+      kubernetes.core.k8s:
+        state: present
+        src: https://github.com/cert-manager/cert-manager/releases/download/v1.13.2/cert-manager.yaml
+        kubeconfig: "{{ kubeconfig_path }}"
+        wait: true
+        wait_timeout: 300
+
+    - name: Wait for cert-manager to be ready
+      kubernetes.core.k8s_info:
+        api_version: apps/v1
+        kind: Deployment
+        name: cert-manager
+        namespace: cert-manager
+        kubeconfig: "{{ kubeconfig_path }}"
+        wait_condition:
+          type: Available
+          status: "True"
+        wait_timeout: 300
+
+    - name: Ensure NeuroNews namespace exists
+      kubernetes.core.k8s:
+        name: "{{ namespace }}"
+        api_version: v1
+        kind: Namespace
+        state: present
+        kubeconfig: "{{ kubeconfig_path }}"
+
+    - name: Apply SSL certificates configuration
+      kubernetes.core.k8s:
+        state: present
+        src: k8s/nginx/ssl-certificates.yaml
+        namespace: "{{ namespace }}"
+        kubeconfig: "{{ kubeconfig_path }}"
+
+    - name: Apply SSL ConfigMap
+      kubernetes.core.k8s:
+        state: present
+        src: k8s/nginx/ssl-configmap.yaml
+        namespace: "{{ namespace }}"
+        kubeconfig: "{{ kubeconfig_path }}"
+
+    - name: Apply SSL NGINX deployment
+      kubernetes.core.k8s:
+        state: present
+        src: k8s/nginx/ssl-deployment.yaml
+        namespace: "{{ namespace }}"
+        kubeconfig: "{{ kubeconfig_path }}"
+
+    - name: Apply SSL NGINX service
+      kubernetes.core.k8s:
+        state: present
+        src: k8s/nginx/ssl-service.yaml
+        namespace: "{{ namespace }}"
+        kubeconfig: "{{ kubeconfig_path }}"
+
+    - name: Wait for SSL deployment to be ready
+      kubernetes.core.k8s_info:
+        api_version: apps/v1
+        kind: Deployment
+        name: nginx-ssl-proxy
+        namespace: "{{ namespace }}"
+        kubeconfig: "{{ kubeconfig_path }}"
+        wait_condition:
+          type: Available
+          status: "True"
+        wait_timeout: 300
+
+    - name: Get LoadBalancer external IP
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Service
+        name: nginx-ssl-service
+        namespace: "{{ namespace }}"
+        kubeconfig: "{{ kubeconfig_path }}"
+      register: ssl_service_info
+
+    - name: Display SSL service information
+      debug:
+        msg: |
+          SSL NGINX service deployed successfully!
+          Service Name: nginx-ssl-service
+          Namespace: {{ namespace }}
+          External IP: {{ ssl_service_info.resources[0].status.loadBalancer.ingress[0].ip | default('Pending...') }}
+          HTTPS Port: 443
+          HTTP Port: 80 (redirects to HTTPS)
+          
+          Certificate Management:
+          - Let's Encrypt certificates will be automatically issued
+          - Check certificate status: kubectl get certificates -n {{ namespace }}
+          - View certificate details: kubectl describe certificate neuronews-tls -n {{ namespace }}
+          
+          DNS Configuration Required:
+          - Point api.neuronews.com to {{ ssl_service_info.resources[0].status.loadBalancer.ingress[0].ip | default('EXTERNAL_IP') }}
+          - Point neuronews.com to {{ ssl_service_info.resources[0].status.loadBalancer.ingress[0].ip | default('EXTERNAL_IP') }}
+          - Point www.neuronews.com to {{ ssl_service_info.resources[0].status.loadBalancer.ingress[0].ip | default('EXTERNAL_IP') }}
+
+    - name: Verify SSL certificate status
+      kubernetes.core.k8s_info:
+        api_version: cert-manager.io/v1
+        kind: Certificate
+        name: neuronews-tls
+        namespace: "{{ namespace }}"
+        kubeconfig: "{{ kubeconfig_path }}"
+      register: cert_status
+
+    - name: Display certificate status
+      debug:
+        msg: |
+          Certificate Status:
+          Name: neuronews-tls
+          Ready: {{ cert_status.resources[0].status.conditions[-1].status | default('Unknown') }}
+          Reason: {{ cert_status.resources[0].status.conditions[-1].reason | default('N/A') }}
+          
+          If certificate is not ready, check:
+          1. DNS records are properly configured
+          2. Domain points to LoadBalancer IP
+          3. cert-manager logs: kubectl logs -n cert-manager deployment/cert-manager
+          4. Certificate events: kubectl describe certificate neuronews-tls -n {{ namespace }}
