@@ -1,3 +1,5 @@
+
+![Airflow DAG Check](https://github.com/Ikey168/NeuroNews/actions/workflows/airflow-dag-check.yml/badge.svg)
 # NeuroNews – AI-Powered News Intelligence Pipeline
 
 📡 **Real-Time ETL Pipeline for Politics & Technology News** | 🚀 **AI-Driven Insights** | 📊 **Sentiment & Trend Analysis**
