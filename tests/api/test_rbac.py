@@ -86,7 +86,7 @@ def test_db(monkeypatch):
         return []
 
     monkeypatch.setattr(
-        "src.database.redshift_loader.RedshiftLoader.execute_query", mock_execute_query
+        "src.database.snowflake_connector.SnowflakeAnalyticsConnector.execute_query", mock_execute_query
     )
     return articles
 

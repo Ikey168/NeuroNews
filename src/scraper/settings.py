@@ -74,12 +74,13 @@ BLOCKED_LANGUAGES = (
 )
 REQUIRE_TRANSLATION = os.environ.get("REQUIRE_TRANSLATION", "false").lower() == "true"
 
-# Redshift settings for multi-language processing
-REDSHIFT_HOST = os.environ.get("REDSHIFT_HOST", "")
-REDSHIFT_PORT = int(os.environ.get("REDSHIFT_PORT", "5439"))
-REDSHIFT_DATABASE = os.environ.get("REDSHIFT_DATABASE", "")
-REDSHIFT_USER = os.environ.get("REDSHIFT_USER", "")
-REDSHIFT_PASSWORD = os.environ.get("REDSHIFT_PASSWORD", "")
+# Snowflake settings for analytics and data processing
+SNOWFLAKE_ACCOUNT = os.environ.get("SNOWFLAKE_ACCOUNT", "")
+SNOWFLAKE_USER = os.environ.get("SNOWFLAKE_USER", "")
+SNOWFLAKE_PASSWORD = os.environ.get("SNOWFLAKE_PASSWORD", "")
+SNOWFLAKE_WAREHOUSE = os.environ.get("SNOWFLAKE_WAREHOUSE", "ANALYTICS_WH")
+SNOWFLAKE_DATABASE = os.environ.get("SNOWFLAKE_DATABASE", "NEURONEWS")
+SNOWFLAKE_SCHEMA = os.environ.get("SNOWFLAKE_SCHEMA", "PUBLIC")
 
 # CloudWatch logging settings (disabled by default, enabled with
 # --cloudwatch flag)

@@ -1,7 +1,7 @@
 """
 Database integration for keyword extraction and topic modeling (Issue #29).
 
-This module handles storing extracted keywords and topics in AWS Redshift
+This module handles storing extracted keywords and topics in Snowflake
 and provides querying capabilities for topic-based search functionality.
 """
 
@@ -10,7 +10,7 @@ import logging
 import os
 from typing import Any, Dict, List, Optional
 
-from src.database.redshift_loader import RedshiftLoader
+from src.database.snowflake_connector import SnowflakeAnalyticsConnector
 from src.nlp.keyword_topic_extractor import ExtractionResult
 
 logger = logging.getLogger(__name__)
@@ -19,9 +19,9 @@ logger = logging.getLogger(__name__)
 class KeywordTopicDatabase:
     """Database operations for keyword and topic data."""
 
-    def __init__(self, redshift_loader: Optional[RedshiftLoader] = None):
-        """Initialize with Redshift connection."""
-        self.db = redshift_loader
+    def __init__(self, snowflake_connector: Optional[SnowflakeAnalyticsConnector] = None):
+        """Initialize with Snowflake connection."""
+        self.db = snowflake_connector
 
     async def store_extraction_results(
         self, results: List[ExtractionResult]
@@ -409,22 +409,24 @@ class KeywordTopicDatabase:
 
 
 async def create_keyword_topic_db(
-    redshift_config: Optional[Dict[str, str]] = None,
+    snowflake_config: Optional[Dict[str, str]] = None,
 ) -> KeywordTopicDatabase:
     """Factory function to create keyword topic database connection."""
-    if not redshift_config:
-        redshift_config = {
-            "host": os.getenv("REDSHIFT_HOST"),
-            "database": os.getenv("REDSHIFT_DB", "dev"),
-            "user": os.getenv("REDSHIFT_USER", "admin"),
-            "password": os.getenv("REDSHIFT_PASSWORD"),
+    if not snowflake_config:
+        snowflake_config = {
+            "account": os.getenv("SNOWFLAKE_ACCOUNT"),
+            "user": os.getenv("SNOWFLAKE_USER", "admin"),
+            "password": os.getenv("SNOWFLAKE_PASSWORD"),
+            "warehouse": os.getenv("SNOWFLAKE_WAREHOUSE", "ANALYTICS_WH"),
+            "database": os.getenv("SNOWFLAKE_DATABASE", "NEURONEWS"),
+            "schema": os.getenv("SNOWFLAKE_SCHEMA", "PUBLIC"),
         }
 
     # Validate required config
-    if not redshift_config.get("host"):
-        raise ValueError("REDSHIFT_HOST is required")
+    if not snowflake_config.get("account"):
+        raise ValueError("SNOWFLAKE_ACCOUNT is required")
 
-    db = RedshiftLoader(**redshift_config)
+    db = SnowflakeAnalyticsConnector(**snowflake_config)
     await db.connect()
 
     return KeywordTopicDatabase(db)

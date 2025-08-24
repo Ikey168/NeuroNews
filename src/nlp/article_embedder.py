@@ -719,16 +719,17 @@ class ArticleEmbedder:
 
 
 # Helper functions for configuration
-def get_redshift_connection_params() -> Dict[str, str]:
-    """Get Redshift connection parameters from environment variables."""
+def get_snowflake_connection_params() -> Dict[str, str]:
+    """Get Snowflake connection parameters from environment variables."""
     import os
 
     return {
-        "host": os.getenv("REDSHIFT_HOST", "localhost"),
-        "port": int(os.getenv("REDSHIFT_PORT", 5432)),
-        "database": os.getenv("REDSHIFT_DATABASE", "neuronews"),
-        "user": os.getenv("REDSHIFT_USER", "admin"),
-        "password": os.getenv("REDSHIFT_PASSWORD", "password"),
+        "account": os.getenv("SNOWFLAKE_ACCOUNT", "test-account"),
+        "user": os.getenv("SNOWFLAKE_USER", "admin"),
+        "password": os.getenv("SNOWFLAKE_PASSWORD", "password"),
+        "warehouse": os.getenv("SNOWFLAKE_WAREHOUSE", "ANALYTICS_WH"),
+        "database": os.getenv("SNOWFLAKE_DATABASE", "NEURONEWS"),
+        "schema": os.getenv("SNOWFLAKE_SCHEMA", "PUBLIC"),
     }
 
 

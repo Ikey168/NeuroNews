@@ -387,11 +387,11 @@ class TestNERArticleProcessor(unittest.TestCase):
 
         # Test configuration
         self.config = {
-            "redshift_host": "test-host",
+            "snowflake_account": "test-host",
             "redshift_port": 5439,
             "redshift_database": "test-db",
-            "redshift_user": "test-user",
-            "redshift_password": "test-password",
+            "snowflake_user": "test-user",
+            "snowflake_password": "test-password",
             "sentiment_provider": None,  # Use None to get default model
             "ner_enabled": True,
         }
@@ -674,11 +674,11 @@ class TestNERIntegration(unittest.TestCase):
         # Process with NER
         with patch("src.nlp.sentiment_analysis.create_analyzer"):
             processor = NERArticleProcessor(
-                redshift_host="test-host",
+                snowflake_account="test-host",
                 redshift_port=5439,
                 redshift_database="test-db",
-                redshift_user="test-user",
-                redshift_password="test-password",
+                snowflake_user="test-user",
+                snowflake_password="test-password",
                 sentiment_provider=None,  # Use None to get default model
                 ner_enabled=True,
             )

@@ -8,37 +8,38 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from src.database.redshift_loader import RedshiftLoader
+from src.database.snowflake_analytics_connector import SnowflakeAnalyticsConnector
 
 router = APIRouter(prefix="/news", tags=["news"])
 
 
 async def get_db():
     """Dependency to get database connection."""
-    host = os.getenv("REDSHIFT_HOST")
-    if not host:
+    account = os.getenv("SNOWFLAKE_ACCOUNT")
+    if not account:
         raise HTTPException(
-            status_code=500, detail="REDSHIFT_HOST environment variable not set"
+            status_code=500, detail="SNOWFLAKE_ACCOUNT environment variable not set"
         )
 
-    db = RedshiftLoader(
-        host=host,
-        database=os.getenv("REDSHIFT_DB", "dev"),
-        user=os.getenv("REDSHIFT_USER", "admin"),
-        password=os.getenv("REDSHIFT_PASSWORD"),
+    db = SnowflakeAnalyticsConnector(
+        account=account,
+        user=os.getenv("SNOWFLAKE_USER"),
+        password=os.getenv("SNOWFLAKE_PASSWORD"),
+        database=os.getenv("SNOWFLAKE_DATABASE", "NEURONEWS"),
+        warehouse=os.getenv("SNOWFLAKE_WAREHOUSE", "ANALYTICS_WH"),
     )
     try:
-        await db.connect()
+        db.connect()
         yield db
     finally:
-        await db.close()
+        db.disconnect()
 
 
 @router.get("/articles/topic/{topic}")
 async def get_articles_by_topic(
     topic: str,
     limit: int = Query(10, ge=1, le=100),
-    db: RedshiftLoader = Depends(get_db),
+    db: SnowflakeAnalyticsConnector = Depends(get_db),
 ) -> List[Dict[str, Any]]:
     """
     Retrieve articles related to a specific topic.
@@ -108,7 +109,7 @@ async def get_articles(
     ),
     source: Optional[str] = Query(None, description="Filter by news source"),
     category: Optional[str] = Query(None, description="Filter by article category"),
-    db: RedshiftLoader = Depends(get_db),
+    db: SnowflakeAnalyticsConnector = Depends(get_db),
 ) -> List[Dict[str, Any]]:
     """
     Retrieve processed news articles with optional filtering.
@@ -176,7 +177,7 @@ async def get_articles(
 
 @router.get("/articles/{article_id}")
 async def get_article(
-    article_id: str, db: RedshiftLoader = Depends(get_db)
+    article_id: str, db: SnowflakeAnalyticsConnector = Depends(get_db)
 ) -> Dict[str, Any]:
     """
     Retrieve a specific news article by ID.

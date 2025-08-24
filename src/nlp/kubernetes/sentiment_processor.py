@@ -26,7 +26,7 @@ import torch
 sys.path.append(os.path.join(os.path.dirname(__file__), "../../.."))
 
 try:
-    from database.redshift_loader import RedshiftETLProcessor
+    from database.snowflake_connector import SnowflakeAnalyticsConnector
     from nlp.sentiment_analysis import SentimentAnalyzer
 except ImportError as e:
     print("Import error: {0}".format(e))
@@ -126,17 +126,18 @@ class KubernetesSentimentProcessor:
 
             logger.info("Sentiment analyzer initialized")
 
-            # Initialize Redshift connection
-            redshift_config = {
-                "host": os.getenv("REDSHIFT_HOST"),
-                "database": os.getenv("REDSHIFT_DATABASE", "dev"),
-                "user": os.getenv("REDSHIFT_USER", "admin"),
-                "password": os.getenv("REDSHIFT_PASSWORD"),
-                "port": int(os.getenv("REDSHIFT_PORT", "5439")),
+            # Initialize Snowflake connection
+            snowflake_config = {
+                "account": os.getenv("SNOWFLAKE_ACCOUNT"),
+                "user": os.getenv("SNOWFLAKE_USER", "admin"),
+                "password": os.getenv("SNOWFLAKE_PASSWORD"),
+                "warehouse": os.getenv("SNOWFLAKE_WAREHOUSE", "ANALYTICS_WH"),
+                "database": os.getenv("SNOWFLAKE_DATABASE", "NEURONEWS"),
+                "schema": os.getenv("SNOWFLAKE_SCHEMA", "PUBLIC"),
             }
 
-            self.redshift_processor = RedshiftETLProcessor(**redshift_config)
-            logger.info("Redshift processor initialized")
+            self.snowflake_processor = SnowflakeAnalyticsConnector(**snowflake_config)
+            logger.info("Snowflake processor initialized")
 
             # Initialize PostgreSQL connection for reading articles
             self.postgres_conn = psycopg2.connect(

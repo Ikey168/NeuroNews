@@ -617,9 +617,9 @@ class SummaryDatabase:
 
 
 # Utility functions for database setup
-def get_redshift_connection_params() -> Dict[str, Any]:
+def get_snowflake_connection_params() -> Dict[str, Any]:
     """
-    Get Redshift connection parameters from environment variables.
+    Get Snowflake connection parameters from environment variables.
 
     Returns:
         Dictionary with connection parameters
@@ -627,17 +627,18 @@ def get_redshift_connection_params() -> Dict[str, Any]:
     import os
 
     return {
-        "host": os.getenv("REDSHIFT_HOST", "localhost"),
-        "port": int(os.getenv("REDSHIFT_PORT", 5439)),
-        "database": os.getenv("REDSHIFT_DATABASE", "neuronews"),
-        "user": os.getenv("REDSHIFT_USER", "admin"),
-        "password": os.getenv("REDSHIFT_PASSWORD", "password"),
+        "account": os.getenv("SNOWFLAKE_ACCOUNT", "test-account"),
+        "user": os.getenv("SNOWFLAKE_USER", "admin"),
+        "password": os.getenv("SNOWFLAKE_PASSWORD", "password"),
+        "warehouse": os.getenv("SNOWFLAKE_WAREHOUSE", "ANALYTICS_WH"),
+        "database": os.getenv("SNOWFLAKE_DATABASE", "NEURONEWS"),
+        "schema": os.getenv("SNOWFLAKE_SCHEMA", "PUBLIC"),
     }
 
 
 async def setup_summary_database():
     """Set up the summary database with proper schema."""
-    connection_params = get_redshift_connection_params()
+    connection_params = get_snowflake_connection_params()
     db = SummaryDatabase(connection_params)
     await db.create_table()
     return db

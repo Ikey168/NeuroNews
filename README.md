@@ -28,7 +28,7 @@
 
 ✅ **API for Insights & Reporting** – REST API for accessing structured **event summaries, trends, and sentiment data**.
 
-✅ **AWS Cloud Integration** – Serverless processing with **AWS Lambda, Redshift, S3, Step Functions & SageMaker**.
+✅ **AWS Cloud Integration** – Serverless processing with **AWS Lambda, Snowflake, S3, Step Functions & SageMaker**.
 
 ---
 
@@ -48,7 +48,7 @@
 
 🔹 **Backend & Scraping**: Python, Scrapy, Selenium, Playwright, AWS Lambda
 🔹 **NLP & AI Models**: Hugging Face Transformers, AWS Comprehend, GPT-4, Pegasus
-🔹 **Database & Storage**: AWS Redshift, AWS Neptune (Graph DB), S3, DynamoDB
+🔹 **Database & Storage**: Snowflake, AWS Neptune (Graph DB), S3, DynamoDB
 🔹 **Event Detection & Summarization**: BERT Embeddings, k-Means Clustering
 🔹 **Visualization & Reporting**: AWS QuickSight, Streamlit, Matplotlib
 
@@ -95,7 +95,7 @@ docker compose -f docker-compose.test-minimal.yml up --build --abort-on-containe
 
 - Add your **AWS_ACCESS_KEY_ID** & **AWS_SECRET_ACCESS_KEY**.
 
-- Ensure **IAM roles** have permissions for Lambda, S3, Redshift, and Neptune.
+- Ensure **IAM roles** have permissions for Lambda, S3, Snowflake, and Neptune.
 
 ### 5️⃣ Run Tests and Generate Coverage Report
 

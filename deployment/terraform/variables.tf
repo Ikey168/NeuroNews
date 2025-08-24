@@ -103,55 +103,6 @@ variable "lambda_log_retention_days" {
   default     = 30
 }
 
-# Redshift Configuration
-variable "redshift_node_type" {
-  description = "Node type for Redshift cluster"
-  type        = string
-  default     = "dc2.large"
-}
-
-variable "redshift_cluster_type" {
-  description = "Cluster type for Redshift (single-node or multi-node)"
-  type        = string
-  default     = "single-node"
-}
-
-variable "redshift_number_of_nodes" {
-  description = "Number of nodes in Redshift cluster (only for multi-node)"
-  type        = number
-  default     = 1
-}
-
-variable "redshift_cluster_identifier" {
-  description = "Identifier for Redshift cluster"
-  type        = string
-  default     = "news-cluster"
-}
-
-variable "redshift_database_name" {
-  description = "Name of the Redshift database"
-  type        = string
-  default     = "newsdb"
-}
-
-variable "redshift_master_username" {
-  description = "Master username for Redshift"
-  type        = string
-  sensitive   = true
-}
-
-variable "redshift_master_password" {
-  description = "Master password for Redshift"
-  type        = string
-  sensitive   = true
-}
-
-variable "redshift_skip_final_snapshot" {
-  description = "Skip final snapshot when destroying Redshift cluster"
-  type        = bool
-  default     = false
-}
-
 # Cross-Account Access
 variable "create_cross_account_role" {
   description = "Create IAM role for cross-account access"

@@ -14,15 +14,16 @@ logger = logging.getLogger(__name__)
 
 
 class ArticleProcessor:
-    """Processes articles for sentiment analysis and stores results in Redshift."""
+    """Processes articles for sentiment analysis and stores results in Snowflake."""
 
     def __init__(
         self,
-        redshift_host: str,
-        redshift_port: int,
-        redshift_database: str,
-        redshift_user: str,
-        redshift_password: str,
+        snowflake_account: str,
+        snowflake_user: str,
+        snowflake_password: str,
+        snowflake_warehouse: str = "ANALYTICS_WH",
+        snowflake_database: str = "NEURONEWS",
+        snowflake_schema: str = "PUBLIC",
         sentiment_provider: str = "aws",
         batch_size: int = 25,
         **sentiment_kwargs,
@@ -31,22 +32,24 @@ class ArticleProcessor:
         Initialize the article processor.
 
         Args:
-            redshift_host: Redshift cluster host
-            redshift_port: Redshift port
-            redshift_database: Database name
-            redshift_user: Database user
-            redshift_password: Database password
+            snowflake_account: Snowflake account identifier
+            snowflake_user: Database user
+            snowflake_password: Database password
+            snowflake_warehouse: Snowflake warehouse name
+            snowflake_database: Database name
+            snowflake_schema: Schema name
             sentiment_provider: Which sentiment analyzer to use ("vader", "aws", or "transformers")
             batch_size: Size of batches for processing
             **sentiment_kwargs: Additional arguments for sentiment analyzer
         """
         self.batch_size = batch_size
         self.conn_params = {
-            "host": redshift_host,
-            "port": redshift_port,
-            "database": redshift_database,
-            "user": redshift_user,
-            "password": redshift_password,
+            "account": snowflake_account,
+            "user": snowflake_user,
+            "password": snowflake_password,
+            "warehouse": snowflake_warehouse,
+            "database": snowflake_database,
+            "schema": snowflake_schema,
         }
 
         # Initialize sentiment analyzer
@@ -183,11 +186,12 @@ class ArticleProcessor:
 if __name__ == "__main__":
     # Example configuration
     config = {
-        "redshift_host": "your-cluster.region.redshift.amazonaws.com",
-        "redshift_port": 5439,
-        "redshift_database": "news_db",
-        "redshift_user": "admin",
-        "redshift_password": "your-password",
+        "snowflake_account": "your-account.snowflakecomputing.com",
+        "snowflake_user": "admin",
+        "snowflake_password": "your-password",
+        "snowflake_warehouse": "ANALYTICS_WH",
+        "snowflake_database": "NEURONEWS",
+        "snowflake_schema": "PUBLIC",
         "sentiment_provider": "aws",
         "region_name": "us-west-2",  # for AWS Comprehend
     }

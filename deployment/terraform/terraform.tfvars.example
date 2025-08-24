@@ -24,16 +24,6 @@ neptune_backup_retention_period = 7
 neptune_preferred_backup_window = "03:00-04:00"
 neptune_skip_final_snapshot = false
 
-# Redshift Configuration
-redshift_cluster_identifier = "news-cluster-dev"
-redshift_database_name = "newsdb"
-redshift_master_username = "admin"  # Change in production
-redshift_master_password = "CHANGE_ME_IN_PROD"  # Change in production
-redshift_node_type = "dc2.large"
-redshift_cluster_type = "single-node"
-redshift_number_of_nodes = 1
-redshift_skip_final_snapshot = false
-
 # Lambda Configuration
 lambda_function_prefix = "neuronews-dev"
 lambda_runtime = "python3.9"

@@ -55,20 +55,6 @@ resource "aws_iam_role_policy" "scraper_policy" {
       {
         Effect = "Allow"
         Action = [
-          "redshift-data:ExecuteStatement",
-          "redshift-data:GetStatementResult",
-          "redshift-data:DescribeStatement"
-        ]
-        Resource = ["${aws_redshift_cluster.processed_texts.arn}"]
-        Condition = {
-          StringLike = {
-            "redshift:DatabaseUser": "etl_user"
-          }
-        }
-      },
-      {
-        Effect = "Allow"
-        Action = [
           "logs:CreateLogGroup",
           "logs:CreateLogStream",
           "logs:PutLogEvents"
@@ -118,20 +104,6 @@ resource "aws_iam_role_policy" "api_policy" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "redshift-data:ExecuteStatement",
-          "redshift-data:GetStatementResult",
-          "redshift-data:DescribeStatement"
-        ]
-        Resource = ["${aws_redshift_cluster.processed_texts.arn}"]
-        Condition = {
-          StringLike = {
-            "redshift:DatabaseUser": "api_user"
-          }
-        }
-      },
       {
         Effect = "Allow"
         Action = [

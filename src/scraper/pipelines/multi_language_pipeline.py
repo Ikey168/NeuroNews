@@ -22,11 +22,12 @@ class MultiLanguagePipeline:
 
     def __init__(
         self,
-        redshift_host: str = None,
-        redshift_port: int = 5439,
-        redshift_database: str = None,
-        redshift_user: str = None,
-        redshift_password: str = None,
+        snowflake_account: str = None,
+        snowflake_user: str = None,
+        snowflake_password: str = None,
+        snowflake_warehouse: str = "ANALYTICS_WH",
+        snowflake_database: str = "NEURONEWS",
+        snowflake_schema: str = "PUBLIC",
         aws_region: str = "us-east-1",
         aws_access_key_id: str = None,
         aws_secret_access_key: str = None,
@@ -39,11 +40,12 @@ class MultiLanguagePipeline:
         Initialize multi-language pipeline.
 
         Args:
-            redshift_host: Redshift cluster host
-            redshift_port: Redshift port
-            redshift_database: Database name
-            redshift_user: Database user
-            redshift_password: Database password
+            snowflake_account: Snowflake account identifier
+            snowflake_user: Database user
+            snowflake_password: Database password
+            snowflake_warehouse: Snowflake warehouse name
+            snowflake_database: Database name
+            snowflake_schema: Schema name
             aws_region: AWS region for translate service
             aws_access_key_id: AWS access key ID
             aws_secret_access_key: AWS secret access key
@@ -53,11 +55,12 @@ class MultiLanguagePipeline:
             min_content_length: Minimum content length for processing
         """
         # Use environment variables as fallback
-        self.redshift_host = redshift_host or os.getenv("REDSHIFT_HOST")
-        self.redshift_port = redshift_port
-        self.redshift_database = redshift_database or os.getenv("REDSHIFT_DATABASE")
-        self.redshift_user = redshift_user or os.getenv("REDSHIFT_USER")
-        self.redshift_password = redshift_password or os.getenv("REDSHIFT_PASSWORD")
+        self.snowflake_account = snowflake_account or os.getenv("SNOWFLAKE_ACCOUNT")
+        self.snowflake_user = snowflake_user or os.getenv("SNOWFLAKE_USER")
+        self.snowflake_password = snowflake_password or os.getenv("SNOWFLAKE_PASSWORD")
+        self.snowflake_warehouse = snowflake_warehouse or os.getenv("SNOWFLAKE_WAREHOUSE", "ANALYTICS_WH")
+        self.snowflake_database = snowflake_database or os.getenv("SNOWFLAKE_DATABASE", "NEURONEWS")
+        self.snowflake_schema = snowflake_schema or os.getenv("SNOWFLAKE_SCHEMA", "PUBLIC")
         self.aws_region = aws_region
         self.aws_access_key_id = aws_access_key_id or os.getenv("AWS_ACCESS_KEY_ID")
         self.aws_secret_access_key = aws_secret_access_key or os.getenv(
@@ -83,24 +86,25 @@ class MultiLanguagePipeline:
 
         # Validate required settings
         required_settings = [
-            self.redshift_host,
-            self.redshift_database,
-            self.redshift_user,
-            self.redshift_password,
+            self.snowflake_account,
+            self.snowflake_user,
+            self.snowflake_password,
+            self.snowflake_database,
         ]
 
         if not all(required_settings):
-            logger.error("Missing required Redshift configuration")
-            raise ValueError("Missing required Redshift configuration")
+            logger.error("Missing required Snowflake configuration")
+            raise ValueError("Missing required Snowflake configuration")
 
         # Initialize processor
         try:
             self.processor = MultiLanguageArticleProcessor(
-                redshift_host=self.redshift_host,
-                redshift_port=self.redshift_port,
-                redshift_database=self.redshift_database,
-                redshift_user=self.redshift_user,
-                redshift_password=self.redshift_password,
+                snowflake_account=self.snowflake_account,
+                snowflake_user=self.snowflake_user,
+                snowflake_password=self.snowflake_password,
+                snowflake_warehouse=self.snowflake_warehouse,
+                snowflake_database=self.snowflake_database,
+                snowflake_schema=self.snowflake_schema,
                 aws_region=self.aws_region,
                 aws_access_key_id=self.aws_access_key_id,
                 aws_secret_access_key=self.aws_secret_access_key,
@@ -303,11 +307,12 @@ class LanguageFilterPipeline:
 
         # Add settings to the MultiLanguagePipeline instance
         return MultiLanguagePipeline(
-            redshift_host=settings.get("REDSHIFT_HOST"),
-            redshift_port=settings.getint("REDSHIFT_PORT", 5439),
-            redshift_database=settings.get("REDSHIFT_DATABASE"),
-            redshift_user=settings.get("REDSHIFT_USER"),
-            redshift_password=settings.get("REDSHIFT_PASSWORD"),
+            snowflake_account=settings.get("SNOWFLAKE_ACCOUNT"),
+            snowflake_user=settings.get("SNOWFLAKE_USER"),
+            snowflake_password=settings.get("SNOWFLAKE_PASSWORD"),
+            snowflake_warehouse=settings.get("SNOWFLAKE_WAREHOUSE", "ANALYTICS_WH"),
+            snowflake_database=settings.get("SNOWFLAKE_DATABASE", "NEURONEWS"),
+            snowflake_schema=settings.get("SNOWFLAKE_SCHEMA", "PUBLIC"),
             aws_region=settings.get("AWS_REGION", "us-east-1"),
             aws_access_key_id=settings.get("AWS_ACCESS_KEY_ID"),
             aws_secret_access_key=settings.get("AWS_SECRET_ACCESS_KEY"),

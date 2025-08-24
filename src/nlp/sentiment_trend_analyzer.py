@@ -88,11 +88,12 @@ class SentimentTrendAnalyzer:
 
     def __init__(
         self,
-        redshift_host: str,
-        redshift_port: int,
-        redshift_database: str,
-        redshift_user: str,
-        redshift_password: str,
+        snowflake_account: str,
+        snowflake_user: str,
+        snowflake_password: str,
+        snowflake_warehouse: str = "ANALYTICS_WH",
+        snowflake_database: str = "NEURONEWS",
+        snowflake_schema: str = "PUBLIC",
         sentiment_analyzer: Optional[SentimentAnalyzer] = None,
         topic_extractor: Optional[KeywordTopicExtractor] = None,
     ):
@@ -100,20 +101,22 @@ class SentimentTrendAnalyzer:
         Initialize the sentiment trend analyzer.
 
         Args:
-            redshift_host: Redshift cluster host
-            redshift_port: Redshift port
-            redshift_database: Database name
-            redshift_user: Database user
-            redshift_password: Database password
+            snowflake_account: Snowflake account identifier
+            snowflake_user: Database user
+            snowflake_password: Database password
+            snowflake_warehouse: Snowflake warehouse name
+            snowflake_database: Database name
+            snowflake_schema: Schema name
             sentiment_analyzer: Optional sentiment analyzer instance
             topic_extractor: Optional topic extraction instance
         """
         self.conn_params = {
-            "host": redshift_host,
-            "port": redshift_port,
-            "database": redshift_database,
-            "user": redshift_user,
-            "password": redshift_password,
+            "account": snowflake_account,
+            "user": snowflake_user,
+            "password": snowflake_password,
+            "warehouse": snowflake_warehouse,
+            "database": snowflake_database,
+            "schema": snowflake_schema,
         }
 
         self.sentiment_analyzer = sentiment_analyzer or SentimentAnalyzer()

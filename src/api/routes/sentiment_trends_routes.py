@@ -94,14 +94,15 @@ class AlertResponse(BaseModel):
 
 async def get_sentiment_analyzer() -> SentimentTrendAnalyzer:
     """Dependency to get SentimentTrendAnalyzer instance."""
-    redshift_config = {
-        "redshift_host": settings.REDSHIFT_HOST,
-        "redshift_port": settings.REDSHIFT_PORT,
-        "redshift_database": settings.REDSHIFT_DATABASE,
-        "redshift_user": settings.REDSHIFT_USER,
-        "redshift_password": settings.REDSHIFT_PASSWORD,
+    snowflake_config = {
+        "snowflake_account": settings.SNOWFLAKE_ACCOUNT,
+        "snowflake_user": settings.SNOWFLAKE_USER,
+        "snowflake_password": settings.SNOWFLAKE_PASSWORD,
+        "snowflake_warehouse": settings.SNOWFLAKE_WAREHOUSE,
+        "snowflake_database": settings.SNOWFLAKE_DATABASE,
+        "snowflake_schema": settings.SNOWFLAKE_SCHEMA,
     }
-    return SentimentTrendAnalyzer(**redshift_config)
+    return SentimentTrendAnalyzer(**snowflake_config)
 
 
 @router.get("/sentiment_trends/analyze")

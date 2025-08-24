@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, EmailStr
 
 from src.api.auth.jwt_auth import auth_handler, require_auth
-from src.database.redshift_loader import RedshiftLoader
+from src.database.snowflake_connector import SnowflakeAnalyticsConnector
 
 
 # Request/Response Models
@@ -49,17 +49,19 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 # Database dependency for tests
-async def get_db() -> RedshiftLoader:
-    return RedshiftLoader(
-        host=os.getenv("REDSHIFT_HOST", "test-host"),
-        database=os.getenv("REDSHIFT_DB", "dev"),
-        user=os.getenv("REDSHIFT_USER", "admin"),
-        password=os.getenv("REDSHIFT_PASSWORD", "test-pass"),
+async def get_db() -> SnowflakeAnalyticsConnector:
+    return SnowflakeAnalyticsConnector(
+        account=os.getenv("SNOWFLAKE_ACCOUNT", "test-account"),
+        user=os.getenv("SNOWFLAKE_USER", "admin"),
+        password=os.getenv("SNOWFLAKE_PASSWORD", "test-pass"),
+        warehouse=os.getenv("SNOWFLAKE_WAREHOUSE", "ANALYTICS_WH"),
+        database=os.getenv("SNOWFLAKE_DATABASE", "NEURONEWS"),
+        schema=os.getenv("SNOWFLAKE_SCHEMA", "PUBLIC"),
     )
 
 
 @router.post("/register", response_model=TokenResponse)
-async def register(user: UserCreate, db: RedshiftLoader = Depends(get_db)):
+async def register(user: UserCreate, db: SnowflakeAnalyticsConnector = Depends(get_db)):
     """
     Register a new user.
 
@@ -114,7 +116,7 @@ async def register(user: UserCreate, db: RedshiftLoader = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(user: UserLogin, db: RedshiftLoader = Depends(get_db)):
+async def login(user: UserLogin, db: SnowflakeAnalyticsConnector = Depends(get_db)):
     """
     Authenticate a user and return tokens.
 

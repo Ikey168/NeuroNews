@@ -11,19 +11,20 @@ from pydantic import BaseModel
 
 from src.api.auth.jwt_auth import require_auth
 from src.api.auth.permissions import Permission, require_permissions
-from src.database.redshift_loader import RedshiftLoader
+from src.database.snowflake_analytics_connector import SnowflakeAnalyticsConnector
 
 router = APIRouter(prefix="/articles", tags=["articles"])
 
 
 # Database dependency
-async def get_db() -> RedshiftLoader:
-    """Return a RedshiftLoader using environment configuration or test defaults."""
-    db = RedshiftLoader(
-        host=os.getenv("REDSHIFT_HOST", "test-host"),
-        database=os.getenv("REDSHIFT_DB", "dev"),
-        user=os.getenv("REDSHIFT_USER", "admin"),
-        password=os.getenv("REDSHIFT_PASSWORD", "test-pass"),
+async def get_db() -> SnowflakeAnalyticsConnector:
+    """Return a SnowflakeAnalyticsConnector using environment configuration."""
+    db = SnowflakeAnalyticsConnector(
+        account=os.getenv("SNOWFLAKE_ACCOUNT"),
+        user=os.getenv("SNOWFLAKE_USER"),
+        password=os.getenv("SNOWFLAKE_PASSWORD"),
+        database=os.getenv("SNOWFLAKE_DATABASE", "NEURONEWS"),
+        warehouse=os.getenv("SNOWFLAKE_WAREHOUSE", "ANALYTICS_WH"),
     )
     return db
 
@@ -64,7 +65,7 @@ class Article(ArticleBase):
 @require_permissions(Permission.READ_ARTICLES)
 async def list_articles(
     request: Request,
-    db: RedshiftLoader = Depends(get_db),
+    db: SnowflakeAnalyticsConnector = Depends(get_db),
     category: Optional[str] = None,
     source: Optional[str] = None,
     limit: int = 50,
@@ -120,7 +121,7 @@ async def list_articles(
 async def create_article(
     request: Request,
     article: ArticleCreate,
-    db: RedshiftLoader = Depends(get_db),
+    db: SnowflakeAnalyticsConnector = Depends(get_db),
     user: dict = Depends(require_auth),
 ):
     """
@@ -163,7 +164,7 @@ async def create_article(
 async def get_article(
     request: Request,
     article_id: str,
-    db: RedshiftLoader = Depends(get_db),
+    db: SnowflakeAnalyticsConnector = Depends(get_db),
     _: dict = Depends(require_auth),
 ):
     """
@@ -194,7 +195,7 @@ async def update_article(
     request: Request,
     article_id: str,
     article: ArticleUpdate,
-    db: RedshiftLoader = Depends(get_db),
+    db: SnowflakeAnalyticsConnector = Depends(get_db),
     user: dict = Depends(require_auth),
 ):
     """
@@ -255,7 +256,7 @@ async def update_article(
 async def delete_article(
     request: Request,
     article_id: str,
-    db: RedshiftLoader = Depends(get_db),
+    db: SnowflakeAnalyticsConnector = Depends(get_db),
     user: dict = Depends(require_auth),
 ):
     """
