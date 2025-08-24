@@ -74,11 +74,11 @@ from src.nlp.sentiment_trend_analyzer import (
 def mock_redshift_config():
     """Mock Redshift configuration for testing."""
     return {
-        "redshift_host": "test-redshift.amazonaws.com",
+        "snowflake_account": "test-redshift.amazonaws.com",
         "redshift_port": 5439,
         "redshift_database": "test_db",
-        "redshift_user": "test_user",
-        "redshift_password": "test_password",
+        "snowflake_user": "test_user",
+        "snowflake_password": "test_password",
     }
 
 
@@ -830,11 +830,11 @@ class TestUtilityFunctions:
     async def test_analyze_sentiment_trends_for_topic(self):
         """Test convenience function for topic trend analysis."""
         redshift_config = {
-            "redshift_host": "test-host",
+            "snowflake_account": "test-host",
             "redshift_port": 5439,
             "redshift_database": "test_db",
-            "redshift_user": "test_user",
-            "redshift_password": "test_password",
+            "snowflake_user": "test_user",
+            "snowflake_password": "test_password",
         }
 
         with patch("src.nlp.sentiment_trend_analyzer.SentimentTrendAnalyzer") as MockAnalyzer:
@@ -851,11 +851,11 @@ class TestUtilityFunctions:
     async def test_generate_daily_sentiment_alerts(self):
         """Test convenience function for daily alert generation."""
         redshift_config = {
-            "redshift_host": "test-host",
+            "snowflake_account": "test-host",
             "redshift_port": 5439,
             "redshift_database": "test_db",
-            "redshift_user": "test_user",
-            "redshift_password": "test_password",
+            "snowflake_user": "test_user",
+            "snowflake_password": "test_password",
         }
 
         with patch("src.nlp.sentiment_trend_analyzer.SentimentTrendAnalyzer") as MockAnalyzer:

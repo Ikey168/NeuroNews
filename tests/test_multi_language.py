@@ -272,11 +272,11 @@ class TestMultiLanguageArticleProcessor:
              patch("src.nlp.sentiment_analysis.SentimentAnalyzer"):
 
             self.processor = MultiLanguageArticleProcessor(
-                redshift_host="localhost",  # Use localhost instead of test_host
+                snowflake_account="localhost",  # Use localhost instead of test_host
                 redshift_port=5439,
                 redshift_database="test_db",
-                redshift_user="test_user",
-                redshift_password="test_pass",
+                snowflake_user="test_user",
+                snowflake_password="test_pass",
             )
 
     def test_language_detection_workflow(self):
@@ -349,11 +349,11 @@ class TestMultiLanguageArticleProcessor:
              patch.object(MultiLanguageArticleProcessor, "_initialize_database"), \
              patch("src.nlp.sentiment_analysis.SentimentAnalyzer"):
             processor = MultiLanguageArticleProcessor(
-                redshift_host="localhost",
+                snowflake_account="localhost",
                 redshift_port=5439,
                 redshift_database="test_db",
-                redshift_user="test_user",
-                redshift_password="test_pass",
+                snowflake_user="test_user",
+                snowflake_password="test_pass",
             )
 
         # Mock the connection attribute for the processor
@@ -393,20 +393,20 @@ class TestMultiLanguagePipeline:
                 "MULTI_LANGUAGE_ENABLED": True,
                 "MULTI_LANGUAGE_TARGET_LANGUAGE": "en",
                 "MULTI_LANGUAGE_QUALITY_THRESHOLD": 0.7,
-                "REDSHIFT_HOST": "localhost",  # Use localhost instead of test_host
+                "SNOWFLAKE_ACCOUNT": "localhost",  # Use localhost instead of test_host
                 "REDSHIFT_PORT": 5439,
                 "REDSHIFT_DATABASE": "test_db",
-                "REDSHIFT_USER": "test_user",
-                "REDSHIFT_PASSWORD": "test_pass",
+                "SNOWFLAKE_USER": "test_user",
+                "SNOWFLAKE_PASSWORD": "test_pass",
             }
 
             # Create pipeline with settings
             self.pipeline = MultiLanguagePipeline(
-                redshift_host="localhost",  # Use localhost instead of test_host
+                snowflake_account="localhost",  # Use localhost instead of test_host
                 redshift_port=5439,
                 redshift_database="test_db",
-                redshift_user="test_user",
-                redshift_password="test_pass",
+                snowflake_user="test_user",
+                snowflake_password="test_pass",
             )
 
     def test_pipeline_initialization(self):
@@ -417,7 +417,7 @@ class TestMultiLanguagePipeline:
         with patch("src.scraper.pipelines.multi_language_pipeline.MultiLanguageArticleProcessor"):
             pipeline.open_spider(self.spider)
 
-        assert pipeline.redshift_host == "localhost"
+        assert pipeline.snowflake_account == "localhost"
         assert pipeline.redshift_database == "test_db"
 
     def test_item_processing(self):
@@ -472,20 +472,20 @@ class TestMultiLanguagePipeline:
         spider = Mock()
         spider.settings = {
             "MULTI_LANGUAGE_ENABLED": False,
-            "REDSHIFT_HOST": "localhost",
+            "SNOWFLAKE_ACCOUNT": "localhost",
             "REDSHIFT_PORT": 5439,
             "REDSHIFT_DATABASE": "test_db",
-            "REDSHIFT_USER": "test_user",
-            "REDSHIFT_PASSWORD": "test_pass",
+            "SNOWFLAKE_USER": "test_user",
+            "SNOWFLAKE_PASSWORD": "test_pass",
         }
 
         # Create disabled pipeline
         pipeline = MultiLanguagePipeline(
-            redshift_host="localhost",
+            snowflake_account="localhost",
             redshift_port=5439,
             redshift_database="test_db",
-            redshift_user="test_user",
-            redshift_password="test_pass",
+            snowflake_user="test_user",
+            snowflake_password="test_pass",
         )
 
         # Mock the enabled property
@@ -624,11 +624,11 @@ class TestIntegrationWorkflow:
             mock_connect.return_value = mock_conn
 
             processor = MultiLanguageArticleProcessor(
-                redshift_host="localhost",
+                snowflake_account="localhost",
                 redshift_port=5439,
                 redshift_database="test_db",
-                redshift_user="test_user",
-                redshift_password="test_pass",
+                snowflake_user="test_user",
+                snowflake_password="test_pass",
                 sentiment_provider="huggingface",  # Use huggingface instead of local
             )
 

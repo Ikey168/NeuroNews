@@ -595,7 +595,7 @@ class TestDatabaseIntegration:
         with patch.dict(
             "os.environ",
             {
-                "REDSHIFT_HOST": "test-host",
+                "SNOWFLAKE_ACCOUNT": "test-host",
                 "REDSHIFT_PORT": "5439",
                 "REDSHIFT_DATABASE": "test-db",
             },

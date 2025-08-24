@@ -242,11 +242,11 @@ class TestMultiLanguageArticleProcessor:
             MultiLanguageArticleProcessor, "_create_translation_tables"
         ):
             self.processor = MultiLanguageArticleProcessor(
-                redshift_host="localhost",
+                snowflake_account="localhost",
                 redshift_port=5439,
                 redshift_database="test_db",
-                redshift_user="test_user",
-                redshift_password="test_pass",
+                snowflake_user="test_user",
+                snowflake_password="test_pass",
             )
 
     def test_language_detection_workflow(self):
@@ -305,11 +305,11 @@ class TestMultiLanguageArticleProcessor:
         with patch("src.nlp.sentiment_analysis.SentimentAnalyzer") as mock_analyzer:
             mock_analyzer.return_value = Mock()
             processor = MultiLanguageArticleProcessor(
-                redshift_host="localhost",
+                snowflake_account="localhost",
                 redshift_port=5439,
                 redshift_database="test_db",
-                redshift_user="test_user",
-                redshift_password="test_pass",
+                snowflake_user="test_user",
+                snowflake_password="test_pass",
             )
 
             # Manually set the connection since database initialization might
@@ -350,11 +350,11 @@ class TestMultiLanguagePipeline:
             "MULTI_LANGUAGE_ENABLED": True,
             "MULTI_LANGUAGE_TARGET_LANGUAGE": "en",
             "MULTI_LANGUAGE_QUALITY_THRESHOLD": 0.7,
-            "REDSHIFT_HOST": "localhost",
+            "SNOWFLAKE_ACCOUNT": "localhost",
             "REDSHIFT_PORT": 5439,
             "REDSHIFT_DATABASE": "test_db",
-            "REDSHIFT_USER": "test_user",
-            "REDSHIFT_PASSWORD": "test_pass",
+            "SNOWFLAKE_USER": "test_user",
+            "SNOWFLAKE_PASSWORD": "test_pass",
         }
 
         with patch("psycopg2.connect"), patch(
@@ -362,11 +362,11 @@ class TestMultiLanguagePipeline:
         ) as mock_analyzer, patch.object(MultiLanguageArticleProcessor, "_initialize_database"):
             mock_analyzer.return_value = Mock()
             self.pipeline = MultiLanguagePipeline(
-                redshift_host="localhost",
+                snowflake_account="localhost",
                 redshift_port=5439,
                 redshift_database="test_db",
-                redshift_user="test_user",
-                redshift_password="test_pass",
+                snowflake_user="test_user",
+                snowflake_password="test_pass",
             )
 
     def test_pipeline_initialization(self):
@@ -439,11 +439,11 @@ class TestMultiLanguagePipeline:
         spider = Mock()
         spider.settings = {
             "MULTI_LANGUAGE_ENABLED": False,
-            "REDSHIFT_HOST": "localhost",
+            "SNOWFLAKE_ACCOUNT": "localhost",
             "REDSHIFT_PORT": 5439,
             "REDSHIFT_DATABASE": "test_db",
-            "REDSHIFT_USER": "test_user",
-            "REDSHIFT_PASSWORD": "test_pass",
+            "SNOWFLAKE_USER": "test_user",
+            "SNOWFLAKE_PASSWORD": "test_pass",
         }
 
         with patch("psycopg2.connect"), patch(
@@ -541,11 +541,11 @@ class TestIntegrationWorkflow:
             mock_analyzer.return_value = Mock()
 
             processor = MultiLanguageArticleProcessor(
-                redshift_host="localhost",
+                snowflake_account="localhost",
                 redshift_port=5439,
                 redshift_database="test_db",
-                redshift_user="test_user",
-                redshift_password="test_pass",
+                snowflake_user="test_user",
+                snowflake_password="test_pass",
             )
 
         # Test article
@@ -577,11 +577,11 @@ class TestIntegrationWorkflow:
             mock_analyzer.return_value = Mock()
 
             processor = MultiLanguageArticleProcessor(
-                redshift_host="localhost",
+                snowflake_account="localhost",
                 redshift_port=5439,
                 redshift_database="test_db",
-                redshift_user="test_user",
-                redshift_password="test_pass",
+                snowflake_user="test_user",
+                snowflake_password="test_pass",
             )
 
         # Test with invalid article data

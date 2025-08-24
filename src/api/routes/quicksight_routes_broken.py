@@ -48,12 +48,12 @@ class QuickSightSetupRequest(BaseModel):
 
     aws_account_id: str = Field(..., description="AWS Account ID")
     region: str = Field(default="us-east-1", description="AWS Region")
-    redshift_host: Optional[str] = Field(None, description="Redshift cluster endpoint")
-    redshift_database: str = Field(
-        default="neuronews", description="Redshift database name"
+    snowflake_account: Optional[str] = Field(None, description="Snowflake account identifier")
+    snowflake_database: str = Field(
+        default="NEURONEWS", description="Snowflake database name"
     )
-    redshift_username: Optional[str] = Field(None, description="Redshift username")
-    redshift_password: Optional[str] = Field(None, description="Redshift password")
+    snowflake_username: Optional[str] = Field(None, description="Snowflake username")
+    snowflake_password: Optional[str] = Field(None, description="Snowflake password")
 
 
 class DashboardLayoutRequest(BaseModel):
@@ -178,10 +178,10 @@ async def setup_quicksight_resources(
         config = QuickSightConfig(
             aws_account_id=setup_request.aws_account_id,
             region=setup_request.region,
-            redshift_host=setup_request.redshift_host,
-            redshift_database=setup_request.redshift_database,
-            redshift_username=setup_request.redshift_username,
-            redshift_password=setup_request.redshift_password,
+            snowflake_account=setup_request.snowflake_account,
+            snowflake_database=setup_request.snowflake_database,
+            snowflake_username=setup_request.snowflake_username,
+            snowflake_password=setup_request.snowflake_password,
         )
 
         # Reinitialize service with new config

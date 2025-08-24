@@ -37,10 +37,10 @@ class TestQuickSightService:
         return QuickSightConfig(
             aws_account_id="123456789012",
             region="us-east-1",
-            redshift_host="test-cluster.redshift.amazonaws.com",
+            snowflake_account="test-cluster.redshift.amazonaws.com",
             redshift_database="neuronews",
-            redshift_username="test_user",
-            redshift_password="test_password",
+            snowflake_username="test_user",
+            snowflake_password="test_password",
         )
 
     @pytest.fixture
@@ -120,7 +120,7 @@ class TestQuickSightService:
 
             assert service.config.aws_account_id == "123456789012"
             assert service.config.region == "us-east-1"
-            assert service.config.redshift_host == "test-cluster.redshift.amazonaws.com"
+            assert service.config.snowflake_account == "test-cluster.redshift.amazonaws.com"
             mock_boto3.assert_called()
 
     def test_config_from_env(self):
@@ -130,19 +130,19 @@ class TestQuickSightService:
             {
                 "AWS_ACCOUNT_ID": "123456789012",
                 "AWS_REGION": "us-west-2",
-                "REDSHIFT_HOST": "env-cluster.redshift.amazonaws.com",
-                "REDSHIFT_DB": "env_neuronews",
-                "REDSHIFT_USER": "env_user",
-                "REDSHIFT_PASSWORD": "env_password",
+                "SNOWFLAKE_ACCOUNT": "env-cluster.redshift.amazonaws.com",
+                "SNOWFLAKE_DATABASE": "env_neuronews",
+                "SNOWFLAKE_USER": "env_user",
+                "SNOWFLAKE_PASSWORD": "env_password",
             },
         ):
             config = QuickSightConfig.from_env()
 
             assert config.aws_account_id == "123456789012"
             assert config.region == "us-west-2"
-            assert config.redshift_host == "env-cluster.redshift.amazonaws.com"
+            assert config.snowflake_account == "env-cluster.redshift.amazonaws.com"
             assert config.redshift_database == "env_neuronews"
-            assert config.redshift_username == "env_user"
+            assert config.snowflake_username == "env_user"
 
     @pytest.mark.asyncio
     async def test_create_redshift_data_source(self, service, mock_quicksight_client):
@@ -420,10 +420,10 @@ class TestQuickSightAPI:
         setup_data = {
             "aws_account_id": "123456789012",
             "region": "us-east-1",
-            "redshift_host": "test-cluster.redshift.amazonaws.com",
+            "snowflake_account": "test-cluster.redshift.amazonaws.com",
             "redshift_database": "neuronews",
-            "redshift_username": "test_user",
-            "redshift_password": "test_password",
+            "snowflake_username": "test_user",
+            "snowflake_password": "test_password",
         }
 
         response = client.post("/api/v1/dashboards/setup", json=setup_data)
