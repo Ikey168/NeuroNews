@@ -14,7 +14,7 @@ This directory contains Terraform configurations for the NeuroNews infrastructur
 
 - Lambda Functions (lambda.tf)
 
-- Redshift Data Warehouse (redshift.tf)
+- Analytics infrastructure (uses managed Snowflake service)
 
 ## Neptune Graph Database Setup
 
