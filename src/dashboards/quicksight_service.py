@@ -11,11 +11,11 @@ Key Features:
    - Knowledge graph entity relationships
    - Event timeline analysis
 3. Enable filtering by date, entity, and sentiment
-4. Implement real-time updates from Redshift
+4. Implement real-time updates from Snowflake
 
 Dependencies:
 - boto3 for AWS QuickSight API
-- src.database.redshift_loader for data source integration
+- src.database.snowflake_analytics_connector for data source integration
 """
 
 import logging
@@ -55,16 +55,17 @@ class QuickSightConfig:
     aws_account_id: str
     region: str = "us-east-1"
     namespace: str = "default"
-    data_source_id: str = "neuronews-redshift-ds"
-    data_source_name: str = "NeuroNews Redshift Data Source"
+    data_source_id: str = "neuronews-snowflake-ds"
+    data_source_name: str = "NeuroNews Snowflake Data Source"
     dashboard_prefix: str = "NeuroNews"
 
-    # Redshift connection details
-    redshift_host: Optional[str] = None
-    redshift_port: int = 5439
-    redshift_database: str = "neuronews"
-    redshift_username: Optional[str] = None
-    redshift_password: Optional[str] = None
+    # Snowflake connection details
+    snowflake_account: Optional[str] = None
+    snowflake_warehouse: str = "ANALYTICS_WH"
+    snowflake_database: str = "NEURONEWS"
+    snowflake_schema: str = "PUBLIC"
+    snowflake_username: Optional[str] = None
+    snowflake_password: Optional[str] = None
 
     @classmethod
     def from_env(cls) -> "QuickSightConfig":
@@ -72,10 +73,12 @@ class QuickSightConfig:
         return cls(
             aws_account_id=os.getenv("AWS_ACCOUNT_ID", ""),
             region=os.getenv("AWS_REGION", "us-east-1"),
-            redshift_host=os.getenv("REDSHIFT_HOST"),
-            redshift_database=os.getenv("REDSHIFT_DB", "neuronews"),
-            redshift_username=os.getenv("REDSHIFT_USER"),
-            redshift_password=os.getenv("REDSHIFT_PASSWORD"),
+            snowflake_account=os.getenv("SNOWFLAKE_ACCOUNT"),
+            snowflake_warehouse=os.getenv("SNOWFLAKE_WAREHOUSE", "ANALYTICS_WH"),
+            snowflake_database=os.getenv("SNOWFLAKE_DATABASE", "NEURONEWS"),
+            snowflake_schema=os.getenv("SNOWFLAKE_SCHEMA", "PUBLIC"),
+            snowflake_username=os.getenv("SNOWFLAKE_USER"),
+            snowflake_password=os.getenv("SNOWFLAKE_PASSWORD"),
         )
 
 
@@ -115,7 +118,7 @@ class QuickSightDashboardService:
     def _validate_config(self) -> None:
         """Validate QuickSight configuration."""
         required_fields = ["aws_account_id",
-            "redshift_host", "redshift_username"]
+            "snowflake_account", "snowflake_username"]
         missing_fields = [
             field for field in required_fields if not getattr(self.config, field)
         ]
@@ -142,8 +145,8 @@ class QuickSightDashboardService:
             "errors": [],
         }
         try:
-            # 1. Create Redshift data source
-            data_source_result = await self._create_redshift_data_source()
+            # 1. Create Snowflake data source
+            data_source_result = await self._create_snowflake_data_source()
             setup_results["data_source_created"] = data_source_result["success"]
 
             if not data_source_result["success"]:
@@ -179,25 +182,25 @@ class QuickSightDashboardService:
             setup_results["errors"].append(str(e))
             return setup_results
 
-    async def _create_redshift_data_source(self) -> Dict[str, Any]:
-        """Create Redshift data source in QuickSight."""
+    async def _create_snowflake_data_source(self) -> Dict[str, Any]:
+        """Create Snowflake data source in QuickSight."""
         try:
             data_source_params = {
                 "AwsAccountId": self.config.aws_account_id,
                 "DataSourceId": self.config.data_source_id,
                 "Name": self.config.data_source_name,
-                "Type": "REDSHIFT",
+                "Type": "SNOWFLAKE",
                 "DataSourceParameters": {
-                    "RedshiftParameters": {
-                        "Host": self.config.redshift_host,
-                        "Port": self.config.redshift_port,
-                        "Database": self.config.redshift_database,
+                    "SnowflakeParameters": {
+                        "Host": self.config.snowflake_account,
+                        "Database": self.config.snowflake_database,
+                        "Warehouse": self.config.snowflake_warehouse,
                     }
                 },
                 "Credentials": {
                     "CredentialPair": {
-                        "Username": self.config.redshift_username,
-                        "Password": self.config.redshift_password,
+                        "Username": self.config.snowflake_username,
+                        "Password": self.config.snowflake_password,
                     }
                 },
                 "Permissions": [
@@ -226,7 +229,7 @@ class QuickSightDashboardService:
                     AwsAccountId=self.config.aws_account_id,
                     DataSourceId=self.config.data_source_id,
                 )
-                logger.info("Redshift data source already exists")
+                logger.info("Snowflake data source already exists")
                 return {
                     "success": True,
                     "action": "already_exists",
@@ -240,7 +243,7 @@ class QuickSightDashboardService:
                 **data_source_params)
 
             logger.info(
-                "Created Redshift data source: {0}".format(
+                "Created Snowflake data source: {0}".format(
                     self.config.data_source_id)
             )
             return {
@@ -252,7 +255,7 @@ class QuickSightDashboardService:
 
         except Exception as e:
             logger.error(
-                "Failed to create Redshift data source: {0}".format(e))
+                "Failed to create Snowflake data source: {0}".format(e))
             return {"success": False, "error": str(e)}
 
     async def _create_datasets(self) -> List[Dict[str, Any]]:
@@ -1137,11 +1140,11 @@ class QuickSightDashboardService:
 
     async def setup_real_time_updates(self) -> Dict[str, Any]:
         """
-        Implement real-time updates from Redshift.
+        Implement real-time updates from Snowflake.
 
         This implements the fourth requirement of Issue #49.
         """
-        logger.info("Setting up real-time updates from Redshift...")"
+        logger.info("Setting up real-time updates from Snowflake...")
 
         try:
             # Set up refresh schedules for datasets
