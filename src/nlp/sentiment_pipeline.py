@@ -20,11 +20,12 @@ class SentimentPipeline:
 
     def __init__(
         self,
-        redshift_host: str,
-        redshift_port: int,
-        redshift_database: str,
-        redshift_user: str,
-        redshift_password: str,
+        snowflake_account: str,
+        snowflake_user: str,
+        snowflake_password: str,
+        snowflake_warehouse: str = "ANALYTICS_WH",
+        snowflake_database: str = "NEURONEWS",
+        snowflake_schema: str = "PUBLIC",
         sentiment_provider: str = "huggingface",
         batch_size: int = 25,
         **sentiment_config,
@@ -33,11 +34,12 @@ class SentimentPipeline:
         Initialize the sentiment analysis pipeline.
 
         Args:
-            redshift_host: Redshift cluster host
-            redshift_port: Redshift port
-            redshift_database: Database name
-            redshift_user: Database user
-            redshift_password: Database password
+            snowflake_account: Snowflake account identifier
+            snowflake_user: Database user
+            snowflake_password: Database password
+            snowflake_warehouse: Snowflake warehouse name
+            snowflake_database: Database name
+            snowflake_schema: Schema name
             sentiment_provider: Provider ("huggingface", "aws_comprehend")
             batch_size: Batch size for processing
             **sentiment_config: Additional config for sentiment analyzer
@@ -46,11 +48,12 @@ class SentimentPipeline:
         self.sentiment_provider = sentiment_provider
 
         self.conn_params = {
-            "host": redshift_host,
-            "port": redshift_port,
-            "database": redshift_database,
-            "user": redshift_user,
-            "password": redshift_password,
+            "account": snowflake_account,
+            "user": snowflake_user,
+            "password": snowflake_password,
+            "warehouse": snowflake_warehouse,
+            "database": snowflake_database,
+            "schema": snowflake_schema,
         }
 
         # Initialize sentiment analyzer

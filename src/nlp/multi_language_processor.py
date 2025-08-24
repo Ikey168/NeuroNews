@@ -72,11 +72,12 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
 
     def __init__(
         self,
-        redshift_host: str,
-        redshift_port: int,
-        redshift_database: str,
-        redshift_user: str,
-        redshift_password: str,
+        snowflake_account: str,
+        snowflake_user: str,
+        snowflake_password: str,
+        snowflake_warehouse: str = "ANALYTICS_WH",
+        snowflake_database: str = "NEURONEWS",
+        snowflake_schema: str = "PUBLIC",
         aws_region: str = "us-east-1",
         aws_access_key_id: Optional[str] = None,
         aws_secret_access_key: Optional[str] = None,
@@ -89,11 +90,12 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
         Initialize multi-language article processor.
 
         Args:
-            redshift_host: Redshift cluster host
-            redshift_port: Redshift port
-            redshift_database: Database name
-            redshift_user: Database user
-            redshift_password: Database password
+            snowflake_account: Snowflake account identifier
+            snowflake_user: Database user
+            snowflake_password: Database password
+            snowflake_warehouse: Snowflake warehouse name
+            snowflake_database: Database name
+            snowflake_schema: Schema name
             aws_region: AWS region for translate service
             aws_access_key_id: AWS access key ID
             aws_secret_access_key: AWS secret access key
@@ -104,11 +106,12 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
         """
         # Initialize parent class
         super().__init__(
-            redshift_host,
-            redshift_port,
-            redshift_database,
-            redshift_user,
-            redshift_password,
+            snowflake_account,
+            snowflake_user,
+            snowflake_password,
+            snowflake_warehouse,
+            snowflake_database,
+            snowflake_schema,
             **kwargs,
         )
 
