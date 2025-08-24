@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from src.database.redshift_loader import RedshiftETLProcessor as RedshiftConnection
+from src.database.snowflake_connector import SnowflakeAnalyticsConnector as SnowflakeConnection
 from src.nlp.fake_news_detector import FakeNewsConfig, FakeNewsDetector
 
 # Configure logging
@@ -72,13 +72,20 @@ def get_detector() -> FakeNewsDetector:
     return _detector
 
 
-def get_redshift_connection():
-    """Get Redshift connection for testing compatibility."""
+def get_snowflake_connection():
+    """Get Snowflake connection for testing compatibility."""
     try:
-        redshift_host = os.getenv("REDSHIFT_HOST", "localhost")
-        return RedshiftConnection(host=redshift_host)
+        snowflake_account = os.getenv("SNOWFLAKE_ACCOUNT", "test-account")
+        return SnowflakeConnection(
+            account=snowflake_account,
+            user=os.getenv("SNOWFLAKE_USER", "admin"),
+            password=os.getenv("SNOWFLAKE_PASSWORD", "test-pass"),
+            warehouse=os.getenv("SNOWFLAKE_WAREHOUSE", "ANALYTICS_WH"),
+            database=os.getenv("SNOWFLAKE_DATABASE", "NEURONEWS"),
+            schema=os.getenv("SNOWFLAKE_SCHEMA", "PUBLIC"),
+        )
     except Exception as e:
-        logger.warning("Could not create Redshift connection: {0}".format(e))
+        logger.warning("Could not create Snowflake connection: {0}".format(e))
         return None
 
 
