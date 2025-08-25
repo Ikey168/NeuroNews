@@ -71,6 +71,12 @@ models:
         tests:
           - not_null
           - unique
+          - dbt_expectations.expect_column_values_to_be_unique:
+              config:
+                tags: ['dq']
+          - dbt_expectations.expect_column_values_to_not_be_null:
+              config:
+                tags: ['dq']
       - name: entity_id
         description: "Natural key from staging entities"
         tests:
@@ -80,6 +86,11 @@ models:
         description: "The actual entity text/name"
         tests:
           - not_null
+          - dbt_expectations.expect_column_value_lengths_to_be_between:
+              min_value: 1
+              max_value: 500
+              config:
+                tags: ['dq']
       - name: entity_type
         description: "Normalized entity type"
         tests:
@@ -96,10 +107,28 @@ models:
         description: "Average confidence score across all mentions"
         tests:
           - not_null
+          - dbt_utils.expression_is_true:
+              expression: "avg_confidence_score >= 0.0 AND avg_confidence_score <= 1.0"
+              config:
+                tags: ['dq']
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0.0
+              max_value: 1.0
+              config:
+                tags: ['dq']
       - name: mention_count
         description: "Total number of mentions across all articles"
         tests:
           - not_null
+          - dbt_utils.expression_is_true:
+              expression: "mention_count > 0"
+              config:
+                tags: ['dq']
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 1
+              max_value: 10000
+              config:
+                tags: ['dq']
       - name: first_mention_at_utc
         description: "When this entity was first mentioned (UTC)"
         tests:
@@ -133,6 +162,11 @@ models:
           - relationships:
               to: ref('dim_source')
               field: source_key
+          - dbt_utils.relationships_where:
+              to: ref('dim_source')
+              field: source_key
+              config:
+                tags: ['dq']
       - name: title
         description: "Article title/headline"
         tests:
@@ -141,6 +175,15 @@ models:
         description: "Length of article content in characters"
         tests:
           - not_null
+          - dbt_utils.expression_is_true:
+              expression: "content_length > 0"
+              config:
+                tags: ['dq']
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 50
+              max_value: 100000
+              config:
+                tags: ['dq']
       - name: title_length
         description: "Length of article title in characters"
         tests:
@@ -172,8 +215,22 @@ models:
         description: "Number of entities extracted from this article"
         tests:
           - not_null
+          - dbt_utils.expression_is_true:
+              expression: "entity_count >= 0"
+              config:
+                tags: ['dq']
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 1000
+              config:
+                tags: ['dq']
       - name: avg_entity_confidence
         description: "Average confidence score of entities in this article"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "avg_entity_confidence IS NULL OR (avg_entity_confidence >= 0.0 AND avg_entity_confidence <= 1.0)"
+              config:
+                tags: ['dq']
       - name: published_at_utc
         description: "When the article was originally published (UTC)"
       - name: scraped_at_utc
