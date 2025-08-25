@@ -20,6 +20,14 @@ help:
 	@echo "  airflow-test-bootstrap - Test bootstrap script functionality (Issue #194)"
 	@echo "  marquez-ui       - Open Marquez UI in browser"
 	@echo ""
+	@echo "dbt Analytics:"
+	@echo "  dbt-deps         - Install dbt packages"
+	@echo "  dbt-build        - Build all dbt models"
+	@echo "  dbt-build-snowflake - Build dbt models on Snowflake (no-op locally)"
+	@echo "  dbt-docs         - Generate and serve dbt documentation"
+	@echo "  dbt-test         - Run dbt tests"
+	@echo "  dbt-clean        - Clean dbt artifacts"
+	@echo ""
 	@echo "URLs:"
 	@echo "  Airflow UI:  http://localhost:8080 (airflow/airflow)"
 	@echo "  Marquez UI:  http://localhost:3000"
@@ -133,3 +141,41 @@ airflow-clean:
 	@cd docker/airflow && docker-compose -f docker-compose.airflow.yml down -v
 	@docker system prune -f
 	@echo "✅ Cleanup complete!"
+
+# dbt Analytics targets (Issue #203)
+
+dbt-deps:
+	@echo "📦 Installing dbt packages..."
+	@cd dbt/neuro_news && dbt deps --profiles-dir ../
+	@echo "✅ dbt packages installed!"
+
+dbt-build:
+	@echo "🔨 Building all dbt models..."
+	@cd dbt/neuro_news && dbt build --profiles-dir ../
+	@echo "✅ dbt models built successfully!"
+
+dbt-build-snowflake:
+	@echo "🏔️  Building dbt models on Snowflake..."
+	@if [ -z "$$SNOWFLAKE_ACCOUNT" ]; then \
+		echo "⚠️  SNOWFLAKE_ACCOUNT not set - skipping Snowflake build"; \
+		echo "ℹ️  This is expected in local development"; \
+		echo "ℹ️  To use Snowflake: uncomment target in profiles.yml and set env vars"; \
+	else \
+		echo "🔗 Connecting to Snowflake account: $$SNOWFLAKE_ACCOUNT"; \
+		cd dbt/neuro_news && dbt build --profiles-dir ../ --target prod; \
+	fi
+
+dbt-docs:
+	@echo "📚 Generating dbt documentation..."
+	@cd dbt/neuro_news && dbt docs generate --profiles-dir ../
+	@echo "🌐 Serving dbt documentation..."
+	@cd dbt/neuro_news && dbt docs serve --profiles-dir ../
+
+dbt-test:
+	@echo "🧪 Running dbt tests..."
+	@cd dbt/neuro_news && dbt test --profiles-dir ../
+
+dbt-clean:
+	@echo "🧹 Cleaning dbt artifacts..."
+	@cd dbt/neuro_news && dbt clean --profiles-dir ../
+	@echo "✅ dbt artifacts cleaned!"

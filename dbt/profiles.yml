@@ -1,0 +1,103 @@
+# dbt profiles configuration for NeuroNews analytics
+# This file configures database connections for different environments
+
+neuro_news:
+  # Default target for local development
+  target: dev
+  outputs:
+    
+    # DuckDB target for local development (default)
+    dev:
+      type: duckdb
+      path: './neuro_news.duckdb'
+      threads: 4
+      
+    # Snowflake target for production (commented out by default)
+    # Uncomment and configure for production deployment
+    # prod:
+    #   type: snowflake
+    #   account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+    #   user: "{{ env_var('SNOWFLAKE_USER') }}"
+    #   password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+    #   role: "{{ env_var('SNOWFLAKE_ROLE', 'ANALYTICS_ROLE') }}"
+    #   database: "{{ env_var('SNOWFLAKE_DATABASE', 'NEURONEWS') }}"
+    #   warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE', 'ANALYTICS_WH') }}"
+    #   schema: "{{ env_var('SNOWFLAKE_SCHEMA', 'ANALYTICS') }}"
+    #   threads: 8
+    #   client_session_keep_alive: false
+    #   query_tag: "dbt_neuro_news"
+    
+    # Snowflake with AWS IAM authentication (for production)
+    # prod_iam:
+    #   type: snowflake
+    #   account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+    #   user: "{{ env_var('SNOWFLAKE_USER') }}"
+    #   authenticator: externalbrowser  # Use for SSO/IAM
+    #   role: "{{ env_var('SNOWFLAKE_ROLE', 'ANALYTICS_ROLE') }}"
+    #   database: "{{ env_var('SNOWFLAKE_DATABASE', 'NEURONEWS') }}"
+    #   warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE', 'ANALYTICS_WH') }}"
+    #   schema: "{{ env_var('SNOWFLAKE_SCHEMA', 'ANALYTICS') }}"
+    #   threads: 8
+    #   client_session_keep_alive: false
+    #   query_tag: "dbt_neuro_news"
+    
+    # Snowflake with key-pair authentication (for CI/CD)
+    # prod_keypair:
+    #   type: snowflake
+    #   account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+    #   user: "{{ env_var('SNOWFLAKE_USER') }}"
+    #   private_key_path: "{{ env_var('SNOWFLAKE_PRIVATE_KEY_PATH') }}"
+    #   role: "{{ env_var('SNOWFLAKE_ROLE', 'ANALYTICS_ROLE') }}"
+    #   database: "{{ env_var('SNOWFLAKE_DATABASE', 'NEURONEWS') }}"
+    #   warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE', 'ANALYTICS_WH') }}"
+    #   schema: "{{ env_var('SNOWFLAKE_SCHEMA', 'ANALYTICS') }}"
+    #   threads: 8
+    #   client_session_keep_alive: false
+    #   query_tag: "dbt_neuro_news"
+    
+    # Alternative Snowflake connection using OAuth (commented)
+    # prod_oauth:
+    #   type: snowflake
+    #   account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+    #   user: "{{ env_var('SNOWFLAKE_USER') }}"
+    #   authenticator: externalbrowser
+    #   role: "{{ env_var('SNOWFLAKE_ROLE', 'ANALYTICS_ROLE') }}"
+    #   database: "{{ env_var('SNOWFLAKE_DATABASE', 'NEURONEWS') }}"
+    #   warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE', 'ANALYTICS_WH') }}"
+    #   schema: "{{ env_var('SNOWFLAKE_SCHEMA', 'ANALYTICS') }}"
+    #   threads: 8
+    #   client_session_keep_alive: false
+    #   query_tag: "dbt_neuro_news"
+    
+    # S3 External Tables support (for large data processing)
+    # s3_external:
+    #   type: snowflake
+    #   account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+    #   user: "{{ env_var('SNOWFLAKE_USER') }}"
+    #   password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+    #   role: "{{ env_var('SNOWFLAKE_ROLE', 'ANALYTICS_ROLE') }}"
+    #   database: "{{ env_var('SNOWFLAKE_DATABASE', 'NEURONEWS') }}"
+    #   warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE', 'ANALYTICS_WH') }}"
+    #   schema: "{{ env_var('SNOWFLAKE_SCHEMA', 'EXTERNAL_TABLES') }}"
+    #   threads: 8
+    #   client_session_keep_alive: false
+    #   query_tag: "dbt_neuro_news_external"
+
+# Required environment variables for Snowflake (add to .env or CI/CD):
+# 
+# Basic Authentication:
+# SNOWFLAKE_ACCOUNT=your-account.snowflakecomputing.com
+# SNOWFLAKE_USER=your-username
+# SNOWFLAKE_PASSWORD=your-password
+# SNOWFLAKE_ROLE=ANALYTICS_ROLE
+# SNOWFLAKE_DATABASE=NEURONEWS
+# SNOWFLAKE_WAREHOUSE=ANALYTICS_WH
+# SNOWFLAKE_SCHEMA=ANALYTICS
+#
+# Key-pair Authentication (recommended for CI/CD):
+# SNOWFLAKE_PRIVATE_KEY_PATH=/path/to/rsa_key.p8
+# 
+# S3 External Schema (optional):
+# SNOWFLAKE_S3_STAGE_URL=s3://your-bucket/data/
+# SNOWFLAKE_S3_AWS_ROLE=arn:aws:iam::123456789012:role/SnowflakeIntegrationRole
+# SNOWFLAKE_S3_EXTERNAL_ID=your-external-id
