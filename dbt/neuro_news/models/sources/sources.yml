@@ -87,7 +87,7 @@ sources:
             description: "Entity extraction confidence score (0-1)"
             tests:
               - not_null
-              - accepted_range:
+              - dbt_expectations.expect_column_values_to_be_between:
                   min_value: 0
                   max_value: 1
           - name: start_char
