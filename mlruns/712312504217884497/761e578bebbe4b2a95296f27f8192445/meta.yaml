@@ -1,0 +1,14 @@
+artifact_uri: file:///workspaces/NeuroNews/mlruns/712312504217884497/761e578bebbe4b2a95296f27f8192445/artifacts
+end_time: 1756134193758
+entry_point_name: ''
+experiment_id: '712312504217884497'
+lifecycle_stage: active
+run_id: 761e578bebbe4b2a95296f27f8192445
+run_name: logistic_regression_20250825_150309
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1756134190231
+status: 3
+tags: []
+user_id: codespace

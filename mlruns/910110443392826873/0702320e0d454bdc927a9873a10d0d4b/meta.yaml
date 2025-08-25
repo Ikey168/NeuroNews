@@ -1,0 +1,14 @@
+artifact_uri: file:///workspaces/NeuroNews/mlruns/910110443392826873/0702320e0d454bdc927a9873a10d0d4b/artifacts
+end_time: 1756136138723
+entry_point_name: ''
+experiment_id: '910110443392826873'
+lifecycle_stage: active
+run_id: 0702320e0d454bdc927a9873a10d0d4b
+run_name: test_run_invalid_env
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1756136138707
+status: 3
+tags: []
+user_id: codespace

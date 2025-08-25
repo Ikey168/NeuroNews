@@ -1,0 +1,14 @@
+artifact_uri: file:///workspaces/NeuroNews/mlruns/910110443392826873/51b9d824f3b149fda3209249f7781b54/artifacts
+end_time: 1756136138558
+entry_point_name: ''
+experiment_id: '910110443392826873'
+lifecycle_stage: active
+run_id: 51b9d824f3b149fda3209249f7781b54
+run_name: embeddings_indexer_20250825_153538_sentence_transformers_test
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1756136138525
+status: 3
+tags: []
+user_id: codespace
