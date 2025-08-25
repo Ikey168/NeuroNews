@@ -9,6 +9,12 @@ models:
         tests:
           - unique
           - not_null
+          - dbt_expectations.expect_column_values_to_be_unique:
+              config:
+                tags: ['dq']
+          - dbt_expectations.expect_column_values_to_not_be_null:
+              config:
+                tags: ['dq']
       - name: title
         description: "Cleaned article title"
         tests:
@@ -22,6 +28,10 @@ models:
         tests:
           - not_null
           - unique
+          - dbt_expectations.expect_column_values_to_match_regex:
+              regex: "^https?://.+"
+              config:
+                tags: ['dq']
       - name: source_name
         description: "Normalized news source name"
         tests:
@@ -48,10 +58,23 @@ models:
         description: "Character count of article content"
         tests:
           - not_null
+          - dbt_utils.expression_is_true:
+              expression: "content_length > 0"
+              config:
+                tags: ['dq']
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 50
+              max_value: 100000
+              config:
+                tags: ['dq']
       - name: title_length
         description: "Character count of article title"
         tests:
           - not_null
+          - dbt_utils.expression_is_true:
+              expression: "title_length > 0 AND title_length <= 500"
+              config:
+                tags: ['dq']
       - name: is_duplicate
         description: "Flag indicating if this is a duplicate article"
         tests:
@@ -86,28 +109,65 @@ models:
           - relationships:
               to: ref('stg_news')
               field: article_id
+          - dbt_expectations.expect_column_values_to_not_be_null:
+              config:
+                tags: ['dq']
+          - dbt_utils.relationships_where:
+              to: ref('stg_news')
+              field: article_id
+              config:
+                tags: ['dq']
       - name: entity_text
         description: "Cleaned entity text"
         tests:
           - not_null
+          - dbt_expectations.expect_column_values_to_not_be_null:
+              config:
+                tags: ['dq']
+          - dbt_expectations.expect_column_value_lengths_to_be_between:
+              min_value: 1
+              max_value: 500
+              config:
+                tags: ['dq']
       - name: entity_type
         description: "Normalized entity type"
         tests:
           - not_null
           - accepted_values:
               values: ['PERSON', 'ORG', 'GPE', 'LOC', 'EVENT', 'PRODUCT', 'WORK_OF_ART', 'LAW', 'LANGUAGE', 'DATE', 'TIME', 'PERCENT', 'MONEY', 'QUANTITY', 'ORDINAL', 'CARDINAL', 'MISC']
+          - dbt_expectations.expect_column_values_to_be_in_set:
+              value_set: ['PERSON', 'ORG', 'GPE', 'LOC', 'EVENT', 'PRODUCT', 'WORK_OF_ART', 'LAW', 'LANGUAGE', 'DATE', 'TIME', 'PERCENT', 'MONEY', 'QUANTITY', 'ORDINAL', 'CARDINAL', 'MISC']
+              config:
+                tags: ['dq']
       - name: confidence_score
         description: "Confidence score for entity extraction (0.0 to 1.0)"
         tests:
           - not_null
+          - dbt_utils.expression_is_true:
+              expression: "confidence_score >= 0.0 AND confidence_score <= 1.0"
+              config:
+                tags: ['dq']
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0.0
+              max_value: 1.0
+              config:
+                tags: ['dq']
       - name: start_position
         description: "Start character position in text"
         tests:
           - not_null
+          - dbt_utils.expression_is_true:
+              expression: "start_position >= 0"
+              config:
+                tags: ['dq']
       - name: end_position
         description: "End character position in text"
         tests:
           - not_null
+          - dbt_utils.expression_is_true:
+              expression: "end_position > start_position"
+              config:
+                tags: ['dq']
       - name: entity_length
         description: "Length of entity text in characters"
         tests:
@@ -133,6 +193,12 @@ models:
         tests:
           - unique
           - not_null
+          - dbt_expectations.expect_column_values_to_be_unique:
+              config:
+                tags: ['dq']
+          - dbt_expectations.expect_column_values_to_not_be_null:
+              config:
+                tags: ['dq']
       - name: source_name
         description: "Cleaned and normalized source name"
         tests:
@@ -142,6 +208,10 @@ models:
         description: "Normalized base URL"
         tests:
           - not_null
+          - dbt_expectations.expect_column_values_to_match_regex:
+              regex: "^https?://.+"
+              config:
+                tags: ['dq']
       - name: rss_feed_url
         description: "Normalized RSS feed URL"
       - name: language_code
