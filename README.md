@@ -19,6 +19,10 @@
 
 ✅ **AI-Powered Event Detection** – Clusters related news articles into significant political & tech events.
 
+## Documentation
+
+- [Exactly-Once Delivery Design](docs/EXACTLY_ONCE_DESIGN.md)
+
 ✅ **NLP & Sentiment Analysis** – Extracts **named entities, sentiment scores, and keyword trends**.
 
 ✅ **Knowledge Graph Integration** – Links entities, policies, and historical context using **AWS Neptune**.
