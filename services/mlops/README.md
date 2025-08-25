@@ -1,23 +1,84 @@
-# MLflow Python Tracking Helper
+# MLflow MLOps Suite for NeuroNews
 
-A standardized MLflow tracking helper for NeuroNews ML experiments that automatically sets common tags, parameters, and metadata.
+A comprehensive MLflow-based MLOps solution for NeuroNews, providing standardized experiment tracking, model lifecycle management, and deployment automation.
+
+## 🚀 Components
+
+### 🔬 Experiment Tracking (`tracking.py`)
+Standardized MLflow tracking with automatic tagging and validation.
+
+### 📦 Model Registry (`registry.py`) 
+Complete model lifecycle management with versioning and stage transitions.
+
+### 📊 Experiment Organization
+Structured experiments with naming conventions and validation.
 
 ## Features
 
+### Experiment Tracking
 - 🏷️ **Automatic Standard Tags**: git SHA, branch, environment, hostname, code version
 - 🌍 **Environment Detection**: Automatically detects dev/ci/prod environments
 - 📊 **Context Manager**: Simple `mlrun()` context manager for experiment tracking
 - ⚙️ **Configurable**: Environment variables for tracking URI and experiment names
 - 🧪 **Well Tested**: Comprehensive unit and integration tests
 
+### Model Registry
+- 📝 **Model Registration**: Standardized model registration with metadata
+- 🔄 **Stage Management**: Controlled transitions (None → Staging → Production → Archived)
+- ✅ **Performance Gates**: Automatic validation before production deployment
+- 📈 **Version Comparison**: Performance tracking across model versions
+- 🗄️ **Automated Archival**: Cleanup of old model versions
+- 🚀 **Deployment Management**: Centralized deployment status and URIs
+
 ## Quick Start
+
+### Experiment Tracking
 
 ```python
 from services.mlops.tracking import mlrun
 import mlflow
 
-# Basic usage
+# Basic experiment tracking
 with mlrun("my-experiment") as run:
+    mlflow.log_param("learning_rate", 0.01)
+    mlflow.log_metric("accuracy", 0.95)
+    mlflow.log_artifact("model.pkl")
+```
+
+### Model Registry
+
+```python
+from services.mlops.registry import NeuroNewsModelRegistry, ModelMetadata
+
+# Initialize registry
+registry = NeuroNewsModelRegistry()
+
+# Register model with metadata
+metadata = ModelMetadata(
+    name="neuro_sentiment_classifier",
+    description="News sentiment classification model",
+    tags={"team": "nlp", "algorithm": "random_forest"},
+    owner="ml-team",
+    use_case="sentiment_analysis",
+    performance_metrics={"accuracy": 0.89, "f1_score": 0.85},
+    deployment_target="production"
+)
+
+# Register and promote model
+version = registry.register_model(
+    model_uri="runs:/abc123/model",
+    name="neuro_sentiment_classifier",
+    metadata=metadata
+)
+
+# Promote to production (with performance validation)
+registry.transition_model_stage(
+    name="neuro_sentiment_classifier",
+    version=version.version,
+    stage=ModelStage.PRODUCTION,
+    check_performance_gates=True
+)
+```
     mlflow.log_param("learning_rate", 0.01)
     mlflow.log_metric("accuracy", 0.95)
     mlflow.log_artifact("model.pkl")
@@ -264,3 +325,44 @@ git.branch: unknown
 ```
 
 **Solution**: Ensure you're running in a git repository, or the warnings can be ignored for non-git environments.
+
+## Model Registry
+
+The model registry provides comprehensive model lifecycle management. See [Model Registry Documentation](../../docs/mlops/model_registry.md) for detailed usage.
+
+### Standard Models
+
+| Model Name | Description | Performance Gates |
+|------------|-------------|------------------|
+| `neuro_sentiment_classifier` | News sentiment classification | accuracy > 0.85, f1_score > 0.80 |
+| `neuro_embeddings_encoder` | Document embedding generation | similarity_score > 0.75, recall@10 > 0.70 |
+| `neuro_rag_retriever` | RAG retrieval and ranking | relevance_score > 0.80, answer_quality > 0.75 |
+| `neuro_topic_extractor` | Topic and keyword extraction | - |
+| `neuro_summarizer` | Article summarization | - |
+| `neuro_clustering_engine` | Article clustering | - |
+
+### Helper Functions
+
+```python
+from services.mlops.registry import (
+    register_model_from_run,
+    promote_to_production,
+    get_production_model_uri
+)
+
+# Register model from run
+version = register_model_from_run("run_id", "model_name")
+
+# Promote to production
+promote_to_production("model_name", "1")
+
+# Get production URI for inference
+uri = get_production_model_uri("model_name")
+model = mlflow.pyfunc.load_model(uri)
+```
+
+## Documentation
+
+- **Experiment Tracking**: [experiments.md](../../docs/mlops/experiments.md)
+- **Model Registry**: [model_registry.md](../../docs/mlops/model_registry.md)
+- **MLflow Setup**: [docker/mlflow/README.md](../../docker/mlflow/README.md)
