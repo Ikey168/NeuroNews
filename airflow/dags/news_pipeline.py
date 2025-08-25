@@ -28,6 +28,9 @@ import sys
 sys.path.append("/opt/airflow/plugins")
 from lineage_utils import LineageHelper, build_uri
 
+# Import MLflow callbacks for experiment tracking (Issue #225)
+from mlflow_callbacks import configure_dag_for_mlflow, configure_task_for_mlflow
+
 
 # Default arguments for all tasks
 default_args = {
@@ -56,7 +59,7 @@ def load_io_paths() -> Dict[str, Any]:
     schedule_interval='0 8 * * *',  # Daily at 08:00 Europe/Berlin
     start_date=datetime(2025, 8, 1),
     catchup=False,
-    tags=['neuronews', 'data-pipeline', 'openlineage'],
+    tags=['neuronews', 'data-pipeline', 'openlineage', 'mlflow:neuro_news_indexing'],
     max_active_runs=1,
     doc_md=__doc__,
 )
@@ -487,6 +490,9 @@ def news_pipeline():
 
 # Create the DAG instance
 news_pipeline_dag = news_pipeline()
+
+# Configure MLflow integration (Issue #225)
+news_pipeline_dag = configure_dag_for_mlflow(news_pipeline_dag)
 
 # Configure SLA for the clean task (Issue #190)
 # Set SLA to 15 minutes to demonstrate SLA monitoring
