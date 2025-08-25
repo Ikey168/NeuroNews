@@ -108,9 +108,9 @@ class EmbeddingsProvider:
             run_name = f"embeddings_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
         with mlrun(
-            experiment_name=experiment_name,
-            run_name=run_name,
-            description=f"Generate embeddings for {len(texts)} documents"
+            name=run_name,
+            experiment=experiment_name,
+            tags={"description": f"Generate embeddings for {len(texts)} documents"}
         ):
             # Log parameters
             import mlflow

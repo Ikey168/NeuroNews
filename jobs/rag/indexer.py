@@ -118,9 +118,9 @@ class RAGIndexer:
             run_name = f"index_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
         with mlrun(
-            experiment_name=experiment_name,
-            run_name=run_name,
-            description=f"Index {len(documents)} documents for RAG"
+            name=run_name,
+            experiment=experiment_name,
+            tags={"description": f"Index {len(documents)} documents for RAG"}
         ):
             # Log parameters
             import mlflow
@@ -282,12 +282,22 @@ class RAGIndexer:
         """Generate embeddings for chunks."""
         chunk_texts = [chunk["text"] for chunk in chunks]
         
-        # Use embeddings provider with tracking
-        embeddings, metrics = await self.embeddings_provider.generate_embeddings(
+        # Generate embeddings directly (avoid nested MLflow tracking)
+        embeddings = self.embeddings_provider.model.encode(
             chunk_texts,
-            experiment_name="chunk_embeddings",
-            run_name=f"chunks_{len(chunk_texts)}"
+            batch_size=self.embeddings_provider.batch_size,
+            convert_to_numpy=True,
+            show_progress_bar=True,
         )
+        
+        # Convert to list format expected by the rest of the code
+        embeddings = [emb for emb in embeddings]
+        
+        # Create metrics dict for compatibility
+        metrics = {
+            "embeddings_generated": len(embeddings),
+            "total_processing_time": 0.0,  # Would be calculated if needed
+        }
         
         # Update our metrics
         self.metrics["embeddings_generated"] = len(embeddings)
