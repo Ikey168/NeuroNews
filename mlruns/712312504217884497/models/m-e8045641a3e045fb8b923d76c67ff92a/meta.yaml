@@ -1,0 +1,10 @@
+artifact_location: file:///workspaces/NeuroNews/mlruns/712312504217884497/models/m-e8045641a3e045fb8b923d76c67ff92a/artifacts
+creation_timestamp: 1756133285783
+experiment_id: '712312504217884497'
+last_updated_timestamp: 1756133287555
+model_id: m-e8045641a3e045fb8b923d76c67ff92a
+model_type: null
+name: model
+source_run_id: 52c072fda8a04073ba2cea7b8191a9af
+status: 2
+status_message: null
