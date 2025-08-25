@@ -2,16 +2,107 @@
 MLflow Tracking Helper for NeuroNews.
 
 This module provides a standardized way to track ML experiments with MLflow,
-automatically setting common tags, parameters, and metadata.
+automatically setting common tags, parameters, and metadata according to
+the NeuroNews experiment structure and naming conventions.
+
+Implements Issue #220: Experiment structure & naming conventions
 """
 
 import os
 import socket
 import subprocess
 from contextlib import contextmanager
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, List
 import mlflow
 import mlflow.tracking
+from datetime import datetime
+import warnings
+
+
+# Standard experiment names (Issue #220)
+STANDARD_EXPERIMENTS = {
+    "neuro_news_indexing": "Document embedding generation, vector storage, and retrieval optimization",
+    "neuro_news_ask": "Question-answering pipeline performance and accuracy tracking", 
+    "research_prototypes": "Experimental features, research ideas, and proof-of-concept implementations"
+}
+
+# Required tags for all runs (Issue #220)
+REQUIRED_TAGS = ["git.sha", "env", "pipeline", "data_version"]
+
+# Valid environment values
+VALID_ENVIRONMENTS = ["dev", "staging", "prod"]
+
+
+def validate_experiment_name(experiment_name: str) -> bool:
+    """
+    Validate that experiment name follows naming conventions.
+    
+    Args:
+        experiment_name: Name of the experiment to validate
+        
+    Returns:
+        True if valid, False otherwise
+    """
+    if experiment_name in STANDARD_EXPERIMENTS:
+        return True
+    
+    # Allow additional experiments but warn
+    warnings.warn(
+        f"Experiment '{experiment_name}' is not in standard experiments: {list(STANDARD_EXPERIMENTS.keys())}. "
+        "Consider using a standard experiment or updating the documentation.",
+        UserWarning
+    )
+    return True
+
+
+def validate_required_tags(tags: Dict[str, Any]) -> List[str]:
+    """
+    Validate that all required tags are present.
+    
+    Args:
+        tags: Dictionary of tags to validate
+        
+    Returns:
+        List of missing required tags
+    """
+    missing_tags = []
+    for required_tag in REQUIRED_TAGS:
+        if required_tag not in tags or not tags[required_tag]:
+            missing_tags.append(required_tag)
+    
+    return missing_tags
+
+
+def validate_environment(env: str) -> bool:
+    """
+    Validate environment value.
+    
+    Args:
+        env: Environment string to validate
+        
+    Returns:
+        True if valid, False otherwise
+    """
+    return env in VALID_ENVIRONMENTS
+
+
+def generate_run_name(component: str, descriptor: Optional[str] = None) -> str:
+    """
+    Generate standardized run name following convention: {component}_{timestamp}_{optional_descriptor}
+    
+    Args:
+        component: Component name (e.g., 'embeddings_indexer', 'rag_answerer')
+        descriptor: Optional descriptor for the run
+        
+    Returns:
+        Formatted run name
+    """
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    if descriptor:
+        return f"{component}_{timestamp}_{descriptor}"
+    else:
+        return f"{component}_{timestamp}"
 
 
 def _get_git_info() -> Dict[str, str]:
@@ -46,7 +137,12 @@ def _get_git_info() -> Dict[str, str]:
 
 
 def _get_environment() -> str:
-    """Determine the current environment (dev/ci/prod)."""
+    """Determine the current environment (dev/staging/prod)."""
+    # Check explicit environment variable first
+    env = os.environ.get("NEURONEWS_ENV")
+    if env and validate_environment(env):
+        return env
+    
     # Check common CI environment variables
     if any(env_var in os.environ for env_var in [
         "CI", "CONTINUOUS_INTEGRATION", "GITHUB_ACTIONS", 
@@ -100,29 +196,45 @@ def _setup_mlflow_tracking():
 
 
 @contextmanager
-def mlrun(name: str, experiment: Optional[str] = None, tags: Optional[Dict[str, Any]] = None):
+def mlrun(name: str, experiment: Optional[str] = None, tags: Optional[Dict[str, Any]] = None, 
+          validate_tags: bool = True):
     """
-    Context manager for MLflow runs with standardized tagging.
+    Context manager for MLflow runs with standardized tagging and validation.
+    
+    Implements Issue #220 experiment structure and naming conventions.
     
     Args:
-        name: Name for the MLflow run
-        experiment: Optional experiment name (overrides environment)
+        name: Name for the MLflow run (should follow: {component}_{timestamp}_{optional_descriptor})
+        experiment: Optional experiment name (should be one of the standard experiments)
         tags: Additional custom tags to add
+        validate_tags: Whether to validate required tags (default: True)
     
     Yields:
         MLflow active run object
     
+    Raises:
+        ValueError: If required tags are missing or invalid values provided
+    
     Example:
-        with mlrun("sentiment-training", experiment="news-nlp") as run:
-            mlflow.log_param("model_type", "bert")
+        with mlrun(
+            name="embeddings_indexer_20250825_143021",
+            experiment="neuro_news_indexing",
+            tags={
+                "data_version": "v1.2.3",
+                "notes": "Baseline embedding generation run",
+                "model_type": "transformer",
+                "task_type": "embedding"
+            }
+        ) as run:
+            mlflow.log_param("model_name", "sentence-transformers/all-MiniLM-L6-v2")
             mlflow.log_metric("accuracy", 0.95)
-            mlflow.log_artifact("model.pkl")
     """
     # Setup MLflow tracking
     _setup_mlflow_tracking()
     
-    # Override experiment if specified
+    # Validate experiment name if provided
     if experiment:
+        validate_experiment_name(experiment)
         try:
             mlflow.set_experiment(experiment)
         except Exception as e:
@@ -130,10 +242,13 @@ def mlrun(name: str, experiment: Optional[str] = None, tags: Optional[Dict[str, 
     
     # Gather standard tags and metadata
     git_info = _get_git_info()
+    env = _get_environment()
+    
+    # Build standard tags (required by Issue #220)
     standard_tags = {
         "git.sha": git_info["sha"],
-        "git.branch": git_info["branch"],
-        "env": _get_environment(),
+        "git.branch": git_info["branch"], 
+        "env": env,
         "hostname": socket.gethostname(),
         "code_version": _get_code_version(),
     }
@@ -143,22 +258,53 @@ def mlrun(name: str, experiment: Optional[str] = None, tags: Optional[Dict[str, 
     if pipeline:
         standard_tags["pipeline"] = pipeline
     
+    # Add data_version from environment if not in custom tags
+    data_version = os.environ.get("NEURONEWS_DATA_VERSION")
+    if data_version and (not tags or "data_version" not in tags):
+        standard_tags["data_version"] = data_version
+    
     # Merge with custom tags
+    final_tags = standard_tags.copy()
     if tags:
-        standard_tags.update(tags)
+        final_tags.update(tags)
+    
+    # Validate required tags if requested
+    if validate_tags:
+        missing_tags = validate_required_tags(final_tags)
+        if missing_tags:
+            missing_list = ", ".join(missing_tags)
+            raise ValueError(
+                f"Missing required tags: {missing_list}. "
+                f"Required tags: {REQUIRED_TAGS}. "
+                f"Set missing tags in the tags parameter or environment variables "
+                f"(NEURONEWS_PIPELINE, NEURONEWS_DATA_VERSION)."
+            )
+        
+        # Validate environment value
+        if not validate_environment(final_tags["env"]):
+            raise ValueError(
+                f"Invalid environment '{final_tags['env']}'. "
+                f"Valid environments: {VALID_ENVIRONMENTS}. "
+                f"Set NEURONEWS_ENV environment variable."
+            )
     
     # Start MLflow run
     try:
-        with mlflow.start_run(run_name=name, tags=standard_tags) as run:
+        with mlflow.start_run(run_name=name, tags=final_tags) as run:
             # Log standard parameters
             mlflow.log_param("run_name", name)
             mlflow.log_param("git_sha", git_info["sha"])
             mlflow.log_param("git_branch", git_info["branch"])
-            mlflow.log_param("environment", _get_environment())
+            mlflow.log_param("environment", env)
             mlflow.log_param("hostname", socket.gethostname())
             
+            # Log experiment info if available
+            if experiment:
+                mlflow.log_param("experiment_name", experiment)
+                if experiment in STANDARD_EXPERIMENTS:
+                    mlflow.log_param("experiment_description", STANDARD_EXPERIMENTS[experiment])
+
             yield run
-            
     except Exception as e:
         print(f"Warning: MLflow run failed: {e}")
         # Create a mock run object for offline development
