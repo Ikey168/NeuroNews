@@ -59,6 +59,10 @@ def create_enriched_table_if_not_exists(spark):
     spark.sql(create_table_sql)
     print(f"✓ Ensured {ENRICHED_TABLE} table exists")
 
+        # Set write order and distribution mode for performance tuning
+        spark.sql(f"ALTER TABLE {ENRICHED_TABLE} WRITE ORDERED BY published_at, id")
+        spark.sql(f"ALTER TABLE {ENRICHED_TABLE} SET TBLPROPERTIES ('write.distribution-mode'='hash')")
+
 def get_process_date():
     """Get the date to process (default to yesterday)."""
     if PROCESS_DATE:
