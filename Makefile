@@ -1,4 +1,4 @@
-.PHONY: help airflow-up airflow-down airflow-logs marquez-ui airflow-init airflow-status airflow-build airflow-test-openlineage
+.PHONY: help airflow-up airflow-down airflow-logs marquez-ui airflow-init airflow-status airflow-build airflow-test-openlineage mlflow-up mlflow-down mlflow-ui
 
 # Default target
 help:
@@ -20,6 +20,11 @@ help:
 	@echo "  airflow-test-bootstrap - Test bootstrap script functionality (Issue #194)"
 	@echo "  marquez-ui       - Open Marquez UI in browser"
 	@echo ""
+	@echo "MLflow Model Tracking:"
+	@echo "  mlflow-up        - Start MLflow tracking server with Postgres backend"
+	@echo "  mlflow-down      - Stop MLflow tracking server"
+	@echo "  mlflow-ui        - Open MLflow UI in browser"
+	@echo ""
 	@echo "dbt Analytics:"
 	@echo "  dbt-deps         - Install dbt packages"
 	@echo "  dbt-build        - Build all dbt models"
@@ -31,6 +36,7 @@ help:
 	@echo "URLs:"
 	@echo "  Airflow UI:  http://localhost:8080 (airflow/airflow)"
 	@echo "  Marquez UI:  http://localhost:3000"
+	@echo "  MLflow UI:   http://localhost:5001"
 
 # Airflow and Marquez orchestration targets
 
@@ -179,3 +185,31 @@ dbt-clean:
 	@echo "🧹 Cleaning dbt artifacts..."
 	@cd dbt/neuro_news && dbt clean --profiles-dir ../
 	@echo "✅ dbt artifacts cleaned!"
+
+# MLflow Model Tracking targets (Issue #215)
+
+mlflow-up:
+	@echo "🚀 Starting MLflow tracking server with Postgres backend..."
+	@cd docker/mlflow && docker-compose -f docker-compose.mlflow.yml up -d
+	@echo ""
+	@echo "✅ MLflow services started!"
+	@echo "📊 MLflow UI: http://localhost:5001"
+	@echo "📈 Database: PostgreSQL on port 5433"
+	@echo ""
+	@echo "Use 'make mlflow-down' to stop services"
+	@echo "Use 'make mlflow-ui' to open MLflow UI"
+
+mlflow-down:
+	@echo "🛑 Stopping MLflow tracking server..."
+	@cd docker/mlflow && docker-compose -f docker-compose.mlflow.yml down
+	@echo "✅ MLflow services stopped!"
+
+mlflow-ui:
+	@echo "🌐 Opening MLflow UI..."
+	@if command -v xdg-open > /dev/null; then \
+		xdg-open http://localhost:5001; \
+	elif command -v open > /dev/null; then \
+		open http://localhost:5001; \
+	else \
+		echo "Please open http://localhost:5001 in your browser"; \
+	fi
