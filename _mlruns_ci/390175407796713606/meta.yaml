@@ -1,0 +1,6 @@
+artifact_location: file:///workspaces/NeuroNews/_mlruns_ci/390175407796713606
+creation_time: 1756148491462
+experiment_id: '390175407796713606'
+last_update_time: 1756148491462
+lifecycle_stage: active
+name: rag_evaluation_ci
