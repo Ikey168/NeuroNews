@@ -44,6 +44,16 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 
+# Issue #222: Import reproducibility tools
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+try:
+    from services.mlops.data_manifest import DataManifestGenerator
+    from scripts.capture_env import capture_environment
+except ImportError as e:
+    print(f"Warning: Could not import reproducibility tools: {e}")
+    DataManifestGenerator = None
+    capture_environment = None
+
 # Suppress sklearn warnings for cleaner output
 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -71,6 +81,64 @@ def setup_mlflow() -> None:
             print("💡 Make sure MLflow server is running or use local tracking")
             print("   For local tracking: unset MLFLOW_TRACKING_URI")
         sys.exit(1)
+
+
+def capture_reproducibility_info(run_name: str, dataset_info: Dict[str, Any]) -> None:
+    """
+    Capture environment and data information for reproducibility.
+    
+    Args:
+        run_name: Name of the current MLflow run
+        dataset_info: Information about the dataset being used
+    """
+    # Issue #222: Capture environment for reproducibility
+    if capture_environment:
+        print("🔍 Capturing environment for reproducibility...")
+        try:
+            env_artifacts = capture_environment(
+                output_dir=f"/tmp/train_env_{run_name}",
+                log_to_mlflow=True
+            )
+            print(f"✅ Environment captured: {len(env_artifacts)} artifacts")
+        except Exception as e:
+            print(f"⚠️  Environment capture failed: {e}")
+            mlflow.log_param("env_capture_error", str(e))
+    
+    # Issue #222: Generate data manifest for reproducibility
+    if DataManifestGenerator:
+        print("📋 Generating data manifest...")
+        try:
+            import tempfile
+            import json
+            
+            with tempfile.TemporaryDirectory() as temp_dir:
+                # Save dataset info to temporary file for manifest
+                data_file = os.path.join(temp_dir, "dataset_info.json")
+                with open(data_file, 'w') as f:
+                    json.dump(dataset_info, f, indent=2)
+                
+                # Generate manifest
+                manifest_generator = DataManifestGenerator()
+                data_manifest = manifest_generator.generate_manifest(
+                    data_file,
+                    metadata={
+                        "training_run": run_name,
+                        "dataset_type": "synthetic",
+                        "timestamp": datetime.now().isoformat()
+                    }
+                )
+                
+                # Log manifest to MLflow
+                manifest_generator.log_to_mlflow(data_manifest, "training_data_manifest")
+                print(f"✅ Data manifest generated")
+                
+        except Exception as e:
+            print(f"⚠️  Data manifest generation failed: {e}")
+            mlflow.log_param("data_manifest_error", str(e))
+    
+    # Log dataset info as parameters
+    for key, value in dataset_info.items():
+        mlflow.log_param(f"dataset_{key}", value)
 
 
 def create_classification_dataset(n_samples: int = 1000, random_state: int = 42) -> Tuple[pd.DataFrame, pd.Series]:
@@ -329,18 +397,38 @@ def demonstration_run():
     # Train models with autologging
     results = {}
     
+    # Dataset information for reproducibility
+    clf_dataset_info = {
+        "type": "classification",
+        "samples": X_clf.shape[0],
+        "features": X_clf.shape[1],
+        "train_samples": len(X_train_clf),
+        "test_samples": len(X_test_clf),
+        "random_state": 42,
+        "test_size": 0.2,
+        "classes": len(np.unique(y_clf))
+    }
+    
     # Logistic Regression
-    with mlflow.start_run(run_name=f"logistic_regression_{datetime.now().strftime('%Y%m%d_%H%M%S')}"):
+    with mlflow.start_run(run_name=f"logistic_regression_{datetime.now().strftime('%Y%m%d_%H%M%S')}") as run:
         mlflow.set_tag("model_type", "logistic_regression")
         mlflow.set_tag("task_type", "classification")
         mlflow.set_tag("dataset_type", "synthetic")
+        
+        # Issue #222: Capture reproducibility information
+        capture_reproducibility_info(run.info.run_name, clf_dataset_info)
+        
         results['logistic'] = train_logistic_regression(X_train_clf, X_test_clf, y_train_clf, y_test_clf)
     
     # Random Forest
-    with mlflow.start_run(run_name=f"random_forest_{datetime.now().strftime('%Y%m%d_%H%M%S')}"):
+    with mlflow.start_run(run_name=f"random_forest_{datetime.now().strftime('%Y%m%d_%H%M%S')}") as run:
         mlflow.set_tag("model_type", "random_forest")
         mlflow.set_tag("task_type", "classification")
         mlflow.set_tag("dataset_type", "synthetic")
+        
+        # Issue #222: Capture reproducibility information
+        capture_reproducibility_info(run.info.run_name, clf_dataset_info)
+        
         results['forest'] = train_random_forest(X_train_clf, X_test_clf, y_train_clf, y_test_clf)
     
     # Run regression example
@@ -357,11 +445,28 @@ def demonstration_run():
     print(f"📊 Regression Dataset: {X_reg.shape[0]} samples, {X_reg.shape[1]} features")
     print(f"🔀 Train/Test Split: {len(X_train_reg)}/{len(X_test_reg)} samples")
     
+    # Dataset information for reproducibility
+    reg_dataset_info = {
+        "type": "regression",
+        "samples": X_reg.shape[0],
+        "features": X_reg.shape[1],
+        "train_samples": len(X_train_reg),
+        "test_samples": len(X_test_reg),
+        "random_state": 42,
+        "test_size": 0.2,
+        "n_informative": 5,
+        "noise": 0.1
+    }
+    
     # Linear Regression
-    with mlflow.start_run(run_name=f"linear_regression_{datetime.now().strftime('%Y%m%d_%H%M%S')}"):
+    with mlflow.start_run(run_name=f"linear_regression_{datetime.now().strftime('%Y%m%d_%H%M%S')}") as run:
         mlflow.set_tag("model_type", "linear_regression")
         mlflow.set_tag("task_type", "regression")
         mlflow.set_tag("dataset_type", "synthetic")
+        
+        # Issue #222: Capture reproducibility information
+        capture_reproducibility_info(run.info.run_name, reg_dataset_info)
+        
         results['linear'] = train_linear_regression(X_train_reg, X_test_reg, y_train_reg, y_test_reg)
     
     # Summary
