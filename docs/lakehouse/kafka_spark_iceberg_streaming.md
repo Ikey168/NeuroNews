@@ -1,10 +1,10 @@
 # Kafka → Spark → Iceberg Streaming Setup
 
-This document explains the streaming pipeline setup for Issue #289, including checkpoint management and restart behavior.
+This document explains the streaming pipeline setup for Issue #289 and #290, including checkpoint management, restart behavior, watermarking, and deduplication.
 
 ## Overview
 
-The streaming job reads from Kafka topic `articles.raw.v1`, parses Avro messages, and writes to Iceberg table `demo.news.articles_raw` with checkpointing to ensure exactly-once processing.
+The streaming job reads from Kafka topic `articles.raw.v1`, parses Avro messages, applies watermarking and deduplication for late data handling, and writes to Iceberg table `demo.news.articles_raw` with checkpointing to ensure exactly-once processing.
 
 ## Architecture
 
@@ -13,8 +13,28 @@ Kafka Topic: articles.raw.v1
     ↓ (Avro messages)
 Spark Streaming
     ↓ (parsed articles)
+Watermarking (2 hours) + Deduplication
+    ↓ (clean, unique articles)
 Iceberg Table: demo.news.articles_raw
     ↓ (checkpoint: /chk/articles_raw)
+```
+
+## Watermarking & Deduplication (Issue #290)
+
+### Watermarking
+- **Window**: 2-hour watermark for late data tolerance
+- **Purpose**: Handles out-of-order events within acceptable latency
+- **Behavior**: Events arriving more than 2 hours late are dropped
+
+### Deduplication
+- **Key**: Article ID (`id` field)
+- **Strategy**: `dropDuplicates(["id"])` within watermark window
+- **Result**: Only the latest version of each article survives
+
+### Implementation
+```python
+clean = (df.withWatermark("published_at", "2 hours")
+           .dropDuplicates(["id"]))
 ```
 
 ## Checkpoint Directory & Restart Behavior
@@ -67,7 +87,33 @@ python jobs/spark/stream_write_raw.py
 # Check Iceberg table
 spark-sql -e "SELECT count(*) FROM demo.news.articles_raw"
 
+# Check for duplicates
+spark-sql -e "SELECT id, count(*) as cnt FROM demo.news.articles_raw GROUP BY id HAVING cnt > 1"
+
 # Check checkpoint directory
+ls -la /chk/articles_raw/
+```
+
+## Testing
+
+### Unit Tests
+```bash
+# Run watermarking and deduplication unit tests
+python tests/test_watermark_deduplication.py
+```
+
+### Integration Tests
+```bash
+# Run full integration test with out-of-order events
+python jobs/spark/test_watermark_deduplication.py
+```
+
+### DoD Validation (Issue #290)
+The integration test validates:
+- ✅ No duplicates for keys within watermark window
+- ✅ Late data beyond watermark is properly handled
+- ✅ Only latest version of each article survives
+- ✅ Backpressure remains acceptable during processing
 ls -la /chk/articles_raw/
 ```
 
