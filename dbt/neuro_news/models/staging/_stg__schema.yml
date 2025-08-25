@@ -1,0 +1,182 @@
+version: 2
+
+models:
+  - name: stg_news
+    description: "Staging model for news articles with clean, typed, and deduplicated data"
+    columns:
+      - name: article_id
+        description: "Deterministic natural key for the article (hash of url + source)"
+        tests:
+          - unique
+          - not_null
+      - name: title
+        description: "Cleaned article title"
+        tests:
+          - not_null
+      - name: content
+        description: "Cleaned article content"
+        tests:
+          - not_null
+      - name: url
+        description: "Normalized article URL"
+        tests:
+          - not_null
+          - unique
+      - name: source_name
+        description: "Normalized news source name"
+        tests:
+          - not_null
+      - name: published_at_utc
+        description: "Article publication timestamp in UTC"
+      - name: scraped_at_utc
+        description: "Article scraping timestamp in UTC"
+        tests:
+          - not_null
+      - name: language_code
+        description: "Normalized ISO 639-1 language code"
+        tests:
+          - accepted_values:
+              values: ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'zh', 'ja', 'ar', 'unknown']
+      - name: category
+        description: "Normalized article category"
+        tests:
+          - accepted_values:
+              values: ['technology', 'politics', 'business', 'sports', 'entertainment', 'science', 'health', 'environment', 'finance', 'other']
+      - name: author
+        description: "Cleaned author name"
+      - name: content_length
+        description: "Character count of article content"
+        tests:
+          - not_null
+      - name: title_length
+        description: "Character count of article title"
+        tests:
+          - not_null
+      - name: is_duplicate
+        description: "Flag indicating if this is a duplicate article"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [true, false]
+      - name: created_at_utc
+        description: "Record creation timestamp in UTC"
+        tests:
+          - not_null
+      - name: updated_at_utc
+        description: "Record last update timestamp in UTC"
+        tests:
+          - not_null
+      - name: dbt_loaded_at
+        description: "When this record was loaded by dbt"
+        tests:
+          - not_null
+
+  - name: stg_entities
+    description: "Staging model for extracted entities with clean, typed data"
+    columns:
+      - name: entity_id
+        description: "Deterministic natural key for the entity (hash of article_id + entity_text + entity_type)"
+        tests:
+          - unique
+          - not_null
+      - name: article_id
+        description: "Foreign key to stg_news"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_news')
+              field: article_id
+      - name: entity_text
+        description: "Cleaned entity text"
+        tests:
+          - not_null
+      - name: entity_type
+        description: "Normalized entity type"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['PERSON', 'ORG', 'GPE', 'LOC', 'EVENT', 'PRODUCT', 'WORK_OF_ART', 'LAW', 'LANGUAGE', 'DATE', 'TIME', 'PERCENT', 'MONEY', 'QUANTITY', 'ORDINAL', 'CARDINAL', 'MISC']
+      - name: confidence_score
+        description: "Confidence score for entity extraction (0.0 to 1.0)"
+        tests:
+          - not_null
+      - name: start_position
+        description: "Start character position in text"
+        tests:
+          - not_null
+      - name: end_position
+        description: "End character position in text"
+        tests:
+          - not_null
+      - name: entity_length
+        description: "Length of entity text in characters"
+        tests:
+          - not_null
+      - name: extracted_at_utc
+        description: "Entity extraction timestamp in UTC"
+        tests:
+          - not_null
+      - name: created_at_utc
+        description: "Record creation timestamp in UTC"
+        tests:
+          - not_null
+      - name: dbt_loaded_at
+        description: "When this record was loaded by dbt"
+        tests:
+          - not_null
+
+  - name: stg_sources
+    description: "Staging model for news source configurations with clean, typed data"
+    columns:
+      - name: source_id
+        description: "Unique identifier for the news source"
+        tests:
+          - unique
+          - not_null
+      - name: source_name
+        description: "Cleaned and normalized source name"
+        tests:
+          - not_null
+          - unique
+      - name: base_url
+        description: "Normalized base URL"
+        tests:
+          - not_null
+      - name: rss_feed_url
+        description: "Normalized RSS feed URL"
+      - name: language_code
+        description: "Normalized ISO 639-1 language code"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'zh', 'ja', 'ar', 'unknown']
+      - name: country_code
+        description: "Normalized ISO 3166-1 alpha-2 country code"
+        tests:
+          - accepted_values:
+              values: ['US', 'UK', 'CA', 'AU', 'DE', 'FR', 'ES', 'IT', 'JP', 'CN', 'RU', 'BR', 'IN', 'MX', 'NL', 'SE', 'NO', 'FI', 'DK', 'unknown']
+      - name: category
+        description: "Normalized source category"
+        tests:
+          - accepted_values:
+              values: ['technology', 'politics', 'business', 'sports', 'entertainment', 'science', 'health', 'environment', 'finance', 'general', 'other']
+      - name: is_scraping_enabled
+        description: "Whether this source is actively being scraped"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [true, false]
+      - name: last_scraped_at_utc
+        description: "Last successful scrape timestamp in UTC"
+      - name: created_at_utc
+        description: "Source registration timestamp in UTC"
+        tests:
+          - not_null
+      - name: updated_at_utc
+        description: "Source configuration last update timestamp in UTC"
+        tests:
+          - not_null
+      - name: dbt_loaded_at
+        description: "When this record was loaded by dbt"
+        tests:
+          - not_null
