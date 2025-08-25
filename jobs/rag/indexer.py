@@ -24,6 +24,11 @@ try:
     from services.mlops.tracking import mlrun
     from services.embeddings.provider import EmbeddingsProvider
     from src.nlp.article_embedder import ArticleEmbedder, get_snowflake_connection_params
+    # Issue #222: Import reproducibility tools
+    from services.mlops.data_manifest import DataManifestGenerator
+    import sys
+    sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
+    from scripts.capture_env import capture_environment
 except ImportError as e:
     print(f"Import error: {e}")
     print("Please ensure you're running from the project root directory")
@@ -52,8 +57,43 @@ class RAGIndexer:
         batch_size: int = 32,
         embedding_model: str = "all-MiniLM-L6-v2",
         index_type: str = "flat",
-        conn_params: Optional[Dict] = None,
+        capture_environment: bool = True,
+        capture_data_manifest: bool = True,
     ):
+        """
+        Initialize RAG indexer.
+
+        Args:
+            chunk_size: Size of text chunks for processing
+            chunk_overlap: Overlap between consecutive chunks
+            batch_size: Batch size for embedding generation
+            embedding_model: Name of the embedding model to use
+            index_type: Type of vector index to create
+            capture_environment: Whether to capture environment for reproducibility
+            capture_data_manifest: Whether to capture data manifest for reproducibility
+        """
+        self.chunk_size = chunk_size
+        self.chunk_overlap = chunk_overlap
+        self.batch_size = batch_size
+        self.embedding_model = embedding_model
+        self.index_type = index_type
+        self.capture_environment = capture_environment
+        self.capture_data_manifest = capture_data_manifest
+        
+        # Initialize reproducibility tools
+        if self.capture_data_manifest:
+            self.manifest_generator = DataManifestGenerator()
+        else:
+            self.manifest_generator = None
+        
+        # Initialize embeddings provider
+        self.embeddings_provider = EmbeddingsProvider(
+            model_name=embedding_model,
+            provider_type="sentence_transformers"
+        )
+        
+        # Initialize metrics tracking
+        self._reset_metrics()
         """
         Initialize RAG indexer.
 
@@ -132,6 +172,51 @@ class RAGIndexer:
             mlflow.log_param("overlap", self.chunk_overlap)
             mlflow.log_param("index_type", self.index_type)
             mlflow.log_param("input_docs", len(documents))
+            
+            # Issue #222: Capture environment for reproducibility
+            if self.capture_environment:
+                logger.info("🔍 Capturing environment for reproducibility...")
+                try:
+                    env_artifacts = capture_environment(
+                        output_dir=f"/tmp/indexer_env_{run_name}",
+                        log_to_mlflow=True
+                    )
+                    logger.info(f"✅ Environment captured: {len(env_artifacts)} artifacts")
+                except Exception as e:
+                    logger.warning(f"⚠️  Environment capture failed: {e}")
+                    mlflow.log_param("env_capture_error", str(e))
+            
+            # Issue #222: Generate data manifest for input documents
+            if self.capture_data_manifest and documents:
+                logger.info("📋 Generating data manifest for input documents...")
+                try:
+                    # Create temporary data structure for manifest
+                    import tempfile
+                    import json
+                    
+                    with tempfile.TemporaryDirectory() as temp_dir:
+                        # Save documents to temporary files for manifest generation
+                        docs_file = os.path.join(temp_dir, "input_documents.json")
+                        with open(docs_file, 'w') as f:
+                            json.dump(documents, f, indent=2)
+                        
+                        # Generate manifest
+                        data_manifest = self.manifest_generator.generate_manifest(
+                            docs_file,
+                            metadata={
+                                "indexer_run": run_name,
+                                "document_count": len(documents),
+                                "timestamp": datetime.now().isoformat()
+                            }
+                        )
+                        
+                        # Log manifest to MLflow
+                        self.manifest_generator.log_to_mlflow(data_manifest, "input_data_manifest")
+                        logger.info(f"✅ Data manifest generated for {len(documents)} documents")
+                        
+                except Exception as e:
+                    logger.warning(f"⚠️  Data manifest generation failed: {e}")
+                    mlflow.log_param("data_manifest_error", str(e))
 
             # Reset metrics for this run
             self._reset_metrics()
