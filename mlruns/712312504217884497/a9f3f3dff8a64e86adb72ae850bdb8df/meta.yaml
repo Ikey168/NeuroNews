@@ -1,0 +1,14 @@
+artifact_uri: file:///workspaces/NeuroNews/mlruns/712312504217884497/a9f3f3dff8a64e86adb72ae850bdb8df/artifacts
+end_time: 1756133538720
+entry_point_name: ''
+experiment_id: '712312504217884497'
+lifecycle_stage: active
+run_id: a9f3f3dff8a64e86adb72ae850bdb8df
+run_name: linear_regression_20250825_145216
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1756133536788
+status: 3
+tags: []
+user_id: codespace

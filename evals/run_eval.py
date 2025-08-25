@@ -7,6 +7,7 @@ for key metrics including Recall@k, nDCG@k, MRR, and Answer_F1.
 """
 
 import asyncio
+import argparse
 import csv
 import json
 import logging
@@ -430,30 +431,68 @@ def create_sample_dataset() -> List[Dict[str, Any]]:
     ]
 
 
+def create_tiny_dataset() -> List[Dict[str, Any]]:
+    """Create a tiny evaluation dataset for CI testing."""
+    return [
+        {
+            "question": "What is AI?",
+            "ground_truth": "Artificial intelligence is machine simulation of human intelligence.",
+            "relevant_docs": ["doc_0", "doc_1"],
+        },
+        {
+            "question": "What is ML?",
+            "ground_truth": "Machine learning enables computers to learn from data.",
+            "relevant_docs": ["doc_2", "doc_3"],
+        },
+    ]
+
+
 async def main():
     """Run RAG evaluation demo."""
-    logger.info("Starting RAG evaluation demo")
+    parser = argparse.ArgumentParser(description="Run RAG evaluation")
+    parser.add_argument("--tiny", action="store_true", help="Run tiny evaluation for CI")
+    args = parser.parse_args()
     
-    # Create sample dataset
-    dataset = create_sample_dataset()
+    if args.tiny:
+        logger.info("Starting tiny RAG evaluation for CI")
+        dataset = create_tiny_dataset()
+        experiment_name = "rag_evaluation_ci"
+        run_name = f"ci_eval_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    else:
+        logger.info("Starting RAG evaluation demo")
+        dataset = create_sample_dataset()
+        experiment_name = "rag_evaluation_demo"
+        run_name = f"demo_eval_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     
-    # Initialize evaluator
-    evaluator = RAGEvaluator(
-        k_values=[1, 3, 5],
-        fusion_weights={"semantic": 0.7, "keyword": 0.3},
-        reranker_enabled=True,
-    )
+    # Create evaluator with appropriate settings for the context
+    if args.tiny:
+        # Simpler configuration for CI
+        evaluator = RAGEvaluator(
+            k_values=[1, 3],
+            fusion_weights={"semantic": 0.7, "keyword": 0.3},
+            reranker_enabled=True,
+        )
+    else:
+        # Full configuration for demo
+        evaluator = RAGEvaluator(
+            k_values=[1, 3, 5],
+            fusion_weights={"semantic": 0.7, "keyword": 0.3},
+            reranker_enabled=True,
+        )
     
     # Run evaluation
     results = await evaluator.evaluate_dataset(
         dataset=dataset,
-        experiment_name="rag_evaluation_demo",
-        run_name=f"demo_eval_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+        experiment_name=experiment_name,
+        run_name=run_name,
     )
     
     # Print results
     print("\n" + "="*50)
-    print("RAG EVALUATION RESULTS")
+    if args.tiny:
+        print("TINY RAG EVALUATION RESULTS (CI)")
+    else:
+        print("RAG EVALUATION RESULTS")
     print("="*50)
     
     print(f"\nDataset size: {results['dataset_size']} queries")
@@ -469,7 +508,10 @@ async def main():
     print(f"\nPer-query results logged to MLflow")
     print(f"Check MLflow UI for detailed results and CSV artifacts")
     
-    logger.info("RAG evaluation demo completed")
+    if args.tiny:
+        logger.info("Tiny RAG evaluation for CI completed")
+    else:
+        logger.info("RAG evaluation demo completed")
 
 
 if __name__ == "__main__":

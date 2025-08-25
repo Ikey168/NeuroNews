@@ -1,0 +1,8 @@
+aliases: {}
+creation_timestamp: 1756141933152
+deployment_job_id: null
+deployment_job_state: null
+description: Advanced sentiment classifier for NeuroNews articles using transformer
+  architecture
+last_updated_timestamp: 1756141933208
+name: neuro_sentiment_classifier

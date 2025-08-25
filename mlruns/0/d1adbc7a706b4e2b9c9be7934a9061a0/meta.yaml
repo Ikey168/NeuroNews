@@ -1,0 +1,14 @@
+artifact_uri: file:///workspaces/NeuroNews/mlruns/0/d1adbc7a706b4e2b9c9be7934a9061a0/artifacts
+end_time: 1756141933132
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: d1adbc7a706b4e2b9c9be7934a9061a0
+run_name: dummy_sentiment_model_training
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1756141918217
+status: 3
+tags: []
+user_id: codespace
