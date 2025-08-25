@@ -99,6 +99,17 @@ def parse_avro_messages(raw_stream):
         col("offset")
     )
 
+def apply_watermark_and_deduplication(parsed_stream):
+    """Apply watermarking and deduplication for late data handling (Issue #290)."""
+    # Apply watermark on published_at column with 2-hour tolerance for late data
+    watermarked_stream = parsed_stream.withWatermark("published_at", "2 hours")
+    
+    # Drop duplicates based on article id within the watermark window
+    # This ensures only the latest version of each article survives
+    deduplicated_stream = watermarked_stream.dropDuplicates(["id"])
+    
+    return deduplicated_stream
+
 def write_to_iceberg(parsed_stream):
     """Write parsed stream to Iceberg table with checkpointing."""
     return parsed_stream.writeStream \
@@ -129,8 +140,12 @@ def main():
         parsed_stream = parse_avro_messages(raw_stream)
         print("✓ Configured Avro message parsing")
         
+        # Apply watermarking and deduplication (Issue #290)
+        clean_stream = apply_watermark_and_deduplication(parsed_stream)
+        print("✓ Applied watermarking (2 hours) and deduplication")
+        
         # Write to Iceberg with checkpointing
-        streaming_query = write_to_iceberg(parsed_stream)
+        streaming_query = write_to_iceberg(clean_stream)
         print("✓ Started streaming to Iceberg table")
         
         # Wait for termination
