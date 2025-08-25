@@ -1,0 +1,4 @@
+{"article_id": "news_001", "entity_text": "MIT", "entity_type": "ORG", "confidence_score": 0.95, "start_char": 14, "end_char": 17, "extracted_at": "2024-08-20 10:45:00", "created_at": "2024-08-20 10:45:00"}
+{"article_id": "news_001", "entity_text": "AI system", "entity_type": "PRODUCT", "confidence_score": 0.88, "start_char": 51, "end_char": 60, "extracted_at": "2024-08-20 10:45:00", "created_at": "2024-08-20 10:45:00"}
+{"article_id": "news_002", "entity_text": "Arctic", "entity_type": "LOC", "confidence_score": 0.92, "start_char": 60, "end_char": 66, "extracted_at": "2024-08-20 14:20:00", "created_at": "2024-08-20 14:20:00"}
+{"article_id": "news_003", "entity_text": "tech stocks", "entity_type": "PRODUCT", "confidence_score": 0.85, "start_char": 75, "end_char": 86, "extracted_at": "2024-08-21 09:15:00", "created_at": "2024-08-21 09:15:00"}
