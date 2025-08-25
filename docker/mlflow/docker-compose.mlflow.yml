@@ -32,18 +32,15 @@ services:
     volumes:
       - ./mlruns:/mlflow/artifacts
       - ./logs:/mlflow/logs
+      - ./start-mlflow.py:/mlflow/start-mlflow.py
     working_dir: /mlflow
     command: >
       bash -c "
-        pip install mlflow psycopg2-binary &&
-        mlflow server
-          --backend-store-uri postgresql+psycopg2://mlflow:mlflow@mlflow-db:5432/mlflow
-          --default-artifact-root /mlflow/artifacts
-          --host 0.0.0.0
-          --port 5000
+        pip install mlflow psycopg2-binary uvicorn &&
+        python /mlflow/start-mlflow.py
       "
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000', timeout=5)"]
       interval: 30s
       timeout: 10s
       retries: 3
