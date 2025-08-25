@@ -2,7 +2,8 @@
     materialized='incremental',
     unique_key='article_id',
     on_schema_change='append_new_columns',
-    tags=['marts', 'fact']
+    tags=['marts', 'fact'],
+    contract={'enforced': true}
 ) }}
 
 WITH news_data AS (

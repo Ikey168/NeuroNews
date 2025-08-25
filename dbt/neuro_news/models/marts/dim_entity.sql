@@ -1,6 +1,7 @@
 {{ config(
     materialized='table',
-    tags=['marts', 'dimension']
+    tags=['marts', 'dimension'],
+    contract={'enforced': true}
 ) }}
 
 WITH entity_data AS (
