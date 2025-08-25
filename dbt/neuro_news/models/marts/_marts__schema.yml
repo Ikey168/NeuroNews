@@ -1,0 +1,201 @@
+version: 2
+
+models:
+  - name: dim_source
+    description: "Dimension table for news sources containing publisher/site metadata"
+    columns:
+      - name: source_key
+        description: "Surrogate key for the source dimension"
+        tests:
+          - not_null
+          - unique
+      - name: source_id
+        description: "Natural key from staging sources"
+        tests:
+          - not_null
+          - unique
+      - name: source_name
+        description: "Name of the news source/publisher"
+        tests:
+          - not_null
+      - name: domain
+        description: "Domain extracted from base URL"
+        tests:
+          - not_null
+      - name: base_url
+        description: "Base URL of the news source"
+        tests:
+          - not_null
+      - name: country_code
+        description: "ISO country code for the source"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['US', 'UK', 'CA', 'AU', 'DE', 'FR', 'ES', 'IT', 'JP', 'CN', 'RU', 'BR', 'IN', 'MX', 'NL', 'SE', 'NO', 'FI', 'DK', 'unknown']
+      - name: language_code
+        description: "ISO language code for the source"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'zh', 'ja', 'ar', 'unknown']
+      - name: category
+        description: "Primary category of the news source"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['technology', 'politics', 'business', 'sports', 'entertainment', 'science', 'health', 'environment', 'finance', 'general', 'other']
+      - name: is_scraping_enabled
+        description: "Whether scraping is currently enabled for this source"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [true, false]
+      - name: created_at_utc
+        description: "When the source was first added (UTC)"
+        tests:
+          - not_null
+      - name: updated_at_utc
+        description: "When the source was last updated (UTC)"
+        tests:
+          - not_null
+      - name: dbt_loaded_at
+        description: "When this record was loaded by dbt"
+        tests:
+          - not_null
+
+  - name: dim_entity
+    description: "Dimension table for normalized entities (person/org/topic)"
+    columns:
+      - name: entity_key
+        description: "Surrogate key for the entity dimension"
+        tests:
+          - not_null
+          - unique
+      - name: entity_id
+        description: "Natural key from staging entities"
+        tests:
+          - not_null
+          - unique
+      - name: entity_text
+        description: "The actual entity text/name"
+        tests:
+          - not_null
+      - name: entity_type
+        description: "Normalized entity type"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['PERSON', 'ORG', 'GPE', 'LOC', 'EVENT', 'PRODUCT', 'WORK_OF_ART', 'LAW', 'LANGUAGE', 'DATE', 'TIME', 'PERCENT', 'MONEY', 'QUANTITY', 'ORDINAL', 'CARDINAL', 'MISC']
+      - name: entity_category
+        description: "High-level category grouping"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['PERSON', 'ORGANIZATION', 'LOCATION', 'EVENT', 'PRODUCT', 'TEMPORAL', 'NUMERICAL', 'OTHER']
+      - name: avg_confidence_score
+        description: "Average confidence score across all mentions"
+        tests:
+          - not_null
+      - name: mention_count
+        description: "Total number of mentions across all articles"
+        tests:
+          - not_null
+      - name: first_mention_at_utc
+        description: "When this entity was first mentioned (UTC)"
+        tests:
+          - not_null
+      - name: last_mention_at_utc
+        description: "When this entity was last mentioned (UTC)"
+        tests:
+          - not_null
+      - name: dbt_loaded_at
+        description: "When this record was loaded by dbt"
+        tests:
+          - not_null
+
+  - name: fact_news
+    description: "Fact table for news articles with grain = article"
+    columns:
+      - name: article_key
+        description: "Surrogate key for the fact table"
+        tests:
+          - not_null
+          - unique
+      - name: article_id
+        description: "Natural key from staging news"
+        tests:
+          - not_null
+          - unique
+      - name: source_key
+        description: "Foreign key to dim_source"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_source')
+              field: source_key
+      - name: title
+        description: "Article title/headline"
+        tests:
+          - not_null
+      - name: content_length
+        description: "Length of article content in characters"
+        tests:
+          - not_null
+      - name: title_length
+        description: "Length of article title in characters"
+        tests:
+          - not_null
+      - name: url
+        description: "Source URL of the article"
+        tests:
+          - not_null
+          - unique
+      - name: language_code
+        description: "Detected/assigned language code"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'zh', 'ja', 'ar', 'unknown']
+      - name: category
+        description: "Article category/topic"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['technology', 'politics', 'business', 'sports', 'entertainment', 'science', 'health', 'environment', 'finance', 'other']
+      - name: is_duplicate
+        description: "Whether this article was identified as a duplicate"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [true, false]
+      - name: entity_count
+        description: "Number of entities extracted from this article"
+        tests:
+          - not_null
+      - name: avg_entity_confidence
+        description: "Average confidence score of entities in this article"
+      - name: published_at_utc
+        description: "When the article was originally published (UTC)"
+      - name: scraped_at_utc
+        description: "When the article was scraped (UTC)"
+        tests:
+          - not_null
+      - name: created_at_utc
+        description: "When the article record was created (UTC)"
+        tests:
+          - not_null
+      - name: updated_at_utc
+        description: "When the article record was last updated (UTC)"
+        tests:
+          - not_null
+      - name: dbt_loaded_at
+        description: "When this record was loaded by dbt"
+        tests:
+          - not_null
+
+# Relationship tests between facts and dimensions
+tests:
+  - name: test_fact_news_source_relationship
+    description: "Ensure all fact_news records have valid source_key references"
+  - name: test_entity_mentions_exist
+    description: "Ensure entities referenced in fact_news actually exist"
