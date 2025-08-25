@@ -1,10 +1,22 @@
 {{ config(
-    materialized='table',
+    materialized='incremental',
+    unique_key='article_id',
+    on_schema_change='append_new_columns',
     tags=['marts', 'fact']
 ) }}
 
 WITH news_data AS (
     SELECT * FROM {{ ref('stg_news') }}
+    {% if is_incremental() %}
+        WHERE published_at_utc::date > (
+            SELECT COALESCE(MAX(published_at_utc::date), '1900-01-01'::date) 
+            FROM {{ this }}
+        )
+           OR updated_at_utc > (
+            SELECT COALESCE(MAX(updated_at_utc), '1900-01-01'::timestamp) 
+            FROM {{ this }}
+        )
+    {% endif %}
 ),
 
 source_dim AS (
