@@ -156,7 +156,37 @@ ls demo/
 
 python demo/demo_sentiment_pipeline.py
 
-```text
+```
+
+### 6.1️⃣ MLflow Autologging Demo
+
+Experience MLflow's automatic experiment tracking with scikit-learn models:
+
+```bash
+# Run the complete MLflow autologging demonstration
+python examples/train_sklearn_demo.py
+
+# View results in MLflow UI (if server is running)
+# Otherwise, results are stored in ./mlruns directory
+
+# Explore the interactive Jupyter notebook
+jupyter notebook notebooks/mlflow_autolog_demo.ipynb
+```
+
+**Features demonstrated:**
+- ✅ **Automatic parameter logging** - All model hyperparameters captured
+- ✅ **Metrics tracking** - Training and test performance metrics
+- ✅ **Model artifacts** - Serialized models with signatures for serving
+- ✅ **Custom logging** - Additional metrics, plots, and data artifacts
+- ✅ **Model comparison** - Easy performance comparison across experiments
+- ✅ **Model loading** - Seamless model reuse and deployment
+
+**What gets logged automatically:**
+- Model hyperparameters (C, n_estimators, max_depth, etc.)
+- Training metrics and scores
+- Model artifacts (serialized models)
+- Model signatures (input/output schema)
+- Feature importance (for tree-based models)
 
 ### 7️⃣ Run the Scraper
 

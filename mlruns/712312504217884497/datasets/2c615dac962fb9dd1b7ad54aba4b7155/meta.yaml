@@ -1,0 +1,14 @@
+digest: a5b4664b
+name: dataset
+profile: '{"num_rows": 300, "num_elements": 3000}'
+schema: '{"mlflow_colspec": [{"type": "double", "name": "feature_1", "required": true},
+  {"type": "double", "name": "feature_2", "required": true}, {"type": "double", "name":
+  "feature_3", "required": true}, {"type": "double", "name": "feature_4", "required":
+  true}, {"type": "double", "name": "feature_5", "required": true}, {"type": "double",
+  "name": "feature_6", "required": true}, {"type": "double", "name": "feature_7",
+  "required": true}, {"type": "double", "name": "feature_8", "required": true}, {"type":
+  "double", "name": "feature_9", "required": true}, {"type": "double", "name": "feature_10",
+  "required": true}]}'
+source: '{"tags": {"mlflow.user": "codespace", "mlflow.source.name": "examples/train_sklearn_demo.py",
+  "mlflow.source.type": "LOCAL", "mlflow.source.git.commit": "521a6203e747a254650d21403d147e5bf44c8e1f"}}'
+source_type: code
