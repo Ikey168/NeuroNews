@@ -1,301 +1,237 @@
 # RAG Evaluation Framework
 
-This document describes the RAG (Retrieval-Augmented Generation) evaluation framework with MLflow integration for comprehensive performance tracking and analysis.
+This document describes the evaluation framework for the NeuroNews RAG (Retrieval-Augmented Generation) system, as implemented in Issue #235.
 
 ## Overview
 
-The RAG evaluation framework provides systematic evaluation of the retrieval and generation pipeline using industry-standard metrics. All evaluation runs are tracked in MLflow with detailed metrics, configuration parameters, and artifacts.
+The evaluation framework provides comprehensive assessment of RAG system performance using standardized metrics and configuration comparison capabilities. It supports both individual configuration evaluation and comparative analysis across multiple settings.
 
-## Evaluation Metrics
+## Evaluation Dataset
+
+### Format
+The evaluation dataset is stored in `evals/qa_dev.jsonl` in JSON Lines format, with each line containing:
+
+```json
+{
+  "query": "What are the latest developments in artificial intelligence?",
+  "answers": ["Recent AI developments include large language models..."],
+  "must_have_terms": ["artificial intelligence", "AI", "developments"],
+  "date_filter": "2024-01-01"
+}
+```
+
+### Fields Description
+- **query**: The question to be answered by the RAG system
+- **answers**: List of acceptable ground truth answers
+- **must_have_terms**: Terms that should appear in relevant retrieved documents
+- **date_filter**: Optional date filter for document retrieval
+
+### Dataset Size
+The current dataset contains 50 carefully curated questions covering:
+- Technology and AI developments
+- Climate and environmental issues
+- Economic and financial trends
+- Healthcare and biotechnology
+- Policy and regulatory changes
+- Scientific and research advances
+
+## Metrics
 
 ### Retrieval Metrics
 
 #### Recall@k
-- **Description**: Proportion of relevant documents retrieved in the top-k results
-- **Formula**: `|relevant ∩ retrieved@k| / |relevant|`
-- **Range**: [0, 1] (higher is better)
-- **Interpretation**: How well the system finds relevant documents
+Measures the proportion of relevant documents retrieved in the top-k results.
+- **Formula**: `relevant_retrieved / total_relevant`
+- **Range**: [0, 1]
+- **Higher is better**
 
 #### nDCG@k (Normalized Discounted Cumulative Gain)
-- **Description**: Ranking quality metric that considers position of relevant documents
+Evaluates ranking quality considering both relevance and position.
 - **Formula**: `DCG@k / IDCG@k`
-- **Range**: [0, 1] (higher is better)
-- **Interpretation**: How well relevant documents are ranked (position matters)
+- **Range**: [0, 1]
+- **Higher is better**
 
 #### MRR (Mean Reciprocal Rank)
-- **Description**: Average of reciprocal ranks of first relevant document
-- **Formula**: `1 / rank_of_first_relevant_document`
-- **Range**: [0, 1] (higher is better)
-- **Interpretation**: How quickly users find relevant information
+Measures the average reciprocal rank of the first relevant document.
+- **Formula**: `1 / rank_of_first_relevant`
+- **Range**: [0, 1]
+- **Higher is better**
 
-### Generation Metrics
+#### Precision@k
+Proportion of retrieved documents that are relevant.
+- **Formula**: `relevant_retrieved / k`
+- **Range**: [0, 1]
+- **Higher is better**
 
-#### Answer F1 Score
-- **Description**: Token-level F1 score between generated and ground truth answers
-- **Formula**: `2 * (precision * recall) / (precision + recall)`
-- **Range**: [0, 1] (higher is better)
-- **Interpretation**: Quality of generated answers compared to expected responses
+#### Must-Have Terms Coverage
+Proportion of required terms found in retrieved documents.
+- **Formula**: `found_terms / total_must_have_terms`
+- **Range**: [0, 1]
+- **Higher is better**
+
+### Answer Quality Metrics
+
+#### Exact Match
+Binary indicator of perfect answer match (case-insensitive).
+- **Range**: {0, 1}
+- **Higher is better**
+
+#### Partial Match
+Binary indicator if any ground truth appears as substring in prediction.
+- **Range**: {0, 1}
+- **Higher is better**
+
+#### Token F1
+Token-level F1 score between prediction and best matching ground truth.
+- **Formula**: `2 * precision * recall / (precision + recall)`
+- **Range**: [0, 1]
+- **Higher is better**
+
+### Performance Metrics
+
+#### Query Time
+Average time to process a single query (milliseconds).
+- **Lower is better** (efficiency measure)
+
+#### Citation Count
+Average number of citations returned per query.
+- **Context-dependent** (completeness vs. conciseness)
+
+## Configuration Options
+
+### Predefined Configurations
+
+1. **baseline**: Default configuration with balanced settings
+   - k=5, fusion=True, rerank=True, semantic_weight=0.7
+
+2. **no_rerank**: Baseline without reranking
+   - k=5, fusion=True, rerank=False, semantic_weight=0.7
+
+3. **no_fusion**: Baseline without query fusion
+   - k=5, fusion=False, rerank=True, semantic_weight=0.7
+
+4. **high_k**: Higher retrieval count
+   - k=10, fusion=True, rerank=True, semantic_weight=0.7
+
+5. **semantic_heavy**: Emphasizes semantic search
+   - k=5, fusion=True, rerank=True, semantic_weight=0.9
+
+### Custom Configuration Parameters
+
+- **k**: Number of documents to retrieve (1-20)
+- **fusion**: Enable/disable query fusion (vector + lexical search)
+- **rerank**: Enable/disable cross-encoder reranking
+- **provider**: LLM provider (openai, anthropic, local)
+- **semantic_weight**: Weight for semantic search in fusion (0.0-1.0)
 
 ## Usage
 
 ### Basic Evaluation
 
-```python
-from evals.run_eval import RAGEvaluator, create_sample_dataset
-
-# Create evaluator
-evaluator = RAGEvaluator(
-    k_values=[1, 3, 5, 10],
-    fusion_weights={"semantic": 0.7, "keyword": 0.3},
-    reranker_enabled=True
-)
-
-# Load or create dataset
-dataset = create_sample_dataset()
-
-# Run evaluation
-results = await evaluator.evaluate_dataset(
-    dataset=dataset,
-    experiment_name="my_rag_evaluation",
-    run_name="baseline_v1"
-)
-```
-
-### Dataset Format
-
-Evaluation datasets should follow this format:
-
-```python
-dataset = [
-    {
-        "question": "What is artificial intelligence?",
-        "ground_truth": "AI is the simulation of human intelligence in machines...",
-        "relevant_docs": ["doc_1", "doc_3", "doc_7"]  # List of relevant document IDs
-    },
-    # ... more examples
-]
-```
-
-### Configuration Parameters
-
-The framework logs the following configuration parameters to MLflow:
-
-#### Retrieval Configuration
-- `k_values`: List of k values to evaluate (e.g., [1, 3, 5, 10])
-- `max_k`: Maximum k value used for retrieval
-- `reranker_enabled`: Whether document reranking is enabled
-
-#### Fusion Weights
-- `fusion_weight_semantic`: Weight for semantic search (0.0-1.0)
-- `fusion_weight_keyword`: Weight for keyword search (0.0-1.0)
-
-#### RAG Service Settings
-- `rag_default_k`: Default number of documents to retrieve
-- `rag_fusion_enabled`: Whether query fusion is enabled
-- `rag_answer_provider`: Answer generation provider (openai/anthropic/local)
-
-## MLflow Integration
-
-### Logged Metrics
-
-#### Performance Metrics
-- `total_evaluation_time_s`: Total time for evaluation run
-- `queries_evaluated`: Number of queries in dataset
-- `avg_query_time_ms`: Average time per query
-- `avg_retrieved_docs`: Average number of documents retrieved
-
-#### Retrieval Quality
-- `avg_recall_at_k`: Average Recall@k for each k value
-- `avg_ndcg_at_k`: Average nDCG@k for each k value
-- `avg_mrr`: Average Mean Reciprocal Rank
-
-#### Generation Quality
-- `avg_answer_f1`: Average F1 score for generated answers
-
-### Artifacts
-
-#### Per-Query Results CSV
-- **File**: `evaluation_results/per_query_results.csv`
-- **Content**: Detailed results for each query including:
-  - Question and generated answer
-  - All metric values (Recall@k, nDCG@k, MRR, Answer_F1)
-  - Query processing time
-  - Retrieved document count
-
-### Experiment Organization
-
-```
-MLflow Experiments
-├── rag_evaluation/
-│   ├── baseline_v1/
-│   │   ├── metrics: recall@k, nDCG@k, MRR, Answer_F1
-│   │   ├── params: k_values, fusion_weights, reranker_enabled
-│   │   └── artifacts: per_query_results.csv
-│   ├── fusion_weights_tuning/
-│   └── reranker_comparison/
-```
-
-## Evaluation Workflows
-
-### 1. Baseline Evaluation
-
-Establish baseline performance with default settings:
-
+Run evaluation with default configuration:
 ```bash
-cd /workspaces/NeuroNews
-python evals/run_eval.py
+python evals/run_eval.py --config baseline
 ```
 
-### 2. Parameter Tuning
+### Configuration Comparison
 
-Evaluate different configurations:
-
-```python
-# Test different k values
-evaluator = RAGEvaluator(k_values=[1, 3, 5, 10, 20])
-
-# Test fusion weights
-evaluator = RAGEvaluator(fusion_weights={"semantic": 0.8, "keyword": 0.2})
-
-# Test with/without reranker
-evaluator = RAGEvaluator(reranker_enabled=False)
+Compare multiple predefined configurations:
+```bash
+python evals/run_eval.py --compare
 ```
 
-### 3. Model Comparison
+### Custom Configuration
 
-Compare different answer generation providers:
-
-```python
-providers = ["openai", "anthropic", "local"]
-
-for provider in providers:
-    rag_service = RAGAnswerService(answer_provider=provider)
-    evaluator = RAGEvaluator(rag_service=rag_service)
-    
-    results = await evaluator.evaluate_dataset(
-        dataset=dataset,
-        run_name=f"provider_{provider}"
-    )
+Use custom parameters:
+```bash
+python evals/run_eval.py --custom --k 10 --fusion true --rerank false --semantic-weight 0.8
 ```
 
-## Interpreting Results
+### Output Options
 
-### Good Performance Indicators
-- **Recall@1 > 0.5**: System finds relevant documents quickly
-- **Recall@5 > 0.8**: System has good coverage of relevant documents
-- **nDCG@5 > 0.7**: Relevant documents are well-ranked
-- **MRR > 0.6**: First relevant document appears early in results
-- **Answer_F1 > 0.6**: Generated answers have good overlap with ground truth
-
-### Performance Analysis
-
-#### Low Recall@k
-- **Possible Causes**: Poor embeddings, insufficient document coverage, weak query processing
-- **Solutions**: Improve embeddings model, expand document corpus, enhance query expansion
-
-#### Low nDCG@k but High Recall@k
-- **Possible Causes**: Ranking algorithm issues, reranker problems
-- **Solutions**: Tune reranking model, adjust fusion weights, improve scoring
-
-#### Low MRR
-- **Possible Causes**: Relevant documents ranked too low
-- **Solutions**: Improve initial ranking, enhance query-document matching
-
-#### Low Answer_F1
-- **Possible Causes**: Poor generation model, insufficient context, bad prompting
-- **Solutions**: Improve generation prompts, provide more context, tune generation parameters
-
-## Best Practices
-
-### Dataset Creation
-1. **Diverse Questions**: Include various question types (factual, explanatory, comparative)
-2. **Quality Ground Truth**: Ensure accurate and complete reference answers
-3. **Relevant Documents**: Manually verify document relevance for accuracy
-4. **Sufficient Size**: Use at least 50+ examples for reliable evaluation
-
-### Evaluation Process
-1. **Version Control**: Track dataset versions and changes
-2. **Reproducibility**: Set random seeds and document configurations
-3. **Multiple Runs**: Run multiple evaluations to account for variance
-4. **Progressive Evaluation**: Start with small datasets, scale up gradually
-
-### Monitoring and Alerts
-1. **Performance Regression**: Set up alerts for significant metric drops
-2. **Regular Evaluation**: Schedule periodic evaluations on production data
-3. **A/B Testing**: Compare new models against baseline using evaluation framework
-
-## Advanced Usage
-
-### Custom Metrics
-
-Add custom evaluation metrics by extending the `RAGEvaluator` class:
-
-```python
-class CustomRAGEvaluator(RAGEvaluator):
-    def _calculate_custom_metric(self, generated_answer, ground_truth):
-        # Implement custom metric calculation
-        pass
-        
-    async def _evaluate_single_query(self, example):
-        result = await super()._evaluate_single_query(example)
-        # Add custom metrics to result
-        result["custom_metric"] = self._calculate_custom_metric(
-            result["generated_answer"], 
-            result["ground_truth"]
-        )
-        return result
+Save results to specific CSV file:
+```bash
+python evals/run_eval.py --config baseline --output results.csv
 ```
 
-### Integration with CI/CD
-
-Add evaluation to your continuous integration pipeline:
-
-```yaml
-# .github/workflows/rag_evaluation.yml
-name: RAG Evaluation
-on: [push, pull_request]
-
-jobs:
-  evaluate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Run RAG Evaluation
-        run: |
-          python evals/run_eval.py
-          # Fail if metrics below threshold
-          python scripts/check_eval_thresholds.py
+Sample dataset for quick testing:
+```bash
+python evals/run_eval.py --config baseline --sample 10
 ```
+
+## Output Format
+
+### Console Output
+The framework prints formatted metrics tables showing:
+- Retrieval metrics (Recall@k, nDCG@k, MRR, Precision@k)
+- Answer quality metrics (Exact match, Partial match, Token F1)
+- Performance metrics (Query time, Citation count, Success rate)
+
+### CSV Output
+Detailed per-query results saved as CSV with columns:
+- query_idx, query, predicted_answer, ground_truth_answers
+- All metric values per query
+- Configuration parameters
+- Timing information
+
+### MLflow Logging
+When MLflow is available, the framework logs:
+- Configuration parameters
+- Overall metrics
+- Individual query results
+- CSV artifacts
+- Experiment metadata
+
+## Interpretation Guidelines
+
+### Retrieval Quality
+- **Recall@k > 0.6**: Good document retrieval
+- **nDCG@k > 0.7**: Well-ranked results
+- **MRR > 0.5**: Relevant docs appear early
+
+### Answer Quality
+- **Token F1 > 0.4**: Reasonable answer overlap
+- **Partial Match > 0.7**: Good content coverage
+- **Exact Match**: Rare but indicates perfect answers
+
+### Configuration Insights
+- **High fusion weight**: Better for semantic queries
+- **Reranking**: Improves precision, adds latency
+- **Higher k**: More comprehensive but slower
 
 ## Troubleshooting
 
 ### Common Issues
 
-#### ImportError: Required modules not available
-- **Solution**: Ensure you're running from project root directory
-- **Check**: Python path and module imports
+1. **Import Errors**: Ensure all dependencies are installed and you're running from project root
+2. **Dataset Not Found**: Check that `evals/qa_dev.jsonl` exists
+3. **MLflow Errors**: MLflow logging is optional; evaluation continues without it
+4. **Memory Issues**: Use `--sample` flag to limit dataset size
 
-#### MLflow tracking errors
-- **Solution**: Verify MLflow server is running and accessible
-- **Check**: MLflow configuration and credentials
+### Performance Considerations
 
-#### Memory issues with large datasets
-- **Solution**: Process datasets in batches
-- **Implementation**: Add batch processing to `evaluate_dataset` method
+- Evaluation time scales linearly with dataset size
+- Reranking adds ~50ms per query
+- Large k values increase retrieval time
+- MLflow logging adds minimal overhead
 
-#### Inconsistent results across runs
-- **Solution**: Set random seeds for reproducibility
-- **Check**: Non-deterministic components in pipeline
+## Extension Points
 
-### Performance Optimization
+### Adding New Metrics
+Extend `_calculate_retrieval_metrics()` and `_calculate_answer_metrics()` methods in the `EnhancedRAGEvaluator` class.
 
-1. **Parallel Processing**: Evaluate multiple queries in parallel
-2. **Caching**: Cache embeddings and model outputs
-3. **Batch Processing**: Process queries in batches for efficiency
-4. **Resource Management**: Monitor memory and GPU usage
+### Custom Configurations
+Add new entries to the `create_predefined_configs()` function.
+
+### Dataset Expansion
+Add new examples to `evals/qa_dev.jsonl` following the established format.
+
+### Integration with CI/CD
+Use `--sample` flag for quick validation in continuous integration pipelines.
 
 ## References
 
-- [Information Retrieval Evaluation Metrics](https://en.wikipedia.org/wiki/Evaluation_measures_(information_retrieval))
-- [MLflow Tracking Documentation](https://mlflow.org/docs/latest/tracking.html)
-- [RAG System Architecture](../implementation/RAG_IMPLEMENTATION.md)
+- Issue #235: Evals: small QA set + metrics (R@k, nDCG, MRR)
+- Issue #233: Answering pipeline + citations (FastAPI /ask)
+- MLflow Documentation: https://mlflow.org/docs/latest/index.html
+- Information Retrieval Metrics: https://en.wikipedia.org/wiki/Evaluation_measures_(information_retrieval)

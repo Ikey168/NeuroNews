@@ -1,9 +1,12 @@
 """
-RAG Evaluation with MLflow Logging
-Issue #223: Wire existing RAG eval harness to MLflow
+Enhanced RAG Evaluation with MLflow Logging and Configuration Comparison
+Issue #235: Evals: small QA set + metrics (R@k, nDCG, MRR)
 
-This module provides comprehensive evaluation of the RAG system with MLflow tracking
-for key metrics including Recall@k, nDCG@k, MRR, and Answer_F1.
+This module provides comprehensive evaluation of the RAG system with:
+- Retrieval metrics: Recall@k, nDCG@k, MRR
+- Answer quality metrics: exact/partial match, token F1
+- Configuration comparison capabilities
+- CSV output and MLflow logging
 """
 
 import asyncio
@@ -17,6 +20,7 @@ import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 import tempfile
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -28,7 +32,8 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 try:
     from services.mlops.tracking import mlrun
     from services.rag.answer import RAGAnswerService
-    from services.embeddings.provider import EmbeddingsProvider
+    from services.embeddings.provider import EmbeddingProvider
+    from services.api.routes.ask import AskRequest, ask_question, get_rag_service
 except ImportError as e:
     print(f"Import error: {e}")
     print("Please ensure you're running from the project root directory")
@@ -38,480 +43,617 @@ except ImportError as e:
 logger = logging.getLogger(__name__)
 
 
-class RAGEvaluator:
-    """
-    RAG Evaluation Framework with MLflow logging.
+class EvaluationConfig:
+    """Configuration for RAG evaluation experiments."""
     
-    Features:
-    - Recall@k, nDCG@k, MRR, Answer_F1 metrics calculation
-    - Per-query results tracking with CSV artifact logging
-    - Configuration parameter logging (fusion weights, k, reranker)
-    - Comprehensive MLflow experiment tracking
-    """
-
     def __init__(
         self,
-        rag_service: Optional[RAGAnswerService] = None,
-        k_values: List[int] = None,
-        fusion_weights: Dict[str, float] = None,
-        reranker_enabled: bool = True,
+        name: str,
+        k: int = 5,
+        fusion_enabled: bool = True,
+        rerank_enabled: bool = True,
+        provider: str = "openai",
+        fusion_weights: Optional[Dict[str, float]] = None
     ):
-        """Initialize RAG evaluator with configuration."""
-        self.rag_service = rag_service or RAGAnswerService()
-        self.k_values = k_values or [1, 3, 5, 10]
-        self.fusion_weights = fusion_weights or {
-            "semantic": 0.6,
-            "keyword": 0.4,
+        self.name = name
+        self.k = k
+        self.fusion_enabled = fusion_enabled
+        self.rerank_enabled = rerank_enabled
+        self.provider = provider
+        self.fusion_weights = fusion_weights or {"semantic": 0.7, "keyword": 0.3}
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert config to dictionary for logging."""
+        return {
+            "name": self.name,
+            "k": self.k,
+            "fusion_enabled": self.fusion_enabled,
+            "rerank_enabled": self.rerank_enabled,
+            "provider": self.provider,
+            "fusion_weights": self.fusion_weights
         }
-        self.reranker_enabled = reranker_enabled
+    
+    @classmethod
+    def from_args(cls, args: argparse.Namespace) -> 'EvaluationConfig':
+        """Create config from command line arguments."""
+        return cls(
+            name=args.config,
+            k=args.k,
+            fusion_enabled=args.fusion,
+            rerank_enabled=args.rerank,
+            provider=args.provider,
+            fusion_weights={"semantic": args.semantic_weight, "keyword": 1.0 - args.semantic_weight}
+        )
+
+
+class EnhancedRAGEvaluator:
+    """
+    Enhanced RAG Evaluation Framework with comprehensive metrics and comparison capabilities.
+    
+    Features:
+    - Retrieval metrics: Recall@k, nDCG@k, MRR
+    - Answer quality metrics: exact match, partial match, token F1
+    - Configuration comparison support
+    - CSV output and MLflow logging
+    - Support for JSONL evaluation datasets
+    """
+
+    def __init__(self, config: EvaluationConfig):
+        """Initialize evaluator with configuration."""
+        self.config = config
+        self.results = []
         
-        # Evaluation results storage
-        self.per_query_results = []
-        self.overall_metrics = {}
-        
-        logger.info(f"RAG Evaluator initialized with k_values={self.k_values}")
+        logger.info(f"Enhanced RAG Evaluator initialized with config: {config.name}")
 
     async def evaluate_dataset(
         self,
         dataset: List[Dict[str, Any]],
-        experiment_name: str = "rag_evaluation",
+        experiment_name: str = "rag_evaluation_comparison",
         run_name: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        Evaluate RAG system on a dataset with MLflow tracking.
+        Evaluate RAG system on a dataset with comprehensive metrics.
 
         Args:
-            dataset: List of evaluation examples with format:
-                     [{"question": str, "ground_truth": List[str], "relevant_docs": List[str]}]
+            dataset: List of evaluation examples from qa_dev.jsonl
             experiment_name: MLflow experiment name
             run_name: Optional run name for MLflow
 
         Returns:
-            Dictionary containing overall metrics and per-query results
+            Dictionary containing metrics and results
         """
         if not run_name:
-            run_name = f"rag_eval_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            run_name = f"{self.config.name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
-        logger.info(f"Starting RAG evaluation on {len(dataset)} queries")
+        logger.info(f"Starting evaluation: {self.config.name} on {len(dataset)} queries")
 
-        with mlrun(
-            name=run_name,
-            experiment=experiment_name,
-            tags={
-                "description": f"RAG evaluation on {len(dataset)} queries",
-                "pipeline": "rag_evaluation",
-                "data_version": "v1.0",
-                "env": "dev",
-            }
-        ):
-            import mlflow
-            
-            # Log configuration parameters
-            await self._log_config_params(mlflow)
-            
-            overall_start = time.time()
-            
-            # Reset evaluation state
-            self.per_query_results = []
-            self.overall_metrics = {}
-            
-            try:
-                # Process each query in the dataset
+        try:
+            with mlrun(
+                name=run_name,
+                experiment=experiment_name,
+                tags={
+                    "config": self.config.name,
+                    "evaluation_type": "comprehensive_rag",
+                    "dataset_size": len(dataset),
+                    "issue": "235"
+                }
+            ):
+                import mlflow
+                
+                # Log configuration parameters
+                mlflow.log_params(self.config.to_dict())
+                
+                overall_start = time.time()
+                self.results = []
+                
+                # Process each query
                 for i, example in enumerate(dataset):
-                    logger.info(f"Processing query {i+1}/{len(dataset)}: {example['question'][:50]}...")
+                    logger.info(f"Processing {i+1}/{len(dataset)}: {example['query'][:50]}...")
                     
-                    query_result = await self._evaluate_single_query(example)
-                    self.per_query_results.append(query_result)
+                    result = await self._evaluate_single_query(example, i)
+                    self.results.append(result)
                 
                 # Calculate overall metrics
-                await self._calculate_overall_metrics()
-                
+                overall_metrics = self._calculate_overall_metrics()
                 total_time = time.time() - overall_start
                 
                 # Log metrics to MLflow
-                await self._log_metrics_to_mlflow(mlflow, total_time)
+                self._log_metrics_to_mlflow(mlflow, overall_metrics, total_time)
                 
-                # Log per-query results as CSV artifact
-                await self._log_csv_artifact(mlflow)
+                # Save CSV output
+                csv_path = self._save_csv_results()
+                if csv_path:
+                    mlflow.log_artifact(csv_path, "evaluation_results")
                 
                 logger.info(f"Evaluation completed in {total_time:.2f}s")
                 
                 return {
-                    "overall_metrics": self.overall_metrics,
-                    "per_query_results": self.per_query_results,
+                    "config": self.config.to_dict(),
+                    "overall_metrics": overall_metrics,
+                    "results": self.results,
                     "dataset_size": len(dataset),
                     "total_time": total_time,
+                    "csv_path": csv_path
                 }
 
-            except Exception as e:
-                logger.error(f"Evaluation failed: {e}")
-                mlflow.log_metric("evaluation_failed", 1)
-                raise
+        except Exception as e:
+            logger.error(f"Evaluation failed: {e}")
+            raise
 
-    async def _log_config_params(self, mlflow) -> None:
-        """Log configuration parameters to MLflow."""
-        # Log k values
-        mlflow.log_param("k_values", ",".join(map(str, self.k_values)))
-        mlflow.log_param("max_k", max(self.k_values))
-        
-        # Log fusion weights
-        for weight_type, weight_value in self.fusion_weights.items():
-            mlflow.log_param(f"fusion_weight_{weight_type}", weight_value)
-        
-        # Log reranker configuration
-        mlflow.log_param("reranker_enabled", self.reranker_enabled)
-        
-        # Log RAG service configuration
-        mlflow.log_param("rag_default_k", self.rag_service.default_k)
-        mlflow.log_param("rag_fusion_enabled", self.rag_service.fusion_enabled)
-        mlflow.log_param("rag_answer_provider", self.rag_service.answer_provider)
-
-    async def _evaluate_single_query(self, example: Dict[str, Any]) -> Dict[str, Any]:
+    async def _evaluate_single_query(self, example: Dict[str, Any], query_idx: int) -> Dict[str, Any]:
         """Evaluate a single query and return detailed results."""
-        question = example["question"]
-        ground_truth_answer = example.get("ground_truth", "")
-        relevant_doc_ids = example.get("relevant_docs", [])
-        
         query_start = time.time()
         
-        # Get RAG response directly without MLflow tracking to avoid nested runs
-        max_k = max(self.k_values)
-        
-        # Reset metrics for this run
-        self.rag_service._reset_metrics()
-        
-        # Direct call to document retrieval and answer generation without MLflow
-        retrieved_docs = await self.rag_service._retrieve_documents(
-            question, max_k, None, self.rag_service.fusion_enabled
-        )
-        
-        if self.reranker_enabled and retrieved_docs:
-            retrieved_docs = await self.rag_service._rerank_documents(question, retrieved_docs)
-        
-        answer_result = await self.rag_service._generate_answer(
-            question, retrieved_docs, self.rag_service.answer_provider
-        )
-        
-        citations = await self.rag_service._extract_citations(
-            answer_result["answer"], retrieved_docs
-        )
-        
-        query_time = time.time() - query_start
-        
-        # Extract retrieved document IDs (simulated from response metadata)
-        retrieved_doc_ids = self._extract_retrieved_docs_from_list(retrieved_docs)
-        generated_answer = answer_result["answer"]
-        
-        # Calculate metrics for different k values
-        recall_metrics = {}
-        ndcg_metrics = {}
-        
-        for k in self.k_values:
-            # Recall@k
-            recall_at_k = self._calculate_recall_at_k(retrieved_doc_ids[:k], relevant_doc_ids)
-            recall_metrics[f"recall_at_{k}"] = recall_at_k
-            
-            # nDCG@k  
-            ndcg_at_k = self._calculate_ndcg_at_k(retrieved_doc_ids[:k], relevant_doc_ids)
-            ndcg_metrics[f"ndcg_at_{k}"] = ndcg_at_k
-        
-        # MRR (Mean Reciprocal Rank)
-        mrr = self._calculate_mrr(retrieved_doc_ids, relevant_doc_ids)
-        
-        # Answer F1 score
-        answer_f1 = self._calculate_answer_f1(generated_answer, ground_truth_answer)
-        
-        # Prepare per-query result
-        query_result = {
-            "question": question,
-            "generated_answer": generated_answer,
-            "ground_truth": ground_truth_answer,
-            "retrieved_doc_count": len(retrieved_docs),
-            "relevant_doc_count": len(relevant_doc_ids),
-            "query_time_ms": query_time * 1000,
-            "mrr": mrr,
-            "answer_f1": answer_f1,
-            **recall_metrics,
-            **ndcg_metrics,
-        }
-        
-        return query_result
-
-    def _extract_retrieved_docs_from_list(self, retrieved_docs: List[Dict[str, Any]]) -> List[str]:
-        """Extract retrieved document IDs from document list."""
-        # In a real implementation, this would extract actual document IDs
-        # For demo purposes, generate simulated document IDs based on retrieved docs
-        return [doc.get("id", f"doc_{i}") for i, doc in enumerate(retrieved_docs)]
-
-    def _extract_retrieved_docs(self, response: Dict[str, Any]) -> List[str]:
-        """Extract retrieved document IDs from RAG response."""
-        # In a real implementation, this would extract actual document IDs
-        # For demo purposes, generate simulated document IDs
-        doc_count = response["metadata"].get("documents_retrieved", 5)
-        return [f"doc_{i}" for i in range(doc_count)]
-
-    def _calculate_recall_at_k(self, retrieved_docs: List[str], relevant_docs: List[str]) -> float:
-        """Calculate Recall@k metric."""
-        if not relevant_docs:
-            return 0.0
-        
-        retrieved_set = set(retrieved_docs)
-        relevant_set = set(relevant_docs)
-        
-        intersection = retrieved_set.intersection(relevant_set)
-        return len(intersection) / len(relevant_set)
-
-    def _calculate_ndcg_at_k(self, retrieved_docs: List[str], relevant_docs: List[str]) -> float:
-        """Calculate nDCG@k (Normalized Discounted Cumulative Gain) metric."""
-        if not relevant_docs:
-            return 0.0
-        
-        # Calculate DCG
-        dcg = 0.0
-        for i, doc_id in enumerate(retrieved_docs):
-            if doc_id in relevant_docs:
-                # Binary relevance: 1 if relevant, 0 if not
-                relevance = 1.0
-                dcg += relevance / np.log2(i + 2)  # i+2 because log2(1) = 0
-        
-        # Calculate IDCG (ideal DCG)
-        idcg = 0.0
-        for i in range(min(len(relevant_docs), len(retrieved_docs))):
-            idcg += 1.0 / np.log2(i + 2)
-        
-        if idcg == 0:
-            return 0.0
-        
-        return dcg / idcg
-
-    def _calculate_mrr(self, retrieved_docs: List[str], relevant_docs: List[str]) -> float:
-        """Calculate Mean Reciprocal Rank (MRR) metric."""
-        if not relevant_docs:
-            return 0.0
-        
-        for i, doc_id in enumerate(retrieved_docs):
-            if doc_id in relevant_docs:
-                return 1.0 / (i + 1)
-        
-        return 0.0
-
-    def _calculate_answer_f1(self, generated_answer: str, ground_truth: str) -> float:
-        """Calculate F1 score between generated and ground truth answers."""
-        if not generated_answer or not ground_truth:
-            return 0.0
-        
-        # Simple token-based F1 calculation
-        generated_tokens = set(generated_answer.lower().split())
-        ground_truth_tokens = set(ground_truth.lower().split())
-        
-        if not generated_tokens and not ground_truth_tokens:
-            return 1.0
-        if not generated_tokens or not ground_truth_tokens:
-            return 0.0
-        
-        intersection = generated_tokens.intersection(ground_truth_tokens)
-        
-        precision = len(intersection) / len(generated_tokens)
-        recall = len(intersection) / len(ground_truth_tokens)
-        
-        if precision + recall == 0:
-            return 0.0
-        
-        return 2 * (precision * recall) / (precision + recall)
-
-    async def _calculate_overall_metrics(self) -> None:
-        """Calculate overall metrics from per-query results."""
-        if not self.per_query_results:
-            return
-        
-        num_queries = len(self.per_query_results)
-        
-        # Calculate average metrics
-        self.overall_metrics = {
-            "num_queries": num_queries,
-            "avg_query_time_ms": np.mean([r["query_time_ms"] for r in self.per_query_results]),
-            "avg_retrieved_docs": np.mean([r["retrieved_doc_count"] for r in self.per_query_results]),
-            "avg_mrr": np.mean([r["mrr"] for r in self.per_query_results]),
-            "avg_answer_f1": np.mean([r["answer_f1"] for r in self.per_query_results]),
-        }
-        
-        # Calculate average recall and nDCG for each k
-        for k in self.k_values:
-            recall_key = f"recall_at_{k}"
-            ndcg_key = f"ndcg_at_{k}"
-            
-            self.overall_metrics[f"avg_{recall_key}"] = np.mean([
-                r[recall_key] for r in self.per_query_results
-            ])
-            
-            self.overall_metrics[f"avg_{ndcg_key}"] = np.mean([
-                r[ndcg_key] for r in self.per_query_results
-            ])
-
-    async def _log_metrics_to_mlflow(self, mlflow, total_time: float) -> None:
-        """Log overall metrics to MLflow."""
-        # Log evaluation metadata
-        mlflow.log_metric("total_evaluation_time_s", total_time)
-        mlflow.log_metric("queries_evaluated", self.overall_metrics["num_queries"])
-        
-        # Log performance metrics
-        mlflow.log_metric("avg_query_time_ms", self.overall_metrics["avg_query_time_ms"])
-        mlflow.log_metric("avg_retrieved_docs", self.overall_metrics["avg_retrieved_docs"])
-        
-        # Log retrieval metrics
-        mlflow.log_metric("avg_mrr", self.overall_metrics["avg_mrr"])
-        
-        # Log answer quality metrics
-        mlflow.log_metric("avg_answer_f1", self.overall_metrics["avg_answer_f1"])
-        
-        # Log recall and nDCG metrics for each k
-        for k in self.k_values:
-            mlflow.log_metric(f"avg_recall_at_{k}", self.overall_metrics[f"avg_recall_at_{k}"])
-            mlflow.log_metric(f"avg_ndcg_at_{k}", self.overall_metrics[f"avg_ndcg_at_{k}"])
-
-    async def _log_csv_artifact(self, mlflow) -> None:
-        """Log per-query results as CSV artifact to MLflow."""
         try:
-            # Create temporary CSV file
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
-                if self.per_query_results:
-                    # Get field names from first result
-                    fieldnames = list(self.per_query_results[0].keys())
-                    
-                    writer = csv.DictWriter(f, fieldnames=fieldnames)
-                    writer.writeheader()
-                    writer.writerows(self.per_query_results)
-                    
-                    csv_path = f.name
+            # Create request based on configuration
+            request = AskRequest(
+                question=example["query"],
+                k=self.config.k,
+                filters=self._build_filters(example),
+                rerank_on=self.config.rerank_enabled,
+                fusion=self.config.fusion_enabled,
+                provider=self.config.provider
+            )
             
-            # Try to log CSV as MLflow artifact
-            mlflow.log_artifact(csv_path, "evaluation_results")
-            logger.info(f"Logged per-query results CSV with {len(self.per_query_results)} rows")
+            # Get RAG service and process
+            rag_service = get_rag_service()
+            response = await ask_question(request, rag_service)
+            
+            query_time = (time.time() - query_start) * 1000
+            
+            # Calculate retrieval metrics
+            retrieval_metrics = self._calculate_retrieval_metrics(
+                response.citations, 
+                example.get("must_have_terms", []),
+                example.get("relevant_docs", [])
+            )
+            
+            # Calculate answer quality metrics
+            answer_metrics = self._calculate_answer_metrics(
+                response.answer,
+                example.get("answers", [])
+            )
+            
+            # Combine results
+            result = {
+                "query_idx": query_idx,
+                "query": example["query"],
+                "predicted_answer": response.answer,
+                "ground_truth_answers": example.get("answers", []),
+                "num_citations": len(response.citations),
+                "query_time_ms": query_time,
+                "config_name": self.config.name,
+                **retrieval_metrics,
+                **answer_metrics,
+                "metadata": response.metadata
+            }
+            
+            return result
             
         except Exception as e:
-            logger.warning(f"Could not log CSV artifact: {e}")
-            logger.info(f"Per-query results ready for logging ({len(self.per_query_results)} queries)")
+            logger.error(f"Failed to evaluate query {query_idx}: {e}")
+            return {
+                "query_idx": query_idx,
+                "query": example["query"],
+                "error": str(e),
+                "config_name": self.config.name
+            }
+
+    def _build_filters(self, example: Dict[str, Any]) -> Dict[str, Any]:
+        """Build filters from example data."""
+        filters = {}
+        if "date_filter" in example:
+            filters["date_from"] = example["date_filter"]
+        return filters
+
+    def _calculate_retrieval_metrics(
+        self, 
+        citations: List[Dict[str, Any]], 
+        must_have_terms: List[str],
+        relevant_docs: List[str]
+    ) -> Dict[str, float]:
+        """Calculate retrieval-based metrics."""
+        if not citations:
+            return {
+                "recall_at_k": 0.0,
+                "ndcg_at_k": 0.0,
+                "mrr": 0.0,
+                "precision_at_k": 0.0,
+                "has_must_terms": 0.0
+            }
+        
+        # Extract citation text for analysis
+        citation_texts = [
+            f"{cit.get('title', '')} {cit.get('excerpt', '')}"
+            for cit in citations
+        ]
+        
+        # Check for must-have terms coverage
+        has_must_terms = 0.0
+        if must_have_terms:
+            found_terms = 0
+            for term in must_have_terms:
+                if any(term.lower() in text.lower() for text in citation_texts):
+                    found_terms += 1
+            has_must_terms = found_terms / len(must_have_terms)
+        
+        # Calculate relevance-based metrics
+        relevance_scores = [
+            float(cit.get("relevance_score", 0.0)) 
+            for cit in citations
+        ]
+        
+        # Recall@k (simplified - based on relevance threshold)
+        relevant_threshold = 0.7
+        relevant_retrieved = sum(1 for score in relevance_scores if score >= relevant_threshold)
+        recall_at_k = relevant_retrieved / max(len(relevant_docs), 1) if relevant_docs else 0.0
+        
+        # Precision@k
+        precision_at_k = relevant_retrieved / len(citations) if citations else 0.0
+        
+        # nDCG@k (simplified calculation)
+        dcg = sum(
+            score / np.log2(i + 2) 
+            for i, score in enumerate(relevance_scores)
+        )
+        ideal_scores = sorted(relevance_scores, reverse=True)
+        idcg = sum(
+            score / np.log2(i + 2)
+            for i, score in enumerate(ideal_scores)
+        )
+        ndcg_at_k = dcg / idcg if idcg > 0 else 0.0
+        
+        # MRR (Mean Reciprocal Rank)
+        mrr = 0.0
+        for i, score in enumerate(relevance_scores):
+            if score >= relevant_threshold:
+                mrr = 1.0 / (i + 1)
+                break
+        
+        return {
+            "recall_at_k": recall_at_k,
+            "ndcg_at_k": ndcg_at_k,
+            "mrr": mrr,
+            "precision_at_k": precision_at_k,
+            "has_must_terms": has_must_terms
+        }
+
+    def _calculate_answer_metrics(
+        self, 
+        predicted: str, 
+        ground_truth: List[str]
+    ) -> Dict[str, float]:
+        """Calculate answer quality metrics."""
+        if not ground_truth:
+            return {
+                "exact_match": 0.0,
+                "partial_match": 0.0,
+                "token_f1": 0.0,
+                "answer_length": len(predicted.split())
+            }
+        
+        predicted_lower = predicted.lower()
+        
+        # Exact match (case-insensitive)
+        exact_match = float(any(
+            gt.lower() == predicted_lower 
+            for gt in ground_truth
+        ))
+        
+        # Partial match (any ground truth substring in prediction)
+        partial_match = float(any(
+            gt.lower() in predicted_lower 
+            for gt in ground_truth
+        ))
+        
+        # Token F1 (best match against any ground truth)
+        token_f1 = 0.0
+        predicted_tokens = set(predicted.lower().split())
+        
+        for gt in ground_truth:
+            gt_tokens = set(gt.lower().split())
+            if gt_tokens:
+                precision = len(predicted_tokens & gt_tokens) / len(predicted_tokens) if predicted_tokens else 0
+                recall = len(predicted_tokens & gt_tokens) / len(gt_tokens)
+                f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
+                token_f1 = max(token_f1, f1)
+        
+        return {
+            "exact_match": exact_match,
+            "partial_match": partial_match,
+            "token_f1": token_f1,
+            "answer_length": len(predicted.split())
+        }
+
+    def _calculate_overall_metrics(self) -> Dict[str, float]:
+        """Calculate overall metrics from all results."""
+        if not self.results:
+            return {}
+        
+        # Filter out error results
+        valid_results = [r for r in self.results if "error" not in r]
+        
+        if not valid_results:
+            return {"error": "No valid results"}
+        
+        metrics = {}
+        
+        # Aggregate retrieval metrics
+        metrics["avg_recall_at_k"] = np.mean([r["recall_at_k"] for r in valid_results])
+        metrics["avg_ndcg_at_k"] = np.mean([r["ndcg_at_k"] for r in valid_results])
+        metrics["avg_mrr"] = np.mean([r["mrr"] for r in valid_results])
+        metrics["avg_precision_at_k"] = np.mean([r["precision_at_k"] for r in valid_results])
+        metrics["avg_has_must_terms"] = np.mean([r["has_must_terms"] for r in valid_results])
+        
+        # Aggregate answer metrics
+        metrics["avg_exact_match"] = np.mean([r["exact_match"] for r in valid_results])
+        metrics["avg_partial_match"] = np.mean([r["partial_match"] for r in valid_results])
+        metrics["avg_token_f1"] = np.mean([r["token_f1"] for r in valid_results])
+        metrics["avg_answer_length"] = np.mean([r["answer_length"] for r in valid_results])
+        
+        # Performance metrics
+        metrics["avg_query_time_ms"] = np.mean([r["query_time_ms"] for r in valid_results])
+        metrics["avg_num_citations"] = np.mean([r["num_citations"] for r in valid_results])
+        
+        # Summary stats
+        metrics["total_queries"] = len(self.results)
+        metrics["valid_queries"] = len(valid_results)
+        metrics["error_rate"] = (len(self.results) - len(valid_results)) / len(self.results)
+        
+        return metrics
+
+    def _log_metrics_to_mlflow(self, mlflow, metrics: Dict[str, float], total_time: float) -> None:
+        """Log metrics to MLflow."""
+        # Log evaluation metadata
+        mlflow.log_metric("total_evaluation_time_s", total_time)
+        
+        # Log all calculated metrics
+        for metric_name, value in metrics.items():
+            mlflow.log_metric(metric_name, value)
+        
+        logger.info(f"Logged {len(metrics)} metrics to MLflow")
+
+    def _save_csv_results(self) -> Optional[str]:
+        """Save results to CSV file."""
+        if not self.results:
+            return None
+        
+        try:
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            csv_path = f"eval_results_{self.config.name}_{timestamp}.csv"
             
-        finally:
-            # Clean up temporary file
-            try:
-                os.unlink(csv_path)
-            except:
-                pass
+            # Convert results to DataFrame and save
+            df = pd.DataFrame(self.results)
+            df.to_csv(csv_path, index=False)
+            
+            logger.info(f"Results saved to {csv_path}")
+            return csv_path
+            
+        except Exception as e:
+            logger.error(f"Failed to save CSV: {e}")
+            return None
 
 
-def create_sample_dataset() -> List[Dict[str, Any]]:
-    """Create a sample evaluation dataset for testing."""
-    return [
-        {
-            "question": "What is artificial intelligence?",
-            "ground_truth": "Artificial intelligence (AI) is the simulation of human intelligence in machines that are programmed to think and learn.",
-            "relevant_docs": ["doc_0", "doc_1", "doc_7"],
-        },
-        {
-            "question": "How does machine learning work?",
-            "ground_truth": "Machine learning is a subset of AI that enables computers to learn and improve from experience without being explicitly programmed.",
-            "relevant_docs": ["doc_2", "doc_4", "doc_8"],
-        },
-        {
-            "question": "What are neural networks?",
-            "ground_truth": "Neural networks are computing systems inspired by biological neural networks that can recognize patterns and make decisions.",
-            "relevant_docs": ["doc_3", "doc_5", "doc_9"],
-        },
-        {
-            "question": "What is deep learning?",
-            "ground_truth": "Deep learning is a subset of machine learning that uses neural networks with multiple layers to analyze data.",
-            "relevant_docs": ["doc_1", "doc_6", "doc_8"],
-        },
-        {
-            "question": "How is AI used in healthcare?",
-            "ground_truth": "AI in healthcare includes medical imaging analysis, drug discovery, personalized treatment recommendations, and diagnostic assistance.",
-            "relevant_docs": ["doc_4", "doc_7", "doc_9"],
-        },
-    ]
+def load_qa_dataset(file_path: str) -> List[Dict[str, Any]]:
+    """Load QA dataset from JSONL file."""
+    dataset = []
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            for line_num, line in enumerate(f, 1):
+                try:
+                    example = json.loads(line.strip())
+                    dataset.append(example)
+                except json.JSONDecodeError as e:
+                    logger.warning(f"Skipping invalid JSON on line {line_num}: {e}")
+        
+        logger.info(f"Loaded {len(dataset)} examples from {file_path}")
+        return dataset
+        
+    except FileNotFoundError:
+        logger.error(f"Dataset file not found: {file_path}")
+        raise
+    except Exception as e:
+        logger.error(f"Error loading dataset: {e}")
+        raise
 
 
-def create_tiny_dataset() -> List[Dict[str, Any]]:
-    """Create a tiny evaluation dataset for CI testing."""
-    return [
-        {
-            "question": "What is AI?",
-            "ground_truth": "Artificial intelligence is machine simulation of human intelligence.",
-            "relevant_docs": ["doc_0", "doc_1"],
-        },
-        {
-            "question": "What is ML?",
-            "ground_truth": "Machine learning enables computers to learn from data.",
-            "relevant_docs": ["doc_2", "doc_3"],
-        },
-    ]
+def create_predefined_configs() -> Dict[str, EvaluationConfig]:
+    """Create predefined evaluation configurations for comparison."""
+    configs = {
+        "baseline": EvaluationConfig(
+            name="baseline",
+            k=5,
+            fusion_enabled=True,
+            rerank_enabled=True,
+            provider="openai"
+        ),
+        "no_rerank": EvaluationConfig(
+            name="no_rerank",
+            k=5,
+            fusion_enabled=True,
+            rerank_enabled=False,
+            provider="openai"
+        ),
+        "no_fusion": EvaluationConfig(
+            name="no_fusion",
+            k=5,
+            fusion_enabled=False,
+            rerank_enabled=True,
+            provider="openai"
+        ),
+        "high_k": EvaluationConfig(
+            name="high_k",
+            k=10,
+            fusion_enabled=True,
+            rerank_enabled=True,
+            provider="openai"
+        ),
+        "semantic_heavy": EvaluationConfig(
+            name="semantic_heavy",
+            k=5,
+            fusion_enabled=True,
+            rerank_enabled=True,
+            provider="openai",
+            fusion_weights={"semantic": 0.9, "keyword": 0.1}
+        )
+    }
+    return configs
+
+
+async def run_evaluation(config: EvaluationConfig, dataset: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Run evaluation with given configuration."""
+    evaluator = EnhancedRAGEvaluator(config)
+    results = await evaluator.evaluate_dataset(dataset)
+    return results
+
+
+async def compare_configurations(
+    configs: List[EvaluationConfig], 
+    dataset: List[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """Compare multiple configurations and generate comparison report."""
+    logger.info(f"Comparing {len(configs)} configurations")
+    
+    all_results = {}
+    
+    for config in configs:
+        logger.info(f"Running evaluation for config: {config.name}")
+        results = await run_evaluation(config, dataset)
+        all_results[config.name] = results
+    
+    # Create comparison table
+    comparison_df = pd.DataFrame({
+        config_name: result["overall_metrics"]
+        for config_name, result in all_results.items()
+    }).T
+    
+    # Save comparison CSV
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    comparison_csv = f"config_comparison_{timestamp}.csv"
+    comparison_df.to_csv(comparison_csv)
+    
+    logger.info(f"Configuration comparison saved to {comparison_csv}")
+    
+    return {
+        "individual_results": all_results,
+        "comparison_table": comparison_df,
+        "comparison_csv": comparison_csv
+    }
+
+
+def print_metrics_table(results: Dict[str, Any]) -> None:
+    """Print formatted metrics table."""
+    if "overall_metrics" in results:
+        metrics = results["overall_metrics"]
+        config_name = results.get("config", {}).get("name", "Unknown")
+        
+        print(f"\nResults for Configuration: {config_name}")
+        print("=" * 60)
+        
+        # Retrieval metrics
+        print("Retrieval Metrics:")
+        print(f"  Recall@k:        {metrics.get('avg_recall_at_k', 0):.4f}")
+        print(f"  nDCG@k:          {metrics.get('avg_ndcg_at_k', 0):.4f}")
+        print(f"  MRR:             {metrics.get('avg_mrr', 0):.4f}")
+        print(f"  Precision@k:     {metrics.get('avg_precision_at_k', 0):.4f}")
+        print(f"  Must-have terms: {metrics.get('avg_has_must_terms', 0):.4f}")
+        
+        # Answer metrics
+        print("\nAnswer Quality Metrics:")
+        print(f"  Exact match:     {metrics.get('avg_exact_match', 0):.4f}")
+        print(f"  Partial match:   {metrics.get('avg_partial_match', 0):.4f}")
+        print(f"  Token F1:        {metrics.get('avg_token_f1', 0):.4f}")
+        print(f"  Avg length:      {metrics.get('avg_answer_length', 0):.1f} tokens")
+        
+        # Performance metrics
+        print("\nPerformance Metrics:")
+        print(f"  Avg query time:  {metrics.get('avg_query_time_ms', 0):.1f} ms")
+        print(f"  Avg citations:   {metrics.get('avg_num_citations', 0):.1f}")
+        print(f"  Success rate:    {1 - metrics.get('error_rate', 0):.4f}")
 
 
 async def main():
-    """Run RAG evaluation demo."""
-    parser = argparse.ArgumentParser(description="Run RAG evaluation")
-    parser.add_argument("--tiny", action="store_true", help="Run tiny evaluation for CI")
+    """Main evaluation function with CLI support."""
+    parser = argparse.ArgumentParser(description="RAG System Evaluation with Configuration Comparison")
+    
+    # Dataset options
+    parser.add_argument("--dataset", type=str, default="evals/qa_dev.jsonl",
+                       help="Path to evaluation dataset (JSONL format)")
+    parser.add_argument("--sample", type=int, default=None,
+                       help="Sample N examples from dataset for quick testing")
+    
+    # Configuration options
+    parser.add_argument("--config", type=str, default="baseline",
+                       help="Configuration name (baseline, no_rerank, no_fusion, high_k, semantic_heavy)")
+    parser.add_argument("--compare", action="store_true",
+                       help="Compare multiple predefined configurations")
+    parser.add_argument("--custom", action="store_true",
+                       help="Use custom configuration from CLI args")
+    
+    # Custom configuration parameters
+    parser.add_argument("--k", type=int, default=5,
+                       help="Number of documents to retrieve")
+    parser.add_argument("--fusion", type=bool, default=True,
+                       help="Enable query fusion")
+    parser.add_argument("--rerank", type=bool, default=True,
+                       help="Enable reranking")
+    parser.add_argument("--provider", type=str, default="openai",
+                       help="Answer provider (openai, anthropic, local)")
+    parser.add_argument("--semantic-weight", type=float, default=0.7,
+                       help="Semantic search weight in fusion (0.0-1.0)")
+    
+    # Output options
+    parser.add_argument("--output", type=str, default=None,
+                       help="Output CSV file path")
+    parser.add_argument("--mlflow", action="store_true", default=True,
+                       help="Enable MLflow logging")
+    
     args = parser.parse_args()
     
-    if args.tiny:
-        logger.info("Starting tiny RAG evaluation for CI")
-        dataset = create_tiny_dataset()
-        experiment_name = "rag_evaluation_ci"
-        run_name = f"ci_eval_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    # Load dataset
+    logger.info(f"Loading dataset from {args.dataset}")
+    dataset = load_qa_dataset(args.dataset)
+    
+    if args.sample:
+        dataset = dataset[:args.sample]
+        logger.info(f"Using sample of {len(dataset)} examples")
+    
+    if args.compare:
+        # Compare multiple configurations
+        configs = list(create_predefined_configs().values())
+        comparison_results = await compare_configurations(configs, dataset)
+        
+        print("\nConfiguration Comparison Results")
+        print("=" * 60)
+        print(comparison_results["comparison_table"])
+        print(f"\nDetailed results saved to: {comparison_results['comparison_csv']}")
+        
     else:
-        logger.info("Starting RAG evaluation demo")
-        dataset = create_sample_dataset()
-        experiment_name = "rag_evaluation_demo"
-        run_name = f"demo_eval_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    
-    # Create evaluator with appropriate settings for the context
-    if args.tiny:
-        # Simpler configuration for CI
-        evaluator = RAGEvaluator(
-            k_values=[1, 3],
-            fusion_weights={"semantic": 0.7, "keyword": 0.3},
-            reranker_enabled=True,
-        )
-    else:
-        # Full configuration for demo
-        evaluator = RAGEvaluator(
-            k_values=[1, 3, 5],
-            fusion_weights={"semantic": 0.7, "keyword": 0.3},
-            reranker_enabled=True,
-        )
-    
-    # Run evaluation
-    results = await evaluator.evaluate_dataset(
-        dataset=dataset,
-        experiment_name=experiment_name,
-        run_name=run_name,
-    )
-    
-    # Print results
-    print("\n" + "="*50)
-    if args.tiny:
-        print("TINY RAG EVALUATION RESULTS (CI)")
-    else:
-        print("RAG EVALUATION RESULTS")
-    print("="*50)
-    
-    print(f"\nDataset size: {results['dataset_size']} queries")
-    print(f"Evaluation time: {results['total_time']:.2f}s")
-    
-    print("\nOverall Metrics:")
-    for metric, value in results['overall_metrics'].items():
-        if isinstance(value, float):
-            print(f"  {metric}: {value:.4f}")
+        # Single configuration evaluation
+        if args.custom:
+            config = EvaluationConfig.from_args(args)
         else:
-            print(f"  {metric}: {value}")
+            predefined_configs = create_predefined_configs()
+            if args.config not in predefined_configs:
+                logger.error(f"Unknown config: {args.config}. Available: {list(predefined_configs.keys())}")
+                sys.exit(1)
+            config = predefined_configs[args.config]
+        
+        # Run evaluation
+        results = await run_evaluation(config, dataset)
+        
+        # Print results
+        print_metrics_table(results)
+        
+        # Save CSV if specified
+        if args.output:
+            csv_path = results.get("csv_path")
+            if csv_path and os.path.exists(csv_path):
+                import shutil
+                shutil.move(csv_path, args.output)
+                print(f"\nResults saved to: {args.output}")
     
-    print(f"\nPer-query results logged to MLflow")
-    print(f"Check MLflow UI for detailed results and CSV artifacts")
-    
-    if args.tiny:
-        logger.info("Tiny RAG evaluation for CI completed")
-    else:
-        logger.info("RAG evaluation demo completed")
+    logger.info("Evaluation completed successfully")
 
 
 if __name__ == "__main__":

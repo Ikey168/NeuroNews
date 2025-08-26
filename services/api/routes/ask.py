@@ -25,7 +25,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "../../.."))
 try:
     from services.mlops.tracking import mlrun
     from services.rag.answer import RAGAnswerService
-    from services.embeddings.provider import EmbeddingsProvider
+    from services.embeddings.provider import EmbeddingProvider
 except ImportError as e:
     print(f"Import error: {e}")
     print("Please ensure you're running from the project root directory")
@@ -76,7 +76,7 @@ class CitationModel(BaseModel):
 
 # Global service instances (would typically be dependency-injected)
 _rag_service: Optional[RAGAnswerService] = None
-_embeddings_provider: Optional[EmbeddingsProvider] = None
+_embeddings_provider: Optional[EmbeddingProvider] = None
 
 
 def get_rag_service() -> RAGAnswerService:
@@ -85,7 +85,7 @@ def get_rag_service() -> RAGAnswerService:
     
     if _rag_service is None:
         if _embeddings_provider is None:
-            _embeddings_provider = EmbeddingsProvider(
+            _embeddings_provider = EmbeddingProvider(
                 model_name="all-MiniLM-L6-v2",
                 batch_size=16,
             )

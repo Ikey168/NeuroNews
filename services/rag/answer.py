@@ -22,7 +22,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
 
 try:
     from services.mlops.tracking import mlrun
-    from services.embeddings.provider import EmbeddingsProvider
+    from services.embeddings.provider import EmbeddingProvider
     from jobs.rag.indexer import RAGIndexer
 except ImportError as e:
     print(f"Import error: {e}")
@@ -47,7 +47,7 @@ class RAGAnswerService:
 
     def __init__(
         self,
-        embeddings_provider: Optional[EmbeddingsProvider] = None,
+        embeddings_provider: Optional[EmbeddingProvider] = None,
         default_k: int = 5,
         rerank_enabled: bool = True,
         fusion_enabled: bool = True,
@@ -63,7 +63,7 @@ class RAGAnswerService:
             fusion_enabled: Whether to enable query fusion
             answer_provider: Provider for answer generation
         """
-        self.embeddings_provider = embeddings_provider or EmbeddingsProvider()
+        self.embeddings_provider = embeddings_provider or EmbeddingProvider()
         self.default_k = default_k
         self.rerank_enabled = rerank_enabled
         self.fusion_enabled = fusion_enabled
