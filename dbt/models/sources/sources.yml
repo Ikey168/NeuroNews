@@ -1,0 +1,76 @@
+version: 2
+
+sources:
+  - name: iceberg
+    description: "Iceberg tables containing raw and enriched news articles data"
+    schema: news
+    tables:
+      - name: articles_raw
+        description: "Raw articles ingested from Kafka streams"
+        columns:
+          - name: id
+            description: "Unique article identifier"
+            tests:
+              - not_null
+              - unique
+          - name: url
+            description: "Article URL"
+            tests:
+              - not_null
+          - name: title
+            description: "Article title"
+            tests:
+              - not_null
+          - name: body
+            description: "Article content/body"
+          - name: source
+            description: "News source identifier"
+            tests:
+              - not_null
+          - name: published_at
+            description: "Article publication timestamp"
+            tests:
+              - not_null
+          - name: processed_at
+            description: "Processing timestamp"
+          - name: year
+            description: "Partition field - year"
+          - name: month
+            description: "Partition field - month"
+          - name: day
+            description: "Partition field - day"
+          - name: hour
+            description: "Partition field - hour"
+
+      - name: articles_enriched
+        description: "Articles with NLP enrichments and analytics"
+        columns:
+          - name: id
+            description: "Unique article identifier"
+            tests:
+              - not_null
+              - unique
+          - name: url
+            description: "Article URL"
+            tests:
+              - not_null
+          - name: title
+            description: "Article title"
+            tests:
+              - not_null
+          - name: sentiment_score
+            description: "Sentiment analysis score (-1 to 1)"
+          - name: sentiment_label
+            description: "Sentiment label (positive/negative/neutral)"
+          - name: topics
+            description: "Extracted topics array"
+          - name: entities
+            description: "Named entities array"
+          - name: keywords
+            description: "Extracted keywords array"
+          - name: content_quality_score
+            description: "Content quality score (0 to 1)"
+          - name: enriched_at
+            description: "Enrichment processing timestamp"
+            tests:
+              - not_null
