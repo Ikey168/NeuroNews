@@ -1,0 +1,76 @@
+# RAG Indexer Configuration
+# Issue #230: Indexer job (embed + upsert)
+
+# Database configuration
+database:
+  host: ${POSTGRES_HOST:localhost}
+  port: ${POSTGRES_PORT:5433}
+  database: ${POSTGRES_DB:neuronews_vector}
+  user: ${POSTGRES_USER:neuronews}
+  password: ${POSTGRES_PASSWORD:neuronews_vector_pass}
+  table_name: chunks
+
+# Embedding configuration
+embedding:
+  provider: ${EMBEDDING_PROVIDER:local}  # local or openai
+  model: ${EMBEDDING_MODEL_NAME:all-MiniLM-L6-v2}
+  batch_size: 32
+  max_retries: 3
+  timeout: 30
+
+# Chunking configuration
+chunking:
+  max_chars: 1000
+  overlap_chars: 100
+  split_on: sentence  # sentence, paragraph, word, character
+  min_chunk_chars: 50
+  preserve_structure: true
+
+# Processing configuration
+processing:
+  batch_size: 100
+  max_workers: 4
+  progress_interval: 10
+  dry_run: false
+
+# Content filters
+filters:
+  min_content_length: 100
+  max_content_length: 500000
+  languages: 
+    - en
+    - unknown
+  exclude_sources: []
+  exclude_patterns: []
+
+# Logging configuration
+logging:
+  level: INFO
+  progress_to_db: true
+  log_table: search_logs
+  
+# Content type mappings for different chunking strategies
+content_types:
+  news:
+    max_chars: 800
+    overlap_chars: 80
+    split_on: sentence
+    min_chunk_chars: 100
+  
+  academic:
+    max_chars: 1200
+    overlap_chars: 150
+    split_on: paragraph
+    min_chunk_chars: 200
+  
+  social:
+    max_chars: 400
+    overlap_chars: 40
+    split_on: sentence
+    min_chunk_chars: 50
+  
+  code:
+    max_chars: 600
+    overlap_chars: 60
+    split_on: paragraph
+    min_chunk_chars: 100
