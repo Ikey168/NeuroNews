@@ -11,6 +11,8 @@ import sys
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from services.api.cache import QueryCache
+from services.api.middleware.ratelimit import SlidingWindowRateLimiter
 
 # Add to path for imports
 sys.path.append(os.path.dirname(__file__))
@@ -40,8 +42,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add rate limit middleware
+app.add_middleware(SlidingWindowRateLimiter)
+
 # Include the ask router
 app.include_router(ask_router, prefix="/api")
+
+# Initialize global query cache (can be injected or used in ask endpoint)
+query_cache = QueryCache()
 
 @app.get("/")
 async def root():
