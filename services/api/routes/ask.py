@@ -19,6 +19,12 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel, Field
 
+# Import query cache from main
+try:
+    from services.api.main import query_cache
+except ImportError:
+    query_cache = None
+
 # Add src to path for imports
 sys.path.append(os.path.join(os.path.dirname(__file__), "../../.."))
 
@@ -129,6 +135,22 @@ async def ask_question(
         f"Processing ask request {request_id}: '{request.question[:50]}...' "
         f"(MLflow tracking: {'enabled' if should_track else 'disabled'})"
     )
+
+    # Try cache lookup
+    cache_result = None
+    if query_cache:
+        cache_result = query_cache.get(
+            request.question,
+            request.filters or {},
+            request.provider or "openai",
+            request.k or 5,
+            request.rerank_on or False
+        )
+        if cache_result:
+            logger.info(f"Cache hit for request {request_id}")
+            cache_result["request_id"] = request_id
+            cache_result["tracked_in_mlflow"] = False
+            return AskResponse(**cache_result)
     
     try:
         if should_track:
@@ -161,6 +183,17 @@ async def ask_question(
             request_id=request_id,
             tracked_in_mlflow=tracked_in_mlflow
         )
+
+            # Store result in cache
+            if query_cache and not should_track:
+                query_cache.set(
+                    request.question,
+                    request.filters or {},
+                    request.provider or "openai",
+                    request.k or 5,
+                    request.rerank_on or False,
+                    api_response.dict()
+                )
 
         logger.info(
             f"Request {request_id} completed in {response['metadata']['total_time_ms']:.1f}ms: "
