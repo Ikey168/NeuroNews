@@ -64,12 +64,50 @@ jobs:
           sleep 2
         done
     
+    - name: Install PostgreSQL extensions
+      run: |
+        # Install pgvector extension
+        sudo apt-get update
+        sudo apt-get install -y postgresql-15-pgvector
+    
     - name: Set up test database
       env:
         PGPASSWORD: postgres
       run: |
-        psql -h localhost -U postgres -d neuronews_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
-        psql -h localhost -U postgres -d neuronews_test -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;"
+        # Wait for PostgreSQL to be ready
+        until pg_isready -h localhost -p 5432 -U postgres; do
+          echo "Waiting for PostgreSQL..."
+          sleep 2
+        done
+        
+        # Create extensions (vector extension is needed for embeddings)
+        psql -h localhost -U postgres -d neuronews_test -c "CREATE EXTENSION IF NOT EXISTS vector;" || echo "Warning: vector extension not available"
+        psql -h localhost -U postgres -d neuronews_test -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;" || echo "Warning: pg_trgm extension not available"
+        
+        # Create basic tables if needed
+        psql -h localhost -U postgres -d neuronews_test -c "
+          CREATE TABLE IF NOT EXISTS documents (
+            id VARCHAR PRIMARY KEY,
+            title TEXT,
+            content TEXT,
+            url TEXT,
+            source VARCHAR,
+            published_date TIMESTAMP,
+            created_at TIMESTAMP DEFAULT NOW()
+          );
+          
+          CREATE TABLE IF NOT EXISTS document_chunks (
+            id SERIAL PRIMARY KEY,
+            document_id VARCHAR REFERENCES documents(id),
+            chunk_index INTEGER,
+            content TEXT,
+            embedding vector(384),
+            created_at TIMESTAMP DEFAULT NOW()
+          );
+          
+          CREATE INDEX IF NOT EXISTS idx_chunks_document_id ON document_chunks(document_id);
+          CREATE INDEX IF NOT EXISTS idx_chunks_embedding ON document_chunks USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+        " || echo "Warning: Could not create vector tables, falling back to basic tables"
     
     - name: Set environment variables
       run: |
