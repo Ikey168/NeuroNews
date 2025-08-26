@@ -22,7 +22,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
 
 try:
     from services.mlops.tracking import mlrun
-    from services.embeddings.provider import EmbeddingsProvider
+    from services.embeddings.provider import EmbeddingProvider
     from src.nlp.article_embedder import ArticleEmbedder, get_snowflake_connection_params
     # Issue #222: Import reproducibility tools
     from services.mlops.data_manifest import DataManifestGenerator
@@ -87,7 +87,7 @@ class RAGIndexer:
             self.manifest_generator = None
         
         # Initialize embeddings provider
-        self.embeddings_provider = EmbeddingsProvider(
+        self.embeddings_provider = EmbeddingProvider(
             model_name=embedding_model,
             provider_type="sentence_transformers"
         )
@@ -113,7 +113,7 @@ class RAGIndexer:
         self.conn_params = conn_params or get_snowflake_connection_params()
 
         # Initialize embeddings provider
-        self.embeddings_provider = EmbeddingsProvider(
+        self.embeddings_provider = EmbeddingProvider(
             model_name=embedding_model,
             batch_size=batch_size,
         )
