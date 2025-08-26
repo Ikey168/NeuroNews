@@ -1,0 +1,121 @@
+name: RAG CI Smoke Tests
+# Issue #238: CI: Smoke tests for indexing & /ask
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'services/rag/**'
+      - 'services/api/**'
+      - 'jobs/rag/**'
+      - 'services/embeddings/**'
+      - 'tests/rag/**'
+      - 'tests/fixtures/**'
+      - '.github/workflows/rag-ci.yml'
+
+jobs:
+  rag-smoke-tests:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: neuronews_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-asyncio httpx
+    
+    - name: Wait for PostgreSQL
+      run: |
+        until pg_isready -h localhost -p 5432 -U postgres; do
+          echo "Waiting for PostgreSQL..."
+          sleep 2
+        done
+    
+    - name: Set up test database
+      env:
+        PGPASSWORD: postgres
+      run: |
+        psql -h localhost -U postgres -d neuronews_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
+        psql -h localhost -U postgres -d neuronews_test -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;"
+    
+    - name: Set environment variables
+      run: |
+        echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/neuronews_test" >> $GITHUB_ENV
+        echo "POSTGRES_HOST=localhost" >> $GITHUB_ENV
+        echo "POSTGRES_PORT=5432" >> $GITHUB_ENV
+        echo "POSTGRES_USER=postgres" >> $GITHUB_ENV
+        echo "POSTGRES_PASSWORD=postgres" >> $GITHUB_ENV
+        echo "POSTGRES_DB=neuronews_test" >> $GITHUB_ENV
+        echo "PYTHONPATH=${{ github.workspace }}" >> $GITHUB_ENV
+        echo "OPENAI_API_KEY=test-key" >> $GITHUB_ENV
+        echo "ANTHROPIC_API_KEY=test-key" >> $GITHUB_ENV
+        echo "NEURONEWS_PIPELINE=ci-smoke-test" >> $GITHUB_ENV
+        echo "NEURONEWS_DATA_VERSION=test-v1.0" >> $GITHUB_ENV
+    
+    - name: Run RAG indexing smoke test
+      run: |
+        python -m pytest tests/rag/test_retriever_smoke.py -v --tb=short
+    
+    - name: Start FastAPI server in background
+      run: |
+        cd services/api
+        python -m uvicorn main:app --host 0.0.0.0 --port 8000 &
+        echo $! > /tmp/fastapi.pid
+        sleep 10  # Give server time to start
+    
+    - name: Wait for API to be ready
+      run: |
+        timeout 60 bash -c 'until curl -f http://localhost:8000/health 2>/dev/null; do sleep 2; done'
+    
+    - name: Run API smoke test
+      run: |
+        python -m pytest tests/rag/test_api_smoke.py -v --tb=short
+    
+    - name: Stop FastAPI server
+      if: always()
+      run: |
+        if [ -f /tmp/fastapi.pid ]; then
+          kill $(cat /tmp/fastapi.pid) || true
+        fi
+    
+    - name: Upload test results
+      if: failure()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results
+        path: |
+          tests/rag/
+          *.log
