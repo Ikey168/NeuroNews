@@ -1,4 +1,4 @@
-.PHONY: help airflow-up airflow-down airflow-logs marquez-ui airflow-init airflow-status airflow-build airflow-test-openlineage mlflow-up mlflow-down mlflow-ui
+.PHONY: help airflow-up airflow-down airflow-logs marquez-ui airflow-init airflow-status airflow-build airflow-test-openlineage mlflow-up mlflow-down mlflow-ui rag-up rag-down rag-migrate rag-connect rag-reset rag-logs
 
 # Default target
 help:
@@ -33,10 +33,19 @@ help:
 	@echo "  dbt-test         - Run dbt tests"
 	@echo "  dbt-clean        - Clean dbt artifacts"
 	@echo ""
+	@echo "Vector Store & RAG:"
+	@echo "  rag-up           - Start PostgreSQL with pgvector extension"
+	@echo "  rag-down         - Stop vector store services"
+	@echo "  rag-migrate      - Run database migrations for vector store"
+	@echo "  rag-connect      - Connect to vector database"
+	@echo "  rag-reset        - Reset vector database (WARNING: deletes all data)"
+	@echo "  rag-logs         - Show vector store logs"
+	@echo ""
 	@echo "URLs:"
 	@echo "  Airflow UI:  http://localhost:8080 (airflow/airflow)"
 	@echo "  Marquez UI:  http://localhost:3000"
 	@echo "  MLflow UI:   http://localhost:5001"
+	@echo "  pgAdmin:     http://localhost:5050 (admin@neuronews.com/admin)"
 
 # Airflow and Marquez orchestration targets
 
@@ -213,3 +222,56 @@ mlflow-ui:
 	else \
 		echo "Please open http://localhost:5001 in your browser"; \
 	fi
+
+# Vector Store & RAG targets (Issue #227)
+
+rag-up:
+	@echo "🚀 Starting PostgreSQL with pgvector extension..."
+	@cd docker/vector && docker-compose -f docker-compose.rag.yml up -d
+	@echo ""
+	@echo "✅ Vector store services started!"
+	@echo "🐘 PostgreSQL: localhost:5433"
+	@echo "🔍 pgAdmin: http://localhost:5050 (admin@neuronews.com/admin)"
+	@echo "🗄️  Database: neuronews_vector"
+	@echo "👤 User: neuronews"
+	@echo ""
+	@echo "Use 'make rag-migrate' to initialize schema"
+	@echo "Use 'make rag-down' to stop services"
+
+rag-down:
+	@echo "🛑 Stopping vector store services..."
+	@cd docker/vector && docker-compose -f docker-compose.rag.yml down
+	@echo "✅ Vector store services stopped!"
+
+rag-migrate:
+	@echo "🔄 Running vector store migrations..."
+	@echo "Waiting for PostgreSQL to be ready..."
+	@timeout 60 sh -c 'until docker exec neuronews-postgres-vector pg_isready -U neuronews -d neuronews_vector; do sleep 2; done'
+	@echo "Running migration 0001_init_pgvector.sql..."
+	@docker exec -i neuronews-postgres-vector psql -U neuronews -d neuronews_vector < migrations/pg/0001_init_pgvector.sql
+	@echo "Running migration 0002_schema_chunks.sql..."
+	@docker exec -i neuronews-postgres-vector psql -U neuronews -d neuronews_vector < migrations/pg/0002_schema_chunks.sql
+	@echo ""
+	@echo "✅ Vector store migrations completed!"
+	@echo "📊 Tables created: documents, chunks, embeddings, inverted_terms, search_logs"
+	@echo "🔍 Indexes created: IVFFlat vector indexes for optimal similarity search"
+	@echo "⚡ Functions created: search_similar_documents(), cosine_similarity(), etc."
+
+rag-connect:
+	@echo "🔌 Connecting to vector database..."
+	@docker exec -it neuronews-postgres-vector psql -U neuronews -d neuronews_vector
+
+rag-reset:
+	@echo "⚠️  WARNING: This will delete ALL vector store data!"
+	@read -p "Are you sure? Type 'yes' to continue: " confirm && [ "$$confirm" = "yes" ] || exit 1
+	@echo "🗑️  Resetting vector database..."
+	@cd docker/vector && docker-compose -f docker-compose.rag.yml down -v
+	@cd docker/vector && docker-compose -f docker-compose.rag.yml up -d
+	@echo "Waiting for PostgreSQL to be ready..."
+	@timeout 60 sh -c 'until docker exec neuronews-postgres-vector pg_isready -U neuronews -d neuronews_vector; do sleep 2; done'
+	@make rag-migrate
+	@echo "✅ Vector database reset complete!"
+
+rag-logs:
+	@echo "📄 Showing vector store logs..."
+	@cd docker/vector && docker-compose -f docker-compose.rag.yml logs -f
