@@ -1,0 +1,149 @@
+# Chunking Configuration
+# Issue #229: Chunking & normalization pipeline
+# 
+# This configuration file defines the default parameters for text chunking
+# including maximum characters per chunk, overlap between chunks, and splitting strategy.
+
+# Default chunking configuration
+default:
+  max_chars: 1000              # Maximum characters per chunk
+  overlap_chars: 100           # Character overlap between consecutive chunks
+  split_on: "sentence"         # Strategy: "sentence", "paragraph", "word", "character"
+  min_chunk_chars: 50          # Minimum characters for a valid chunk
+  preserve_sentences: true     # Use language-aware sentence splitting
+  language: "en"               # Language for sentence splitting
+
+# Configuration for different content types
+content_types:
+  
+  # Short news articles
+  news_short:
+    max_chars: 800
+    overlap_chars: 80
+    split_on: "sentence"
+    min_chunk_chars: 100
+    preserve_sentences: true
+    language: "en"
+  
+  # Long-form articles
+  news_long:
+    max_chars: 1200
+    overlap_chars: 150
+    split_on: "paragraph"
+    min_chunk_chars: 200
+    preserve_sentences: true
+    language: "en"
+  
+  # Social media posts
+  social:
+    max_chars: 500
+    overlap_chars: 50
+    split_on: "sentence"
+    min_chunk_chars: 25
+    preserve_sentences: false
+    language: "en"
+  
+  # Academic papers
+  academic:
+    max_chars: 1500
+    overlap_chars: 200
+    split_on: "paragraph"
+    min_chunk_chars: 300
+    preserve_sentences: true
+    language: "en"
+  
+  # Code documentation
+  code:
+    max_chars: 800
+    overlap_chars: 100
+    split_on: "paragraph"
+    min_chunk_chars: 50
+    preserve_sentences: false
+    language: "en"
+
+# Language-specific configurations
+languages:
+  
+  # English (default)
+  en:
+    max_chars: 1000
+    overlap_chars: 100
+    split_on: "sentence"
+    preserve_sentences: true
+  
+  # Spanish
+  es:
+    max_chars: 1100          # Slightly longer for Spanish
+    overlap_chars: 110
+    split_on: "sentence"
+    preserve_sentences: true
+  
+  # French
+  fr:
+    max_chars: 1100
+    overlap_chars: 110
+    split_on: "sentence"
+    preserve_sentences: true
+  
+  # German
+  de:
+    max_chars: 900           # Shorter for German compound words
+    overlap_chars: 90
+    split_on: "sentence"
+    preserve_sentences: true
+  
+  # Chinese
+  zh:
+    max_chars: 800           # Character-based language
+    overlap_chars: 80
+    split_on: "character"
+    preserve_sentences: false
+  
+  # Japanese
+  ja:
+    max_chars: 800
+    overlap_chars: 80
+    split_on: "character"
+    preserve_sentences: false
+
+# Special handling configurations
+special_cases:
+  
+  # Very long documents (>10k chars)
+  long_document:
+    max_chars: 1500
+    overlap_chars: 200
+    split_on: "paragraph"
+    min_chunk_chars: 500
+    preserve_sentences: true
+  
+  # Short snippets (<500 chars)
+  short_snippet:
+    max_chars: 300
+    overlap_chars: 30
+    split_on: "sentence"
+    min_chunk_chars: 20
+    preserve_sentences: true
+  
+  # Code blocks
+  code_block:
+    max_chars: 1000
+    overlap_chars: 0         # No overlap for code
+    split_on: "character"
+    min_chunk_chars: 50
+    preserve_sentences: false
+  
+  # Tables and structured data
+  structured:
+    max_chars: 800
+    overlap_chars: 50
+    split_on: "paragraph"
+    min_chunk_chars: 100
+    preserve_sentences: false
+
+# Quality thresholds
+quality:
+  min_words_per_chunk: 5     # Minimum words for valid chunk
+  max_words_per_chunk: 300   # Maximum words per chunk
+  min_sentences_per_chunk: 1 # Minimum sentences when using sentence splitting
+  max_chunks_per_document: 100 # Safety limit for very long documents
