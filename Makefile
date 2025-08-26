@@ -1,4 +1,4 @@
-.PHONY: help airflow-up airflow-down airflow-logs marquez-ui airflow-init airflow-status airflow-build airflow-test-openlineage mlflow-up mlflow-down mlflow-ui rag-up rag-down rag-migrate rag-connect rag-reset rag-logs
+.PHONY: help airflow-up airflow-down airflow-logs marquez-ui airflow-init airflow-status airflow-build airflow-test-openlineage mlflow-up mlflow-down mlflow-ui rag-up rag-down rag-migrate rag-connect rag-reset rag-logs rag-index
 
 # Default target
 help:
@@ -40,6 +40,7 @@ help:
 	@echo "  rag-connect      - Connect to vector database"
 	@echo "  rag-reset        - Reset vector database (WARNING: deletes all data)"
 	@echo "  rag-logs         - Show vector store logs"
+	@echo "  rag-index        - Run RAG indexer on sample data (Issue #230)"
 	@echo ""
 	@echo "URLs:"
 	@echo "  Airflow UI:  http://localhost:8080 (airflow/airflow)"
@@ -275,3 +276,14 @@ rag-reset:
 rag-logs:
 	@echo "📄 Showing vector store logs..."
 	@cd docker/vector && docker-compose -f docker-compose.rag.yml logs -f
+
+# RAG Indexer target (Issue #230)
+rag-index:
+	@echo "🔍 Running RAG indexer on sample data..."
+	@if [ -z "$(SAMPLE_PATH)" ]; then \
+		echo "⚠️  SAMPLE_PATH not specified, using default: data/silver/news/*.parquet"; \
+		SAMPLE_PATH="data/silver/news/*.parquet"; \
+	fi; \
+	echo "📂 Processing: $$SAMPLE_PATH"; \
+	python jobs/rag/cli_indexer.py "$$SAMPLE_PATH" --config configs/indexer.yaml
+	@echo "✅ RAG indexing complete! Check database for upserted records."
