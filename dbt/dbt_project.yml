@@ -46,12 +46,11 @@ tests:
   +store_failures: true
   +severity: warn
 
-# Documentation
-docs:
-  generate: true
-
 # Seeds configuration
 seeds:
   neuronews:
     +schema: seeds
     +file_format: iceberg
+    time_spine:
+      +column_types:
+        date_day: date

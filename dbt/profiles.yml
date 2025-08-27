@@ -6,18 +6,11 @@ neuronews:
   target: dev
   outputs:
     
-    # Spark target for Iceberg development (Option A)
+    # DuckDB target for development (Simple setup)
     dev:
-      type: spark
-      method: thrift
-      host: localhost
-      port: 10000
-      user: spark
-      database: demo
-      schema: neuronews
+      type: duckdb
+      path: ':memory:'
       threads: 4
-      connect_retries: 5
-      connect_timeout: 60
       retry_all: true
     
     # Spark production target for Iceberg

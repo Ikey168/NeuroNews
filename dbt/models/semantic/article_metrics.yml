@@ -1,0 +1,9 @@
+# Simple metric based on the articles semantic model
+
+metrics:
+  - name: total_articles
+    label: "Total Articles"
+    description: "Total count of articles"
+    type: simple
+    type_params:
+      measure: article_count
