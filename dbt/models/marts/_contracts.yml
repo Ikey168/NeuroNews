@@ -1,0 +1,18 @@
+version: 2
+
+models:
+  - name: fct_articles
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: article_id
+        data_type: string
+      - name: source_id
+        data_type: string
+      - name: published_at
+        data_type: timestamp
+      - name: language
+        data_type: string
+      - name: sentiment_score
+        data_type: double
