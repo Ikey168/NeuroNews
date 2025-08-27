@@ -9,7 +9,7 @@ neuronews:
     # DuckDB target for development (Simple setup)
     dev:
       type: duckdb
-      path: ':memory:'
+      path: './dev.db'
       threads: 4
       retry_all: true
     
