@@ -14,28 +14,21 @@ enriched as (
         content,
         url,
         source,
-        published_date,
+        created_at,
+        updated_at,
         scraped_at,
         sentiment,
-        sentiment_score,
-        language,
-        translated_title,
-        translated_content,
         
         -- Derived fields
         length(content) as content_length,
         length(title) as title_length,
         
         -- Date dimensions
-        date(published_date) as published_date_key,
-        extract(year from published_date) as published_year,
-        extract(month from published_date) as published_month,
-        extract(day from published_date) as published_day,
-        extract(hour from published_date) as published_hour,
-        
-        -- Language flags
-        case when language = 'en' then true else false end as is_english,
-        case when translated_title is not null then true else false end as is_translated,
+        date(created_at) as created_date_key,
+        extract(year from created_at) as created_year,
+        extract(month from created_at) as created_month,
+        extract(day from created_at) as created_day,
+        extract(hour from created_at) as created_hour,
         
         -- Content categorization
         case 
@@ -47,10 +40,7 @@ enriched as (
         -- Sentiment flags
         case when sentiment = 'positive' then 1 else 0 end as is_positive,
         case when sentiment = 'negative' then 1 else 0 end as is_negative,
-        case when sentiment = 'neutral' then 1 else 0 end as is_neutral,
-        
-        created_at,
-        updated_at
+        case when sentiment = 'neutral' then 1 else 0 end as is_neutral
     from articles
 )
 
