@@ -234,4 +234,11 @@ ajv validate -s schema.json -d data.json
 
 ---
 
+## Additional Resources
+
+- **Governance Policies**: [policies.md](./policies.md) - Detailed governance policies and procedures
+- **Evolution Playbook**: [evolution.md](./evolution.md) - Step-by-step guide for schema versioning and evolution
+- **Examples**: [examples/](./examples/) - Sample schemas and usage patterns
+- **Testing**: [tests/](./tests/) - E2E contract validation tests
+
 For detailed governance policies and procedures, see [policies.md](./policies.md).
