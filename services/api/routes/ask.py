@@ -19,6 +19,15 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel, Field
 
+# Import validation utilities
+try:
+    from services.api.validation import ValidatedAskRequest, ValidatedAskResponse, get_schema_validator
+except ImportError:
+    # Fallback if validation module not available
+    ValidatedAskRequest = None
+    ValidatedAskResponse = None
+    get_schema_validator = None
+
 # Import query cache from main
 try:
     from services.api.main import query_cache
@@ -49,13 +58,25 @@ logger.info(f"Ask API MLflow sampling rate: {ASK_LOG_SAMPLE_RATE}")
 
 
 class AskRequest(BaseModel):
-    """Request model for the ask endpoint."""
+    """Request model for the ask endpoint with JSON Schema validation."""
     question: str = Field(..., min_length=3, max_length=500, description="The question to answer")
     k: Optional[int] = Field(5, ge=1, le=20, description="Number of documents to retrieve")
     filters: Optional[Dict[str, Any]] = Field(None, description="Filters to apply during retrieval")
     rerank_on: Optional[bool] = Field(True, description="Whether to enable reranking")
     fusion: Optional[bool] = Field(True, description="Whether to enable query fusion")
     provider: Optional[str] = Field("openai", description="Answer provider to use")
+
+    def __init__(self, **data):
+        # Validate against JSON Schema if validator is available
+        if get_schema_validator:
+            try:
+                validator = get_schema_validator()
+                validator.validate_and_raise("ask-request-v1", data)
+            except Exception as e:
+                logger.warning(f"JSON Schema validation failed: {e}")
+        
+        # Continue with Pydantic validation
+        super().__init__(**data)
 
 
 class AskResponse(BaseModel):
