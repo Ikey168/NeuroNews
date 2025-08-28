@@ -1,0 +1,140 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "CDC Streaming Observability",
+    "tags": ["cdc", "streaming", "kafka", "spark", "iceberg"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Consumer Lag by Topic",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "kafka_consumer_lag_sum{topic=~\"neuronews.*\", consumergroup=\"cdc_to_iceberg\"}",
+            "legendFormat": "{{topic}} - {{partition}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 1000},
+                {"color": "red", "value": 10000}
+              ]
+            },
+            "unit": "short"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Records Processing Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(kafka_consumer_fetch_records_total{consumergroup=\"cdc_to_iceberg\"}[5m])",
+            "legendFormat": "Records Consumed/sec"
+          },
+          {
+            "expr": "rate(spark_streaming_processed_records_total[5m])",
+            "legendFormat": "Records Processed/sec"
+          }
+        ],
+        "yAxes": [
+          {"label": "Records/sec", "min": 0},
+          {"show": false}
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Processing Latency",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(spark_streaming_batch_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(spark_streaming_batch_duration_seconds_bucket[5m]))",
+            "legendFormat": "50th percentile"
+          }
+        ],
+        "yAxes": [
+          {"label": "Seconds", "min": 0},
+          {"show": false}
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+      },
+      {
+        "id": 4,
+        "title": "Failed Batches",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(spark_streaming_failed_batches_total[5m])",
+            "legendFormat": "Failed Batches/min"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 0.1},
+                {"color": "red", "value": 1}
+              ]
+            },
+            "unit": "short"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+      },
+      {
+        "id": 5,
+        "title": "Consumer Group Offsets",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "kafka_consumer_current_offset{consumergroup=\"cdc_to_iceberg\"}",
+            "legendFormat": "Current Offset - {{partition}}"
+          },
+          {
+            "expr": "kafka_consumer_lag{consumergroup=\"cdc_to_iceberg\"}",
+            "legendFormat": "Lag - {{partition}}"
+          }
+        ],
+        "yAxes": [
+          {"label": "Offset", "min": 0},
+          {"show": false}
+        ],
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16}
+      },
+      {
+        "id": 6,
+        "title": "Data Lineage Graph",
+        "type": "text",
+        "gridPos": {"h": 6, "w": 24, "x": 0, "y": 24},
+        "options": {
+          "content": "### OpenLineage Data Lineage\n\n**Source:** Kafka Topic `neuronews.public.articles`  \n**Processor:** Spark Structured Streaming (Consumer Group: `cdc_to_iceberg`)  \n**Target:** Iceberg Table `local.articles`  \n\n**Lineage Tracking:**\n- ✅ Read events from Kafka topic\n- ✅ Batch processing with deduplication\n- ✅ MERGE operations to Iceberg table\n- ✅ Error tracking and failure recovery\n\n**Access Marquez UI:** [http://marquez:3000](http://marquez:3000)"
+        }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "30s",
+    "schemaVersion": 27,
+    "version": 1
+  }
+}
