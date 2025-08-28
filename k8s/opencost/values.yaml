@@ -1,0 +1,128 @@
+# OpenCost Helm Chart Values Configuration
+# Issue #402: Install OpenCost via Helm + expose Prometheus & API
+
+# OpenCost core configuration
+opencost:
+  exporter:
+    # Resource configuration for cost allocation
+    resources:
+      requests:
+        cpu: "10m"
+        memory: "55Mi"
+      limits:
+        cpu: "999m"
+        memory: "1Gi"
+    
+    # Environment configuration
+    env:
+      # Cluster configuration
+      CLUSTER_ID: "neuronews-cluster"
+      
+      # Cloud provider configuration (set based on your provider)
+      # For AWS:
+      # CLOUD_PROVIDER_API_KEY: "set-via-secret"
+      # For multi-cloud or on-premise:
+      CLOUD_PROVIDER_API_KEY: ""
+      
+      # Prometheus configuration
+      PROMETHEUS_SERVER_ENDPOINT: "http://prometheus:9090"
+      
+      # Cost allocation configuration
+      EMIT_KSM_V1_METRICS: "false"
+      EMIT_KSM_V1_METRICS_ONLY: "false"
+      
+      # Enable additional cost models
+      CONFIG_PATH: "/models/config.yaml"
+      
+    # Persistence for cost data
+    persistence:
+      enabled: true
+      size: "0.2Gi"
+      storageClass: ""
+    
+    # Service configuration
+    service:
+      type: ClusterIP
+      port: 9003
+      targetPort: 9003
+      
+  # UI configuration
+  ui:
+    enabled: true
+    service:
+      type: ClusterIP
+      port: 9090
+      targetPort: 9090
+    
+    # Resource limits for UI
+    resources:
+      requests:
+        cpu: "10m"
+        memory: "55Mi"
+      limits:
+        cpu: "999m"
+        memory: "1Gi"
+
+# Prometheus integration
+prometheus:
+  # ServiceMonitor for automatic Prometheus discovery
+  serviceMonitor:
+    enabled: true
+    additionalLabels: {}
+    namespace: "opencost"
+    interval: "1m"
+    scrapeTimeout: "10s"
+    
+  # Manual scrape configuration (alternative to ServiceMonitor)
+  scrapeJob:
+    enabled: false
+
+# Security configuration
+securityContext:
+  runAsUser: 1001
+  runAsGroup: 1001
+  fsGroup: 1001
+  runAsNonRoot: true
+
+# Pod security context
+podSecurityContext:
+  fsGroup: 1001
+  runAsNonRoot: true
+  runAsUser: 1001
+
+# Node selector for cost-effective placement
+nodeSelector: {}
+
+# Tolerations for dedicated nodes
+tolerations: []
+
+# Affinity rules
+affinity: {}
+
+# Custom pricing configuration (optional)
+# Uncomment and configure for custom cloud pricing
+# customPricing:
+#   enabled: false
+#   configmap:
+#     name: "custom-pricing-model"
+
+# Network costs (optional)
+# networkCosts:
+#   enabled: false
+#   config:
+#     # Configure network cost models here
+
+# Plugins configuration
+plugins:
+  enabled: false
+  install: []
+
+# Additional labels for all resources
+commonLabels:
+  app.kubernetes.io/part-of: "neuronews-finops"
+  cost-allocation: "opencost"
+
+# Additional annotations
+commonAnnotations:
+  "finops.neuronews.io/component": "cost-allocation"
+  "finops.neuronews.io/version": "v1.0.0"
