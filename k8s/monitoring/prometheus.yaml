@@ -286,6 +286,43 @@ data:
         annotations:
           summary: "Low disk space"
           description: "Node {{ $labels.instance }} has low disk space of {{ $value }}% on {{ $labels.mountpoint }}."
+
+      # FinOps - OpenCost Integration (Issue #402)
+      - job_name: 'opencost'
+        honor_labels: true
+        scrape_interval: 1m
+        scrape_timeout: 10s
+        metrics_path: /metrics
+        static_configs:
+        - targets: ["opencost.opencost.svc.cluster.local:9003"]
+        relabel_configs:
+        - source_labels: [__address__]
+          target_label: __param_target
+        - source_labels: [__param_target]
+          target_label: instance
+        - target_label: __address__
+          replacement: opencost.opencost.svc.cluster.local:9003
+
+      # FinOps - OpenCost ServiceMonitor (when using Prometheus Operator)
+      - job_name: 'opencost-servicemonitor'
+        kubernetes_sd_configs:
+        - role: endpoints
+          namespaces:
+            names:
+            - opencost
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_service_name]
+          action: keep
+          regex: opencost
+        - source_labels: [__meta_kubernetes_endpoint_port_name]
+          action: keep
+          regex: http-api
+        - source_labels: [__address__]
+          target_label: __param_target
+        - source_labels: [__param_target]
+          target_label: instance
+        - target_label: __address__
+          replacement: opencost.opencost.svc.cluster.local:9003
 ---
 # Prometheus PersistentVolumeClaim
 apiVersion: v1
