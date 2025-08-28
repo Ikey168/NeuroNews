@@ -1,12 +1,13 @@
 """
 Iceberg table maintenance DAG: compaction & snapshot expiration
-Issue #293
+Issue #348
 
 This DAG implements table maintenance operations for Iceberg tables:
 1. Weekly compaction (rewrite_data_files, rewrite_manifests)
-2. Daily snapshot expiration (retain last 5 snapshots)
+2. Daily snapshot expiration (retain last 7 days of snapshots)
 
 Tables maintained:
+- local.news.articles (CDC table from Issue #347)
 - demo.news.articles_enriched
 - demo.news.articles_raw (future)
 """
@@ -49,7 +50,30 @@ daily_expiration_dag = DAG(
     tags=['iceberg', 'maintenance', 'snapshots']
 )
 
-# Weekly compaction tasks
+# Weekly compaction tasks for CDC table (local.news.articles)
+rewrite_data_files_cdc = SparkSubmitOperator(
+    task_id='rewrite_data_files_cdc',
+    application='/opt/airflow/dags/spark_jobs/iceberg_compaction.py',
+    application_args=[
+        '--table', 'local.news.articles',
+        '--operation', 'rewrite_data_files'
+    ],
+    conn_id='spark_default',
+    dag=weekly_compaction_dag
+)
+
+rewrite_manifests_cdc = SparkSubmitOperator(
+    task_id='rewrite_manifests_cdc',
+    application='/opt/airflow/dags/spark_jobs/iceberg_compaction.py',
+    application_args=[
+        '--table', 'local.news.articles',
+        '--operation', 'rewrite_manifests'
+    ],
+    conn_id='spark_default',
+    dag=weekly_compaction_dag
+)
+
+# Weekly compaction tasks for enriched table
 rewrite_data_files_enriched = SparkSubmitOperator(
     task_id='rewrite_data_files_enriched',
     application='/opt/airflow/dags/spark_jobs/iceberg_compaction.py',
@@ -73,16 +97,33 @@ rewrite_manifests_enriched = SparkSubmitOperator(
 )
 
 # Set task dependencies for weekly compaction
+# CDC table maintenance
+rewrite_data_files_cdc >> rewrite_manifests_cdc
+
+# Enriched table maintenance  
 rewrite_data_files_enriched >> rewrite_manifests_enriched
 
-# Daily snapshot expiration task
+# Daily snapshot expiration task for CDC table (keep 7 days)
+expire_snapshots_cdc = SparkSubmitOperator(
+    task_id='expire_snapshots_cdc',
+    application='/opt/airflow/dags/spark_jobs/iceberg_snapshot_expiration.py',
+    application_args=[
+        '--table', 'local.news.articles',
+        '--older_than', '{{ (ds | as_datetime - macros.timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S") }}',
+        '--retain_last', '10'
+    ],
+    conn_id='spark_default',
+    dag=daily_expiration_dag
+)
+
+# Daily snapshot expiration task for enriched table
 expire_snapshots_enriched = SparkSubmitOperator(
     task_id='expire_snapshots_enriched',
     application='/opt/airflow/dags/spark_jobs/iceberg_snapshot_expiration.py',
     application_args=[
         '--table', 'demo.news.articles_enriched',
-        '--older_than', '{{ ds }} 00:00:00',
-        '--retain_last', '5'
+        '--older_than', '{{ (ds | as_datetime - macros.timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S") }}',
+        '--retain_last', '10'
     ],
     conn_id='spark_default',
     dag=daily_expiration_dag

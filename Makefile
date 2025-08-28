@@ -1,4 +1,4 @@
-.PHONY: help airflow-up airflow-down airflow-logs marquez-ui airflow-init airflow-status airflow-build airflow-test-openlineage mlflow-up mlflow-down mlflow-ui rag-up rag-down rag-migrate rag-connect rag-reset rag-logs rag-index contract.publish contract.validate db.seed cdc.run
+.PHONY: help airflow-up airflow-down airflow-logs marquez-ui airflow-init airflow-status airflow-build airflow-test-openlineage mlflow-up mlflow-down mlflow-ui rag-up rag-down rag-migrate rag-connect rag-reset rag-logs rag-index contract.publish contract.validate db.seed cdc.run iceberg.compact iceberg.expire
 
 # Default target
 help:
@@ -51,6 +51,10 @@ help:
 	@echo ""
 	@echo "CDC Streaming (Issue #347):"
 	@echo "  cdc.run          - Start Spark CDC to Iceberg streaming job"
+	@echo ""
+	@echo "Iceberg Maintenance (Issue #348):"
+	@echo "  iceberg.compact  - Run manual Iceberg table compaction"
+	@echo "  iceberg.expire   - Run manual Iceberg snapshot expiration"
 	@echo ""
 	@echo "URLs:"
 	@echo "  Airflow UI:  http://localhost:8080 (airflow/airflow)"
@@ -363,3 +367,26 @@ cdc.run:
 	@echo "✅ Kafka (Redpanda) is running"
 	@echo "🔄 Starting Spark job..."
 	cd spark && python jobs/cdc_to_iceberg.py
+
+# Iceberg maintenance jobs (Issue #348)
+iceberg.compact:
+	@echo "🔧 Running Iceberg table compaction for CDC tables..."
+	@echo "📋 This will consolidate small files and improve query performance"
+	@echo ""
+	@echo "🔄 Compacting local.news.articles (CDC table)..."
+	cd airflow/dags/spark_jobs && python iceberg_compaction.py --table local.news.articles --operation rewrite_data_files
+	cd airflow/dags/spark_jobs && python iceberg_compaction.py --table local.news.articles --operation rewrite_manifests
+	@echo ""
+	@echo "✅ Iceberg compaction completed"
+
+iceberg.expire:
+	@echo "🗑️  Running Iceberg snapshot expiration for CDC tables..."
+	@echo "📋 This will remove old snapshots while retaining recent ones (7+ days)"
+	@echo ""
+	@echo "🔄 Expiring snapshots for local.news.articles (CDC table)..."
+	cd airflow/dags/spark_jobs && python iceberg_snapshot_expiration.py \
+		--table local.news.articles \
+		--older_than "$$(date -d '7 days ago' '+%Y-%m-%d %H:%M:%S')" \
+		--retain_last 10
+	@echo ""
+	@echo "✅ Iceberg snapshot expiration completed"
