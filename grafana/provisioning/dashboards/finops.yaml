@@ -1,0 +1,22 @@
+apiVersion: 1
+
+providers:
+  - name: "NeuroNews FinOps Dashboards"
+    orgId: 1
+    folder: "FinOps"
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards/finops
+  
+  - name: "OpenCost Dashboards"
+    orgId: 1
+    folder: "OpenCost"
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards/opencost
