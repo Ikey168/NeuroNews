@@ -1,1 +1,0 @@
-[('scaler', StandardScaler()), ('regressor', LinearRegression())]

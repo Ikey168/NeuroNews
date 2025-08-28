@@ -1,4 +1,4 @@
-.PHONY: help airflow-up airflow-down airflow-logs marquez-ui airflow-init airflow-status airflow-build airflow-test-openlineage mlflow-up mlflow-down mlflow-ui rag-up rag-down rag-migrate rag-connect rag-reset rag-logs rag-index contract.publish contract.validate db.seed cdc.run iceberg.compact iceberg.expire
+.PHONY: help airflow-up airflow-down airflow-logs marquez-ui airflow-init airflow-status airflow-build airflow-test-openlineage mlflow-up mlflow-down mlflow-ui rag-up rag-down rag-migrate rag-connect rag-reset rag-logs rag-index contract.publish contract.validate db.seed cdc.run iceberg.compact iceberg.expire test.e2e test.e2e.cdc test.e2e.setup
 
 # Default target
 help:
@@ -55,6 +55,11 @@ help:
 	@echo "Iceberg Maintenance (Issue #348):"
 	@echo "  iceberg.compact  - Run manual Iceberg table compaction"
 	@echo "  iceberg.expire   - Run manual Iceberg snapshot expiration"
+	@echo ""
+	@echo "E2E Testing (Issue #349):"
+	@echo "  test.e2e.setup   - Setup E2E test environment and dependencies"
+	@echo "  test.e2e.cdc     - Run CDC E2E tests (PostgreSQL → Iceberg)"
+	@echo "  test.e2e         - Run all E2E tests"
 	@echo ""
 	@echo "URLs:"
 	@echo "  Airflow UI:  http://localhost:8080 (airflow/airflow)"
@@ -390,3 +395,35 @@ iceberg.expire:
 		--retain_last 10
 	@echo ""
 	@echo "✅ Iceberg snapshot expiration completed"
+
+# E2E Testing (Issue #349)
+test.e2e.setup:
+	@echo "🧪 Setting up E2E test environment..."
+	@echo "📋 Installing test dependencies..."
+	pip install pytest psycopg2-binary pyspark
+	@echo ""
+	@echo "🔧 Checking environment variables..."
+	@echo "POSTGRES_HOST: $${POSTGRES_HOST:-localhost}"
+	@echo "POSTGRES_PORT: $${POSTGRES_PORT:-5432}"
+	@echo "POSTGRES_DB: $${POSTGRES_DB:-neuronews}"
+	@echo "POSTGRES_USER: $${POSTGRES_USER:-postgres}"
+	@echo ""
+	@echo "✅ E2E test environment setup completed"
+
+test.e2e.cdc:
+	@echo "🧪 Running CDC E2E tests (Issue #349)..."
+	@echo "📋 This tests the complete CDC pipeline: PostgreSQL → Debezium → Spark → Iceberg"
+	@echo ""
+	@echo "🔄 Running CDC articles E2E tests..."
+	pytest tests/e2e/test_cdc_articles.py -v --tb=short
+	@echo ""
+	@echo "✅ CDC E2E tests completed"
+
+test.e2e:
+	@echo "🧪 Running all E2E tests..."
+	@echo "📋 This includes CDC pipeline and other end-to-end workflows"
+	@echo ""
+	@echo "🔄 Running all E2E tests..."
+	pytest tests/e2e/ -v --tb=short
+	@echo ""
+	@echo "✅ All E2E tests completed"
