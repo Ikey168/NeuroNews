@@ -1,6 +1,0 @@
-artifact_location: file:///workspaces/NeuroNews/mlruns/712312504217884497
-creation_time: 1756133275766
-experiment_id: '712312504217884497'
-last_update_time: 1756133275766
-lifecycle_stage: active
-name: sklearn-autolog-demo
