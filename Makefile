@@ -1,4 +1,4 @@
-.PHONY: help airflow-up airflow-down airflow-logs marquez-ui airflow-init airflow-status airflow-build airflow-test-openlineage mlflow-up mlflow-down mlflow-ui rag-up rag-down rag-migrate rag-connect rag-reset rag-logs rag-index contract.publish contract.validate db.seed
+.PHONY: help airflow-up airflow-down airflow-logs marquez-ui airflow-init airflow-status airflow-build airflow-test-openlineage mlflow-up mlflow-down mlflow-ui rag-up rag-down rag-migrate rag-connect rag-reset rag-logs rag-index contract.publish contract.validate db.seed cdc.run
 
 # Default target
 help:
@@ -48,6 +48,9 @@ help:
 	@echo ""
 	@echo "CDC Database (Issue #345):"
 	@echo "  db.seed          - Seed PostgreSQL with demo articles schema and data"
+	@echo ""
+	@echo "CDC Streaming (Issue #347):"
+	@echo "  cdc.run          - Start Spark CDC to Iceberg streaming job"
 	@echo ""
 	@echo "URLs:"
 	@echo "  Airflow UI:  http://localhost:8080 (airflow/airflow)"
@@ -343,3 +346,20 @@ db.seed:
 		psql -U postgres -d neuronews -c "SELECT article_id, source_id, title, language, country FROM articles LIMIT 5;"
 	@echo ""
 	@echo "✅ Database seeding complete! Articles table ready for CDC streaming."
+
+# CDC Streaming job (Issue #347)
+cdc.run:
+	@echo "🚀 Starting Spark Structured Streaming CDC to Iceberg job..."
+	@echo "📋 Prerequisites:"
+	@echo "   - CDC stack running: docker compose -f docker/docker-compose.cdc.yml up -d"
+	@echo "   - Database seeded: make db.seed"
+	@echo "   - Debezium connector registered"
+	@echo ""
+	@if ! docker ps --filter 'name=.*redpanda.*' --filter 'status=running' | grep -q redpanda; then \
+		echo "❌ Redpanda not running. Start CDC stack first:"; \
+		echo "   cd docker && docker-compose -f docker-compose.cdc.yml up -d"; \
+		exit 1; \
+	fi
+	@echo "✅ Kafka (Redpanda) is running"
+	@echo "🔄 Starting Spark job..."
+	cd spark && python jobs/cdc_to_iceberg.py
