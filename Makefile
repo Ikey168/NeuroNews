@@ -1,4 +1,4 @@
-.PHONY: help airflow-up airflow-down airflow-logs marquez-ui airflow-init airflow-status airflow-build airflow-test-openlineage mlflow-up mlflow-down mlflow-ui rag-up rag-down rag-migrate rag-connect rag-reset rag-logs rag-index contract.publish contract.validate
+.PHONY: help airflow-up airflow-down airflow-logs marquez-ui airflow-init airflow-status airflow-build airflow-test-openlineage mlflow-up mlflow-down mlflow-ui rag-up rag-down rag-migrate rag-connect rag-reset rag-logs rag-index contract.publish contract.validate db.seed
 
 # Default target
 help:
@@ -45,6 +45,9 @@ help:
 	@echo "Contract Management (Issue #357):"
 	@echo "  contract.publish - Publish Avro schema to Schema Registry"
 	@echo "  contract.validate - Validate JSON events against schemas"
+	@echo ""
+	@echo "CDC Database (Issue #345):"
+	@echo "  db.seed          - Seed PostgreSQL with demo articles schema and data"
 	@echo ""
 	@echo "URLs:"
 	@echo "  Airflow UI:  http://localhost:8080 (airflow/airflow)"
@@ -316,3 +319,27 @@ contract.validate:
 			--avro-schema contracts/schemas/avro/article-ingest-v1.avsc; \
 	fi
 	@echo "✅ Event validation complete!"
+
+# CDC Database seeding (Issue #345)
+db.seed:
+	@echo "🌱 Seeding PostgreSQL with demo articles schema and data..."
+	@echo "📋 Checking if CDC Postgres container is running..."
+	@if [ -z "$$(docker ps --filter 'name=.*postgres.*' --filter 'status=running' --format '{{.Names}}' | head -1)" ]; then \
+		echo "❌ No PostgreSQL container running. Please start CDC stack first:"; \
+		echo "   cd docker && docker-compose -f docker-compose.cdc.yml up -d postgres"; \
+		exit 1; \
+	fi
+	@echo "✅ PostgreSQL container found!"
+	@echo "📂 Loading seed data from db/seed/001_articles.sql..."
+	@docker exec -i $$(docker ps --filter 'name=.*postgres.*' --filter 'status=running' --format '{{.Names}}' | head -1) \
+		psql -U postgres -d neuronews < db/seed/001_articles.sql
+	@echo ""
+	@echo "🔍 Verifying data was loaded..."
+	@docker exec $$(docker ps --filter 'name=.*postgres.*' --filter 'status=running' --format '{{.Names}}' | head -1) \
+		psql -U postgres -d neuronews -c "SELECT COUNT(*) as article_count FROM articles;"
+	@echo ""
+	@echo "📋 Sample data preview:"
+	@docker exec $$(docker ps --filter 'name=.*postgres.*' --filter 'status=running' --format '{{.Names}}' | head -1) \
+		psql -U postgres -d neuronews -c "SELECT article_id, source_id, title, language, country FROM articles LIMIT 5;"
+	@echo ""
+	@echo "✅ Database seeding complete! Articles table ready for CDC streaming."
