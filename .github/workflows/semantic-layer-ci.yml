@@ -1,0 +1,92 @@
+name: Semantic Layer CI
+
+# Trigger workflow on PR changes to dbt files
+on:
+  pull_request:
+    paths: ["dbt/**"]
+
+jobs:
+  semantic-layer-validation:
+    name: Validate Semantic Layer
+    runs-on: ubuntu-latest
+    
+    # Use DuckDB for fast CI testing
+    env:
+      DBT_PROFILES_DIR: dbt
+      DBT_PROJECT_DIR: dbt
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      
+      - name: Cache Python dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements-dbt.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
+      - name: Install dbt dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dbt.txt
+      
+      - name: Install dbt packages
+        working-directory: dbt
+        run: |
+          dbt deps
+      
+      - name: dbt parse validation
+        working-directory: dbt
+        run: |
+          dbt parse
+      
+      - name: Validate model contracts
+        working-directory: dbt
+        run: |
+          dbt build --select fct_articles --no-write-json
+      
+      - name: Validate MetricFlow configuration
+        working-directory: dbt
+        run: |
+          mf validate-configs --skip-dw
+      
+      - name: Create seed data for testing
+        working-directory: dbt
+        run: |
+          dbt seed
+      
+      - name: Build dependencies for metrics
+        working-directory: dbt
+        run: |
+          dbt run --select +fct_articles
+      
+      - name: Smoke test - Query metrics
+        working-directory: dbt
+        run: |
+          mf query --metrics articles_ingested,unique_sources --group-by metric_time__day --limit 5
+      
+      - name: Test metric queries with different dimensions
+        working-directory: dbt
+        run: |
+          # Test individual metrics
+          mf query --metrics articles_ingested --group-by metric_time__month --limit 3
+          mf query --metrics unique_sources --group-by metric_time__week --limit 3
+      
+      - name: Run unit tests
+        working-directory: dbt
+        run: |
+          dbt test --select test_type:unit
+      
+      - name: Validate semantic models
+        working-directory: dbt
+        run: |
+          dbt parse
+          # Ensure semantic models compile without errors
+          dbt compile --select semantic_model:*
