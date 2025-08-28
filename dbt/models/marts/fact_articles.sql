@@ -9,7 +9,8 @@
       'write.format.default': 'parquet',
       'write.parquet.compression-codec': 'snappy',
       'history.expire.max-snapshot-age-ms': '432000000',
-      'history.expire.min-snapshots-to-keep': '5'
+      'history.expire.min-snapshots-to-keep': '5',
+      'delete.mode': 'merge-on-read'
     }
   )
 }}
