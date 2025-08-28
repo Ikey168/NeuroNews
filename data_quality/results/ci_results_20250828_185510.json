@@ -1,0 +1,171 @@
+{
+  "articles": {
+    "overall_success": false,
+    "success_percent": 60.71428571428571,
+    "total_expectations": 28,
+    "successful_expectations": 17,
+    "failed_expectations_count": 11,
+    "failed_expectations": [
+      {
+        "expectation_type": "expect_column_values_to_not_be_null",
+        "column": "article_id",
+        "observed_value": "N/A",
+        "details": {
+          "null_count": 1,
+          "non_null_percent": 0.5
+        }
+      },
+      {
+        "expectation_type": "expect_column_values_to_not_be_null",
+        "column": "source_id",
+        "observed_value": "N/A",
+        "details": {
+          "null_count": 1,
+          "non_null_percent": 0.5
+        }
+      },
+      {
+        "expectation_type": "expect_column_values_to_not_be_null",
+        "column": "url",
+        "observed_value": "N/A",
+        "details": {
+          "null_count": 1,
+          "non_null_percent": 0.5
+        }
+      },
+      {
+        "expectation_type": "expect_column_values_to_not_be_null",
+        "column": "language",
+        "observed_value": "N/A",
+        "details": {
+          "null_count": 1,
+          "non_null_percent": 0.5
+        }
+      },
+      {
+        "expectation_type": "expect_column_values_to_not_be_null",
+        "column": "published_at",
+        "observed_value": "N/A",
+        "details": {
+          "null_count": 1,
+          "non_null_percent": 0.5
+        }
+      },
+      {
+        "expectation_type": "expect_column_values_to_not_be_null",
+        "column": "ingested_at",
+        "observed_value": "N/A",
+        "details": {
+          "null_count": 1,
+          "non_null_percent": 0.5
+        }
+      },
+      {
+        "expectation_type": "expect_column_values_to_match_regex",
+        "column": "language",
+        "observed_value": "N/A",
+        "details": {}
+      },
+      {
+        "expectation_type": "expect_column_values_to_match_regex",
+        "column": "country",
+        "observed_value": "N/A",
+        "details": {}
+      },
+      {
+        "expectation_type": "expect_column_values_to_match_regex",
+        "column": "url",
+        "observed_value": "N/A",
+        "details": {}
+      },
+      {
+        "expectation_type": "expect_column_values_to_be_between",
+        "column": "sentiment_score",
+        "observed_value": "N/A",
+        "details": {}
+      },
+      {
+        "expectation_type": "expect_column_values_to_not_be_null",
+        "column": "body",
+        "observed_value": "N/A",
+        "details": {
+          "null_count": 1,
+          "non_null_percent": 0.5
+        }
+      }
+    ],
+    "threshold": 95.0,
+    "timestamp": "2025-08-28T18:55:12.913726",
+    "suite_name": "articles",
+    "run_id": "batch_validation_20250828_185512"
+  },
+  "ask_requests": {
+    "overall_success": false,
+    "success_percent": 10.0,
+    "total_expectations": 10,
+    "successful_expectations": 1,
+    "failed_expectations_count": 9,
+    "failed_expectations": [
+      {
+        "expectation_type": "expect_column_to_exist",
+        "column": "question",
+        "observed_value": "N/A",
+        "details": {
+          "missing_count": 1
+        }
+      },
+      {
+        "expectation_type": "expect_column_values_to_be_of_type",
+        "column": "question",
+        "observed_value": "N/A",
+        "details": {}
+      },
+      {
+        "expectation_type": "expect_column_values_to_be_of_type",
+        "column": "k",
+        "observed_value": "N/A",
+        "details": {}
+      },
+      {
+        "expectation_type": "expect_column_values_to_not_be_null",
+        "column": "question",
+        "observed_value": "N/A",
+        "details": {}
+      },
+      {
+        "expectation_type": "expect_column_value_lengths_to_be_between",
+        "column": "question",
+        "observed_value": "N/A",
+        "details": {}
+      },
+      {
+        "expectation_type": "expect_column_values_to_be_between",
+        "column": "k",
+        "observed_value": "N/A",
+        "details": {}
+      },
+      {
+        "expectation_type": "expect_column_values_to_match_regex",
+        "column": "filters_language",
+        "observed_value": "N/A",
+        "details": {}
+      },
+      {
+        "expectation_type": "expect_column_values_to_match_regex",
+        "column": "filters_date_from",
+        "observed_value": "N/A",
+        "details": {}
+      },
+      {
+        "expectation_type": "expect_column_values_to_match_regex",
+        "column": "filters_date_to",
+        "observed_value": "N/A",
+        "details": {}
+      }
+    ],
+    "threshold": 95.0,
+    "timestamp": "2025-08-28T18:55:12.925174",
+    "suite_name": "ask_requests",
+    "run_id": "batch_validation_20250828_185512"
+  }
+}

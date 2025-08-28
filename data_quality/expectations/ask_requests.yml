@@ -1,0 +1,107 @@
+name: ask_requests
+class_name: Expectation
+module_name: great_expectations.dataset
+expectation_suite_name: ask_requests
+
+expectations:
+  # Required fields from JSON Schema contract
+  - expectation_type: expect_column_to_exist
+    kwargs:
+      column: question
+    meta:
+      source: jsonschema_contract
+      field: question
+      required: true
+
+  # Type constraints from JSON Schema contract
+  - expectation_type: expect_column_values_to_be_of_type
+    kwargs:
+      column: question
+      type_: str
+    meta:
+      source: jsonschema_contract
+      type_constraint: string
+
+  - expectation_type: expect_column_values_to_be_of_type
+    kwargs:
+      column: k
+      type_: int
+    meta:
+      source: jsonschema_contract
+      type_constraint: integer
+
+  # Non-null constraints for required fields
+  - expectation_type: expect_column_values_to_not_be_null
+    kwargs:
+      column: question
+    meta:
+      source: jsonschema_contract
+      constraint: non_null_required
+
+  # String length constraints from JSON Schema
+  - expectation_type: expect_column_value_lengths_to_be_between
+    kwargs:
+      column: question
+      min_value: 3
+      max_value: 500
+    meta:
+      source: jsonschema_contract
+      constraint: question_length
+      description: "Question must be between 3 and 500 characters"
+
+  # Integer range constraints from JSON Schema
+  - expectation_type: expect_column_values_to_be_between
+    kwargs:
+      column: k
+      min_value: 1
+      max_value: 20
+    meta:
+      source: jsonschema_contract
+      constraint: k_range
+      description: "k parameter must be between 1 and 20"
+
+  # Default value check for k
+  - expectation_type: expect_column_most_common_value_to_be_in_set
+    kwargs:
+      column: k
+      value_set: [5]
+      ties_okay: true
+    meta:
+      source: jsonschema_contract
+      constraint: k_default
+      description: "Default value for k should be 5"
+
+  # Filter field validations (when present)
+  - expectation_type: expect_column_values_to_match_regex
+    kwargs:
+      column: filters_language
+      regex: ^(en|es|fr|de|it)$
+    meta:
+      source: jsonschema_contract
+      constraint: language_enum
+      description: "Language filter must be one of: en, es, fr, de, it"
+
+  - expectation_type: expect_column_values_to_match_regex
+    kwargs:
+      column: filters_date_from
+      regex: ^\d{4}-\d{2}-\d{2}$
+    meta:
+      source: jsonschema_contract
+      constraint: date_format
+      description: "Date filters must be in YYYY-MM-DD format"
+
+  - expectation_type: expect_column_values_to_match_regex
+    kwargs:
+      column: filters_date_to
+      regex: ^\d{4}-\d{2}-\d{2}$
+    meta:
+      source: jsonschema_contract
+      constraint: date_format
+      description: "Date filters must be in YYYY-MM-DD format"
+
+meta:
+  generated_from: contracts/schemas/jsonschema/ask-request-v1.json
+  contract_version: v1
+  suite_purpose: validate_ask_requests_against_jsonschema_contract
+  last_updated: "2025-08-28"
+  maintainer: data-platform-team

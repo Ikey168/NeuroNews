@@ -1,0 +1,83 @@
+{
+  "articles": {
+    "overall_success": true,
+    "success_percent": 100.0,
+    "total_expectations": 28,
+    "successful_expectations": 28,
+    "failed_expectations_count": 0,
+    "failed_expectations": [],
+    "threshold": 95.0,
+    "timestamp": "2025-08-28T18:55:07.583663",
+    "suite_name": "articles",
+    "run_id": "batch_validation_20250828_185507"
+  },
+  "ask_requests": {
+    "overall_success": false,
+    "success_percent": 10.0,
+    "total_expectations": 10,
+    "successful_expectations": 1,
+    "failed_expectations_count": 9,
+    "failed_expectations": [
+      {
+        "expectation_type": "expect_column_to_exist",
+        "column": "question",
+        "observed_value": "N/A",
+        "details": {
+          "missing_count": 1
+        }
+      },
+      {
+        "expectation_type": "expect_column_values_to_be_of_type",
+        "column": "question",
+        "observed_value": "N/A",
+        "details": {}
+      },
+      {
+        "expectation_type": "expect_column_values_to_be_of_type",
+        "column": "k",
+        "observed_value": "N/A",
+        "details": {}
+      },
+      {
+        "expectation_type": "expect_column_values_to_not_be_null",
+        "column": "question",
+        "observed_value": "N/A",
+        "details": {}
+      },
+      {
+        "expectation_type": "expect_column_value_lengths_to_be_between",
+        "column": "question",
+        "observed_value": "N/A",
+        "details": {}
+      },
+      {
+        "expectation_type": "expect_column_values_to_be_between",
+        "column": "k",
+        "observed_value": "N/A",
+        "details": {}
+      },
+      {
+        "expectation_type": "expect_column_values_to_match_regex",
+        "column": "filters_language",
+        "observed_value": "N/A",
+        "details": {}
+      },
+      {
+        "expectation_type": "expect_column_values_to_match_regex",
+        "column": "filters_date_from",
+        "observed_value": "N/A",
+        "details": {}
+      },
+      {
+        "expectation_type": "expect_column_values_to_match_regex",
+        "column": "filters_date_to",
+        "observed_value": "N/A",
+        "details": {}
+      }
+    ],
+    "threshold": 95.0,
+    "timestamp": "2025-08-28T18:55:07.597154",
+    "suite_name": "ask_requests",
+    "run_id": "batch_validation_20250828_185507"
+  }
+}
