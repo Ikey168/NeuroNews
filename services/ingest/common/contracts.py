@@ -10,6 +10,7 @@ Features:
 - Comprehensive logging and metrics
 - Dead Letter Queue (DLQ) support
 - Configurable validation policies
+- Prometheus metrics integration (Issue #371)
 """
 
 import json
@@ -20,6 +21,14 @@ from typing import Any, Dict, Optional, Union
 
 import fastavro
 from fastavro import parse_schema, validate
+
+# Import Prometheus metrics for observability (Issue #371)
+try:
+    from services.ingest.metrics import contract_metrics
+    PROMETHEUS_AVAILABLE = True
+except ImportError:
+    PROMETHEUS_AVAILABLE = False
+    contract_metrics = None
 
 logger = logging.getLogger(__name__)
 
@@ -33,26 +42,41 @@ class DataContractViolation(Exception):
 
 
 class ContractValidationMetrics:
-    """Simple metrics counter for contract validation events."""
+    """Metrics counter for contract validation events with Prometheus integration."""
     
     def __init__(self):
         self.contracts_validation_fail_total = 0
         self.contracts_validation_success_total = 0
         self.contracts_validation_dlq_total = 0
     
-    def increment_failure(self):
-        """Increment failure counter."""
+    def increment_failure(self, pipeline: str = "unknown", source_id: str = "unknown", 
+                         schema_name: str = "unknown", error_type: str = "validation_error"):
+        """Increment failure counter with Prometheus integration."""
         self.contracts_validation_fail_total += 1
         logger.warning(f"Contract validation failures: {self.contracts_validation_fail_total}")
+        
+        # Record in Prometheus if available
+        if PROMETHEUS_AVAILABLE and contract_metrics:
+            contract_metrics.record_validation_failure(pipeline, source_id, schema_name, error_type)
     
-    def increment_success(self):
-        """Increment success counter."""
+    def increment_success(self, pipeline: str = "unknown", source_id: str = "unknown", 
+                         schema_name: str = "unknown"):
+        """Increment success counter with Prometheus integration."""
         self.contracts_validation_success_total += 1
+        
+        # Record in Prometheus if available
+        if PROMETHEUS_AVAILABLE and contract_metrics:
+            contract_metrics.record_validation_success(pipeline, source_id, schema_name)
     
-    def increment_dlq(self):
-        """Increment DLQ counter."""
+    def increment_dlq(self, pipeline: str = "unknown", source_id: str = "unknown", 
+                     schema_name: str = "unknown", reason: str = "validation_failed"):
+        """Increment DLQ counter with Prometheus integration."""
         self.contracts_validation_dlq_total += 1
         logger.info(f"Messages sent to DLQ: {self.contracts_validation_dlq_total}")
+        
+        # Record in Prometheus if available
+        if PROMETHEUS_AVAILABLE and contract_metrics:
+            contract_metrics.record_dlq_message(pipeline, source_id, schema_name, reason)
     
     def get_stats(self) -> Dict[str, int]:
         """Get current metrics."""
@@ -124,46 +148,70 @@ class ArticleIngestValidator:
         
         return str(schema_path)
     
-    def validate_article(self, payload: Dict[str, Any]) -> None:
+    def validate_article(self, payload: Dict[str, Any], pipeline: str = "article-ingest", 
+                        source_id: str = "unknown") -> None:
         """
         Validate an article payload against the schema.
         
         Args:
             payload: Dictionary containing article data to validate
+            pipeline: Name of the data pipeline (for metrics)
+            source_id: Source identifier (for metrics)
             
         Raises:
             DataContractViolation: If validation fails and fail_on_error=True
         """
+        import time
+        start_time = time.time()
+        schema_name = "article-ingest-v1"
+        
         try:
             # Use fastavro to validate the payload against the schema
             is_valid = validate(payload, self.schema)
             
+            # Record validation latency
+            latency_ms = (time.time() - start_time) * 1000
+            if PROMETHEUS_AVAILABLE and contract_metrics:
+                contract_metrics.record_validation_latency(latency_ms, pipeline, source_id, schema_name)
+            
             if is_valid:
-                metrics.increment_success()
+                metrics.increment_success(pipeline, source_id, schema_name)
                 logger.debug(f"Article validation successful for article_id: {payload.get('article_id', 'unknown')}")
                 return
             
             # If we get here, validation failed
-            error_msg = f"Data contract validation failed for article: {payload.get('article_id', 'unknown')}"
-            metrics.increment_failure()
+            article_id = payload.get('article_id', 'unknown')
+            error_msg = f"Data contract validation failed for article: {article_id}"
+            error_type = "schema_validation_failed"
+            metrics.increment_failure(pipeline, source_id, schema_name, error_type)
             
             if self.fail_on_error:
                 logger.error(error_msg)
                 raise DataContractViolation(error_msg)
             else:
                 logger.warning(f"{error_msg} - sending to DLQ")
-                metrics.increment_dlq()
+                metrics.increment_dlq(pipeline, source_id, schema_name, "validation_failed")
                 
+        except DataContractViolation:
+            # Re-raise DataContractViolation without wrapping
+            raise
         except Exception as e:
-            error_msg = f"Validation error for article {payload.get('article_id', 'unknown')}: {str(e)}"
-            metrics.increment_failure()
+            # Record validation latency even for errors
+            latency_ms = (time.time() - start_time) * 1000
+            if PROMETHEUS_AVAILABLE and contract_metrics:
+                contract_metrics.record_validation_latency(latency_ms, pipeline, source_id, schema_name)
+            
+            article_id = payload.get('article_id', 'unknown')
+            error_msg = f"Validation error for article {article_id}: {str(e)}"
+            error_type = type(e).__name__
+            metrics.increment_failure(pipeline, source_id, schema_name, error_type)
             
             if self.fail_on_error:
                 logger.error(error_msg)
                 raise DataContractViolation(error_msg) from e
             else:
                 logger.warning(f"{error_msg} - sending to DLQ")
-                metrics.increment_dlq()
+                metrics.increment_dlq(pipeline, source_id, schema_name, "deserialization_error")
     
     def validate_batch(self, payloads: list) -> list:
         """
