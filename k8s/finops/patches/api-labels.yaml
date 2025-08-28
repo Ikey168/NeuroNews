@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neuronews-api
+  namespace: neuronews
+  labels:
+    app: neuronews-api
+    component: backend
+    pipeline: api
+    team: neuronews
+    env: prod
+    cost_center: product
+spec:
+  template:
+    metadata:
+      labels:
+        app: neuronews-api
+        component: backend
+        pipeline: api
+        team: neuronews
+        env: prod
+        cost_center: product
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neuronews-frontend
+  namespace: neuronews
+  labels:
+    app: neuronews-frontend
+    component: frontend
+    pipeline: api
+    team: neuronews
+    env: prod
+    cost_center: product
+spec:
+  template:
+    metadata:
+      labels:
+        app: neuronews-frontend
+        component: frontend
+        pipeline: api
+        team: neuronews
+        env: prod
+        cost_center: product
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rag-service
+  namespace: neuronews
+  labels:
+    app: rag-service
+    component: ml-inference
+    pipeline: rag
+    team: ml-engineering
+    env: prod
+    cost_center: product
+spec:
+  template:
+    metadata:
+      labels:
+        app: rag-service
+        component: ml-inference
+        pipeline: rag
+        team: ml-engineering
+        env: prod
+        cost_center: product
