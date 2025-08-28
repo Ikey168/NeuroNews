@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "https://neuronews.com/schemas/api/ask-request-v1.json",
+  "title": "Ask Request",
+  "description": "Request schema for the /ask API endpoint for question answering with citations",
+  "type": "object",
+  "properties": {
+    "question": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 500,
+      "description": "The question to answer",
+      "examples": [
+        "What are the latest developments in AI technology?",
+        "How does renewable energy impact the economy?",
+        "What happened in the stock market today?"
+      ]
+    },
+    "k": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 20,
+      "default": 5,
+      "description": "Number of documents to retrieve for context"
+    },
+    "filters": {
+      "type": "object",
+      "description": "Filters to apply during document retrieval",
+      "properties": {
+        "source": {
+          "type": "string",
+          "description": "Filter by news source",
+          "examples": ["bbc", "reuters", "cnn"]
+        },
+        "date_from": {
+          "type": "string",
+          "format": "date",
+          "description": "Filter articles from this date (YYYY-MM-DD)"
+        },
+        "date_to": {
+          "type": "string", 
+          "format": "date",
+          "description": "Filter articles until this date (YYYY-MM-DD)"
+        },
+        "language": {
+          "type": "string",
+          "enum": ["en", "es", "fr", "de", "it"],
+          "description": "Filter by article language"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["politics", "business", "technology", "sports", "entertainment", "health", "science"],
+          "description": "Filter by article category"
+        }
+      },
+      "additionalProperties": false
+    },
+    "rerank_on": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether to enable reranking of retrieved documents"
+    },
+    "fusion": {
+      "type": "boolean", 
+      "default": true,
+      "description": "Whether to enable query fusion for better retrieval"
+    },
+    "provider": {
+      "type": "string",
+      "enum": ["openai", "anthropic", "cohere", "huggingface"],
+      "default": "openai",
+      "description": "Answer generation provider to use"
+    }
+  },
+  "required": ["question"],
+  "additionalProperties": false,
+  "examples": [
+    {
+      "question": "What are the latest developments in AI technology?",
+      "k": 10,
+      "filters": {
+        "category": "technology",
+        "date_from": "2025-08-01"
+      },
+      "rerank_on": true,
+      "fusion": true,
+      "provider": "openai"
+    },
+    {
+      "question": "How does renewable energy impact the economy?",
+      "k": 5,
+      "filters": {
+        "source": "reuters",
+        "language": "en"
+      }
+    },
+    {
+      "question": "What happened in the stock market today?"
+    }
+  ]
+}
