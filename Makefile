@@ -1,4 +1,4 @@
-.PHONY: help airflow-up airflow-down airflow-logs marquez-ui airflow-init airflow-status airflow-build airflow-test-openlineage mlflow-up mlflow-down mlflow-ui rag-up rag-down rag-migrate rag-connect rag-reset rag-logs rag-index
+.PHONY: help airflow-up airflow-down airflow-logs marquez-ui airflow-init airflow-status airflow-build airflow-test-openlineage mlflow-up mlflow-down mlflow-ui rag-up rag-down rag-migrate rag-connect rag-reset rag-logs rag-index contract.publish contract.validate
 
 # Default target
 help:
@@ -41,6 +41,10 @@ help:
 	@echo "  rag-reset        - Reset vector database (WARNING: deletes all data)"
 	@echo "  rag-logs         - Show vector store logs"
 	@echo "  rag-index        - Run RAG indexer on sample data (Issue #230)"
+	@echo ""
+	@echo "Contract Management (Issue #357):"
+	@echo "  contract.publish - Publish Avro schema to Schema Registry"
+	@echo "  contract.validate - Validate JSON events against schemas"
 	@echo ""
 	@echo "URLs:"
 	@echo "  Airflow UI:  http://localhost:8080 (airflow/airflow)"
@@ -287,3 +291,28 @@ rag-index:
 	echo "📂 Processing: $$SAMPLE_PATH"; \
 	python jobs/rag/cli_indexer.py "$$SAMPLE_PATH" --config configs/indexer.yaml
 	@echo "✅ RAG indexing complete! Check database for upserted records."
+
+# Contract Management targets (Issue #357)
+
+contract.publish:
+	@echo "📄 Publishing Avro schema to Schema Registry..."
+	@python scripts/contracts/publish_schema.py \
+		contracts/schemas/avro/article-ingest-v1.avsc \
+		--registry-url http://localhost:8081 \
+		--subject neuronews.ArticleIngest-value
+	@echo "✅ Schema published successfully!"
+
+contract.validate:
+	@echo "🔍 Validating JSON events against schemas..."
+	@if [ -d "contracts/examples/article-ingest-v1" ]; then \
+		python scripts/contracts/validate_event.py contracts/examples/article-ingest-v1/ \
+			--avro-schema contracts/schemas/avro/article-ingest-v1.avsc \
+			--json-schema contracts/schemas/jsonschema/article-ingest-v1.json \
+			--directory; \
+	else \
+		echo "⚠️  Example events directory not found: contracts/examples/article-ingest-v1"; \
+		echo "Creating sample validation with any JSON files in schemas/..."; \
+		find contracts/schemas/ -name "*.json" | head -1 | xargs -I {} python scripts/contracts/validate_event.py {} \
+			--avro-schema contracts/schemas/avro/article-ingest-v1.avsc; \
+	fi
+	@echo "✅ Event validation complete!"
