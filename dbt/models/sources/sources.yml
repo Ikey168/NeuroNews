@@ -1,6 +1,49 @@
 version: 2
 
 sources:
+  - name: kafka
+    description: "Kafka topics for real-time article ingestion"
+    schema: kafka
+    tables:
+      - name: article_ingest
+        description: "Raw article ingestion events from Kafka (article-ingest-v1 schema)"
+        columns:
+          - name: article_id
+            description: "Unique identifier for the article"
+            tests:
+              - not_null
+              - unique
+          - name: source_id
+            description: "Identifier of the news source/publisher"
+            tests:
+              - not_null
+          - name: url
+            description: "Original URL where the article was published"
+            tests:
+              - not_null
+          - name: title
+            description: "Article headline/title"
+          - name: body
+            description: "Full article content/body text"
+          - name: language
+            description: "Article language using ISO 639-1 code"
+            tests:
+              - not_null
+          - name: country
+            description: "Country of publication using ISO 3166-1 alpha-2 code"
+          - name: published_at
+            description: "Timestamp when the article was originally published (milliseconds since epoch)"
+            tests:
+              - not_null
+          - name: ingested_at
+            description: "Timestamp when the article was ingested by our system (milliseconds since epoch)"
+            tests:
+              - not_null
+          - name: sentiment_score
+            description: "Sentiment score ranging from -1 (negative) to 1 (positive)"
+          - name: topics
+            description: "Array of topic tags or categories associated with the article"
+
   - name: iceberg
     description: "Iceberg tables containing raw and enriched news articles data"
     schema: news
