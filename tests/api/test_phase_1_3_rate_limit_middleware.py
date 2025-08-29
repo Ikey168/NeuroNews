@@ -10,7 +10,7 @@ import json
 import time
 from collections import defaultdict, deque
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch, PropertyMock
 from typing import Dict, List
 
 import pytest
@@ -334,12 +334,57 @@ class TestSuspiciousActivityDetector:
         return metrics
     
     @pytest.mark.asyncio
-    async def test_analyze_request_no_alerts(self, detector, request_metrics):
-        """Test analyze_request with normal activity."""
-        # Mock getting empty metrics
-        with patch.object(detector, '_get_recent_metrics_memory', return_value=[]):
-            alerts = await detector.analyze_request("test_user", request_metrics)
-            assert alerts == []
+    async def test_analyze_request_with_all_alerts(self, detector):
+        """Test analyze_request with all alert conditions triggered.""" 
+        # Create a custom request metric for unusual hours
+        unusual_time_metric = RequestMetrics(
+            user_id="test_user",
+            ip_address="192.168.1.1",
+            endpoint="/api/abused",
+            timestamp=datetime.now().replace(hour=3, minute=0, second=0),  # Unusual hour
+            response_code=400,
+            processing_time=0.5
+        )
+        
+        # Create metrics that trigger various suspicious patterns
+        now = datetime.now()
+        suspicious_metrics = []
+        
+        # Create 60 requests with multiple suspicious patterns
+        for i in range(60):
+            metric = RequestMetrics(
+                user_id="test_user",
+                ip_address=f"192.168.1.{i % 6}",  # Multiple IPs
+                endpoint="/api/abused",  # Same endpoint for abuse
+                timestamp=now - timedelta(seconds=i),  # Recent rapid requests
+                response_code=400 if i < 35 else 200,  # >50% error rate
+                processing_time=0.5
+            )
+            suspicious_metrics.append(metric)
+        
+        with patch.object(detector, '_get_recent_metrics_memory', return_value=suspicious_metrics):
+            alerts = await detector.analyze_request("test_user", unusual_time_metric)
+            
+            # Should trigger multiple alert types
+            assert len(alerts) >= 4  # Most patterns should be detected
+            assert "rapid_requests" in alerts
+            assert "unusual_hours" in alerts
+    
+    @pytest.mark.asyncio
+    async def test_analyze_request_redis_backend(self, rate_limit_config, request_metrics):
+        """Test analyze_request with Redis backend."""
+        with patch('src.api.middleware.rate_limit_middleware.redis.Redis') as mock_redis:
+            mock_client = Mock()
+            mock_redis.return_value = mock_client
+            
+            store = RateLimitStore(use_redis=True)
+            store.redis_client = mock_client
+            detector = SuspiciousActivityDetector(store, rate_limit_config)
+            
+            # Mock Redis metrics response
+            with patch.object(detector, '_get_recent_metrics_redis', return_value=[]):
+                alerts = await detector.analyze_request("test_user", request_metrics)
+                assert alerts == []
     
     @pytest.mark.asyncio
     async def test_rapid_requests_detection(self, detector, recent_metrics):
@@ -359,17 +404,37 @@ class TestSuspiciousActivityDetector:
         afternoon = datetime.now().replace(hour=14, minute=0, second=0)
         assert detector._check_unusual_hours(afternoon) is False
     
+    def test_unusual_hours_detection_disabled(self, rate_limit_config):
+        """Test unusual hours detection when disabled."""
+        # Temporarily modify the config
+        original_value = rate_limit_config.SUSPICIOUS_PATTERNS["unusual_hours"]
+        rate_limit_config.SUSPICIOUS_PATTERNS["unusual_hours"] = False
+        
+        try:
+            store = RateLimitStore(use_redis=False)
+            detector = SuspiciousActivityDetector(store, rate_limit_config)
+            
+            # Test 3 AM (should NOT be flagged when disabled)
+            early_morning = datetime.now().replace(hour=3, minute=0, second=0)
+            result = detector._check_unusual_hours(early_morning)
+            assert result is False
+        finally:
+            # Restore original value
+            rate_limit_config.SUSPICIOUS_PATTERNS["unusual_hours"] = original_value
+    
     @pytest.mark.asyncio
-    async def test_multiple_ips_detection(self, detector, recent_metrics):
+    async def test_multiple_ips_detection(self, detector):
         """Test multiple IPs detection."""
-        # Create metrics with enough requests and multiple IPs
+        # Create metrics with multiple IPs (within last hour)
+        now = datetime.now()
         multi_ip_metrics = []
-        for i in range(15):  # More than minimum threshold
+        
+        for i in range(15):  # Enough data (>10)
             metric = RequestMetrics(
                 user_id="test_user",
-                ip_address=f"192.168.1.{i % 8}",  # 8 different IPs > 5 threshold
-                endpoint="/api/test",
-                timestamp=datetime.now() - timedelta(minutes=30),  # Within last hour
+                ip_address=f"192.168.1.{i % 7}",  # 7 different IPs (> 5 threshold)
+                endpoint="/test",
+                timestamp=now - timedelta(minutes=30),  # Within last hour
                 response_code=200,
                 processing_time=0.5
             )
@@ -384,8 +449,8 @@ class TestSuspiciousActivityDetector:
             metric = RequestMetrics(
                 user_id="test_user",
                 ip_address="192.168.1.1",  # Same IP
-                endpoint="/api/test",
-                timestamp=datetime.now() - timedelta(minutes=30),
+                endpoint="/test",
+                timestamp=now - timedelta(minutes=30),
                 response_code=200,
                 processing_time=0.5
             )
@@ -393,6 +458,22 @@ class TestSuspiciousActivityDetector:
         
         result = await detector._check_multiple_ips(single_ip_metrics)
         assert result is False
+    
+    @pytest.mark.asyncio
+    async def test_multiple_ips_detection_insufficient_data(self, detector):
+        """Test multiple IPs detection with insufficient data."""
+        # Test with less than 10 metrics
+        few_metrics = [RequestMetrics(
+            user_id="test_user",
+            ip_address="192.168.1.1",
+            endpoint="/test",
+            timestamp=datetime.now(),
+            response_code=200,
+            processing_time=0.5
+        ) for _ in range(5)]
+        
+        result = await detector._check_multiple_ips(few_metrics)
+        assert result is False  # Should return False with insufficient data
     
     @pytest.mark.asyncio
     async def test_error_rate_detection(self, detector):
@@ -413,6 +494,42 @@ class TestSuspiciousActivityDetector:
         
         result = await detector._check_error_rate(error_metrics)
         assert result is True  # Should detect high error rate (60% > 50% threshold)
+    
+    @pytest.mark.asyncio
+    async def test_error_rate_detection_insufficient_data(self, detector):
+        """Test error rate detection with insufficient data."""
+        # Test with less than 10 metrics
+        few_metrics = [RequestMetrics(
+            user_id="test_user",
+            ip_address="192.168.1.1",
+            endpoint="/test",
+            timestamp=datetime.now(),
+            response_code=500,
+            processing_time=0.5
+        ) for _ in range(5)]
+        
+        result = await detector._check_error_rate(few_metrics)
+        assert result is False  # Should return False with insufficient data
+    
+    @pytest.mark.asyncio
+    async def test_error_rate_detection_no_recent_data(self, detector):
+        """Test error rate detection with no recent data."""
+        # Create metrics that are all old (older than 5 minutes)
+        old_metrics = []
+        old_time = datetime.now() - timedelta(minutes=10)
+        for i in range(20):
+            metric = RequestMetrics(
+                user_id="test_user",
+                ip_address="192.168.1.1",
+                endpoint="/api/test",
+                timestamp=old_time,
+                response_code=500,
+                processing_time=0.5
+            )
+            old_metrics.append(metric)
+        
+        result = await detector._check_error_rate(old_metrics)
+        assert result is False  # Should return False when no recent metrics
     
     @pytest.mark.asyncio
     async def test_endpoint_abuse_detection(self, detector, recent_metrics):
@@ -566,6 +683,21 @@ class TestRateLimitMiddleware:
         assert user_id != "anonymous"  # Should extract from token
         assert user_tier.name == "free"  # Default tier
     
+    @pytest.mark.asyncio
+    async def test_get_user_info_exception_handling(self, middleware):
+        """Test getting user info with exception during processing."""
+        mock_request = Mock(spec=Request)
+        mock_request.headers = {"Authorization": "Bearer test_token"}
+        mock_request.state = Mock()
+        
+        # Make request.state.user raise an exception
+        type(mock_request.state).user = PropertyMock(side_effect=Exception("State error"))
+        
+        user_id, user_tier = await middleware._get_user_info(mock_request)
+        
+        assert user_id == "anonymous"
+        assert user_tier.name == "free"
+    
     def test_extract_user_from_token(self, middleware):
         """Test extracting user ID from token."""
         token = "Bearer test_token_123"
@@ -573,6 +705,13 @@ class TestRateLimitMiddleware:
         
         assert user_id != "anonymous"
         assert len(user_id) == 12  # MD5 hash truncated
+    
+    def test_extract_user_from_token_exception(self, middleware):
+        """Test extracting user ID from token with exception."""
+        # Test with invalid token that causes exception
+        with patch('hashlib.md5', side_effect=Exception("Hash error")):
+            user_id = middleware._extract_user_from_token("Bearer invalid_token")
+            assert user_id == "anonymous"
     
     def test_get_client_ip_forwarded(self, middleware, mock_request):
         """Test getting client IP from X-Forwarded-For header."""
@@ -592,6 +731,15 @@ class TestRateLimitMiddleware:
         """Test getting client IP directly from request."""
         ip = middleware._get_client_ip(mock_request)
         assert ip == "192.168.1.1"
+    
+    def test_get_client_ip_no_client(self, middleware):
+        """Test getting client IP when request.client is None."""
+        mock_request = Mock(spec=Request)
+        mock_request.headers = {}
+        mock_request.client = None
+        
+        ip = middleware._get_client_ip(mock_request)
+        assert ip == "unknown"
     
     @pytest.mark.asyncio
     async def test_check_rate_limits_exceeded_minute(self, middleware):
@@ -717,3 +865,18 @@ class TestRateLimitMiddleware:
                     
                     # Verify decrement_concurrent was called in finally block
                     mock_decrement.assert_called_once()
+    
+    @pytest.mark.asyncio
+    async def test_dispatch_rate_limit_hit_returns_early(self, middleware, mock_request):
+        """Test dispatch returns rate limit response without processing."""
+        # Mock rate limits exceeded to trigger line 477 (return rate_limit_result)
+        rate_limit_response = JSONResponse(
+            status_code=429,
+            content={"error": "Rate limit exceeded"}
+        )
+        
+        with patch.object(middleware, '_check_rate_limits', return_value=rate_limit_response):
+            response = await middleware.dispatch(mock_request, lambda req: Response("Should not reach"))
+            
+            assert response.status_code == 429
+            # Verify we returned early and didn't process the request
