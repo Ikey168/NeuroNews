@@ -1,0 +1,143 @@
+# VPA for DBT Pipeline Components
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: dbt-runner-vpa
+  namespace: data-pipeline
+  labels:
+    app: dbt-runner
+    component: vpa
+    pipeline: dbt
+spec:
+  targetRef:
+    apiVersion: batch/v1
+    kind: CronJob
+    name: dbt-daily-run
+  updatePolicy:
+    updateMode: "Off"  # Start with recommendations-only for 1-2 weeks
+  resourcePolicy:
+    containerPolicies:
+    - containerName: dbt
+      minAllowed:
+        cpu: 200m
+        memory: 512Mi
+      maxAllowed:
+        cpu: 4000m
+        memory: 16Gi
+      controlledResources: ["cpu", "memory"]
+      controlledValues: RequestsAndLimits
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: dbt-test-runner-vpa
+  namespace: data-pipeline
+  labels:
+    app: dbt-test-runner
+    component: vpa
+    pipeline: dbt
+spec:
+  targetRef:
+    apiVersion: batch/v1
+    kind: CronJob
+    name: dbt-test-run
+  updatePolicy:
+    updateMode: "Off"  # Start with recommendations-only
+  resourcePolicy:
+    containerPolicies:
+    - containerName: dbt-test
+      minAllowed:
+        cpu: 100m
+        memory: 256Mi
+      maxAllowed:
+        cpu: 2000m
+        memory: 8Gi
+      controlledResources: ["cpu", "memory"]
+      controlledValues: RequestsAndLimits
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: dbt-docs-server-vpa
+  namespace: data-pipeline
+  labels:
+    app: dbt-docs-server
+    component: vpa
+    pipeline: dbt
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: dbt-docs-server
+  updatePolicy:
+    updateMode: "Off"  # Start with recommendations-only
+  resourcePolicy:
+    containerPolicies:
+    - containerName: docs-server
+      minAllowed:
+        cpu: 50m
+        memory: 64Mi
+      maxAllowed:
+        cpu: 500m
+        memory: 1Gi
+      controlledResources: ["cpu", "memory"]
+      controlledValues: RequestsAndLimits
+---
+# VPA for DBT Spark Jobs (if using Spark backend)
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: dbt-spark-executor-vpa
+  namespace: data-pipeline
+  labels:
+    app: dbt-spark-executor
+    component: vpa
+    pipeline: dbt
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: dbt-spark-executor
+  updatePolicy:
+    updateMode: "Off"  # Start with recommendations-only
+  resourcePolicy:
+    containerPolicies:
+    - containerName: spark-executor
+      minAllowed:
+        cpu: 200m
+        memory: 512Mi
+      maxAllowed:
+        cpu: 8000m
+        memory: 32Gi
+      controlledResources: ["cpu", "memory"]
+      controlledValues: RequestsAndLimits
+---
+# VPA for DBT Metadata Processing
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: dbt-metadata-processor-vpa
+  namespace: data-pipeline
+  labels:
+    app: dbt-metadata-processor
+    component: vpa
+    pipeline: dbt
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: dbt-metadata-processor
+  updatePolicy:
+    updateMode: "Off"  # Start with recommendations-only
+  resourcePolicy:
+    containerPolicies:
+    - containerName: metadata-processor
+      minAllowed:
+        cpu: 100m
+        memory: 128Mi
+      maxAllowed:
+        cpu: 1000m
+        memory: 4Gi
+      controlledResources: ["cpu", "memory"]
+      controlledValues: RequestsAndLimits
