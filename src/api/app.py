@@ -103,6 +103,22 @@ try:
 except ImportError:
     WAF_SECURITY_AVAILABLE = False
 
+# Try to import auth routes
+try:
+    from src.api.routes import auth_routes
+
+    AUTH_AVAILABLE = True
+except ImportError:
+    AUTH_AVAILABLE = False
+
+# Try to import search routes
+try:
+    from src.api.routes import search_routes
+
+    SEARCH_AVAILABLE = True
+except ImportError:
+    SEARCH_AVAILABLE = False
+
 app = FastAPI(
     title="NeuroNews API",
     description=(
@@ -188,6 +204,18 @@ if GRAPH_SEARCH_AVAILABLE:
 if INFLUENCE_ANALYSIS_AVAILABLE:
     app.include_router(influence_routes.router)
 
+# Include auth router if available
+if AUTH_AVAILABLE:
+    app.include_router(auth_routes.router, prefix="/api/v1/auth", tags=["Authentication"])
+
+# Include search router if available
+if SEARCH_AVAILABLE:
+    app.include_router(search_routes.router, prefix="/api/v1/search", tags=["Search"])
+
+# Include news and graph routers with versioning and tags
+app.include_router(news_routes.router, prefix="/api/v1/news", tags=["News"])
+app.include_router(graph_routes.router, prefix="/api/v1/graph", tags=["Graph"])
+
 
 @app.get("/")
 async def root():
@@ -208,6 +236,8 @@ async def root():
             "influence_analysis": INFLUENCE_ANALYSIS_AVAILABLE,
         },
     }
+
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint for monitoring."""

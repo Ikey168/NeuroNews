@@ -47,4 +47,5 @@ __all__ = [
     "topic_routes",
     "veracity_routes",
     "waf_security_routes",
+    "search_routes",
 ]

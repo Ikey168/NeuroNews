@@ -25,7 +25,7 @@ def load_aws_config(env="dev"):
     Returns:
         dict: AWS configuration.
     """
-    config_path = Path("config/{0}_aws.json".format(env))"
+    config_path = Path(f"config/{env}_aws.json")
     if not config_path.exists():
         return {}
 
@@ -291,9 +291,8 @@ def main():
             print("  - {0}".format(spider_name))
 
         settings = get_project_settings()
-        print(""
-Configured news sources:")
-        sources = settings.get("SCRAPING_SOURCES", [])"
+        print("Configured news sources:")
+        sources = settings.get("SCRAPING_SOURCES", [])
         if sources:
             for source in sources:
                 print("  - {0}".format(source))

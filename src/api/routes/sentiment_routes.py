@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from src.database.snowflake_connector import SnowflakeAnalyticsConnector
+from src.database.snowflake_analytics_connector import SnowflakeAnalyticsConnector
 
 router = APIRouter(prefix="/news_sentiment", tags=["sentiment"])
 
