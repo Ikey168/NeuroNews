@@ -41,9 +41,13 @@ try:
     from services.mlops.tracking import mlrun
     from services.rag.answer import RAGAnswerService
     from services.embeddings.provider import EmbeddingProvider
+    from services.monitoring.unit_economics import increment_rag_queries
 except ImportError as e:
     print(f"Import error: {e}")
     print("Please ensure you're running from the project root directory")
+    # For unit economics, use a fallback function if import fails
+    def increment_rag_queries(*args, **kwargs):
+        pass
     sys.exit(1)
 
 # Configure logging
@@ -205,6 +209,17 @@ async def ask_question(
             tracked_in_mlflow=tracked_in_mlflow
         )
 
+        # Track unit economics metrics for successful RAG queries
+        try:
+            increment_rag_queries(
+                endpoint="/ask",
+                provider=request.provider or "openai",
+                status="success",
+                count=1
+            )
+        except Exception as metrics_error:
+            logger.warning(f"Failed to track unit economics metrics: {metrics_error}")
+
             # Store result in cache
             if query_cache and not should_track:
                 query_cache.set(
@@ -225,6 +240,18 @@ async def ask_question(
 
     except Exception as e:
         logger.error(f"Request {request_id} failed: {str(e)}")
+        
+        # Track unit economics metrics for failed RAG queries
+        try:
+            increment_rag_queries(
+                endpoint="/ask",
+                provider=request.provider or "openai",
+                status="failed",
+                count=1
+            )
+        except Exception as metrics_error:
+            logger.warning(f"Failed to track unit economics metrics for error: {metrics_error}")
+        
         raise HTTPException(
             status_code=500,
             detail=f"Failed to process question: {str(e)}"

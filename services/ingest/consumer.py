@@ -32,6 +32,14 @@ from services.ingest.common.contracts import (
     ContractValidationMetrics
 )
 
+# Import unit economics metrics
+try:
+    from services.monitoring.unit_economics import increment_articles_ingested
+except ImportError:
+    # Fallback function if import fails
+    def increment_articles_ingested(*args, **kwargs):
+        pass
+
 logger = logging.getLogger(__name__)
 
 
@@ -283,6 +291,19 @@ class ArticleIngestConsumer:
                     callback(payload)
                 
                 self.processed_count += 1
+                
+                # Track unit economics metrics for successful article ingestion
+                try:
+                    source = payload.get('source_id', 'unknown')
+                    increment_articles_ingested(
+                        pipeline="ingest",
+                        source=source,
+                        status="success",
+                        count=1
+                    )
+                except Exception as metrics_error:
+                    logger.warning(f"Failed to track unit economics metrics: {metrics_error}")
+                
                 logger.debug(f"Successfully processed message: {payload.get('article_id', 'unknown')}")
                 return True
             
@@ -294,6 +315,19 @@ class ArticleIngestConsumer:
                     error_type="VALIDATION_ERROR",
                     message=message
                 )
+                
+                # Track unit economics metrics for failed article ingestion
+                try:
+                    source = payload.get('source_id', 'unknown')
+                    increment_articles_ingested(
+                        pipeline="ingest",
+                        source=source,
+                        status="failed",
+                        count=1
+                    )
+                except Exception as metrics_error:
+                    logger.warning(f"Failed to track unit economics metrics for error: {metrics_error}")
+                
                 return False
                 
         except ConsumerValidationError as e:
