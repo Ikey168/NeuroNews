@@ -1,0 +1,380 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: neuronews-nlp-jobs-monitor
+  namespace: neuronews
+  labels:
+    app: neuronews-nlp
+    component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: neuronews-nlp
+      metrics: enabled
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+    honorLabels: true
+  namespaceSelector:
+    matchNames:
+    - neuronews
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: neuronews-nlp-metrics
+  namespace: neuronews
+  labels:
+    app: neuronews-nlp
+    component: metrics
+    metrics: enabled
+spec:
+  selector:
+    app: neuronews-nlp
+  ports:
+  - name: metrics
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: neuronews-nlp-jobs-alerts
+  namespace: neuronews
+  labels:
+    app: neuronews-nlp
+    component: alerting
+spec:
+  groups:
+  - name: neuronews-nlp-jobs
+    interval: 30s
+    rules:
+    # Job failure alerts
+    - alert: NLPJobFailureRate
+      expr: rate(kube_job_status_failed{namespace="neuronews", job_name=~"neuronews-(sentiment|ner|topic).*"}[5m]) > 0.1
+      for: 5m
+      labels:
+        severity: warning
+        component: nlp-jobs
+      annotations:
+        summary: "High NLP job failure rate detected"
+        description: "NLP job failure rate is {{ $value | humanizePercentage }} over the last 5 minutes"
+    
+    - alert: NLPJobStuck
+      expr: time() - kube_job_status_start_time{namespace="neuronews", job_name=~"neuronews-(sentiment|ner|topic).*"} > 7200
+      for: 10m
+      labels:
+        severity: critical
+        component: nlp-jobs
+      annotations:
+        summary: "NLP job running for too long"
+        description: "Job {{ $labels.job_name }} has been running for over 2 hours"
+    
+    - alert: NLPJobNotStarting
+      expr: kube_job_status_active{namespace="neuronews", job_name=~"neuronews-(sentiment|ner|topic).*"} == 0 and kube_job_status_succeeded{namespace="neuronews", job_name=~"neuronews-(sentiment|ner|topic).*"} == 0 and time() - kube_job_created{namespace="neuronews", job_name=~"neuronews-(sentiment|ner|topic).*"} > 600
+      for: 5m
+      labels:
+        severity: warning
+        component: nlp-jobs
+      annotations:
+        summary: "NLP job not starting"
+        description: "Job {{ $labels.job_name }} has not started within 10 minutes of creation"
+    
+    # Resource alerts
+    - alert: NLPJobHighMemoryUsage
+      expr: container_memory_usage_bytes{namespace="neuronews", container=~"sentiment-analyzer|entity-extractor|topic-modeler"} / container_spec_memory_limit_bytes > 0.9
+      for: 5m
+      labels:
+        severity: warning
+        component: nlp-jobs
+      annotations:
+        summary: "NLP job high memory usage"
+        description: "Container {{ $labels.container }} in job {{ $labels.pod }} is using {{ $value | humanizePercentage }} of memory limit"
+    
+    - alert: NLPJobHighCPUUsage
+      expr: rate(container_cpu_usage_seconds_total{namespace="neuronews", container=~"sentiment-analyzer|entity-extractor|topic-modeler"}[5m]) / container_spec_cpu_quota * container_spec_cpu_period > 0.8
+      for: 10m
+      labels:
+        severity: warning
+        component: nlp-jobs
+      annotations:
+        summary: "NLP job high CPU usage"
+        description: "Container {{ $labels.container }} in job {{ $labels.pod }} is using {{ $value | humanizePercentage }} of CPU limit"
+    
+    # GPU alerts
+    - alert: NLPJobGPUMemoryHigh
+      expr: nvidia_gpu_memory_used_bytes / nvidia_gpu_memory_total_bytes > 0.9
+      for: 5m
+      labels:
+        severity: warning
+        component: nlp-jobs
+      annotations:
+        summary: "NLP job high GPU memory usage"
+        description: "GPU memory usage is {{ $value | humanizePercentage }} on node {{ $labels.instance }}"
+    
+    - alert: NLPJobGPUNotAvailable
+      expr: nvidia_gpu_count == 0 and on() kube_job_labels{namespace="neuronews", job_name=~"neuronews-(sentiment|ner|topic).*", label_priority="high"}
+      for: 2m
+      labels:
+        severity: critical
+        component: nlp-jobs
+      annotations:
+        summary: "GPU not available for NLP jobs"
+        description: "No GPUs available but high-priority NLP jobs are scheduled"
+    
+    # Performance alerts
+    - alert: NLPJobLowThroughput
+      expr: rate(nlp_articles_processed_total[10m]) < 0.5
+      for: 15m
+      labels:
+        severity: warning
+        component: nlp-jobs
+      annotations:
+        summary: "Low NLP processing throughput"
+        description: "NLP processing throughput is {{ $value }} articles per second, below expected threshold"
+    
+    - alert: NLPJobQueueBacklog
+      expr: nlp_job_queue_size > 1000
+      for: 5m
+      labels:
+        severity: warning
+        component: nlp-jobs
+      annotations:
+        summary: "Large NLP job queue backlog"
+        description: "NLP job queue has {{ $value }} pending items"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: neuronews-nlp-grafana-dashboard
+  namespace: neuronews
+  labels:
+    app: neuronews-nlp
+    component: monitoring
+    grafana_dashboard: "1"
+data:
+  nlp-jobs-dashboard.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "NeuroNews NLP Jobs Dashboard",
+        "tags": ["neuronews", "nlp", "jobs"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Active NLP Jobs",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "sum(kube_job_status_active{namespace=\"neuronews\", job_name=~\"neuronews-(sentiment|ner|topic).*\"})",
+                "legendFormat": "Active Jobs"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {"mode": "thresholds"},
+                "thresholds": {
+                  "steps": [
+                    {"color": "green", "value": null},
+                    {"color": "yellow", "value": 3},
+                    {"color": "red", "value": 10}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "Job Success Rate",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "sum(rate(kube_job_status_succeeded{namespace=\"neuronews\", job_name=~\"neuronews-(sentiment|ner|topic).*\"}[1h])) / (sum(rate(kube_job_status_succeeded{namespace=\"neuronews\", job_name=~\"neuronews-(sentiment|ner|topic).*\"}[1h])) + sum(rate(kube_job_status_failed{namespace=\"neuronews\", job_name=~\"neuronews-(sentiment|ner|topic).*\"}[1h])))",
+                "legendFormat": "Success Rate"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percentunit",
+                "color": {"mode": "thresholds"},
+                "thresholds": {
+                  "steps": [
+                    {"color": "red", "value": null},
+                    {"color": "yellow", "value": 0.8},
+                    {"color": "green", "value": 0.95}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0}
+          },
+          {
+            "id": 3,
+            "title": "GPU Utilization",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "avg(nvidia_gpu_utilization / 100)",
+                "legendFormat": "GPU Utilization"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percentunit",
+                "color": {"mode": "thresholds"},
+                "thresholds": {
+                  "steps": [
+                    {"color": "red", "value": null},
+                    {"color": "yellow", "value": 0.3},
+                    {"color": "green", "value": 0.7}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0}
+          },
+          {
+            "id": 4,
+            "title": "Processing Throughput",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "sum(rate(nlp_articles_processed_total[5m]))",
+                "legendFormat": "Articles/sec"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "reqps",
+                "color": {"mode": "thresholds"},
+                "thresholds": {
+                  "steps": [
+                    {"color": "red", "value": null},
+                    {"color": "yellow", "value": 1},
+                    {"color": "green", "value": 5}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0}
+          },
+          {
+            "id": 5,
+            "title": "Job Execution Time",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, rate(nlp_job_duration_seconds_bucket[5m]))",
+                "legendFormat": "95th percentile"
+              },
+              {
+                "expr": "histogram_quantile(0.50, rate(nlp_job_duration_seconds_bucket[5m]))",
+                "legendFormat": "50th percentile"
+              }
+            ],
+            "xAxis": {"show": true},
+            "yAxes": [{"unit": "s", "show": true}],
+            "gridPos": {"h": 9, "w": 12, "x": 0, "y": 8}
+          },
+          {
+            "id": 6,
+            "title": "Memory Usage by Job Type",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "avg by (container) (container_memory_usage_bytes{namespace=\"neuronews\", container=~\"sentiment-analyzer|entity-extractor|topic-modeler\"})",
+                "legendFormat": "{{ container }}"
+              }
+            ],
+            "xAxis": {"show": true},
+            "yAxes": [{"unit": "bytes", "show": true}],
+            "gridPos": {"h": 9, "w": 12, "x": 12, "y": 8}
+          },
+          {
+            "id": 7,
+            "title": "Failed Jobs by Type",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum by (job_name) (rate(kube_job_status_failed{namespace=\"neuronews\", job_name=~\"neuronews-(sentiment|ner|topic).*\"}[5m]))",
+                "legendFormat": "{{ job_name }}"
+              }
+            ],
+            "xAxis": {"show": true},
+            "yAxes": [{"unit": "ops", "show": true}],
+            "gridPos": {"h": 9, "w": 12, "x": 0, "y": 17}
+          },
+          {
+            "id": 8,
+            "title": "Resource Utilization",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"neuronews\", container=~\"sentiment-analyzer|entity-extractor|topic-modeler\"}[5m]))",
+                "legendFormat": "CPU Usage"
+              },
+              {
+                "expr": "sum(container_memory_usage_bytes{namespace=\"neuronews\", container=~\"sentiment-analyzer|entity-extractor|topic-modeler\"}) / 1024 / 1024 / 1024",
+                "legendFormat": "Memory Usage (GB)"
+              }
+            ],
+            "xAxis": {"show": true},
+            "yAxes": [{"show": true}],
+            "gridPos": {"h": 9, "w": 12, "x": 12, "y": 17}
+          }
+        ],
+        "time": {"from": "now-1h", "to": "now"},
+        "refresh": "30s"
+      }
+    }
+
+---
+# CronJob for metrics collection and cleanup
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: neuronews-nlp-metrics-collector
+  namespace: neuronews
+  labels:
+    app: neuronews-nlp
+    component: metrics-collector
+spec:
+  schedule: "*/2 * * * *"  # Every 2 minutes
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: neuronews-nlp-processor
+          containers:
+          - name: metrics-collector
+            image: neuronews/metrics-collector:latest
+            command:
+            - /bin/sh
+            - -c
+            - |
+              # Collect job metrics
+              kubectl get jobs -n neuronews -l app=neuronews-nlp -o json > /tmp/job_metrics.json
+              
+              # Collect resource usage
+              kubectl top pods -n neuronews -l app=neuronews-nlp --no-headers > /tmp/resource_metrics.txt
+              
+              # Clean up completed jobs older than 24 hours
+              kubectl delete jobs -n neuronews -l app=neuronews-nlp --field-selector=status.successful=1 --field-selector=metadata.creationTimestamp<$(date -d '24 hours ago' -Iseconds)
+              
+              echo "Metrics collection and cleanup completed at $(date)"
+            resources:
+              requests:
+                memory: "64Mi"
+                cpu: "10m"
+              limits:
+                memory: "128Mi"
+                cpu: "50m"

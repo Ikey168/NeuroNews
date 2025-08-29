@@ -1,0 +1,214 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: neuronews-nlp-config
+  namespace: neuronews-staging
+data:
+  DATABASE_URL: "postgresql://neuronews:${POSTGRES_PASSWORD}@postgres-service:5432/neuronews_staging"
+  REDIS_URL: "redis://redis-service:6379/1"  # Different DB for NLP
+  ENVIRONMENT: "staging"
+  LOG_LEVEL: "DEBUG"
+  BATCH_SIZE: "50"
+  PROCESSING_INTERVAL: "300"  # 5 minutes
+  MAX_QUEUE_SIZE: "1000"
+  WORKER_CONCURRENCY: "4"
+  MODEL_CACHE_SIZE: "500MB"
+  ENABLE_GPU: "false"  # Disabled for staging
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: neuronews-nlp-secrets
+  namespace: neuronews-staging
+type: Opaque
+data:
+  OPENAI_API_KEY: ""  # Add your OpenAI API key (base64 encoded)
+  HUGGINGFACE_API_KEY: ""  # Add your Hugging Face API key (base64 encoded)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neuronews-nlp
+  namespace: neuronews-staging
+  labels:
+    app: neuronews-nlp
+    environment: staging
+spec:
+  replicas: 1  # Single replica for staging
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: neuronews-nlp
+  template:
+    metadata:
+      labels:
+        app: neuronews-nlp
+        environment: staging
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: nlp
+        image: neuronews/nlp:staging
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: metrics
+        env:
+        - name: METRICS_PORT
+          value: "8080"
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        envFrom:
+        - configMapRef:
+            name: neuronews-nlp-config
+        - secretRef:
+            name: neuronews-nlp-secrets
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "300m"
+          limits:
+            memory: "1Gi"
+            cpu: "600m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: metrics
+          initialDelaySeconds: 120  # NLP models take time to load
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: metrics
+          initialDelaySeconds: 60
+          periodSeconds: 15
+          timeoutSeconds: 10
+          failureThreshold: 5
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: model-cache
+          mountPath: /app/models
+        - name: logs
+          mountPath: /app/logs
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: model-cache
+        emptyDir:
+          sizeLimit: 1Gi
+      - name: logs
+        emptyDir: {}
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: neuronews-nlp
+  namespace: neuronews-staging
+  labels:
+    app: neuronews-nlp
+    environment: staging
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: metrics
+    protocol: TCP
+    name: metrics
+  selector:
+    app: neuronews-nlp
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: neuronews-nlp-batch-processing
+  namespace: neuronews-staging
+  labels:
+    app: neuronews-nlp
+    component: batch-processor
+    environment: staging
+spec:
+  schedule: "*/10 * * * *"  # Run every 10 minutes for staging
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: neuronews-nlp
+            component: batch-processor
+        spec:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            fsGroup: 1000
+          containers:
+          - name: batch-processor
+            image: neuronews/nlp:staging
+            imagePullPolicy: Always
+            command:
+            - python
+            - -m
+            - src.batch_processor
+            - --batch-size
+            - "25"
+            - --timeout
+            - "300"
+            envFrom:
+            - configMapRef:
+                name: neuronews-nlp-config
+            - secretRef:
+                name: neuronews-nlp-secrets
+            resources:
+              requests:
+                memory: "256Mi"
+                cpu: "200m"
+              limits:
+                memory: "512Mi"
+                cpu: "400m"
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                - ALL
+            volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: model-cache
+              mountPath: /app/models
+          volumes:
+          - name: tmp
+            emptyDir: {}
+          - name: model-cache
+            emptyDir:
+              sizeLimit: 512Mi
+          restartPolicy: OnFailure
+      backoffLimit: 2
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3

@@ -1,0 +1,58 @@
+services:
+  mlflow-db:
+    image: postgres:15-alpine
+    container_name: mlflow-db
+    environment:
+      POSTGRES_USER: mlflow
+      POSTGRES_PASSWORD: mlflow
+      POSTGRES_DB: mlflow
+    volumes:
+      - mlflow_db_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"  # Use 5433 to avoid conflicts with main postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mlflow -d mlflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mlflow-network
+
+  mlflow:
+    image: python:3.11-slim
+    container_name: mlflow-server
+    depends_on:
+      mlflow-db:
+        condition: service_healthy
+    environment:
+      - MLFLOW_BACKEND_STORE_URI=postgresql+psycopg2://mlflow:mlflow@mlflow-db:5432/mlflow
+      - MLFLOW_DEFAULT_ARTIFACT_ROOT=/mlflow/artifacts
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./mlruns:/mlflow/artifacts
+      - ./logs:/mlflow/logs
+      - ./start-mlflow.py:/mlflow/start-mlflow.py
+    working_dir: /mlflow
+    command: >
+      bash -c "
+        pip install mlflow psycopg2-binary uvicorn &&
+        python /mlflow/start-mlflow.py
+      "
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - mlflow-network
+    restart: unless-stopped
+
+volumes:
+  mlflow_db_data:
+    driver: local
+
+networks:
+  mlflow-network:
+    driver: bridge

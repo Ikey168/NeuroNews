@@ -1,0 +1,268 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secrets
+  namespace: neuronews-prod
+type: Opaque
+data:
+  POSTGRES_PASSWORD: ""  # Add production database password (base64 encoded)
+  POSTGRES_REPLICATION_PASSWORD: ""  # Add replication password (base64 encoded)
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+  namespace: neuronews-prod
+data:
+  POSTGRES_DB: "neuronews_production"
+  POSTGRES_USER: "neuronews"
+  PGDATA: "/var/lib/postgresql/data/pgdata"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: neuronews-prod
+  labels:
+    app: postgres
+    environment: production
+spec:
+  serviceName: postgres-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+        environment: production
+    spec:
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5432
+          name: postgres
+        envFrom:
+        - configMapRef:
+            name: postgres-config
+        - secretRef:
+            name: postgres-secrets
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        - name: postgres-config-volume
+          mountPath: /etc/postgresql/postgresql.conf
+          subPath: postgresql.conf
+          readOnly: true
+        - name: postgres-backup
+          mountPath: /backup
+      volumes:
+      - name: postgres-config-volume
+        configMap:
+          name: postgres-performance-config
+      - name: postgres-backup
+        emptyDir: {}
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-storage
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 100Gi
+      storageClassName: gp3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: neuronews-prod
+  labels:
+    app: postgres
+    environment: production
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5432
+    targetPort: postgres
+    protocol: TCP
+    name: postgres
+  selector:
+    app: postgres
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-performance-config
+  namespace: neuronews-prod
+data:
+  postgresql.conf: |
+    # PostgreSQL configuration for production environment
+    listen_addresses = '*'
+    port = 5432
+    max_connections = 200
+    shared_buffers = 512MB
+    effective_cache_size = 1536MB
+    maintenance_work_mem = 128MB
+    checkpoint_completion_target = 0.9
+    wal_buffers = 32MB
+    default_statistics_target = 100
+    random_page_cost = 1.1
+    effective_io_concurrency = 300
+    work_mem = 8MB
+    min_wal_size = 2GB
+    max_wal_size = 8GB
+    max_worker_processes = 16
+    max_parallel_workers_per_gather = 4
+    max_parallel_workers = 16
+    max_parallel_maintenance_workers = 4
+    
+    # WAL and replication
+    wal_level = replica
+    archive_mode = on
+    archive_command = 'test ! -f /backup/archive/%f && cp %p /backup/archive/%f'
+    max_wal_senders = 3
+    wal_keep_size = 1GB
+    
+    # Logging
+    log_destination = 'stderr'
+    logging_collector = on
+    log_directory = 'log'
+    log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log'
+    log_rotation_age = 1d
+    log_rotation_size = 100MB
+    log_min_duration_statement = 5000
+    log_statement = 'ddl'
+    log_checkpoints = on
+    log_connections = on
+    log_disconnections = on
+    log_lock_waits = on
+    log_temp_files = 0
+    
+    # Security
+    ssl = on
+    ssl_cert_file = '/etc/ssl/certs/server.crt'
+    ssl_key_file = '/etc/ssl/private/server.key'
+    ssl_ca_file = '/etc/ssl/certs/ca.crt'
+    
+    # Performance tuning
+    autovacuum = on
+    autovacuum_max_workers = 3
+    autovacuum_naptime = 30s
+    autovacuum_vacuum_threshold = 100
+    autovacuum_analyze_threshold = 50
+    autovacuum_vacuum_scale_factor = 0.1
+    autovacuum_analyze_scale_factor = 0.05
+    
+    # Monitoring
+    track_activities = on
+    track_counts = on
+    track_io_timing = on
+    track_functions = all
+    stats_temp_directory = '/tmp/pg_stat_tmp'
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: neuronews-prod
+  labels:
+    app: postgres
+    component: backup
+    environment: production
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: postgres
+            component: backup
+        spec:
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+            fsGroup: 999
+          containers:
+          - name: backup
+            image: postgres:15-alpine
+            command:
+            - /bin/sh
+            - -c
+            - |
+              BACKUP_FILE="/backup/postgres-backup-$(date +%Y%m%d_%H%M%S).sql"
+              pg_dump -h postgres-service -U $POSTGRES_USER -d $POSTGRES_DB > $BACKUP_FILE
+              gzip $BACKUP_FILE
+              # Clean up backups older than 7 days
+              find /backup -name "postgres-backup-*.sql.gz" -mtime +7 -delete
+            envFrom:
+            - configMapRef:
+                name: postgres-config
+            - secretRef:
+                name: postgres-secrets
+            resources:
+              requests:
+                memory: "256Mi"
+                cpu: "100m"
+              limits:
+                memory: "512Mi"
+                cpu: "200m"
+            volumeMounts:
+            - name: postgres-backup
+              mountPath: /backup
+          volumes:
+          - name: postgres-backup
+            persistentVolumeClaim:
+              claimName: postgres-backup-pvc
+          restartPolicy: OnFailure
+      backoffLimit: 3
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 3
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-backup-pvc
+  namespace: neuronews-prod
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: gp3

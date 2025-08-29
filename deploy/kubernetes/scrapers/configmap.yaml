@@ -1,0 +1,298 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: neuronews-scraper-config
+  namespace: neuronews
+  labels:
+    app: neuronews-scrapers
+    component: scraper
+data:
+  # General Scraper Configuration
+  scraper.max_concurrent_requests: "10"
+  scraper.delay_between_requests: "2"
+  scraper.request_timeout: "30"
+  scraper.retry_attempts: "3"
+  scraper.retry_delay: "5"
+  scraper.user_agent_rotation: "true"
+  scraper.respect_robots_txt: "true"
+  scraper.enable_cookies: "true"
+  scraper.follow_redirects: "true"
+  scraper.max_redirect_count: "5"
+  
+  # Playwright Configuration
+  playwright.enabled: "true"
+  playwright.headless: "true"
+  playwright.browser_type: "chromium"
+  playwright.viewport_width: "1920"
+  playwright.viewport_height: "1080"
+  playwright.javascript_enabled: "true"
+  playwright.load_images: "false"
+  playwright.block_resources: "stylesheet,font,media"
+  playwright.wait_for_selector_timeout: "10000"
+  playwright.navigation_timeout: "30000"
+  
+  # Data Validation Configuration
+  validation.enabled: "true"
+  validation.min_content_length: "100"
+  validation.max_content_length: "50000"
+  validation.min_title_length: "10"
+  validation.max_title_length: "200"
+  validation.language_detection: "true"
+  validation.content_quality_check: "true"
+  validation.duplicate_detection: "true"
+  validation.spam_detection: "true"
+  
+  # Output Configuration
+  output.format: "json"
+  output.compress: "true"
+  output.batch_size: "100"
+  output.file_rotation: "true"
+  output.max_file_size: "50MB"
+  
+  # Monitoring Configuration
+  monitoring.enabled: "true"
+  monitoring.metrics_port: "8080"
+  monitoring.health_check_port: "8081"
+  monitoring.log_level: "INFO"
+  monitoring.performance_tracking: "true"
+  monitoring.error_tracking: "true"
+  
+  # Cache Configuration
+  cache.enabled: "true"
+  cache.ttl: "3600"
+  cache.max_size: "1000"
+  cache.redis_enabled: "true"
+  
+  # Rate Limiting Configuration
+  rate_limit.enabled: "true"
+  rate_limit.requests_per_minute: "60"
+  rate_limit.burst_limit: "10"
+  rate_limit.backoff_factor: "2"
+  rate_limit.max_backoff: "300"
+  
+  # Proxy Configuration
+  proxy.enabled: "false"
+  proxy.rotation: "false"
+  proxy.timeout: "30"
+  proxy.max_retries: "3"
+  
+  # Error Handling Configuration
+  error_handling.max_retries: "3"
+  error_handling.retry_delay: "5"
+  error_handling.exponential_backoff: "true"
+  error_handling.circuit_breaker: "true"
+  error_handling.alert_on_failure: "true"
+  
+  # News Sources Configuration
+  sources.config: |
+    {
+      "news_sources": [
+        {
+          "name": "TechCrunch",
+          "base_url": "https://techcrunch.com",
+          "category": "technology",
+          "selectors": {
+            "title": "h1.article__title",
+            "content": "div.article-content",
+            "author": "a.article__author-link",
+            "date": "div.article__meta time"
+          },
+          "enabled": true,
+          "priority": "high",
+          "frequency": "4h"
+        },
+        {
+          "name": "Ars Technica",
+          "base_url": "https://arstechnica.com",
+          "category": "technology",
+          "selectors": {
+            "title": "h1.post-title",
+            "content": "div.post-content",
+            "author": "span.author",
+            "date": "time.date"
+          },
+          "enabled": true,
+          "priority": "high",
+          "frequency": "6h"
+        },
+        {
+          "name": "The Verge",
+          "base_url": "https://www.theverge.com",
+          "category": "technology",
+          "selectors": {
+            "title": "h1.c-page-title",
+            "content": "div.c-entry-content",
+            "author": "a.c-byline__author-name",
+            "date": "time.c-byline__item"
+          },
+          "enabled": true,
+          "priority": "medium",
+          "frequency": "6h"
+        },
+        {
+          "name": "MIT Technology Review",
+          "base_url": "https://www.technologyreview.com",
+          "category": "artificial-intelligence",
+          "selectors": {
+            "title": "h1.contentTitle__title",
+            "content": "div.article__content",
+            "author": "a.byline__name",
+            "date": "time.byline__date"
+          },
+          "enabled": true,
+          "priority": "high",
+          "frequency": "8h"
+        },
+        {
+          "name": "AI News",
+          "base_url": "https://artificialintelligence-news.com",
+          "category": "artificial-intelligence",
+          "selectors": {
+            "title": "h1.entry-title",
+            "content": "div.entry-content",
+            "author": "span.author",
+            "date": "time.published"
+          },
+          "enabled": true,
+          "priority": "medium",
+          "frequency": "8h"
+        },
+        {
+          "name": "VentureBeat",
+          "base_url": "https://venturebeat.com",
+          "category": "technology",
+          "selectors": {
+            "title": "h1.article-title",
+            "content": "div.article-content",
+            "author": "div.author-name",
+            "date": "time.the-time"
+          },
+          "enabled": true,
+          "priority": "medium",
+          "frequency": "6h"
+        },
+        {
+          "name": "Wired",
+          "base_url": "https://www.wired.com",
+          "category": "technology",
+          "selectors": {
+            "title": "h1[data-testid='ContentHeaderHed']",
+            "content": "div[data-testid='BodyWrapper']",
+            "author": "a[data-testid='AuthorByline']",
+            "date": "time[data-testid='ContentHeaderPublishDate']"
+          },
+          "enabled": true,
+          "priority": "high",
+          "frequency": "4h"
+        }
+      ]
+    }
+  
+  # Logging Configuration
+  logging.config: |
+    {
+      "version": 1,
+      "disable_existing_loggers": false,
+      "formatters": {
+        "standard": {
+          "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+        },
+        "json": {
+          "format": "{'timestamp': '%(asctime)s', 'level': '%(levelname)s', 'logger': '%(name)s', 'message': '%(message)s'}"
+        }
+      },
+      "handlers": {
+        "console": {
+          "level": "INFO",
+          "class": "logging.StreamHandler",
+          "formatter": "standard"
+        },
+        "file": {
+          "level": "DEBUG",
+          "class": "logging.handlers.RotatingFileHandler",
+          "filename": "/app/logs/scraper.log",
+          "maxBytes": 10485760,
+          "backupCount": 5,
+          "formatter": "json"
+        },
+        "cloudwatch": {
+          "level": "INFO",
+          "class": "watchtower.CloudWatchLogsHandler",
+          "log_group": "/kubernetes/neuronews/scrapers",
+          "stream_name": "scraper-{hostname}",
+          "formatter": "json"
+        }
+      },
+      "loggers": {
+        "": {
+          "handlers": ["console", "file", "cloudwatch"],
+          "level": "INFO"
+        },
+        "scrapy": {
+          "handlers": ["console", "file"],
+          "level": "WARNING",
+          "propagate": false
+        },
+        "playwright": {
+          "handlers": ["console"],
+          "level": "WARNING",
+          "propagate": false
+        }
+      }
+    }
+  
+  # Performance Monitoring Configuration
+  performance.config: |
+    {
+      "metrics": {
+        "enabled": true,
+        "collection_interval": 30,
+        "export_interval": 60,
+        "prometheus_pushgateway": "prometheus-pushgateway.monitoring.svc.cluster.local:9091"
+      },
+      "thresholds": {
+        "max_memory_usage_mb": 3072,
+        "max_cpu_usage_percent": 80,
+        "max_response_time_ms": 30000,
+        "min_success_rate_percent": 85,
+        "max_error_rate_percent": 15
+      },
+      "alerts": {
+        "memory_threshold": 2560,
+        "cpu_threshold": 70,
+        "error_rate_threshold": 10,
+        "response_time_threshold": 25000
+      }
+    }
+  
+  # AWS CloudWatch Configuration
+  cloudwatch.config: |
+    {
+      "enabled": true,
+      "region": "us-east-1",
+      "log_group": "/kubernetes/neuronews/scrapers",
+      "log_retention_days": 30,
+      "metrics_namespace": "NeuroNews/Scrapers",
+      "custom_metrics": [
+        {
+          "name": "ArticlesScraped",
+          "unit": "Count",
+          "dimensions": ["SourceName", "ScrapperType"]
+        },
+        {
+          "name": "ScrapingDuration",
+          "unit": "Seconds",
+          "dimensions": ["SourceName", "ScrapperType"]
+        },
+        {
+          "name": "ErrorRate",
+          "unit": "Percent",
+          "dimensions": ["SourceName", "ScrapperType"]
+        },
+        {
+          "name": "MemoryUsage",
+          "unit": "Megabytes",
+          "dimensions": ["PodName", "ScrapperType"]
+        }
+      ]
+    }

@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: neuronews-fastapi-service
+  namespace: neuronews
+  labels:
+    app: neuronews-fastapi
+    component: api
+    tier: backend
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "http"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "arn:aws:acm:region:account:certificate/cert-id"
+    service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "https"
+spec:
+  type: LoadBalancer
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+    protocol: TCP
+  - name: https
+    port: 443
+    targetPort: http
+    protocol: TCP
+  selector:
+    app: neuronews-fastapi
+  sessionAffinity: None
+  externalTrafficPolicy: Cluster
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: neuronews-fastapi-internal
+  namespace: neuronews
+  labels:
+    app: neuronews-fastapi
+    component: api
+    tier: backend
+    service-type: internal
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 8000
+    targetPort: http
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: 8000
+    protocol: TCP
+  selector:
+    app: neuronews-fastapi
+  sessionAffinity: None

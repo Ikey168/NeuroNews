@@ -1,0 +1,81 @@
+---
+# NeuroNews API Deployment Playbook
+# This playbook automates the deployment of the NeuroNews FastAPI backend to Kubernetes
+- name: "NeuroNews API Deployment"
+  hosts: localhost
+  gather_facts: yes
+  vars:
+    deployment_timestamp: "{{ ansible_date_time.epoch }}"
+    backup_enabled: true
+    rollback_enabled: true
+    health_check_timeout: 300
+    
+  tasks:
+    - name: "Display deployment information"
+      debug:
+        msg: |
+          ============================================
+          NeuroNews API Deployment Starting
+          ============================================
+          Environment: {{ app.environment }}
+          Namespace: {{ app.namespace }}
+          Version: {{ app.version }}
+          Timestamp: {{ deployment_timestamp }}
+          ============================================
+
+    - name: "Pre-deployment validation"
+      include_tasks: tasks/pre_deployment_validation.yml
+      tags: [validation, pre-deployment]
+
+    - name: "Backup current deployment"
+      include_tasks: tasks/backup_deployment.yml
+      when: backup_enabled | bool
+      tags: [backup]
+
+    - name: "Prepare Docker images"
+      include_tasks: tasks/prepare_images.yml
+      tags: [docker, images]
+
+    - name: "Deploy Kubernetes prerequisites"
+      include_tasks: tasks/deploy_prerequisites.yml
+      tags: [kubernetes, prerequisites]
+
+    - name: "Deploy FastAPI application"
+      include_tasks: tasks/deploy_fastapi.yml
+      tags: [kubernetes, fastapi, deployment]
+
+    - name: "Configure ingress and load balancing"
+      include_tasks: tasks/deploy_ingress.yml
+      tags: [kubernetes, ingress, networking]
+
+    - name: "Setup monitoring and logging"
+      include_tasks: tasks/deploy_monitoring.yml
+      tags: [monitoring, logging]
+
+    - name: "Post-deployment validation"
+      include_tasks: tasks/post_deployment_validation.yml
+      tags: [validation, post-deployment]
+
+    - name: "Health checks and smoke tests"
+      include_tasks: tasks/health_checks.yml
+      tags: [health-checks, testing]
+
+  handlers:
+    - name: "Rollback deployment"
+      include_tasks: tasks/rollback_deployment.yml
+      when: rollback_enabled | bool
+
+    - name: "Send deployment notification"
+      mail:
+        to: "{{ monitoring.alerts.email }}"
+        subject: "NeuroNews API Deployment {{ 'SUCCESS' if ansible_failed_result is not defined else 'FAILED' }}"
+        body: |
+          Deployment Status: {{ 'SUCCESS' if ansible_failed_result is not defined else 'FAILED' }}
+          Environment: {{ app.environment }}
+          Version: {{ app.version }}
+          Timestamp: {{ deployment_timestamp }}
+          
+          {% if ansible_failed_result is defined %}
+          Error: {{ ansible_failed_result.msg }}
+          {% endif %}
+      when: monitoring.alerts.enabled | bool

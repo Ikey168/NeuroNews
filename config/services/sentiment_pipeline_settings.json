@@ -1,0 +1,38 @@
+{
+  "sentiment_analysis": {
+    "default_provider": "huggingface",
+    "providers": {
+      "huggingface": {
+        "model": "distilbert-base-uncased-finetuned-sst-2-english",
+        "confidence_threshold": 0.7,
+        "batch_size": 32
+      },
+      "aws_comprehend": {
+        "region": "us-east-1",
+        "confidence_threshold": 0.8,
+        "language_code": "en"
+      },
+      "rule_based": {
+        "confidence_threshold": 0.6,
+        "fallback": true
+      }
+    },
+    "pipeline_settings": {
+      "title_weight": 0.3,
+      "content_weight": 0.7,
+      "enable_trend_analysis": true,
+      "save_detailed_results": true
+    },
+    "output_settings": {
+      "results_file": "sentiment_analysis_results.json",
+      "include_raw_scores": true,
+      "include_metadata": true
+    }
+  },
+  "demo_settings": {
+    "enable_realtime_demo": true,
+    "enable_batch_analysis": true,
+    "enable_trend_analysis": true,
+    "log_level": "INFO"
+  }
+}

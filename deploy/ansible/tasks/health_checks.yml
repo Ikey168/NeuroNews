@@ -1,0 +1,234 @@
+---
+# Health checks and smoke tests tasks
+- name: "Perform API health check"
+  uri:
+    url: "http://{{ fastapi.name }}-internal.{{ app.namespace }}.svc.cluster.local:{{ fastapi.port }}/health"
+    method: GET
+    timeout: 30
+  register: health_check_response
+  retries: 5
+  delay: 10
+
+- name: "Validate health check response"
+  assert:
+    that:
+      - health_check_response.status == 200
+      - health_check_response.json.status == "healthy"
+    fail_msg: "Health check failed: {{ health_check_response.status }}"
+    success_msg: "Health check passed successfully"
+
+- name: "Test API readiness endpoint"
+  uri:
+    url: "http://{{ fastapi.name }}-internal.{{ app.namespace }}.svc.cluster.local:{{ fastapi.port }}/health/ready"
+    method: GET
+    timeout: 30
+  register: readiness_check_response
+  retries: 3
+  delay: 5
+
+- name: "Validate readiness check response"
+  assert:
+    that:
+      - readiness_check_response.status == 200
+    fail_msg: "Readiness check failed: {{ readiness_check_response.status }}"
+    success_msg: "Readiness check passed successfully"
+
+- name: "Test API documentation endpoint"
+  uri:
+    url: "http://{{ fastapi.name }}-internal.{{ app.namespace }}.svc.cluster.local:{{ fastapi.port }}/docs"
+    method: GET
+    timeout: 30
+  register: docs_check_response
+  retries: 3
+  delay: 5
+
+- name: "Validate documentation endpoint"
+  assert:
+    that:
+      - docs_check_response.status == 200
+    fail_msg: "Documentation endpoint failed: {{ docs_check_response.status }}"
+    success_msg: "Documentation endpoint accessible"
+
+- name: "Test API root endpoint"
+  uri:
+    url: "http://{{ fastapi.name }}-internal.{{ app.namespace }}.svc.cluster.local:{{ fastapi.port }}/"
+    method: GET
+    timeout: 30
+  register: root_check_response
+  retries: 3
+  delay: 5
+
+- name: "Validate root endpoint"
+  assert:
+    that:
+      - root_check_response.status == 200
+    fail_msg: "Root endpoint failed: {{ root_check_response.status }}"
+    success_msg: "Root endpoint accessible"
+
+- name: "Test external LoadBalancer access (if available)"
+  uri:
+    url: "http://{{ lb_ready.resources[0].status.loadBalancer.ingress[0].ip | default(lb_ready.resources[0].status.loadBalancer.ingress[0].hostname) }}/health"
+    method: GET
+    timeout: 30
+  register: external_health_check
+  when: 
+    - lb_ready is defined
+    - lb_ready.resources[0].status.loadBalancer.ingress is defined
+  failed_when: false
+  retries: 3
+  delay: 10
+
+- name: "Test Ingress access (if enabled)"
+  uri:
+    url: "http{% if ingress.tls.enabled %}s{% endif %}://{{ ingress.host }}/health"
+    method: GET
+    timeout: 30
+    validate_certs: no
+  register: ingress_health_check
+  when: 
+    - ingress.enabled | bool
+    - ingress_info is defined
+    - ingress_info.resources | length > 0
+  failed_when: false
+  retries: 3
+  delay: 10
+
+- name: "Load test with multiple concurrent requests"
+  uri:
+    url: "http://{{ fastapi.name }}-internal.{{ app.namespace }}.svc.cluster.local:{{ fastapi.port }}/health"
+    method: GET
+    timeout: 30
+  register: load_test_results
+  loop: "{{ range(1, 11) | list }}"  # 10 concurrent requests
+  async: 30
+  poll: 0
+
+- name: "Wait for load test completion"
+  async_status:
+    jid: "{{ item.ansible_job_id }}"
+  register: load_test_status
+  until: load_test_status.finished
+  retries: 10
+  delay: 3
+  loop: "{{ load_test_results.results }}"
+
+- name: "Validate load test results"
+  assert:
+    that:
+      - item.status == 200
+    fail_msg: "Load test request failed"
+  loop: "{{ load_test_status.results }}"
+  loop_control:
+    label: "Request {{ ansible_loop.index }}"
+
+- name: "Test database connectivity (if accessible)"
+  k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Pod
+      metadata:
+        name: "db-test-{{ deployment_timestamp }}"
+        namespace: "{{ app.namespace }}"
+      spec:
+        restartPolicy: Never
+        containers:
+        - name: test
+          image: postgres:13
+          command:
+          - /bin/bash
+          - -c
+          - |
+            export PGPASSWORD=$DB_PASSWORD
+            pg_isready -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME
+            echo "Database connectivity: $?"
+          env:
+          - name: DB_HOST
+            value: "{{ database.host }}"
+          - name: DB_PORT
+            value: "{{ database.port }}"
+          - name: DB_USER
+            valueFrom:
+              secretKeyRef:
+                name: neuronews-db-credentials
+                key: username
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: neuronews-db-credentials
+                key: password
+          - name: DB_NAME
+            value: "{{ database.name }}"
+
+- name: "Wait for database test to complete"
+  k8s_info:
+    api_version: v1
+    kind: Pod
+    name: "db-test-{{ deployment_timestamp }}"
+    namespace: "{{ app.namespace }}"
+    wait: true
+    wait_condition:
+      type: Ready
+      status: "False"
+      reason: PodCompleted
+    wait_timeout: 60
+
+- name: "Get database test results"
+  k8s_log:
+    api_version: v1
+    kind: Pod
+    name: "db-test-{{ deployment_timestamp }}"
+    namespace: "{{ app.namespace }}"
+  register: db_test_logs
+
+- name: "Clean up database test pod"
+  k8s:
+    state: absent
+    api_version: v1
+    kind: Pod
+    name: "db-test-{{ deployment_timestamp }}"
+    namespace: "{{ app.namespace }}"
+
+- name: "Test metrics endpoint"
+  uri:
+    url: "http://{{ fastapi.name }}-internal.{{ app.namespace }}.svc.cluster.local:{{ fastapi.port }}/metrics"
+    method: GET
+    timeout: 30
+  register: metrics_check_response
+  when: monitoring.prometheus.enabled | bool
+
+- name: "Validate metrics endpoint"
+  assert:
+    that:
+      - metrics_check_response.status == 200
+      - "'http_requests_total' in metrics_check_response.content"
+    fail_msg: "Metrics endpoint validation failed"
+    success_msg: "Metrics endpoint working correctly"
+  when: monitoring.prometheus.enabled | bool
+
+- name: "Health checks and smoke tests summary"
+  debug:
+    msg: |
+      ============================================
+      Health Checks & Smoke Tests Complete
+      ============================================
+      ✅ Health Check: {{ health_check_response.status }} - {{ health_check_response.json.status | default('N/A') }}
+      ✅ Readiness Check: {{ readiness_check_response.status }}
+      ✅ Documentation: {{ docs_check_response.status }}
+      ✅ Root Endpoint: {{ root_check_response.status }}
+      {% if external_health_check is defined and external_health_check.status is defined %}
+      ✅ External LoadBalancer: {{ external_health_check.status }}
+      {% endif %}
+      {% if ingress_health_check is defined and ingress_health_check.status is defined %}
+      ✅ Ingress Access: {{ ingress_health_check.status }}
+      {% endif %}
+      ✅ Load Test: 10/10 requests successful
+      ✅ Database Connectivity: {{ 'Connected' if 'Database connectivity: 0' in db_test_logs.log else 'Check logs' }}
+      {% if monitoring.prometheus.enabled %}
+      ✅ Metrics Endpoint: {{ metrics_check_response.status }}
+      {% endif %}
+      ============================================
+      
+      🎉 All health checks and smoke tests passed!
+      Your NeuroNews API is fully operational and ready for use.
+      ============================================

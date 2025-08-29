@@ -1,0 +1,165 @@
+---
+# Spot instance node pool for batch workloads
+# This is a template for AWS EKS managed node groups
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spot-node-pool-config
+  namespace: kube-system
+  labels:
+    component: autoscaling
+    purpose: cost-optimization
+data:
+  spot-node-group.yaml: |
+    # AWS EKS Managed Node Group for Spot Instances
+    # Apply this via AWS CLI or Terraform
+    {
+      "nodegroupName": "neuronews-spot-batch",
+      "clusterName": "neuronews-cluster",
+      "scalingConfig": {
+        "minSize": 0,
+        "maxSize": 20,
+        "desiredSize": 0
+      },
+      "instanceTypes": [
+        "m5.large",
+        "m5.xlarge",
+        "m5.2xlarge",
+        "c5.large",
+        "c5.xlarge",
+        "c5.2xlarge",
+        "r5.large",
+        "r5.xlarge"
+      ],
+      "capacityType": "SPOT",
+      "subnets": [
+        "subnet-xxxxx",
+        "subnet-yyyyy",
+        "subnet-zzzzz"
+      ],
+      "nodeRole": "arn:aws:iam::ACCOUNT_ID:role/NodeInstanceRole",
+      "labels": {
+        "node-lifecycle": "spot",
+        "node-type": "batch",
+        "cost-optimization": "enabled"
+      },
+      "taints": [
+        {
+          "key": "node-lifecycle",
+          "value": "spot",
+          "effect": "NO_SCHEDULE"
+        }
+      ],
+      "tags": {
+        "k8s.io/cluster-autoscaler/enabled": "true",
+        "k8s.io/cluster-autoscaler/neuronews-cluster": "owned",
+        "Environment": "production",
+        "Purpose": "batch-workloads",
+        "CostOptimization": "spot-instances"
+      }
+    }
+
+  on-demand-node-group.yaml: |
+    # AWS EKS Managed Node Group for On-Demand Instances
+    # For critical workloads that need guaranteed availability
+    {
+      "nodegroupName": "neuronews-ondemand-critical",
+      "clusterName": "neuronews-cluster",
+      "scalingConfig": {
+        "minSize": 2,
+        "maxSize": 10,
+        "desiredSize": 3
+      },
+      "instanceTypes": [
+        "m5.large",
+        "m5.xlarge",
+        "c5.large",
+        "c5.xlarge"
+      ],
+      "capacityType": "ON_DEMAND",
+      "subnets": [
+        "subnet-xxxxx",
+        "subnet-yyyyy",
+        "subnet-zzzzz"
+      ],
+      "nodeRole": "arn:aws:iam::ACCOUNT_ID:role/NodeInstanceRole",
+      "labels": {
+        "node-lifecycle": "on-demand",
+        "node-type": "critical",
+        "cost-optimization": "enabled"
+      },
+      "tags": {
+        "k8s.io/cluster-autoscaler/enabled": "true",
+        "k8s.io/cluster-autoscaler/neuronews-cluster": "owned",
+        "Environment": "production",
+        "Purpose": "critical-workloads",
+        "CostOptimization": "on-demand-instances"
+      }
+    }
+
+  terraform-example.tf: |
+    # Terraform configuration for EKS managed node groups
+    resource "aws_eks_node_group" "spot_batch" {
+      cluster_name    = aws_eks_cluster.neuronews.name
+      node_group_name = "neuronews-spot-batch"
+      node_role_arn   = aws_iam_role.node_group.arn
+      subnet_ids      = aws_subnet.private[*].id
+      
+      capacity_type  = "SPOT"
+      instance_types = ["m5.large", "m5.xlarge", "c5.large", "c5.xlarge"]
+      
+      scaling_config {
+        desired_size = 0
+        max_size     = 20
+        min_size     = 0
+      }
+      
+      labels = {
+        "node-lifecycle"      = "spot"
+        "node-type"          = "batch"
+        "cost-optimization"  = "enabled"
+      }
+      
+      taint {
+        key    = "node-lifecycle"
+        value  = "spot"
+        effect = "NO_SCHEDULE"
+      }
+      
+      tags = {
+        "k8s.io/cluster-autoscaler/enabled"           = "true"
+        "k8s.io/cluster-autoscaler/neuronews-cluster" = "owned"
+        "Environment"                                 = "production"
+        "Purpose"                                     = "batch-workloads"
+        "CostOptimization"                           = "spot-instances"
+      }
+    }
+
+  aws-cli-commands.sh: |
+    #!/bin/bash
+    # AWS CLI commands to create spot node groups
+    
+    # Create spot node group for batch workloads
+    aws eks create-nodegroup \
+      --cluster-name neuronews-cluster \
+      --nodegroup-name neuronews-spot-batch \
+      --scaling-config minSize=0,maxSize=20,desiredSize=0 \
+      --instance-types m5.large m5.xlarge c5.large c5.xlarge \
+      --capacity-type SPOT \
+      --subnets subnet-xxxxx subnet-yyyyy subnet-zzzzz \
+      --node-role arn:aws:iam::ACCOUNT_ID:role/NodeInstanceRole \
+      --labels node-lifecycle=spot,node-type=batch,cost-optimization=enabled \
+      --taints key=node-lifecycle,value=spot,effect=NO_SCHEDULE \
+      --tags '{"k8s.io/cluster-autoscaler/enabled":"true","k8s.io/cluster-autoscaler/neuronews-cluster":"owned","Environment":"production","Purpose":"batch-workloads","CostOptimization":"spot-instances"}'
+    
+    # Create on-demand node group for critical workloads
+    aws eks create-nodegroup \
+      --cluster-name neuronews-cluster \
+      --nodegroup-name neuronews-ondemand-critical \
+      --scaling-config minSize=2,maxSize=10,desiredSize=3 \
+      --instance-types m5.large m5.xlarge c5.large c5.xlarge \
+      --capacity-type ON_DEMAND \
+      --subnets subnet-xxxxx subnet-yyyyy subnet-zzzzz \
+      --node-role arn:aws:iam::ACCOUNT_ID:role/NodeInstanceRole \
+      --labels node-lifecycle=on-demand,node-type=critical,cost-optimization=enabled \
+      --tags '{"k8s.io/cluster-autoscaler/enabled":"true","k8s.io/cluster-autoscaler/neuronews-cluster":"owned","Environment":"production","Purpose":"critical-workloads","CostOptimization":"on-demand-instances"}'

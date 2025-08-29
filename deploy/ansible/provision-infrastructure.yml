@@ -1,0 +1,201 @@
+---
+# NeuroNews Infrastructure Provisioning Playbook
+# This playbook provisions AWS/GCP servers and sets up the complete infrastructure
+- name: NeuroNews Infrastructure Provisioning
+  hosts: localhost
+  gather_facts: no
+  vars:
+    cloud_provider: "{{ provider | default('aws') }}"
+    infrastructure_state: "{{ state | default('present') }}"
+    region: "{{ cloud_region | default('us-east-1') }}"
+    
+  tasks:
+    - name: Display provisioning information
+      debug:
+        msg: |
+          Starting NeuroNews infrastructure provisioning...
+          Cloud Provider: {{ cloud_provider }}
+          Region: {{ region }}
+          State: {{ infrastructure_state }}
+    
+    - name: Include AWS provisioning tasks
+      include_tasks: tasks/provision-aws.yml
+      when: cloud_provider == "aws"
+    
+    - name: Include GCP provisioning tasks
+      include_tasks: tasks/provision-gcp.yml
+      when: cloud_provider == "gcp"
+
+# Configure provisioned servers
+- name: Configure Base Infrastructure
+  hosts: all:!localhost
+  gather_facts: yes
+  become: yes
+  vars:
+    setup_stage: "base"
+  
+  pre_tasks:
+    - name: Wait for SSH connection
+      wait_for_connection:
+        connect_timeout: 20
+        sleep: 5
+        delay: 5
+        timeout: 300
+    
+    - name: Gather facts after connection
+      setup:
+  
+  tasks:
+    - name: Update system packages
+      package:
+        name: "*"
+        state: latest
+      when: ansible_os_family == "RedHat" or ansible_os_family == "Debian"
+    
+    - name: Install base packages
+      package:
+        name:
+          - curl
+          - wget
+          - git
+          - vim
+          - htop
+          - unzip
+          - python3
+          - python3-pip
+          - apt-transport-https
+          - ca-certificates
+          - gnupg
+          - lsb-release
+        state: present
+      when: ansible_os_family == "Debian"
+    
+    - name: Install base packages (RedHat)
+      package:
+        name:
+          - curl
+          - wget
+          - git
+          - vim
+          - htop
+          - unzip
+          - python3
+          - python3-pip
+          - yum-utils
+          - device-mapper-persistent-data
+          - lvm2
+        state: present
+      when: ansible_os_family == "RedHat"
+    
+    - name: Configure firewall (Ubuntu/Debian)
+      ufw:
+        state: enabled
+        policy: deny
+        direction: incoming
+      when: ansible_os_family == "Debian"
+    
+    - name: Allow SSH through firewall
+      ufw:
+        rule: allow
+        port: "22"
+        proto: tcp
+      when: ansible_os_family == "Debian"
+
+# Install Docker on all nodes
+- name: Install Docker
+  hosts: all:!localhost
+  gather_facts: yes
+  become: yes
+  vars:
+    setup_stage: "docker"
+  
+  tasks:
+    - name: Include Docker installation tasks
+      include_tasks: tasks/install-docker.yml
+
+# Install Kubernetes on cluster nodes
+- name: Install Kubernetes
+  hosts: kubernetes
+  gather_facts: yes
+  become: yes
+  vars:
+    setup_stage: "kubernetes"
+  
+  tasks:
+    - name: Include Kubernetes installation tasks
+      include_tasks: tasks/install-kubernetes.yml
+
+# Initialize Kubernetes cluster
+- name: Initialize Kubernetes Cluster
+  hosts: masters
+  gather_facts: yes
+  become: yes
+  vars:
+    setup_stage: "k8s-init"
+  
+  tasks:
+    - name: Include Kubernetes cluster initialization
+      include_tasks: tasks/init-kubernetes-cluster.yml
+      run_once: true
+
+# Join worker nodes to cluster
+- name: Join Kubernetes Workers
+  hosts: workers
+  gather_facts: yes
+  become: yes
+  vars:
+    setup_stage: "k8s-join"
+  
+  tasks:
+    - name: Include worker join tasks
+      include_tasks: tasks/join-kubernetes-workers.yml
+
+# Deploy NeuroNews Applications
+- name: Deploy NeuroNews Applications
+  hosts: masters[0]
+  gather_facts: yes
+  become: yes
+  vars:
+    setup_stage: "deploy"
+  
+  tasks:
+    - name: Include application deployment tasks
+      include_tasks: tasks/deploy-applications.yml
+
+# Post-deployment validation
+- name: Validate Deployment
+  hosts: masters[0]
+  gather_facts: yes
+  become: yes
+  vars:
+    setup_stage: "validate"
+  
+  tasks:
+    - name: Include deployment validation tasks
+      include_tasks: tasks/validate-deployment.yml
+
+# Final status report
+- name: Infrastructure Provisioning Complete
+  hosts: localhost
+  gather_facts: no
+  
+  tasks:
+    - name: Display completion status
+      debug:
+        msg: |
+          =====================================================
+          NeuroNews Infrastructure Provisioning Complete!
+          =====================================================
+          
+          Next Steps:
+          1. Verify cluster status: kubectl get nodes
+          2. Check application status: kubectl get pods -n neuronews
+          3. Access FastAPI: kubectl port-forward -n neuronews svc/fastapi-service 8000:8000
+          4. Monitor logs: kubectl logs -n neuronews -l app=fastapi
+          
+          Cluster Information:
+          - Kubernetes Version: {{ kubernetes_version }}
+          - Cluster Name: {{ kubernetes_cluster_name }}
+          - Namespace: {{ app.namespace }}
+          
+          =====================================================

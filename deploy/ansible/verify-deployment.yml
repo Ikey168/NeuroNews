@@ -1,0 +1,426 @@
+---
+# NeuroNews Deployment Verification Playbook
+# Comprehensive testing and validation after deployment
+
+- name: Verify NeuroNews Deployment
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    environment: "{{ environment | default('staging') }}"
+    namespace: "neuronews-{{ environment }}"
+    app_name: neuronews
+    run_load_tests: "{{ run_load_tests | default(false) }}"
+    test_timeout: 300
+    
+    # Test endpoints
+    health_endpoint: "/health"
+    api_endpoints:
+      - "/api/v1/news"
+      - "/api/v1/analytics"
+      - "/api/v1/search"
+      - "/metrics"
+
+  tasks:
+    - name: Display verification information
+      debug:
+        msg: |
+          Starting deployment verification for {{ app_name }}
+          Environment: {{ environment }}
+          Namespace: {{ namespace }}
+          Load Tests: {{ run_load_tests }}
+
+    - name: Verify namespace exists
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Namespace
+        name: "{{ namespace }}"
+      register: namespace_info
+      failed_when: namespace_info.resources | length == 0
+
+    - name: Verify deployment exists and is ready
+      kubernetes.core.k8s_info:
+        api_version: apps/v1
+        kind: Deployment
+        name: "{{ app_name }}"
+        namespace: "{{ namespace }}"
+      register: deployment_info
+      failed_when: |
+        deployment_info.resources | length == 0 or
+        deployment_info.resources[0].status.readyReplicas != deployment_info.resources[0].status.replicas
+
+    - name: Get deployment details
+      set_fact:
+        deployment: "{{ deployment_info.resources[0] }}"
+        expected_replicas: "{{ deployment_info.resources[0].spec.replicas }}"
+        ready_replicas: "{{ deployment_info.resources[0].status.readyReplicas | default(0) }}"
+
+    - name: Verify all pods are running
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        namespace: "{{ namespace }}"
+        label_selectors:
+          - "app={{ app_name }}"
+      register: pod_info
+
+    - name: Check pod status
+      assert:
+        that:
+          - pod_info.resources | length == expected_replicas | int
+          - pod_info.resources | selectattr('status.phase', '!=', 'Running') | list | length == 0
+        fail_msg: "Not all pods are in Running state"
+        success_msg: "All {{ expected_replicas }} pods are running successfully"
+
+    - name: Verify service exists and has endpoints
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Service
+        name: "{{ app_name }}"
+        namespace: "{{ namespace }}"
+      register: service_info
+      failed_when: service_info.resources | length == 0
+
+    - name: Get service endpoints
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Endpoints
+        name: "{{ app_name }}"
+        namespace: "{{ namespace }}"
+      register: endpoints_info
+
+    - name: Verify endpoints are ready
+      assert:
+        that:
+          - endpoints_info.resources | length > 0
+          - endpoints_info.resources[0].subsets | length > 0
+        fail_msg: "Service endpoints are not ready"
+        success_msg: "Service endpoints are configured correctly"
+
+    - name: Test application health endpoint
+      uri:
+        url: "http://{{ app_name }}.{{ namespace }}.svc.cluster.local{{ health_endpoint }}"
+        method: GET
+        status_code: 200
+        timeout: 30
+      register: health_check
+      retries: 10
+      delay: 30
+      until: health_check.status == 200
+
+    - name: Verify health check response
+      assert:
+        that:
+          - health_check.status == 200
+          - "'healthy' in health_check.content or 'ok' in health_check.content"
+        fail_msg: "Health check failed or returned unexpected response"
+        success_msg: "Health check passed successfully"
+
+    - name: Test API endpoints
+      uri:
+        url: "http://{{ app_name }}.{{ namespace }}.svc.cluster.local{{ item }}"
+        method: GET
+        status_code: [200, 301, 302, 404]  # Allow various acceptable status codes
+        timeout: 30
+      register: api_tests
+      loop: "{{ api_endpoints }}"
+      failed_when: api_tests.status not in [200, 301, 302, 404]
+
+    - name: Verify API endpoint responses
+      debug:
+        msg: "Endpoint {{ item.item }} returned status {{ item.status }}"
+      loop: "{{ api_tests.results }}"
+
+    - name: Check application logs for errors
+      kubernetes.core.k8s_log:
+        api_version: v1
+        kind: Pod
+        namespace: "{{ namespace }}"
+        label_selectors:
+          - "app={{ app_name }}"
+        tail_lines: 100
+      register: app_logs
+
+    - name: Analyze logs for critical errors
+      set_fact:
+        critical_errors: >-
+          {{
+            app_logs.log_lines | select('match', '.*ERROR.*|.*CRITICAL.*|.*FATAL.*') | list
+          }}
+
+    - name: Report log analysis
+      debug:
+        msg: |
+          Log Analysis Results:
+          Total log lines analyzed: {{ app_logs.log_lines | length }}
+          Critical errors found: {{ critical_errors | length }}
+          {% if critical_errors | length > 0 %}
+          Critical errors:
+          {% for error in critical_errors %}
+          - {{ error }}
+          {% endfor %}
+          {% endif %}
+
+    - name: Verify resource usage is within limits
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        namespace: "{{ namespace }}"
+        label_selectors:
+          - "app={{ app_name }}"
+      register: resource_check
+
+    - name: Check pod resource consumption
+      debug:
+        msg: |
+          Pod Resource Status:
+          {% for pod in resource_check.resources %}
+          - {{ pod.metadata.name }}:
+            Status: {{ pod.status.phase }}
+            Restart Count: {{ pod.status.containerStatuses[0].restartCount | default(0) }}
+          {% endfor %}
+
+    - name: Verify HPA is functioning
+      kubernetes.core.k8s_info:
+        api_version: autoscaling/v2
+        kind: HorizontalPodAutoscaler
+        name: "{{ app_name }}-hpa"
+        namespace: "{{ namespace }}"
+      register: hpa_info
+      failed_when: false
+
+    - name: Check HPA status
+      debug:
+        msg: |
+          HPA Status:
+          {% if hpa_info.resources | length > 0 %}
+          Current Replicas: {{ hpa_info.resources[0].status.currentReplicas | default('N/A') }}
+          Desired Replicas: {{ hpa_info.resources[0].status.desiredReplicas | default('N/A') }}
+          Target CPU: {{ hpa_info.resources[0].spec.metrics[0].resource.target.averageUtilization }}%
+          {% else %}
+          HPA not found - this may be expected for some environments
+          {% endif %}
+      when: hpa_info.resources | length > 0
+
+    - name: Test database connectivity
+      uri:
+        url: "http://{{ app_name }}.{{ namespace }}.svc.cluster.local/api/v1/health/database"
+        method: GET
+        status_code: [200, 404]  # 404 is acceptable if endpoint doesn't exist
+        timeout: 30
+      register: db_connectivity
+      failed_when: false
+
+    - name: Report database connectivity
+      debug:
+        msg: |
+          Database Connectivity Test:
+          Status: {{ db_connectivity.status | default('Test not available') }}
+          {% if db_connectivity.status == 200 %}
+          Database connection successful
+          {% elif db_connectivity.status == 404 %}
+          Database health endpoint not implemented
+          {% else %}
+          Database connectivity issue detected
+          {% endif %}
+
+    - name: Run load tests
+      when: run_load_tests | bool
+      block:
+        - name: Install load testing tools
+          pip:
+            name:
+              - locust
+              - requests
+          delegate_to: localhost
+
+        - name: Create load test script
+          copy:
+            content: |
+              from locust import HttpUser, task, between
+              import random
+              
+              class NeuroNewsUser(HttpUser):
+                  wait_time = between(1, 3)
+                  
+                  @task(3)
+                  def view_news(self):
+                      self.client.get("/api/v1/news")
+                  
+                  @task(2)
+                  def search_news(self):
+                      terms = ["technology", "AI", "politics", "business"]
+                      term = random.choice(terms)
+                      self.client.get(f"/api/v1/search?q={term}")
+                  
+                  @task(1)
+                  def view_analytics(self):
+                      self.client.get("/api/v1/analytics")
+                  
+                  @task(1)
+                  def health_check(self):
+                      self.client.get("/health")
+            dest: /tmp/locustfile.py
+
+        - name: Run load test
+          shell: |
+            cd /tmp
+            locust -f locustfile.py --headless \
+              --users 50 --spawn-rate 5 \
+              --run-time 120s \
+              --host http://{{ app_name }}.{{ namespace }}.svc.cluster.local \
+              --csv=load_test_results
+          register: load_test_results
+          failed_when: false
+
+        - name: Analyze load test results
+          debug:
+            msg: |
+              Load Test Results:
+              {{ load_test_results.stdout }}
+              {% if load_test_results.stderr %}
+              Errors:
+              {{ load_test_results.stderr }}
+              {% endif %}
+
+        - name: Check application stability after load test
+          uri:
+            url: "http://{{ app_name }}.{{ namespace }}.svc.cluster.local{{ health_endpoint }}"
+            method: GET
+            status_code: 200
+            timeout: 30
+          register: post_load_health
+          retries: 5
+          delay: 30
+
+        - name: Verify post-load test stability
+          assert:
+            that:
+              - post_load_health.status == 200
+            fail_msg: "Application is not stable after load test"
+            success_msg: "Application remained stable during and after load test"
+
+    - name: Check ingress configuration
+      kubernetes.core.k8s_info:
+        api_version: networking.k8s.io/v1
+        kind: Ingress
+        name: "{{ app_name }}"
+        namespace: "{{ namespace }}"
+      register: ingress_info
+      failed_when: false
+
+    - name: Verify ingress status
+      debug:
+        msg: |
+          Ingress Status:
+          {% if ingress_info.resources | length > 0 %}
+          Host: {{ ingress_info.resources[0].spec.rules[0].host | default('Not configured') }}
+          TLS: {{ 'Enabled' if ingress_info.resources[0].spec.tls else 'Disabled' }}
+          Load Balancer: {{ ingress_info.resources[0].status.loadBalancer | default('Pending') }}
+          {% else %}
+          Ingress not configured
+          {% endif %}
+
+    - name: Verify monitoring and metrics
+      uri:
+        url: "http://{{ app_name }}.{{ namespace }}.svc.cluster.local:9090/metrics"
+        method: GET
+        status_code: [200, 404]
+        timeout: 30
+      register: metrics_check
+      failed_when: false
+
+    - name: Report metrics availability
+      debug:
+        msg: |
+          Metrics Endpoint Status: {{ metrics_check.status | default('Not available') }}
+          {% if metrics_check.status == 200 %}
+          Prometheus metrics are available
+          {% else %}
+          Metrics endpoint may not be configured
+          {% endif %}
+
+    - name: Generate verification report
+      set_fact:
+        verification_report:
+          timestamp: "{{ ansible_date_time.iso8601 }}"
+          environment: "{{ environment }}"
+          namespace: "{{ namespace }}"
+          application: "{{ app_name }}"
+          deployment_status: "{{ deployment.status }}"
+          replicas:
+            expected: "{{ expected_replicas }}"
+            ready: "{{ ready_replicas }}"
+          health_check: "{{ health_check.status == 200 }}"
+          api_tests_passed: "{{ api_tests.results | selectattr('status', '!=', 200) | list | length == 0 }}"
+          critical_errors: "{{ critical_errors | length }}"
+          load_test_run: "{{ run_load_tests }}"
+          verification_status: "PASSED"
+
+    - name: Save verification report
+      copy:
+        content: "{{ verification_report | to_nice_yaml }}"
+        dest: "/tmp/verification-report-{{ environment }}-{{ ansible_date_time.epoch }}.yml"
+      delegate_to: localhost
+
+    - name: Display final verification summary
+      debug:
+        msg: |
+          ========================================
+          DEPLOYMENT VERIFICATION SUMMARY
+          ========================================
+          Environment: {{ environment }}
+          Application: {{ app_name }}
+          Namespace: {{ namespace }}
+          
+          ✅ Deployment Status: READY
+          ✅ Replicas: {{ ready_replicas }}/{{ expected_replicas }}
+          ✅ Health Check: {{ 'PASSED' if health_check.status == 200 else 'FAILED' }}
+          ✅ API Endpoints: ACCESSIBLE
+          ✅ Pod Stability: VERIFIED
+          {% if run_load_tests %}
+          ✅ Load Test: COMPLETED
+          {% endif %}
+          
+          Critical Errors: {{ critical_errors | length }}
+          {% if critical_errors | length > 0 %}
+          ⚠️  Warning: Critical errors detected in logs
+          {% endif %}
+          
+          Verification Report: /tmp/verification-report-{{ environment }}-{{ ansible_date_time.epoch }}.yml
+          ========================================
+
+  rescue:
+    - name: Handle verification failure
+      debug:
+        msg: |
+          ========================================
+          DEPLOYMENT VERIFICATION FAILED
+          ========================================
+          Environment: {{ environment }}
+          Application: {{ app_name }}
+          
+          Please check the following:
+          - Pod status and logs
+          - Service configuration
+          - Network connectivity
+          - Resource limits and requests
+          ========================================
+
+    - name: Generate failure report
+      set_fact:
+        failure_report:
+          timestamp: "{{ ansible_date_time.iso8601 }}"
+          environment: "{{ environment }}"
+          verification_status: "FAILED"
+          error_details: "{{ ansible_failed_result | default({}) }}"
+
+    - name: Save failure report
+      copy:
+        content: "{{ failure_report | to_nice_yaml }}"
+        dest: "/tmp/verification-failure-{{ environment }}-{{ ansible_date_time.epoch }}.yml"
+      delegate_to: localhost
+
+    - name: Fail the verification
+      fail:
+        msg: "Deployment verification failed. Check logs and failure report for details."

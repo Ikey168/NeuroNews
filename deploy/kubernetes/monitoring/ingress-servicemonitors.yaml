@@ -1,0 +1,220 @@
+---
+# Monitoring Ingress for external access
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: monitoring-ingress
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: monitoring-ingress
+    app.kubernetes.io/component: monitoring
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: monitoring-auth
+    nginx.ingress.kubernetes.io/auth-realm: 'Authentication Required - NeuroNews Monitoring'
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - grafana.neuronews.com
+    - prometheus.neuronews.com
+    - alertmanager.neuronews.com
+    secretName: monitoring-tls
+  rules:
+  - host: grafana.neuronews.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: grafana
+            port:
+              number: 3000
+  - host: prometheus.neuronews.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: prometheus
+            port:
+              number: 9090
+  - host: alertmanager.neuronews.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: alertmanager
+            port:
+              number: 9093
+---
+# Basic Auth Secret for monitoring access
+apiVersion: v1
+kind: Secret
+metadata:
+  name: monitoring-auth
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: monitoring-auth
+    app.kubernetes.io/component: monitoring
+type: Opaque
+data:
+  # Username: admin, Password: neuronews123
+  # Generated with: htpasswd -nb admin neuronews123 | base64
+  auth: YWRtaW46JGFwcjEkSGpJdkouSXIkTVkuOGFJNmVZeXhDZS4uY0hOWEQ5LwoK
+---
+# NetworkPolicy for monitoring ingress traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: monitoring-ingress-netpol
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: monitoring-ingress-netpol
+    app.kubernetes.io/component: monitoring
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: monitoring
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    - namespaceSelector:
+        matchLabels:
+          name: neuronews
+    ports:
+    - protocol: TCP
+      port: 3000  # Grafana
+    - protocol: TCP
+      port: 9090  # Prometheus
+    - protocol: TCP
+      port: 9093  # AlertManager
+    - protocol: TCP
+      port: 2020  # Fluent Bit metrics
+  - from: []  # Allow from all for monitoring scraping
+    ports:
+    - protocol: TCP
+      port: 9090  # Prometheus scraping
+  egress:
+  - to: []  # Allow all outbound traffic for monitoring
+---
+# Service Monitor for Prometheus to scrape itself
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: prometheus-self
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: prometheus
+  endpoints:
+  - port: web
+    interval: 30s
+    path: /metrics
+---
+# Service Monitor for Grafana
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: grafana
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: grafana
+  endpoints:
+  - port: web
+    interval: 30s
+    path: /metrics
+---
+# Service Monitor for AlertManager
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: alertmanager
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: alertmanager
+    app.kubernetes.io/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: alertmanager
+  endpoints:
+  - port: web
+    interval: 30s
+    path: /metrics
+---
+# Service Monitor for Node Exporter
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: node-exporter
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: node-exporter
+    app.kubernetes.io/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: node-exporter
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+---
+# Service Monitor for kube-state-metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kube-state-metrics
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: kube-state-metrics
+    app.kubernetes.io/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kube-state-metrics
+  endpoints:
+  - port: http-metrics
+    interval: 30s
+    path: /metrics
+---
+# Service Monitor for Fluent Bit
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: fluent-bit
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: fluent-bit
+    app.kubernetes.io/component: logging
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: fluent-bit
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /api/v1/metrics/prometheus

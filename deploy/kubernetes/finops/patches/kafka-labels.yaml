@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-connect
+  namespace: data-processing
+  labels:
+    app: kafka-connect
+    component: stream-processor
+    pipeline: ingest
+    team: data-engineering
+    env: prod
+    cost_center: data-platform
+spec:
+  template:
+    metadata:
+      labels:
+        app: kafka-connect
+        component: stream-processor
+        pipeline: ingest
+        team: data-engineering
+        env: prod
+        cost_center: data-platform
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kafka
+  namespace: data-processing
+  labels:
+    app: kafka
+    component: message-broker
+    pipeline: ingest
+    team: data-engineering
+    env: prod
+    cost_center: data-platform
+spec:
+  template:
+    metadata:
+      labels:
+        app: kafka
+        component: message-broker
+        pipeline: ingest
+        team: data-engineering
+        env: prod
+        cost_center: data-platform
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: zookeeper
+  namespace: data-processing
+  labels:
+    app: zookeeper
+    component: coordination
+    pipeline: ingest
+    team: data-engineering
+    env: prod
+    cost_center: data-platform
+spec:
+  template:
+    metadata:
+      labels:
+        app: zookeeper
+        component: coordination
+        pipeline: ingest
+        team: data-engineering
+        env: prod
+        cost_center: data-platform

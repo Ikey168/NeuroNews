@@ -1,0 +1,101 @@
+# Kubernetes Cluster Variables
+---
+# Cluster Configuration
+kubernetes:
+  version: "1.28.0"
+  cluster_name: "neuronews-cluster"
+  api_server_port: 6443
+  pod_network_cidr: "10.244.0.0/16"
+  service_cidr: "10.96.0.0/12"
+  cluster_dns: "10.96.0.10"
+  
+# Container Runtime
+container_runtime:
+  name: "containerd"
+  version: "1.7.0"
+  socket: "/run/containerd/containerd.sock"
+
+# CNI Plugin
+cni:
+  plugin: "flannel"
+  version: "0.22.0"
+  config_dir: "/etc/cni/net.d"
+  bin_dir: "/opt/cni/bin"
+
+# etcd Configuration
+etcd:
+  version: "3.5.9"
+  data_dir: "/var/lib/etcd"
+  backup:
+    enabled: true
+    schedule: "0 2 * * *"
+    retention: "7d"
+
+# Kubelet Configuration
+kubelet:
+  config_dir: "/var/lib/kubelet"
+  cgroup_driver: "systemd"
+  max_pods: 110
+  
+# kube-proxy Configuration
+kube_proxy:
+  mode: "ipvs"
+  
+# API Server Configuration
+api_server:
+  bind_address: "0.0.0.0"
+  secure_port: 6443
+  admission_controllers:
+    - "NamespaceLifecycle"
+    - "LimitRanger"
+    - "ServiceAccount"
+    - "DefaultStorageClass"
+    - "ResourceQuota"
+    - "NodeRestriction"
+    - "PodSecurityPolicy"
+
+# Controller Manager Configuration
+controller_manager:
+  bind_address: "0.0.0.0"
+  
+# Scheduler Configuration
+scheduler:
+  bind_address: "0.0.0.0"
+
+# Add-ons
+addons:
+  dns:
+    enabled: true
+    provider: "coredns"
+    version: "1.10.1"
+  dashboard:
+    enabled: true
+    version: "2.7.0"
+  metrics_server:
+    enabled: true
+    version: "0.6.4"
+  ingress_nginx:
+    enabled: true
+    version: "1.8.1"
+
+# Node Configuration
+nodes:
+  masters:
+    taint: true
+    labels:
+      - "node-role.kubernetes.io/control-plane="
+  workers:
+    labels:
+      - "node-role.kubernetes.io/worker="
+
+# Certificates
+certificates:
+  ca_cert_validity: "10y"
+  cert_validity: "1y"
+  key_size: 2048
+  
+# Feature Gates
+feature_gates:
+  - "TTLAfterFinished=true"
+  - "EphemeralContainers=true"
+  - "ServerSideApply=true"

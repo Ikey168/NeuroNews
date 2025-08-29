@@ -1,0 +1,381 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: knowledge-graph-api-monitor
+  namespace: neuronews
+  labels:
+    app: knowledge-graph-api
+    component: monitoring
+    team: platform
+  annotations:
+    description: "Prometheus ServiceMonitor for Knowledge Graph API metrics"
+spec:
+  selector:
+    matchLabels:
+      app: knowledge-graph-api
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+    honorLabels: true
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'kg_api_.*'
+      targetLabel: service
+      replacement: 'knowledge-graph-api'
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kg-api-redis-monitor
+  namespace: neuronews
+  labels:
+    app: kg-api-redis
+    component: monitoring
+    team: platform
+  annotations:
+    description: "Prometheus ServiceMonitor for Redis cache metrics"
+spec:
+  selector:
+    matchLabels:
+      app: kg-api-redis
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 15s
+    scrapeTimeout: 10s
+    honorLabels: true
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'redis_.*'
+      targetLabel: service
+      replacement: 'kg-api-redis'
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: knowledge-graph-api-alerts
+  namespace: neuronews
+  labels:
+    app: knowledge-graph-api
+    component: alerting
+    team: platform
+  annotations:
+    description: "Alerting rules for Knowledge Graph API"
+spec:
+  groups:
+  - name: knowledge-graph-api.rules
+    interval: 30s
+    rules:
+    
+    # API Availability Alerts
+    - alert: KnowledgeGraphAPIDown
+      expr: up{job="knowledge-graph-api-service"} == 0
+      for: 5m
+      labels:
+        severity: critical
+        service: knowledge-graph-api
+        team: platform
+      annotations:
+        summary: "Knowledge Graph API is down"
+        description: "Knowledge Graph API has been down for more than 5 minutes"
+        runbook_url: "https://runbooks.neuronews.com/kg-api-down"
+    
+    - alert: KnowledgeGraphAPIHighErrorRate
+      expr: rate(kg_api_requests_total{status=~"5.."}[5m]) / rate(kg_api_requests_total[5m]) > 0.05
+      for: 10m
+      labels:
+        severity: warning
+        service: knowledge-graph-api
+        team: platform
+      annotations:
+        summary: "High error rate in Knowledge Graph API"
+        description: "Knowledge Graph API error rate is {{ $value | humanizePercentage }} for the last 10 minutes"
+        runbook_url: "https://runbooks.neuronews.com/kg-api-errors"
+    
+    - alert: KnowledgeGraphAPISlowResponse
+      expr: histogram_quantile(0.95, rate(kg_api_request_duration_seconds_bucket[5m])) > 2
+      for: 15m
+      labels:
+        severity: warning
+        service: knowledge-graph-api
+        team: platform
+      annotations:
+        summary: "Slow response times in Knowledge Graph API"
+        description: "95th percentile response time is {{ $value }}s for the last 15 minutes"
+        runbook_url: "https://runbooks.neuronews.com/kg-api-slow"
+    
+    # Cache Performance Alerts
+    - alert: KnowledgeGraphAPILowCacheHitRate
+      expr: kg_api_cache_hit_rate < 0.5
+      for: 30m
+      labels:
+        severity: warning
+        service: knowledge-graph-api
+        team: platform
+      annotations:
+        summary: "Low cache hit rate in Knowledge Graph API"
+        description: "Cache hit rate is {{ $value | humanizePercentage }} for the last 30 minutes"
+        runbook_url: "https://runbooks.neuronews.com/kg-api-cache"
+    
+    - alert: RedisDown
+      expr: up{job="kg-api-redis-service"} == 0
+      for: 5m
+      labels:
+        severity: critical
+        service: kg-api-redis
+        team: platform
+      annotations:
+        summary: "Redis cache is down"
+        description: "Redis cache for Knowledge Graph API has been down for more than 5 minutes"
+        runbook_url: "https://runbooks.neuronews.com/redis-down"
+    
+    - alert: RedisHighMemoryUsage
+      expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+      for: 10m
+      labels:
+        severity: warning
+        service: kg-api-redis
+        team: platform
+      annotations:
+        summary: "High memory usage in Redis cache"
+        description: "Redis memory usage is {{ $value | humanizePercentage }} for the last 10 minutes"
+        runbook_url: "https://runbooks.neuronews.com/redis-memory"
+    
+    # Neptune Database Alerts
+    - alert: NeptuneConnectionIssues
+      expr: increase(kg_api_neptune_connection_errors_total[5m]) > 10
+      for: 5m
+      labels:
+        severity: critical
+        service: knowledge-graph-api
+        team: platform
+      annotations:
+        summary: "Neptune connection issues"
+        description: "{{ $value }} Neptune connection errors in the last 5 minutes"
+        runbook_url: "https://runbooks.neuronews.com/neptune-connection"
+    
+    - alert: NeptuneQueryTimeout
+      expr: increase(kg_api_neptune_query_timeouts_total[10m]) > 5
+      for: 10m
+      labels:
+        severity: warning
+        service: knowledge-graph-api
+        team: platform
+      annotations:
+        summary: "Neptune query timeouts"
+        description: "{{ $value }} Neptune query timeouts in the last 10 minutes"
+        runbook_url: "https://runbooks.neuronews.com/neptune-timeouts"
+    
+    # Resource Usage Alerts
+    - alert: KnowledgeGraphAPIHighCPUUsage
+      expr: rate(container_cpu_usage_seconds_total{pod=~"knowledge-graph-api-.*"}[5m]) > 0.8
+      for: 15m
+      labels:
+        severity: warning
+        service: knowledge-graph-api
+        team: platform
+      annotations:
+        summary: "High CPU usage in Knowledge Graph API"
+        description: "CPU usage is {{ $value | humanizePercentage }} for the last 15 minutes"
+        runbook_url: "https://runbooks.neuronews.com/kg-api-cpu"
+    
+    - alert: KnowledgeGraphAPIHighMemoryUsage
+      expr: container_memory_usage_bytes{pod=~"knowledge-graph-api-.*"} / container_spec_memory_limit_bytes > 0.9
+      for: 10m
+      labels:
+        severity: warning
+        service: knowledge-graph-api
+        team: platform
+      annotations:
+        summary: "High memory usage in Knowledge Graph API"
+        description: "Memory usage is {{ $value | humanizePercentage }} for the last 10 minutes"
+        runbook_url: "https://runbooks.neuronews.com/kg-api-memory"
+    
+    # Scaling Alerts
+    - alert: KnowledgeGraphAPIReplicasLow
+      expr: kube_deployment_status_replicas_available{deployment="knowledge-graph-api"} < 2
+      for: 5m
+      labels:
+        severity: critical
+        service: knowledge-graph-api
+        team: platform
+      annotations:
+        summary: "Low number of available replicas"
+        description: "Only {{ $value }} replicas are available for Knowledge Graph API"
+        runbook_url: "https://runbooks.neuronews.com/kg-api-replicas"
+    
+    - alert: KnowledgeGraphAPIHighRequestRate
+      expr: rate(kg_api_requests_total[5m]) > 1000
+      for: 10m
+      labels:
+        severity: info
+        service: knowledge-graph-api
+        team: platform
+      annotations:
+        summary: "High request rate in Knowledge Graph API"
+        description: "Request rate is {{ $value }} requests/second for the last 10 minutes"
+        runbook_url: "https://runbooks.neuronews.com/kg-api-traffic"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kg-api-grafana-dashboard
+  namespace: neuronews
+  labels:
+    app: knowledge-graph-api
+    component: monitoring
+    grafana_dashboard: "true"
+  annotations:
+    description: "Grafana dashboard for Knowledge Graph API monitoring"
+data:
+  kg-api-dashboard.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "Knowledge Graph API - Performance Dashboard",
+        "tags": ["knowledge-graph", "api", "neuronews"],
+        "style": "dark",
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "API Requests per Second",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(kg_api_requests_total[5m])",
+                "legendFormat": "{{method}} {{endpoint}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Requests/sec"
+              }
+            ],
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "id": 2,
+            "title": "Response Time Percentiles",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.50, rate(kg_api_request_duration_seconds_bucket[5m]))",
+                "legendFormat": "50th percentile"
+              },
+              {
+                "expr": "histogram_quantile(0.95, rate(kg_api_request_duration_seconds_bucket[5m]))",
+                "legendFormat": "95th percentile"
+              },
+              {
+                "expr": "histogram_quantile(0.99, rate(kg_api_request_duration_seconds_bucket[5m]))",
+                "legendFormat": "99th percentile"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Seconds"
+              }
+            ],
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 12,
+              "y": 0
+            }
+          },
+          {
+            "id": 3,
+            "title": "Cache Hit Rate",
+            "type": "singlestat",
+            "targets": [
+              {
+                "expr": "kg_api_cache_hit_rate",
+                "legendFormat": "Hit Rate"
+              }
+            ],
+            "valueName": "current",
+            "format": "percentunit",
+            "thresholds": "0.5,0.8",
+            "colorBackground": true,
+            "gridPos": {
+              "h": 4,
+              "w": 6,
+              "x": 0,
+              "y": 8
+            }
+          },
+          {
+            "id": 4,
+            "title": "Error Rate",
+            "type": "singlestat",
+            "targets": [
+              {
+                "expr": "rate(kg_api_requests_total{status=~\"5..\"}[5m]) / rate(kg_api_requests_total[5m])",
+                "legendFormat": "Error Rate"
+              }
+            ],
+            "valueName": "current",
+            "format": "percentunit",
+            "thresholds": "0.01,0.05",
+            "colorBackground": true,
+            "gridPos": {
+              "h": 4,
+              "w": 6,
+              "x": 6,
+              "y": 8
+            }
+          },
+          {
+            "id": 5,
+            "title": "Active Connections",
+            "type": "singlestat",
+            "targets": [
+              {
+                "expr": "kg_api_active_connections",
+                "legendFormat": "Connections"
+              }
+            ],
+            "valueName": "current",
+            "format": "short",
+            "gridPos": {
+              "h": 4,
+              "w": 6,
+              "x": 12,
+              "y": 8
+            }
+          },
+          {
+            "id": 6,
+            "title": "Pod Count",
+            "type": "singlestat",
+            "targets": [
+              {
+                "expr": "kube_deployment_status_replicas_available{deployment=\"knowledge-graph-api\"}",
+                "legendFormat": "Available Pods"
+              }
+            ],
+            "valueName": "current",
+            "format": "short",
+            "gridPos": {
+              "h": 4,
+              "w": 6,
+              "x": 18,
+              "y": 8
+            }
+          }
+        ],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "refresh": "30s"
+      }
+    }
