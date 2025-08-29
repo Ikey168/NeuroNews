@@ -7,6 +7,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.routes import event_routes, graph_routes, news_routes, veracity_routes, knowledge_graph_routes
 
+# Try to import error handlers (Issue #428)
+try:
+    from src.api.error_handlers import configure_error_handlers
+    ERROR_HANDLERS_AVAILABLE = True
+except ImportError:
+    ERROR_HANDLERS_AVAILABLE = False
+
 # Try to import enhanced knowledge graph routes (Issue #37)
 try:
     from src.api.routes import enhanced_kg_routes
@@ -127,6 +134,10 @@ app = FastAPI(
     ),
     version="0.1.0",
 )
+
+# Configure global error handlers (Issue #428)
+if ERROR_HANDLERS_AVAILABLE:
+    configure_error_handlers(app)
 
 # Add WAF security middleware first for maximum protection (Issue #65)
 if WAF_SECURITY_AVAILABLE:
