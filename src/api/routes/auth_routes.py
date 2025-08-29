@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, EmailStr
 
 from src.api.auth.jwt_auth import auth_handler, require_auth
-from src.database.snowflake_connector import SnowflakeAnalyticsConnector
+from src.database.snowflake_analytics_connector import SnowflakeAnalyticsConnector
 
 
 # Request/Response Models

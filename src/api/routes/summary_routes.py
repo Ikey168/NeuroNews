@@ -30,10 +30,8 @@ from src.nlp.ai_summarizer import (
     SummarizationModel,
     SummaryLength,
 )
-from src.nlp.summary_database import (
-    SummaryDatabase,
-    get_redshift_connection_params,
-)
+from src.nlp.summary_database import SummaryDatabase
+from src.utils.database_utils import get_redshift_connection_params
 
 logger = logging.getLogger(__name__)
 

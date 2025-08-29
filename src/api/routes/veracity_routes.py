@@ -12,7 +12,9 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from src.database.snowflake_connector import SnowflakeAnalyticsConnector as SnowflakeConnection
+from src.database.snowflake_analytics_connector import (
+    SnowflakeAnalyticsConnector as SnowflakeConnection,
+)
 from src.nlp.fake_news_detector import FakeNewsConfig, FakeNewsDetector
 
 # Configure logging
@@ -92,7 +94,7 @@ def get_snowflake_connection():
 def store_veracity_result(
     article_id: str,
     result: Dict[str, Any],
-    redshift_conn: Optional[RedshiftConnection] = None,
+    redshift_conn: Optional[SnowflakeConnection] = None,
 ) -> bool:
     """
     Store veracity analysis result in Redshift.

@@ -13,7 +13,8 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from src.nlp.article_embedder import ArticleEmbedder, get_redshift_connection_params
+from src.utils.database_utils import get_redshift_connection_params
+from src.nlp.article_embedder import ArticleEmbedder
 from src.nlp.event_clusterer import EventClusterer
 
 # Configure logging
