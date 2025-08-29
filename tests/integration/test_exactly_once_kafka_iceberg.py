@@ -28,11 +28,19 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 import pytest
-from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, count, sum as spark_sum
+
+# Try to import pyspark, skip tests if not available
+try:
+    from pyspark.sql import SparkSession
+    from pyspark.sql.functions import col, count, sum as spark_sum
+    PYSPARK_AVAILABLE = True
+except ImportError:
+    PYSPARK_AVAILABLE = False
+
 from kafka import KafkaProducer, KafkaConsumer
 from kafka.admin import KafkaAdminClient, NewTopic
 
+@pytest.mark.skipif(not PYSPARK_AVAILABLE, reason="pyspark not available")
 class TestExactlyOnceKafkaIceberg:
     """Test exactly-once delivery guarantees for Kafka → Iceberg pipeline."""
     

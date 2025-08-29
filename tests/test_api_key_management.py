@@ -341,7 +341,7 @@ class TestAPIKeyManager:
 
     @pytest.mark.asyncio
     async def test_get_user_api_keys(self, mock_manager):
-        """Test retrieving user's API keys."""'
+        """Test retrieving user's API keys."""
         manager, mock_store = mock_manager
 
         # Mock API keys
@@ -491,8 +491,7 @@ def run_api_key_tests():
         return False
 
     # Test APIKey data structure
-    print(""
-2. Testing APIKey Data Structure...")"
+    print("2. Testing APIKey Data Structure...")
     test_key = TestAPIKey()
     try:
         test_key.test_api_key_creation()
@@ -503,8 +502,7 @@ def run_api_key_tests():
         return False
 
     # Test async functions
-    print(""
-3. Testing Async API Key Operations...")"
+    print("3. Testing Async API Key Operations...")
     try:
         loop = asyncio.get_event_loop()
     except RuntimeError:
@@ -552,8 +550,7 @@ def run_api_key_tests():
         return False
 
     # Test system completeness
-    print(""
-4. Testing System Completeness...")"
+    print("4. Testing System Completeness...")
     try:
         # Test that all required components exist
         assert hasattr(api_key_manager, "generate_api_key")
@@ -571,12 +568,11 @@ def run_api_key_tests():
         print("❌ API Key System completeness test failed: {0}".format(e))
         return False
 
-    print(""
- All API Key Management tests passed!")"
+    print("All API Key Management tests passed!")
     print()
 
     # Print requirements status
-    print(" Issue #61 Requirements Status:")
+    print("Issue #61 Requirements Status:")
     print(" 1. Allow users to generate & revoke API keys")
     print(" 2. Store API keys securely in DynamoDB")
     print(" 3. Implement API key expiration & renewal policies")

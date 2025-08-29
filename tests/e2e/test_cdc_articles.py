@@ -6,16 +6,23 @@ import pytest
 import psycopg2
 import time
 from datetime import datetime, timezone
-from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, max as spark_max
 import os
 import logging
+
+# Try to import pyspark, skip tests if not available
+try:
+    from pyspark.sql import SparkSession
+    from pyspark.sql.functions import col, max as spark_max
+    PYSPARK_AVAILABLE = True
+except ImportError:
+    PYSPARK_AVAILABLE = False
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.skipif(not PYSPARK_AVAILABLE, reason="pyspark not available")
 class TestCDCArticles:
     """Test CDC operations on articles table with Iceberg validation."""
     

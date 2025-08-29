@@ -173,7 +173,7 @@ class TestEnhancedEntityExtractor:
         Apple Inc. is a major technology company. Apple, founded by Steve Jobs,
         continues to innovate. The company Apple has partnerships with Google.
         Google LLC, also known as Alphabet's Google, works with various companies.
-        """'
+        """
 
         entities = await extractor.extract_entities_from_article(
             article_id="test_003", title="Entity Normalization Test", content=content
