@@ -1,0 +1,129 @@
+---
+# Pod Disruption Budget for critical ingestion components
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: neuronews-ingestion-pdb
+  namespace: data-pipeline
+  labels:
+    component: autoscaling
+    purpose: bin-packing
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      pipeline: ingest
+      tier: critical
+
+---
+# Pod Disruption Budget for DBT pipeline
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: neuronews-dbt-pdb
+  namespace: data-pipeline
+  labels:
+    component: autoscaling
+    purpose: bin-packing
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      pipeline: dbt
+      tier: standard
+
+---
+# Pod Disruption Budget for batch workloads (can be more aggressive)
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: neuronews-batch-pdb
+  namespace: data-pipeline
+  labels:
+    component: autoscaling
+    purpose: bin-packing
+spec:
+  maxUnavailable: 50%
+  selector:
+    matchLabels:
+      tier: batch
+
+---
+# Template for topology spread constraints
+# This should be added to all deployment specs
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: topology-spread-constraints
+  namespace: data-pipeline
+  labels:
+    component: autoscaling
+    purpose: bin-packing
+data:
+  constraints.yaml: |
+    # Spread pods across availability zones for resilience
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          pipeline: "{{ .Values.pipeline }}"
+    
+    # Spread pods across nodes for better bin-packing
+    - maxSkew: 2
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          app: "{{ .Values.app }}"
+    
+    # Spread pods by node instance type for cost optimization
+    - maxSkew: 3
+      topologyKey: node.kubernetes.io/instance-type
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          pipeline: "{{ .Values.pipeline }}"
+
+  node-affinity.yaml: |
+    # Prefer cost-optimized instances for batch workloads
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      preference:
+        matchExpressions:
+        - key: node.kubernetes.io/instance-type
+          operator: In
+          values:
+          - "m5.large"
+          - "m5.xlarge"
+          - "c5.large"
+          - "c5.xlarge"
+    - weight: 80
+      preference:
+        matchExpressions:
+        - key: kubernetes.io/arch
+          operator: In
+          values:
+          - "amd64"
+    - weight: 60
+      preference:
+        matchExpressions:
+        - key: node-lifecycle
+          operator: In
+          values:
+          - "spot"
+
+  spot-tolerations.yaml: |
+    # Tolerations for spot instances
+    - key: "node-lifecycle"
+      operator: "Equal"
+      value: "spot"
+      effect: "NoSchedule"
+    - key: "node.kubernetes.io/not-ready"
+      operator: "Exists"
+      effect: "NoExecute"
+      tolerationSeconds: 300
+    - key: "node.kubernetes.io/unreachable"
+      operator: "Exists"
+      effect: "NoExecute"
+      tolerationSeconds: 300
