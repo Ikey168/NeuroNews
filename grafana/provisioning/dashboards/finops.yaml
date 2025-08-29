@@ -20,3 +20,13 @@ providers:
     allowUiUpdates: true
     options:
       path: /var/lib/grafana/dashboards/opencost
+
+  - name: "Unit Economics Dashboards"
+    orgId: 1
+    folder: "Unit Economics"
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards/unit-economics
