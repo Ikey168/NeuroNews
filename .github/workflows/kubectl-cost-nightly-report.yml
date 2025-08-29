@@ -1,0 +1,378 @@
+name: Nightly kubectl-cost Report
+
+on:
+  schedule:
+    # Run every night at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+env:
+  KUBECONFIG_FILE: '${{ secrets.KUBECONFIG_CONTENT }}'
+  SLACK_WEBHOOK_URL: '${{ secrets.SLACK_WEBHOOK_URL_FINOPS }}'
+
+jobs:
+  kubectl-cost-report:
+    runs-on: ubuntu-latest
+    name: Generate kubectl-cost nightly report
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Configure kubectl with kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "$KUBECONFIG_FILE" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+          
+          # Test kubectl connectivity
+          echo "Testing kubectl connectivity..."
+          kubectl cluster-info
+          kubectl get nodes
+
+      - name: Install kubectl-cost plugin via krew
+        run: |
+          set -x
+          
+          # Install krew plugin manager
+          (
+            set -x; cd "$(mktemp -d)" &&
+            OS="$(uname | tr '[:upper:]' '[:lower:]')" &&
+            ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" &&
+            KREW="krew-${OS}_${ARCH}" &&
+            curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" &&
+            tar zxvf "${KREW}.tar.gz" &&
+            ./"${KREW}" install krew
+          )
+          
+          # Add krew to PATH
+          export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
+          echo "${KREW_ROOT:-$HOME/.krew}/bin" >> $GITHUB_PATH
+          
+          # Install kubectl-cost plugin
+          kubectl krew update
+          kubectl krew install cost
+          
+          # Verify installation
+          kubectl cost --help
+
+      - name: Wait for OpenCost to be ready
+        run: |
+          echo "Waiting for OpenCost to be available..."
+          timeout 300s bash -c 'until kubectl get pods -n opencost | grep opencost | grep Running; do sleep 10; done' || {
+            echo "OpenCost not found in opencost namespace, checking other namespaces..."
+            kubectl get pods --all-namespaces | grep -i cost || true
+            echo "Continuing with available cost data..."
+          }
+
+      - name: Generate cost report by pipeline
+        run: |
+          set -e
+          
+          echo "# 🏷️ NeuroNews Nightly Cost Report - $(date +%Y-%m-%d)" > cost-report.md
+          echo "" >> cost-report.md
+          echo "Generated at: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> cost-report.md
+          echo "" >> cost-report.md
+          
+          # Get overall cluster cost
+          echo "## 💰 Overall Cluster Cost" >> cost-report.md
+          echo "" >> cost-report.md
+          echo "\`\`\`" >> cost-report.md
+          kubectl cost --show-cpu --show-memory --show-pv --show-efficiency || {
+            echo "Note: Overall cost data not available - OpenCost may still be initializing"
+          } >> cost-report.md
+          echo "\`\`\`" >> cost-report.md
+          echo "" >> cost-report.md
+          
+          # Cost by namespace (proxy for pipeline grouping)
+          echo "## 📊 Top 10 Costly Workloads by Namespace" >> cost-report.md
+          echo "" >> cost-report.md
+          echo "| Namespace | CPU Cost | Memory Cost | PV Cost | Total Cost | Efficiency |" >> cost-report.md
+          echo "|-----------|----------|-------------|---------|------------|------------|" >> cost-report.md
+          
+          # Get cost by namespace and format as table
+          kubectl cost --show-cpu --show-memory --show-pv --show-efficiency --output json 2>/dev/null | \
+          jq -r '.[] | "\(.namespace)|\(.cpuCost // "N/A")|\(.memoryCost // "N/A")|\(.pvCost // "N/A")|\(.totalCost // "N/A")|\(.efficiency // "N/A")"' | \
+          head -10 | \
+          while IFS='|' read -r namespace cpu_cost memory_cost pv_cost total_cost efficiency; do
+            echo "| $namespace | $cpu_cost | $memory_cost | $pv_cost | $total_cost | $efficiency |" >> cost-report.md
+          done || {
+            echo "| default | N/A | N/A | N/A | N/A | N/A |" >> cost-report.md
+            echo "" >> cost-report.md
+            echo "*Note: Detailed cost breakdown not available. OpenCost may still be collecting data.*" >> cost-report.md
+          }
+          
+          echo "" >> cost-report.md
+          
+          # Cost by workload type
+          echo "## 🔧 Cost by Workload Type" >> cost-report.md
+          echo "" >> cost-report.md
+          echo "\`\`\`" >> cost-report.md
+          kubectl cost --show-controller || {
+            echo "Note: Controller cost data not available"
+          } >> cost-report.md
+          echo "\`\`\`" >> cost-report.md
+          echo "" >> cost-report.md
+          
+          # FinOps pipeline analysis (NeuroNews specific)
+          echo "## 🧠 NeuroNews Pipeline Cost Analysis" >> cost-report.md
+          echo "" >> cost-report.md
+          echo "### Data Pipeline Components" >> cost-report.md
+          echo "\`\`\`" >> cost-report.md
+          
+          # Check specific NeuroNews namespaces/services
+          for ns in data-pipeline ingestion api embedding vector-search monitoring; do
+            if kubectl get namespace $ns 2>/dev/null; then
+              echo "=== $ns namespace ===" >> cost-report.md
+              kubectl cost --namespace $ns --show-cpu --show-memory 2>/dev/null || {
+                echo "No cost data available for $ns"
+              } >> cost-report.md
+              echo "" >> cost-report.md
+            fi
+          done
+          
+          echo "\`\`\`" >> cost-report.md
+          echo "" >> cost-report.md
+          
+          # Resource utilization summary
+          echo "## 📈 Resource Utilization Summary" >> cost-report.md
+          echo "" >> cost-report.md
+          echo "\`\`\`" >> cost-report.md
+          echo "Node Resource Usage:" >> cost-report.md
+          kubectl top nodes 2>/dev/null || echo "Node metrics not available" >> cost-report.md
+          echo "" >> cost-report.md
+          echo "Top Resource Consuming Pods:" >> cost-report.md
+          kubectl top pods --all-namespaces --sort-by=memory | head -10 2>/dev/null || echo "Pod metrics not available" >> cost-report.md
+          echo "\`\`\`" >> cost-report.md
+          echo "" >> cost-report.md
+          
+          # Cost optimization recommendations
+          echo "## 💡 Cost Optimization Recommendations" >> cost-report.md
+          echo "" >> cost-report.md
+          echo "### Immediate Actions" >> cost-report.md
+          echo "- Review workloads with efficiency < 50%" >> cost-report.md
+          echo "- Consider scaling down development environments during off-hours" >> cost-report.md
+          echo "- Check for unused persistent volumes" >> cost-report.md
+          echo "" >> cost-report.md
+          echo "### Medium-term Optimizations" >> cost-report.md
+          echo "- Implement Horizontal Pod Autoscaling (HPA) for variable workloads" >> cost-report.md
+          echo "- Consider spot instances for batch processing workloads" >> cost-report.md
+          echo "- Review resource requests vs actual usage patterns" >> cost-report.md
+          echo "" >> cost-report.md
+          
+          # Footer with links
+          echo "---" >> cost-report.md
+          echo "" >> cost-report.md
+          echo "📊 **Dashboards**: [FinOps Dashboard](http://grafana:3000/d/neuronews-finops/) | [Unit Economics](http://grafana:3000/d/unit-economics-001/)" >> cost-report.md
+          echo "" >> cost-report.md
+          echo "🚨 **Alerts**: Check [Prometheus Alerts](http://prometheus:9090/alerts) for budget threshold breaches" >> cost-report.md
+          echo "" >> cost-report.md
+          echo "📚 **Runbook**: [FinOps Budget Alerts Runbook](https://github.com/Ikey168/NeuroNews/blob/main/docs/runbooks/finops-budget-alerts.md)" >> cost-report.md
+          
+          echo "Generated cost report:"
+          cat cost-report.md
+
+      - name: Post to GitHub Discussions
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const costReport = fs.readFileSync('cost-report.md', 'utf8');
+            
+            try {
+              // Get the discussions category ID for "Cost Reports" (or create if needed)
+              const query = `
+                query($owner: String!, $repo: String!) {
+                  repository(owner: $owner, name: $repo) {
+                    discussionCategories(first: 10) {
+                      nodes {
+                        id
+                        name
+                        slug
+                      }
+                    }
+                  }
+                }
+              `;
+              
+              const result = await github.graphql(query, {
+                owner: context.repo.owner,
+                repo: context.repo.repo
+              });
+              
+              let categoryId = null;
+              const categories = result.repository.discussionCategories.nodes;
+              const costCategory = categories.find(cat => 
+                cat.name.toLowerCase().includes('cost') || 
+                cat.slug.includes('cost') ||
+                cat.name.toLowerCase().includes('finops')
+              );
+              
+              if (costCategory) {
+                categoryId = costCategory.id;
+              } else {
+                // Use the first available category as fallback
+                categoryId = categories[0]?.id;
+              }
+              
+              if (categoryId) {
+                const mutation = `
+                  mutation($repositoryId: ID!, $categoryId: ID!, $title: String!, $body: String!) {
+                    createDiscussion(input: {
+                      repositoryId: $repositoryId,
+                      categoryId: $categoryId,
+                      title: $title,
+                      body: $body
+                    }) {
+                      discussion {
+                        url
+                      }
+                    }
+                  }
+                `;
+                
+                const repoQuery = `
+                  query($owner: String!, $repo: String!) {
+                    repository(owner: $owner, name: $repo) {
+                      id
+                    }
+                  }
+                `;
+                
+                const repoResult = await github.graphql(repoQuery, {
+                  owner: context.repo.owner,
+                  repo: context.repo.repo
+                });
+                
+                const discussion = await github.graphql(mutation, {
+                  repositoryId: repoResult.repository.id,
+                  categoryId: categoryId,
+                  title: `Nightly Cost Report - ${new Date().toISOString().split('T')[0]}`,
+                  body: costReport
+                });
+                
+                console.log(`✅ Posted cost report to GitHub Discussions: ${discussion.createDiscussion.discussion.url}`);
+                
+                // Set output for Slack notification
+                const discussionUrl = discussion.createDiscussion.discussion.url;
+                require('fs').writeFileSync('discussion-url.txt', discussionUrl);
+              } else {
+                console.log('⚠️ No suitable discussion category found. Skipping GitHub Discussions post.');
+                require('fs').writeFileSync('discussion-url.txt', 'N/A');
+              }
+            } catch (error) {
+              console.log(`⚠️ Failed to post to GitHub Discussions: ${error.message}`);
+              console.log('This may be because Discussions are not enabled for this repository.');
+              require('fs').writeFileSync('discussion-url.txt', 'N/A');
+            }
+
+      - name: Post summary to Slack
+        if: env.SLACK_WEBHOOK_URL != ''
+        run: |
+          DISCUSSION_URL=$(cat discussion-url.txt)
+          DATE=$(date +%Y-%m-%d)
+          
+          # Extract cost summary from report
+          TOTAL_COST=$(grep -A 5 "Overall Cluster Cost" cost-report.md | grep -o "\$[0-9]*\.[0-9]*" | head -1 || echo "N/A")
+          TOP_NAMESPACE=$(grep -A 15 "Top 10 Costly Workloads" cost-report.md | grep "|" | grep -v "Namespace" | grep -v "---" | head -1 | cut -d'|' -f2 | xargs || echo "N/A")
+          
+          # Create Slack payload
+          cat << EOF > slack-payload.json
+          {
+            "text": "🏷️ NeuroNews Nightly Cost Report - $DATE",
+            "blocks": [
+              {
+                "type": "header",
+                "text": {
+                  "type": "plain_text",
+                  "text": "🏷️ NeuroNews Nightly Cost Report"
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Date:*\n$DATE"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Total Cluster Cost:*\n${TOTAL_COST:-N/A}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Top Costly Namespace:*\n${TOP_NAMESPACE:-N/A}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Generated:*\n$(date -u '+%H:%M UTC')"
+                  }
+                ]
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "📊 View detailed cost breakdown and optimization recommendations"
+                }
+              },
+              {
+                "type": "actions",
+                "elements": [
+                  {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "📋 Full Report"
+                    },
+                    "url": "$DISCUSSION_URL",
+                    "style": "primary"
+                  },
+                  {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "📊 FinOps Dashboard"
+                    },
+                    "url": "http://grafana:3000/d/neuronews-finops/"
+                  },
+                  {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "🚨 Budget Alerts"
+                    },
+                    "url": "http://prometheus:9090/alerts"
+                  }
+                ]
+              }
+            ]
+          }
+          EOF
+          
+          # Post to Slack
+          curl -X POST -H 'Content-type: application/json' \
+            --data @slack-payload.json \
+            "$SLACK_WEBHOOK_URL" || {
+            echo "⚠️ Failed to post to Slack. Webhook URL may not be configured."
+          }
+          
+          echo "✅ Cost report generated and notifications sent!"
+
+      - name: Archive cost report
+        uses: actions/upload-artifact@v4
+        with:
+          name: kubectl-cost-report-${{ github.run_number }}
+          path: cost-report.md
+          retention-days: 30
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f cost-report.md slack-payload.json discussion-url.txt
+          rm -f $HOME/.kube/config
