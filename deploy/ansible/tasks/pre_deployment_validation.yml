@@ -1,0 +1,98 @@
+---
+# Pre-deployment validation tasks
+- name: "Check required tools are installed"
+  command: "{{ item }}"
+  register: tool_check
+  failed_when: tool_check.rc != 0
+  loop:
+    - "kubectl version --client"
+    - "docker version"
+    - "helm version"
+  tags: [tools]
+
+- name: "Verify Kubernetes cluster connectivity"
+  k8s_info:
+    api_version: v1
+    kind: Node
+  register: cluster_nodes
+  failed_when: cluster_nodes.resources | length == 0
+
+- name: "Display cluster information"
+  debug:
+    msg: |
+      Cluster Nodes: {{ cluster_nodes.resources | length }}
+      Available Nodes: {{ cluster_nodes.resources | selectattr('status.conditions', 'search', 'Ready.*True') | list | length }}
+
+- name: "Check namespace exists or create it"
+  k8s:
+    name: "{{ app.namespace }}"
+    api_version: v1
+    kind: Namespace
+    state: present
+    definition:
+      metadata:
+        labels:
+          name: "{{ app.namespace }}"
+          app: "{{ app.name }}"
+          managed-by: "ansible"
+
+- name: "Validate required secrets exist"
+  k8s_info:
+    api_version: v1
+    kind: Secret
+    name: "{{ item }}"
+    namespace: "{{ app.namespace }}"
+  register: secret_check
+  failed_when: secret_check.resources | length == 0
+  loop:
+    - "neuronews-secrets"
+    - "neuronews-db-credentials"
+  ignore_errors: yes
+
+- name: "Create missing secrets (if any)"
+  k8s:
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: "{{ item.name }}"
+        namespace: "{{ app.namespace }}"
+      type: Opaque
+      data: "{{ item.data }}"
+  loop:
+    - name: "neuronews-secrets"
+      data:
+        api_key: "{{ 'your-api-key-here' | b64encode }}"
+        jwt_secret: "{{ 'your-jwt-secret-here' | b64encode }}"
+    - name: "neuronews-db-credentials"
+      data:
+        username: "{{ database.user | b64encode }}"
+        password: "{{ 'your-db-password-here' | b64encode }}"
+  when: secret_check is failed
+
+- name: "Check available resources in cluster"
+  k8s_info:
+    api_version: v1
+    kind: Node
+  register: node_resources
+
+- name: "Validate sufficient resources"
+  assert:
+    that:
+      - node_resources.resources | length >= 1
+      - "cluster_nodes.resources | selectattr('status.conditions', 'search', 'Ready.*True') | list | length >= 1"
+    fail_msg: "Insufficient cluster resources for deployment"
+    success_msg: "Cluster resources validated successfully"
+
+- name: "Check Docker images are available"
+  docker_image_info:
+    name: "{{ fastapi.image }}:{{ fastapi.tag }}"
+  register: image_check
+  delegate_to: localhost
+
+- name: "Pull Docker image if not available locally"
+  docker_image:
+    name: "{{ fastapi.image }}:{{ fastapi.tag }}"
+    source: pull
+  when: image_check.images | length == 0
+  delegate_to: localhost

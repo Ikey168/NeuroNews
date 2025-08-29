@@ -1,0 +1,68 @@
+{
+  "multi_language": {
+    "target_language": "en",
+    "translation_enabled": true,
+    "quality_threshold": 0.7,
+    "min_content_length": 100,
+    "detection_confidence_threshold": 0.5,
+    "supported_languages": ["en", "es", "fr", "de", "zh", "ja", "ru", "ar", "pt", "it"],
+    "aws_translate": {
+      "region": "us-east-1",
+      "max_text_length": 5000,
+      "batch_size": 25
+    },
+    "language_filters": {
+      "allowed_languages": null,
+      "blocked_languages": [],
+      "require_translation": false
+    },
+    "quality_checks": {
+      "length_ratio_tolerances": {
+        "en_es": [0.8, 1.3],
+        "en_fr": [0.9, 1.4],
+        "en_de": [0.7, 1.2],
+        "en_zh": [0.3, 0.7],
+        "zh_en": [1.4, 3.0],
+        "ja_en": [1.2, 2.5]
+      },
+      "common_issues": [
+        "encoding_problems",
+        "untranslated_text",
+        "truncated_content",
+        "repeated_content"
+      ]
+    }
+  },
+  "database": {
+    "tables": {
+      "article_translations": {
+        "indexes": [
+          "article_id",
+          "original_language",
+          "target_language",
+          "translation_quality_score"
+        ]
+      },
+      "language_detections": {
+        "indexes": [
+          "article_id",
+          "detected_language",
+          "detection_confidence"
+        ]
+      }
+    }
+  },
+  "monitoring": {
+    "metrics": [
+      "translation_success_rate",
+      "average_quality_score",
+      "language_distribution",
+      "processing_time"
+    ],
+    "alerts": {
+      "low_quality_threshold": 0.5,
+      "high_error_rate_threshold": 0.1,
+      "processing_delay_threshold": 300
+    }
+  }
+}

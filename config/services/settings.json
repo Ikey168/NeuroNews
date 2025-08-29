@@ -1,0 +1,38 @@
+{
+  "app_name": "NeuroNews",
+  "version": "0.1.0",
+  "debug": true,
+  "api": {
+    "host": "localhost",
+    "port": 8000
+  },
+  "aws": {
+    "region": "us-east-1",
+    "s3": {
+      "bucket": "neuronews-raw-articles-${environment}",
+      "prefix": "news_articles"
+    },
+    "cloudwatch": {
+      "log_group": "NeuroNews-Scraper",
+      "log_stream_prefix": "scraper",
+      "log_level": "INFO"
+    }
+  },
+  "scraping": {
+    "interval_minutes": 60,
+    "sources": [
+      "https://www.cnn.com",
+      "https://www.bbc.com/news",
+      "https://techcrunch.com",
+      "https://arstechnica.com",
+      "https://www.reuters.com",
+      "https://www.theguardian.com",
+      "https://www.npr.org",
+      "https://www.wired.com",
+      "https://www.theverge.com",
+      "https://www.engadget.com",
+      "https://www.polygon.com",
+      "https://www.politico.com"
+    ]
+  }
+}

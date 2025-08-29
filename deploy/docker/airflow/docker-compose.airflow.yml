@@ -1,0 +1,161 @@
+version: '3.8'
+
+x-airflow-common:
+  &airflow-common
+  # Use custom NeuroNews Airflow image with OpenLineage provider (Issue #187)
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: neuronews/airflow:2.8.1-openlineage
+  environment:
+    &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
+    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
+    # Timezone configuration (Issue #190)
+    AIRFLOW__CORE__DEFAULT_TIMEZONE: Europe/Berlin
+    # SLA configuration (Issue #190)
+    AIRFLOW__CORE__CHECK_SLAS: 'true'
+    AIRFLOW__EMAIL__EMAIL_BACKEND: airflow.providers.sendgrid.utils.emailer.send_email
+    # OpenLineage configuration for automatic lineage tracking (Issue #188)
+    OPENLINEAGE_URL: ${OPENLINEAGE_URL:-http://marquez:5000}
+    OPENLINEAGE_NAMESPACE: ${OPENLINEAGE_NAMESPACE:-neuro_news_dev}
+    OPENLINEAGE_DISABLED: ${OPENLINEAGE_DISABLED:-false}
+    # Airflow OpenLineage provider configuration
+    AIRFLOW__OPENLINEAGE__TRANSPORT: '{"type": "http", "url": "${OPENLINEAGE_URL:-http://marquez:5000}", "endpoint": "/api/v1/lineage"}'
+    AIRFLOW__OPENLINEAGE__NAMESPACE: ${OPENLINEAGE_NAMESPACE:-neuro_news_dev}
+    AIRFLOW__OPENLINEAGE__DISABLED: ${OPENLINEAGE_DISABLED:-false}
+    AIRFLOW__OPENLINEAGE__DEBUG: 'true'
+    # Remove pip additional requirements since we use custom image
+    # _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
+  volumes:
+    - ${AIRFLOW_PROJ_DIR:-.}/../../airflow/dags:/opt/airflow/dags
+    - ${AIRFLOW_PROJ_DIR:-.}/../../airflow/logs:/opt/airflow/logs
+    - ${AIRFLOW_PROJ_DIR:-.}/../../airflow/plugins:/opt/airflow/plugins
+    - /var/run/docker.sock:/var/run/docker.sock
+  user: "${AIRFLOW_UID:-50000}:0"
+  depends_on:
+    &airflow-common-depends-on
+    postgres:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres_db_volume:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    restart: always
+
+  marquez-db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: marquez
+      POSTGRES_PASSWORD: marquez
+      POSTGRES_DB: marquez
+    volumes:
+      - marquez_db_volume:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "marquez"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    restart: always
+
+  marquez:
+    image: marquezproject/marquez:0.46.0
+    environment:
+      MARQUEZ_CONFIG: /usr/src/app/marquez.yml
+    volumes:
+      - ./marquez.yml:/usr/src/app/marquez.yml:ro
+    ports:
+      - "5000:5000"
+    depends_on:
+      marquez-db:
+        condition: service_healthy
+    restart: always
+
+  marquez-web:
+    image: marquezproject/marquez-web:0.46.0
+    environment:
+      MARQUEZ_HOST: marquez
+      MARQUEZ_PORT: 5000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - marquez
+    restart: always
+
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8974/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-init:
+    <<: *airflow-common
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        mkdir -p /sources/logs /sources/dags /sources/plugins
+        chown -R "${AIRFLOW_UID:-50000}:0" /sources/{logs,dags,plugins}
+        exec /entrypoint airflow version
+    environment:
+      <<: *airflow-common-env
+      _AIRFLOW_DB_UPGRADE: 'true'
+      _AIRFLOW_WWW_USER_CREATE: 'true'
+      _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-airflow}
+      _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-airflow}
+    user: "0:0"
+    volumes:
+      - ${AIRFLOW_PROJ_DIR:-.}/../../airflow:/sources
+
+volumes:
+  postgres_db_volume:
+  marquez_db_volume:
+
+networks:
+  default:
+    name: neuronews-airflow

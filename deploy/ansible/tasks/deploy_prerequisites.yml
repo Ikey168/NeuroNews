@@ -1,0 +1,173 @@
+---
+# Deploy Kubernetes prerequisites tasks
+- name: "Apply namespace and RBAC configuration"
+  k8s:
+    state: present
+    definition: "{{ item }}"
+  loop:
+    - apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ app.namespace }}"
+        labels:
+          name: "{{ app.namespace }}"
+          app: "{{ app.name }}"
+          managed-by: "ansible"
+    
+    - apiVersion: v1
+      kind: ServiceAccount
+      metadata:
+        name: "{{ fastapi.name }}-sa"
+        namespace: "{{ app.namespace }}"
+      
+    - apiVersion: rbac.authorization.k8s.io/v1
+      kind: Role
+      metadata:
+        name: "{{ fastapi.name }}-role"
+        namespace: "{{ app.namespace }}"
+      rules:
+      - apiGroups: [""]
+        resources: ["pods", "services", "configmaps", "secrets"]
+        verbs: ["get", "list", "watch"]
+      - apiGroups: ["apps"]
+        resources: ["deployments"]
+        verbs: ["get", "list", "watch"]
+    
+    - apiVersion: rbac.authorization.k8s.io/v1
+      kind: RoleBinding
+      metadata:
+        name: "{{ fastapi.name }}-rolebinding"
+        namespace: "{{ app.namespace }}"
+      subjects:
+      - kind: ServiceAccount
+        name: "{{ fastapi.name }}-sa"
+        namespace: "{{ app.namespace }}"
+      roleRef:
+        kind: Role
+        name: "{{ fastapi.name }}-role"
+        apiGroup: rbac.authorization.k8s.io
+
+- name: "Create application ConfigMap"
+  k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: "{{ fastapi.name }}-config"
+        namespace: "{{ app.namespace }}"
+        labels:
+          app: "{{ app.name }}"
+          component: "fastapi"
+      data:
+        ENVIRONMENT: "{{ app.environment }}"
+        HOST: "0.0.0.0"
+        PORT: "{{ fastapi.port }}"
+        WORKERS: "4"
+        DB_HOST: "{{ database.host }}"
+        DB_PORT: "{{ database.port }}"
+        DB_NAME: "{{ database.name }}"
+        REDIS_HOST: "{{ redis.host }}"
+        REDIS_PORT: "{{ redis.port }}"
+        REDIS_DB: "{{ redis.db }}"
+        AWS_REGION: "{{ aws.region }}"
+        S3_BUCKET: "{{ aws.s3_bucket }}"
+        NEPTUNE_ENDPOINT: "{{ aws.neptune_endpoint }}"
+        NEPTUNE_PORT: "{{ aws.neptune_port }}"
+        LOG_LEVEL: "{{ logging.level }}"
+        LOG_FORMAT: "{{ logging.format }}"
+        PROMETHEUS_ENABLED: "{{ monitoring.prometheus.enabled | string }}"
+
+- name: "Create network policies (if enabled)"
+  k8s:
+    state: present
+    definition:
+      apiVersion: networking.k8s.io/v1
+      kind: NetworkPolicy
+      metadata:
+        name: "{{ fastapi.name }}-netpol"
+        namespace: "{{ app.namespace }}"
+      spec:
+        podSelector:
+          matchLabels:
+            app: "{{ fastapi.name }}"
+        policyTypes:
+        - Ingress
+        - Egress
+        ingress:
+        - from:
+          - namespaceSelector:
+              matchLabels:
+                name: "{{ app.namespace }}"
+          - podSelector:
+              matchLabels:
+                app: "nginx-ingress"
+          ports:
+          - protocol: TCP
+            port: {{ fastapi.port }}
+        egress:
+        - to:
+          - namespaceSelector:
+              matchLabels:
+                name: "kube-system"
+        - to: []
+          ports:
+          - protocol: TCP
+            port: {{ database.port }}
+          - protocol: TCP
+            port: {{ redis.port }}
+          - protocol: TCP
+            port: 443  # HTTPS
+          - protocol: TCP
+            port: 80   # HTTP
+  when: security.network_policies.enabled | bool
+
+- name: "Create resource quotas"
+  k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: ResourceQuota
+      metadata:
+        name: "{{ fastapi.name }}-quota"
+        namespace: "{{ app.namespace }}"
+      spec:
+        hard:
+          requests.cpu: "2"
+          requests.memory: "4Gi"
+          limits.cpu: "4"
+          limits.memory: "8Gi"
+          persistentvolumeclaims: "2"
+          pods: "10"
+          services: "5"
+
+- name: "Create pod disruption budget"
+  k8s:
+    state: present
+    definition:
+      apiVersion: policy/v1
+      kind: PodDisruptionBudget
+      metadata:
+        name: "{{ fastapi.name }}-pdb"
+        namespace: "{{ app.namespace }}"
+      spec:
+        minAvailable: 1
+        selector:
+          matchLabels:
+            app: "{{ fastapi.name }}"
+
+- name: "Verify prerequisites are ready"
+  k8s_info:
+    api_version: v1
+    kind: "{{ item.kind }}"
+    name: "{{ item.name }}"
+    namespace: "{{ app.namespace }}"
+  register: prereq_check
+  failed_when: prereq_check.resources | length == 0
+  loop:
+    - kind: ServiceAccount
+      name: "{{ fastapi.name }}-sa"
+    - kind: ConfigMap
+      name: "{{ fastapi.name }}-config"
+    - kind: ResourceQuota
+      name: "{{ fastapi.name }}-quota"

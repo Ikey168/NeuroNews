@@ -1,0 +1,391 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: neuronews-news-scraper
+  namespace: neuronews
+  labels:
+    app: neuronews-scrapers
+    component: news-scraper
+    scraper-type: news
+    tier: backend
+  annotations:
+    description: "Main news scraper for tech and AI articles"
+    contact: "team@neuronews.io"
+    last-updated: "2025-08-18"
+spec:
+  schedule: "0 */4 * * *"  # Every 4 hours
+  timeZone: "UTC"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 600  # 10 minutes
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  suspend: false
+  jobTemplate:
+    metadata:
+      labels:
+        app: neuronews-scrapers
+        component: news-scraper
+        scraper-type: news
+    spec:
+      parallelism: 1
+      completions: 1
+      backoffLimit: 3
+      activeDeadlineSeconds: 3600  # 1 hour timeout
+      ttlSecondsAfterFinished: 86400  # Clean up after 24 hours
+      template:
+        metadata:
+          labels:
+            app: neuronews-scrapers
+            component: news-scraper
+            scraper-type: news
+          annotations:
+            prometheus.io/scrape: "true"
+            prometheus.io/port: "8080"
+            prometheus.io/path: "/metrics"
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: neuronews-scrapers
+          
+          # Security Context
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            runAsNonRoot: true
+          
+          containers:
+          - name: news-scraper
+            image: neuronews/scraper:latest
+            imagePullPolicy: Always
+            
+            command: ["python"]
+            args: ["-m", "scraper.async_scraper_runner", "--source", "all", "--mode", "production"]
+            
+            # Environment Variables
+            env:
+            - name: SCRAPER_TYPE
+              value: "news"
+            - name: ENVIRONMENT
+              value: "production"
+            - name: LOG_LEVEL
+              value: "INFO"
+            - name: OUTPUT_FORMAT
+              value: "json"
+            - name: USE_PLAYWRIGHT
+              value: "true"
+            - name: MAX_PAGES
+              value: "100"
+            - name: CONCURRENT_REQUESTS
+              value: "10"
+            - name: DELAY_BETWEEN_REQUESTS
+              value: "2"
+            - name: USER_AGENT_ROTATION
+              value: "true"
+            - name: PROXY_ENABLED
+              value: "false"
+            - name: CAPTCHA_SOLVING
+              value: "true"
+            - name: DATA_VALIDATION
+              value: "true"
+            - name: DUPLICATE_FILTERING
+              value: "true"
+            
+            # Database Configuration
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: neuronews-postgres-secret
+                  key: host
+            - name: DB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: neuronews-postgres-secret
+                  key: port
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: neuronews-postgres-secret
+                  key: database
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: neuronews-postgres-secret
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: neuronews-postgres-secret
+                  key: password
+            
+            # Redis Configuration
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: neuronews-config
+                  key: redis.host
+            - name: REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: neuronews-config
+                  key: redis.port
+            
+            # AWS Configuration
+            - name: AWS_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: neuronews-config
+                  key: aws.region
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: neuronews-aws-secret
+                  key: access-key-id
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: neuronews-aws-secret
+                  key: secret-access-key
+            - name: S3_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: neuronews-config
+                  key: aws.s3.bucket
+            - name: S3_PREFIX
+              value: "scraped-news"
+            
+            # CloudWatch Logging
+            - name: CLOUDWATCH_ENABLED
+              value: "true"
+            - name: CLOUDWATCH_LOG_GROUP
+              value: "/kubernetes/neuronews/scrapers/news"
+            - name: CLOUDWATCH_LOG_STREAM
+              value: "news-scraper"
+            
+            # Monitoring
+            - name: METRICS_ENABLED
+              value: "true"
+            - name: METRICS_PORT
+              value: "8080"
+            - name: PROMETHEUS_PUSHGATEWAY
+              value: "prometheus-pushgateway.monitoring.svc.cluster.local:9091"
+            
+            # Resource Limits
+            resources:
+              requests:
+                cpu: 500m
+                memory: 1Gi
+                ephemeral-storage: 2Gi
+              limits:
+                cpu: 2000m
+                memory: 4Gi
+                ephemeral-storage: 5Gi
+            
+            # Volume Mounts
+            volumeMounts:
+            - name: scraper-config
+              mountPath: /app/config
+              readOnly: true
+            - name: scraper-logs
+              mountPath: /app/logs
+            - name: temp-data
+              mountPath: /tmp
+            - name: browser-cache
+              mountPath: /app/.cache
+            
+            # Health Checks (for long-running tasks)
+            livenessProbe:
+              exec:
+                command:
+                - /bin/sh
+                - -c
+                - "ps aux | grep -v grep | grep python > /dev/null"
+              initialDelaySeconds: 60
+              periodSeconds: 300
+              timeoutSeconds: 10
+              failureThreshold: 2
+            
+          # Volumes
+          volumes:
+          - name: scraper-config
+            configMap:
+              name: neuronews-scraper-config
+          - name: scraper-logs
+            emptyDir: {}
+          - name: temp-data
+            emptyDir:
+              sizeLimit: 2Gi
+          - name: browser-cache
+            emptyDir:
+              sizeLimit: 1Gi
+          
+          # Node Selection
+          nodeSelector:
+            kubernetes.io/arch: amd64
+          
+          # Tolerations for dedicated nodes
+          tolerations:
+          - key: "scraper-workload"
+            operator: "Equal"
+            value: "true"
+            effect: "NoSchedule"
+          
+          # Pod Anti-affinity (avoid running on same node)
+          affinity:
+            podAntiAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+              - weight: 100
+                podAffinityTerm:
+                  labelSelector:
+                    matchExpressions:
+                    - key: component
+                      operator: In
+                      values:
+                      - news-scraper
+                  topologyKey: kubernetes.io/hostname
+          
+          # Graceful Shutdown
+          terminationGracePeriodSeconds: 300
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: neuronews-tech-scraper
+  namespace: neuronews
+  labels:
+    app: neuronews-scrapers
+    component: tech-scraper
+    scraper-type: technology
+    tier: backend
+spec:
+  schedule: "30 */6 * * *"  # Every 6 hours, offset by 30 minutes
+  timeZone: "UTC"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      activeDeadlineSeconds: 2400  # 40 minutes
+      ttlSecondsAfterFinished: 86400
+      template:
+        metadata:
+          labels:
+            app: neuronews-scrapers
+            component: tech-scraper
+            scraper-type: technology
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: neuronews-scrapers
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            runAsNonRoot: true
+          containers:
+          - name: tech-scraper
+            image: neuronews/scraper:latest
+            imagePullPolicy: Always
+            command: ["python"]
+            args: ["-m", "scraper.async_scraper_runner", "--source", "tech", "--mode", "production"]
+            env:
+            - name: SCRAPER_TYPE
+              value: "technology"
+            - name: ENVIRONMENT
+              value: "production"
+            - name: MAX_PAGES
+              value: "50"
+            - name: CLOUDWATCH_LOG_STREAM
+              value: "tech-scraper"
+            resources:
+              requests:
+                cpu: 300m
+                memory: 768Mi
+              limits:
+                cpu: 1500m
+                memory: 3Gi
+            volumeMounts:
+            - name: scraper-config
+              mountPath: /app/config
+              readOnly: true
+            - name: scraper-logs
+              mountPath: /app/logs
+          volumes:
+          - name: scraper-config
+            configMap:
+              name: neuronews-scraper-config
+          - name: scraper-logs
+            emptyDir: {}
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: neuronews-ai-scraper
+  namespace: neuronews
+  labels:
+    app: neuronews-scrapers
+    component: ai-scraper
+    scraper-type: artificial-intelligence
+    tier: backend
+spec:
+  schedule: "0 */8 * * *"  # Every 8 hours
+  timeZone: "UTC"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      activeDeadlineSeconds: 2400  # 40 minutes
+      ttlSecondsAfterFinished: 86400
+      template:
+        metadata:
+          labels:
+            app: neuronews-scrapers
+            component: ai-scraper
+            scraper-type: artificial-intelligence
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: neuronews-scrapers
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            runAsNonRoot: true
+          containers:
+          - name: ai-scraper
+            image: neuronews/scraper:latest
+            imagePullPolicy: Always
+            command: ["python"]
+            args: ["-m", "scraper.async_scraper_runner", "--source", "ai", "--mode", "production"]
+            env:
+            - name: SCRAPER_TYPE
+              value: "artificial-intelligence"
+            - name: ENVIRONMENT
+              value: "production"
+            - name: MAX_PAGES
+              value: "75"
+            - name: CLOUDWATCH_LOG_STREAM
+              value: "ai-scraper"
+            resources:
+              requests:
+                cpu: 400m
+                memory: 1Gi
+              limits:
+                cpu: 1800m
+                memory: 3.5Gi
+            volumeMounts:
+            - name: scraper-config
+              mountPath: /app/config
+              readOnly: true
+            - name: scraper-logs
+              mountPath: /app/logs
+          volumes:
+          - name: scraper-config
+            configMap:
+              name: neuronews-scraper-config
+          - name: scraper-logs
+            emptyDir: {}

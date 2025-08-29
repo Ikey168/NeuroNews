@@ -1,0 +1,284 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: neuronews-scrapers-pdb
+  namespace: neuronews
+  labels:
+    app: neuronews-scrapers
+    component: scraper
+spec:
+  minAvailable: 0  # Allow all pods to be disrupted since CronJobs can be rescheduled
+  selector:
+    matchLabels:
+      app: neuronews-scrapers
+
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: neuronews-scrapers-limits
+  namespace: neuronews
+  labels:
+    app: neuronews-scrapers
+    component: scraper
+spec:
+  limits:
+  - type: Container
+    default:
+      cpu: 1000m
+      memory: 2Gi
+      ephemeral-storage: 3Gi
+    defaultRequest:
+      cpu: 300m
+      memory: 768Mi
+      ephemeral-storage: 1Gi
+    max:
+      cpu: 2000m
+      memory: 4Gi
+      ephemeral-storage: 5Gi
+    min:
+      cpu: 100m
+      memory: 256Mi
+      ephemeral-storage: 512Mi
+  - type: Pod
+    max:
+      cpu: 2000m
+      memory: 4Gi
+      ephemeral-storage: 5Gi
+
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: neuronews-scrapers-quota
+  namespace: neuronews
+  labels:
+    app: neuronews-scrapers
+    component: scraper
+spec:
+  hard:
+    requests.cpu: "5"
+    requests.memory: 10Gi
+    requests.ephemeral-storage: 20Gi
+    limits.cpu: "10"
+    limits.memory: 20Gi
+    limits.ephemeral-storage: 40Gi
+    pods: "20"
+    persistentvolumeclaims: "5"
+    services: "5"
+    secrets: "10"
+    configmaps: "10"
+    count/jobs.batch: "50"
+    count/cronjobs.batch: "10"
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: neuronews-scrapers-egress-policy
+  namespace: neuronews
+  labels:
+    app: neuronews-scrapers
+    component: scraper
+spec:
+  podSelector:
+    matchLabels:
+      app: neuronews-scrapers
+  policyTypes:
+  - Egress
+  egress:
+  # Allow DNS resolution
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  # Allow web scraping (HTTP/HTTPS)
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 80
+    - protocol: TCP
+      port: 443
+  # Allow database connections
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: neuronews
+    ports:
+    - protocol: TCP
+      port: 5432  # PostgreSQL
+    - protocol: TCP
+      port: 6379  # Redis
+  # Allow AWS services
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+  # Allow monitoring services
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 9091  # Prometheus PushGateway
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: neuronews-scraper-secrets
+  namespace: neuronews
+  labels:
+    app: neuronews-scrapers
+    component: scraper
+type: Opaque
+data:
+  # Replace with actual base64 encoded scraper-specific secrets during deployment
+  captcha-api-key: REPLACE_WITH_ACTUAL_CAPTCHA_API_KEY_B64
+  proxy-username: REPLACE_WITH_ACTUAL_PROXY_USERNAME_B64
+  proxy-password: REPLACE_WITH_ACTUAL_PROXY_PASSWORD_B64
+  monitoring-token: REPLACE_WITH_ACTUAL_MONITORING_TOKEN_B64
+  webhook-secret: REPLACE_WITH_ACTUAL_WEBHOOK_SECRET_B64
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: neuronews-scraper-scripts
+  namespace: neuronews
+  labels:
+    app: neuronews-scrapers
+    component: scraper
+data:
+  health-check.sh: |
+    #!/bin/bash
+    # Health check script for scraper jobs
+    
+    # Check if python process is running
+    if ! pgrep -f "python.*scraper" > /dev/null; then
+        echo "No scraper process found"
+        exit 1
+    fi
+    
+    # Check memory usage
+    MEMORY_USAGE=$(ps -o pid,ppid,cmd,%mem,%cpu --sort=-%mem | grep python | head -1 | awk '{print $4}')
+    if (( $(echo "$MEMORY_USAGE > 90" | bc -l) )); then
+        echo "High memory usage: $MEMORY_USAGE%"
+        exit 1
+    fi
+    
+    # Check if log file is being updated
+    if [ -f "/app/logs/scraper.log" ]; then
+        LAST_MODIFIED=$(stat -c %Y /app/logs/scraper.log)
+        CURRENT_TIME=$(date +%s)
+        TIME_DIFF=$((CURRENT_TIME - LAST_MODIFIED))
+        
+        if [ $TIME_DIFF -gt 600 ]; then  # 10 minutes
+            echo "Log file not updated for $TIME_DIFF seconds"
+            exit 1
+        fi
+    fi
+    
+    echo "Health check passed"
+    exit 0
+  
+  cleanup.sh: |
+    #!/bin/bash
+    # Cleanup script for scraper jobs
+    
+    echo "Starting cleanup process..."
+    
+    # Clean up temporary files
+    if [ -d "/tmp" ]; then
+        find /tmp -name "*.tmp" -type f -mtime +1 -delete
+        find /tmp -name "playwright*" -type d -mtime +1 -exec rm -rf {} +
+    fi
+    
+    # Clean up old log files
+    if [ -d "/app/logs" ]; then
+        find /app/logs -name "*.log.*" -type f -mtime +7 -delete
+    fi
+    
+    # Clean up browser cache
+    if [ -d "/app/.cache" ]; then
+        find /app/.cache -type f -mtime +3 -delete
+    fi
+    
+    # Clean up downloaded files
+    if [ -d "/app/downloads" ]; then
+        find /app/downloads -type f -mtime +1 -delete
+    fi
+    
+    echo "Cleanup completed"
+  
+  monitor.sh: |
+    #!/bin/bash
+    # Monitoring script for scraper performance
+    
+    LOG_FILE="/app/logs/monitor.log"
+    
+    while true; do
+        TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+        
+        # Get CPU and memory usage
+        CPU_USAGE=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | cut -d'%' -f1)
+        MEMORY_USAGE=$(free | grep Mem | awk '{printf("%.2f", $3/$2 * 100.0)}')
+        
+        # Get disk usage
+        DISK_USAGE=$(df -h /app | awk 'NR==2{print $5}' | sed 's/%//')
+        
+        # Get process count
+        PROCESS_COUNT=$(pgrep -f "python.*scraper" | wc -l)
+        
+        # Log metrics
+        echo "$TIMESTAMP - CPU: ${CPU_USAGE}%, Memory: ${MEMORY_USAGE}%, Disk: ${DISK_USAGE}%, Processes: $PROCESS_COUNT" >> $LOG_FILE
+        
+        # Send metrics to Prometheus PushGateway if available
+        if command -v curl &> /dev/null && [ -n "$PROMETHEUS_PUSHGATEWAY" ]; then
+            curl -X POST http://$PROMETHEUS_PUSHGATEWAY/metrics/job/scraper-monitor/instance/$(hostname) \
+                --data-binary "cpu_usage $CPU_USAGE
+    memory_usage $MEMORY_USAGE
+    disk_usage $DISK_USAGE
+    process_count $PROCESS_COUNT"
+        fi
+        
+        sleep 60
+    done
+  
+  retry-failed-jobs.sh: |
+    #!/bin/bash
+    # Script to retry failed scraping jobs
+    
+    NAMESPACE="neuronews"
+    LABEL_SELECTOR="app=neuronews-scrapers"
+    
+    echo "Checking for failed jobs..."
+    
+    # Get failed jobs
+    FAILED_JOBS=$(kubectl get jobs -n $NAMESPACE -l $LABEL_SELECTOR --field-selector=status.phase=Failed -o name)
+    
+    if [ -z "$FAILED_JOBS" ]; then
+        echo "No failed jobs found"
+        exit 0
+    fi
+    
+    echo "Found failed jobs: $FAILED_JOBS"
+    
+    # Retry each failed job
+    for JOB in $FAILED_JOBS; do
+        JOB_NAME=$(echo $JOB | cut -d'/' -f2)
+        echo "Retrying job: $JOB_NAME"
+        
+        # Get job spec and create new job
+        kubectl get job $JOB_NAME -n $NAMESPACE -o yaml | \
+            sed 's/name: .*/name: '$JOB_NAME'-retry-'$(date +%s)'/' | \
+            kubectl apply -f -
+        
+        # Delete old failed job
+        kubectl delete job $JOB_NAME -n $NAMESPACE
+    done
+    
+    echo "Job retry process completed"

@@ -1,0 +1,119 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: neuronews-nlp-models-pvc
+  namespace: neuronews
+  labels:
+    app: neuronews-nlp
+    component: storage
+    storage-type: models
+spec:
+  accessModes:
+    - ReadWriteMany  # Allow multiple jobs to access models simultaneously
+  storageClassName: fast-ssd  # High-performance storage for model loading
+  resources:
+    requests:
+      storage: 50Gi  # Large storage for transformer models
+  selector:
+    matchLabels:
+      storage-purpose: nlp-models
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: neuronews-nlp-results-pvc
+  namespace: neuronews
+  labels:
+    app: neuronews-nlp
+    component: storage
+    storage-type: results
+spec:
+  accessModes:
+    - ReadWriteMany  # Allow multiple jobs to write results
+  storageClassName: standard  # Standard storage for results
+  resources:
+    requests:
+      storage: 100Gi  # Large storage for processing results
+  selector:
+    matchLabels:
+      storage-purpose: nlp-results
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: neuronews-nlp-cache-pvc
+  namespace: neuronews
+  labels:
+    app: neuronews-nlp
+    component: storage
+    storage-type: cache
+spec:
+  accessModes:
+    - ReadWriteMany  # Shared cache across jobs
+  storageClassName: fast-ssd  # Fast access for cache
+  resources:
+    requests:
+      storage: 25Gi  # Cache storage for intermediate data
+  selector:
+    matchLabels:
+      storage-purpose: nlp-cache
+
+---
+# Optional: PersistentVolume definitions for local testing
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: neuronews-nlp-models-pv
+  labels:
+    app: neuronews-nlp
+    storage-purpose: nlp-models
+spec:
+  capacity:
+    storage: 50Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: fast-ssd
+  hostPath:
+    path: "/mnt/nlp-models"
+    type: DirectoryOrCreate
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: neuronews-nlp-results-pv
+  labels:
+    app: neuronews-nlp
+    storage-purpose: nlp-results
+spec:
+  capacity:
+    storage: 100Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: standard
+  hostPath:
+    path: "/mnt/nlp-results"
+    type: DirectoryOrCreate
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: neuronews-nlp-cache-pv
+  labels:
+    app: neuronews-nlp
+    storage-purpose: nlp-cache
+spec:
+  capacity:
+    storage: 25Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: fast-ssd
+  hostPath:
+    path: "/mnt/nlp-cache"
+    type: DirectoryOrCreate

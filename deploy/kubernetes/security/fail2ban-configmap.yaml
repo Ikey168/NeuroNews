@@ -1,0 +1,192 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fail2ban-config
+  namespace: neuronews
+  labels:
+    app: fail2ban
+    component: ddos-protection
+    issue: "86"
+data:
+  jail.local: |
+    [DEFAULT]
+    # Global settings
+    bantime = 3600
+    findtime = 600
+    maxretry = 5
+    backend = auto
+    usedns = warn
+    logencoding = auto
+    enabled = false
+    mode = normal
+    filter = %(__name__)s[mode=%(mode)s]
+    
+    # Email notifications (configure as needed)
+    destemail = admin@neuronews.local
+    sender = fail2ban@neuronews.local
+    mta = sendmail
+    protocol = tcp
+    chain = <known/chain>
+    port = 0:65535
+    fail2ban_agent = Fail2Ban/%(fail2ban_version)s
+    
+    # Ban action
+    banaction = iptables-multiport
+    banaction_allports = iptables-allports
+    action_abuseipdb = abuseipdb
+    action = %(banaction)s[name=%(__name__)s, bantime="%(bantime)s", port="%(port)s", protocol="%(protocol)s", chain="%(chain)s"]
+    
+    # NGINX HTTP GET flood protection
+    [nginx-http-auth]
+    enabled = true
+    port = http,https
+    filter = nginx-http-auth
+    logpath = /var/log/nginx/auth.log
+    maxretry = 3
+    bantime = 1800
+    findtime = 300
+    
+    # NGINX limit request (rate limiting violations)
+    [nginx-limit-req]
+    enabled = true
+    port = http,https
+    filter = nginx-limit-req
+    logpath = /var/log/nginx/error.log
+    maxretry = 10
+    bantime = 3600
+    findtime = 600
+    
+    # NGINX no script kiddie attempts
+    [nginx-noscript]
+    enabled = true
+    port = http,https
+    filter = nginx-noscript
+    logpath = /var/log/nginx/access.log
+    maxretry = 6
+    bantime = 86400
+    findtime = 600
+    
+    # NGINX bad bots
+    [nginx-badbots]
+    enabled = true
+    port = http,https
+    filter = nginx-badbots
+    logpath = /var/log/nginx/access.log
+    maxretry = 2
+    bantime = 86400
+    findtime = 600
+    
+    # NGINX botsearch (search for exploits)
+    [nginx-botsearch]
+    enabled = true
+    port = http,https
+    filter = nginx-botsearch
+    logpath = /var/log/nginx/access.log
+    maxretry = 3
+    bantime = 86400
+    findtime = 600
+    
+    # NGINX 4xx errors (too many not found)
+    [nginx-4xx]
+    enabled = true
+    port = http,https
+    filter = nginx-4xx
+    logpath = /var/log/nginx/access.log
+    maxretry = 20
+    bantime = 1800
+    findtime = 300
+    
+    # NGINX DDoS protection
+    [nginx-ddos]
+    enabled = true
+    port = http,https
+    filter = nginx-ddos
+    logpath = /var/log/nginx/access.log
+    maxretry = 100
+    bantime = 600
+    findtime = 60
+    
+    # SSH protection
+    [sshd]
+    enabled = true
+    port = ssh
+    filter = sshd
+    logpath = /var/log/auth.log
+    maxretry = 3
+    bantime = 3600
+
+  filter.d/nginx-http-auth.conf: |
+    # Fail2Ban filter for nginx authentication failures
+    [Definition]
+    failregex = ^<HOST> -.*"(GET|POST|HEAD).*HTTP.*" (401|403) .*$
+    ignoreregex =
+
+  filter.d/nginx-limit-req.conf: |
+    # Fail2Ban filter for nginx rate limiting
+    [Definition]
+    failregex = limiting requests, excess: .* by zone .*, client: <HOST>
+    ignoreregex =
+
+  filter.d/nginx-noscript.conf: |
+    # Fail2Ban filter for nginx script kiddie attempts
+    [Definition]
+    failregex = ^<HOST> -.*GET.*(\.php|\.asp|\.exe|\.pl|\.cgi|\.scgi).*HTTP.*" (404|200) .*$
+    ignoreregex =
+
+  filter.d/nginx-badbots.conf: |
+    # Fail2Ban filter for nginx bad bots
+    [Definition]
+    failregex = ^<HOST> -.*"(GET|POST|HEAD).*HTTP.*" (200|404) .* "(.*sqlmap.*|.*nikto.*|.*nessus.*|.*masscan.*|.*nmap.*|.*openvas.*|.*w3af.*)" ?.*$
+    ignoreregex = 
+
+  filter.d/nginx-botsearch.conf: |
+    # Fail2Ban filter for nginx bot searches
+    [Definition]
+    failregex = ^<HOST> -.*"(GET|POST|HEAD).*(admin|phpmyadmin|wp-admin|wp-login|\.env|config\.|\.git|\.svn).*HTTP.*" (404|200|403) .*$
+    ignoreregex =
+
+  filter.d/nginx-4xx.conf: |
+    # Fail2Ban filter for too many 4xx errors
+    [Definition]
+    failregex = ^<HOST> -.*"(GET|POST|HEAD).*HTTP.*" (404|400|403|405) .*$
+    ignoreregex =
+
+  filter.d/nginx-ddos.conf: |
+    # Fail2Ban filter for DDoS attacks
+    [Definition]
+    failregex = ^<HOST> -.*"(GET|POST|HEAD).*HTTP.*" (200|404) .*$
+    ignoreregex = .*Googlebot.*|.*Bingbot.*|.*Slurp.*|.*DuckDuckBot.*|.*Baiduspider.*
+
+  action.d/iptables-nginx.conf: |
+    # Custom iptables action for nginx
+    [Definition]
+    actionstart = iptables -N f2b-<name>
+                  iptables -A f2b-<name> -j RETURN
+                  iptables -I INPUT -p <protocol> --dport <port> -j f2b-<name>
+    
+    actionstop = iptables -D INPUT -p <protocol> --dport <port> -j f2b-<name>
+                 iptables -F f2b-<name>
+                 iptables -X f2b-<name>
+    
+    actioncheck = iptables -n -L INPUT | grep -q 'f2b-<name>[ \t]'
+    
+    actionban = iptables -I f2b-<name> 1 -s <ip> -j REJECT --reject-with icmp-port-unreachable
+    
+    actionunban = iptables -D f2b-<name> -s <ip> -j REJECT --reject-with icmp-port-unreachable
+    
+    [Init]
+    name = default
+    protocol = tcp
+    port = http,https
+    bantime = 600
+
+  fail2ban.conf: |
+    # Main fail2ban configuration
+    [Definition]
+    loglevel = INFO
+    logtarget = /var/log/fail2ban.log
+    syslogsocket = auto
+    socket = /var/run/fail2ban/fail2ban.sock
+    pidfile = /var/run/fail2ban/fail2ban.pid
+    dbfile = /var/lib/fail2ban/fail2ban.sqlite3
+    dbpurgeage = 86400

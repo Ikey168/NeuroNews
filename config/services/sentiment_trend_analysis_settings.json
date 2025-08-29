@@ -1,0 +1,208 @@
+{
+    "sentiment_trend_analysis": {
+        "redshift_connection": {
+            "host": "your-redshift-cluster.redshift.amazonaws.com",
+            "port": 5439,
+            "database": "neuronews",
+            "user": "neuronews_user",
+            "password": "your_password_here"
+        },
+        
+        "analysis_settings": {
+            "trend_window_days": 30,
+            "min_articles_for_trend": 5,
+            "smoothing_window": 7,
+            "default_time_granularity": "daily",
+            "max_analysis_days": 365
+        },
+        
+        "alert_configuration": {
+            "thresholds": {
+                "significant_shift": 0.3,
+                "trend_reversal": 0.2,
+                "volatility_spike": 0.4
+            },
+            "severity_mapping": {
+                "critical": {
+                    "min_change_magnitude": 0.6,
+                    "description": "Extreme sentiment shift requiring immediate attention"
+                },
+                "high": {
+                    "min_change_magnitude": 0.4,
+                    "description": "Significant sentiment change warranting investigation"
+                },
+                "medium": {
+                    "min_change_magnitude": 0.2,
+                    "description": "Notable sentiment shift for monitoring"
+                },
+                "low": {
+                    "min_change_magnitude": 0.1,
+                    "description": "Minor sentiment fluctuation"
+                }
+            },
+            "alert_types": [
+                "significant_shift",
+                "trend_reversal",
+                "volatility_spike"
+            ],
+            "notification_settings": {
+                "enable_email_alerts": true,
+                "enable_slack_alerts": true,
+                "email_recipients": [
+                    "alerts@neuronews.com",
+                    "analytics@neuronews.com"
+                ],
+                "slack_webhook_url": "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
+            }
+        },
+        
+        "topics_configuration": {
+            "priority_topics": [
+                "politics",
+                "technology", 
+                "economy",
+                "healthcare",
+                "climate",
+                "education",
+                "security",
+                "international"
+            ],
+            "topic_aliases": {
+                "tech": "technology",
+                "political": "politics",
+                "economic": "economy",
+                "health": "healthcare",
+                "environment": "climate",
+                "foreign": "international"
+            },
+            "auto_discovery": {
+                "enable": true,
+                "min_article_count": 10,
+                "discovery_window_days": 7
+            }
+        },
+        
+        "data_processing": {
+            "batch_sizes": {
+                "trend_analysis": 1000,
+                "alert_generation": 500,
+                "data_aggregation": 200
+            },
+            "caching": {
+                "enable_trend_caching": true,
+                "cache_ttl_minutes": 60,
+                "cache_size_mb": 100
+            },
+            "data_validation": {
+                "min_confidence_threshold": 0.3,
+                "max_sentiment_range": [-1.0, 1.0],
+                "required_fields": [
+                    "article_id",
+                    "sentiment_score", 
+                    "sentiment_label",
+                    "confidence",
+                    "publish_date",
+                    "topic"
+                ]
+            }
+        },
+        
+        "visualization_settings": {
+            "chart_configurations": {
+                "trend_line": {
+                    "smoothing": true,
+                    "show_confidence_bands": true,
+                    "color_scheme": "sentiment_based"
+                },
+                "alert_markers": {
+                    "show_on_trends": true,
+                    "severity_colors": {
+                        "critical": "#ff4444",
+                        "high": "#ff8800",
+                        "medium": "#ffcc00", 
+                        "low": "#44ff44"
+                    }
+                }
+            },
+            "dashboard_defaults": {
+                "default_time_range": "30d",
+                "default_topics": ["politics", "technology", "economy"],
+                "refresh_interval_seconds": 300
+            }
+        },
+        
+        "performance_optimization": {
+            "indexing": {
+                "create_topic_date_index": true,
+                "create_alert_severity_index": true,
+                "create_timestamp_indexes": true
+            },
+            "query_optimization": {
+                "use_materialized_views": true,
+                "enable_query_caching": true,
+                "partition_by_date": true
+            },
+            "resource_limits": {
+                "max_concurrent_analyses": 5,
+                "query_timeout_seconds": 300,
+                "memory_limit_mb": 1024
+            }
+        },
+        
+        "monitoring_and_logging": {
+            "metrics_collection": {
+                "enable_performance_metrics": true,
+                "track_alert_generation_rate": true,
+                "track_analysis_accuracy": true,
+                "metrics_retention_days": 90
+            },
+            "logging": {
+                "level": "INFO",
+                "log_trend_calculations": true,
+                "log_alert_triggers": true,
+                "log_api_requests": true,
+                "max_log_size_mb": 100
+            },
+            "health_checks": {
+                "database_connectivity": true,
+                "data_freshness_check": true,
+                "alert_system_status": true,
+                "check_interval_minutes": 15
+            }
+        },
+        
+        "integration_settings": {
+            "external_apis": {
+                "news_sentiment_api": {
+                    "endpoint": "https://api.neuronews.com/sentiment",
+                    "timeout_seconds": 30,
+                    "retry_attempts": 3
+                }
+            },
+            "data_sources": {
+                "primary_sentiment_table": "news_articles",
+                "topic_extraction_table": "keyword_topics",
+                "trend_storage_table": "sentiment_trends",
+                "alert_storage_table": "sentiment_alerts"
+            },
+            "export_formats": {
+                "supported_formats": ["json", "csv", "xlsx"],
+                "default_format": "json",
+                "include_metadata": true
+            }
+        },
+        
+        "experimental_features": {
+            "advanced_analytics": {
+                "enable_ml_trend_prediction": false,
+                "enable_sentiment_clustering": false,
+                "enable_cross_topic_correlation": false
+            },
+            "real_time_processing": {
+                "enable_streaming_analysis": false,
+                "stream_buffer_size": 1000,
+                "stream_processing_interval": 60
+            }
+        }
+    }
+}

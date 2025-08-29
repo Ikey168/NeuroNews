@@ -1,0 +1,259 @@
+{
+  "event_detection": {
+    "embedding": {
+      "default_model": "all-MiniLM-L6-v2",
+      "available_models": {
+        "all-MiniLM-L6-v2": {
+          "dimension": 384,
+          "description": "Fast and efficient, good for most use cases",
+          "speed": "fast",
+          "quality": "good",
+          "memory_usage": "low"
+        },
+        "all-mpnet-base-v2": {
+          "dimension": 768,
+          "description": "High quality embeddings, slower processing",
+          "speed": "medium",
+          "quality": "excellent",
+          "memory_usage": "high"
+        },
+        "all-distilroberta-v1": {
+          "dimension": 768,
+          "description": "Balanced speed and quality",
+          "speed": "medium",
+          "quality": "very good",
+          "memory_usage": "medium"
+        }
+      },
+      "processing": {
+        "max_length": 512,
+        "batch_size": 32,
+        "quality_threshold": 0.3,
+        "cache_embeddings": true
+      }
+    },
+    "clustering": {
+      "default_method": "kmeans",
+      "methods": {
+        "kmeans": {
+          "min_cluster_size": 3,
+          "max_clusters": 20,
+          "n_init": 10,
+          "max_iter": 300,
+          "random_state": 42
+        },
+        "dbscan": {
+          "eps": 0.5,
+          "min_samples": 3,
+          "metric": "cosine"
+        }
+      },
+      "optimization": {
+        "normalize_embeddings": true,
+        "silhouette_threshold": 0.2,
+        "min_silhouette_for_quality": 0.5
+      }
+    },
+    "event_detection": {
+      "significance_thresholds": {
+        "breaking": {
+          "min_trending_score": 3.0,
+          "min_impact_score": 60.0,
+          "min_velocity_score": 2.0,
+          "max_duration_hours": 6
+        },
+        "trending": {
+          "min_trending_score": 2.0,
+          "min_impact_score": 40.0,
+          "min_velocity_score": 1.0,
+          "max_duration_hours": 24
+        },
+        "developing": {
+          "min_trending_score": 1.0,
+          "min_impact_score": 30.0,
+          "min_velocity_score": 0.5,
+          "max_duration_hours": 72
+        }
+      },
+      "scoring_weights": {
+        "trending_score": {
+          "article_volume": 0.3,
+          "velocity": 0.3,
+          "source_diversity": 0.2,
+          "recency": 0.2
+        },
+        "impact_score": {
+          "source_credibility": 0.4,
+          "source_diversity": 0.25,
+          "article_volume": 0.2,
+          "sentiment_extremity": 0.15
+        },
+        "significance_score": {
+          "trending_score": 0.3,
+          "impact_score": 0.4,
+          "velocity_score": 0.2,
+          "cluster_size": 0.1
+        }
+      },
+      "filters": {
+        "min_articles_per_cluster": 3,
+        "max_articles_per_cluster": 100,
+        "min_source_credibility": ["trusted", "reliable"],
+        "exclude_sources": [],
+        "min_article_quality": "medium"
+      }
+    },
+    "categories": {
+      "default_categories": [
+        "Technology",
+        "Politics", 
+        "Health",
+        "Business",
+        "Sports",
+        "Entertainment",
+        "Science",
+        "World",
+        "General"
+      ],
+      "category_keywords": {
+        "Technology": [
+          "tech", "ai", "artificial intelligence", "software", "computer", 
+          "digital", "app", "google", "apple", "microsoft", "amazon", 
+          "facebook", "meta", "tesla", "spacex", "openai", "startup",
+          "cybersecurity", "blockchain", "cryptocurrency", "cloud",
+          "machine learning", "data", "internet", "smartphone"
+        ],
+        "Politics": [
+          "government", "election", "president", "congress", "senate", 
+          "policy", "law", "vote", "democratic", "republican", "parliament",
+          "minister", "legislation", "political", "campaign", "ballot",
+          "constitution", "supreme court", "federal", "state"
+        ],
+        "Health": [
+          "health", "medical", "doctor", "hospital", "disease", "covid",
+          "vaccine", "medicine", "treatment", "patient", "clinical",
+          "pharmaceutical", "drug", "therapy", "surgery", "healthcare",
+          "wellness", "mental health", "pandemic", "virus"
+        ],
+        "Business": [
+          "business", "company", "market", "stock", "economy", "financial",
+          "revenue", "profit", "investment", "corporate", "earnings",
+          "merger", "acquisition", "startup", "ipo", "nasdaq", "s&p",
+          "economics", "trade", "industry", "consumer"
+        ],
+        "Sports": [
+          "sports", "game", "team", "player", "match", "championship",
+          "league", "tournament", "olympics", "football", "basketball",
+          "baseball", "soccer", "tennis", "golf", "hockey", "racing",
+          "athlete", "coach", "stadium"
+        ],
+        "Entertainment": [
+          "movie", "music", "celebrity", "entertainment", "film", "actor",
+          "singer", "hollywood", "netflix", "disney", "streaming",
+          "television", "tv show", "concert", "album", "box office",
+          "award", "oscar", "grammy", "media"
+        ]
+      }
+    },
+    "database": {
+      "connection": {
+        "host": "${REDSHIFT_HOST}",
+        "port": "${REDSHIFT_PORT}",
+        "database": "${REDSHIFT_DATABASE}",
+        "user": "${REDSHIFT_USER}",
+        "password": "${REDSHIFT_PASSWORD}"
+      },
+      "tables": {
+        "event_clusters": "event_clusters",
+        "article_cluster_assignments": "article_cluster_assignments", 
+        "article_embeddings": "article_embeddings",
+        "news_articles": "news_articles"
+      },
+      "performance": {
+        "batch_insert_size": 100,
+        "connection_pool_size": 5,
+        "query_timeout": 30
+      }
+    },
+    "api": {
+      "rate_limiting": {
+        "breaking_news": "100/hour",
+        "event_detection": "10/hour",
+        "cluster_details": "200/hour"
+      },
+      "pagination": {
+        "default_limit": 10,
+        "max_limit": 100
+      },
+      "cache": {
+        "breaking_news_ttl": 300,
+        "cluster_stats_ttl": 600,
+        "trending_categories_ttl": 900
+      }
+    },
+    "scheduling": {
+      "auto_detection": {
+        "enabled": true,
+        "interval_minutes": 30,
+        "max_articles_per_run": 200,
+        "lookback_hours": 6
+      },
+      "cleanup": {
+        "enabled": true,
+        "archive_events_older_than_days": 90,
+        "delete_events_older_than_days": 365,
+        "cleanup_interval_hours": 24
+      },
+      "maintenance": {
+        "rebuild_embeddings_interval_days": 30,
+        "recalculate_significance_interval_hours": 6,
+        "update_trending_scores_interval_minutes": 15
+      }
+    },
+    "monitoring": {
+      "metrics": {
+        "track_processing_times": true,
+        "track_cluster_quality": true,
+        "track_api_usage": true,
+        "track_error_rates": true
+      },
+      "alerts": {
+        "low_cluster_quality_threshold": 0.3,
+        "high_processing_time_threshold": 300,
+        "high_error_rate_threshold": 0.1,
+        "no_events_detected_hours": 6
+      },
+      "logging": {
+        "level": "INFO",
+        "log_embeddings": false,
+        "log_clustering_details": true,
+        "log_api_requests": true
+      }
+    },
+    "feature_flags": {
+      "enable_geographic_extraction": true,
+      "enable_entity_extraction": true,
+      "enable_sentiment_analysis": true,
+      "enable_trend_prediction": false,
+      "enable_real_time_updates": false,
+      "enable_multi_language": false
+    },
+    "experimental": {
+      "advanced_clustering": {
+        "enabled": false,
+        "methods": ["hierarchical", "spectral", "gaussian_mixture"],
+        "ensemble_clustering": false
+      },
+      "time_series_analysis": {
+        "enabled": false,
+        "predict_event_evolution": false,
+        "trend_forecasting": false
+      },
+      "cross_lingual_clustering": {
+        "enabled": false,
+        "supported_languages": ["en", "es", "fr", "de"],
+        "translation_api": "google"
+      }
+    }
+  }
+}

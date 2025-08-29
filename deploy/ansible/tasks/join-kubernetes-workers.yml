@@ -1,0 +1,101 @@
+---
+# Kubernetes Worker Join Tasks
+# Joins worker nodes to the Kubernetes cluster
+
+- name: Check if node is already joined to cluster
+  stat:
+    path: /etc/kubernetes/kubelet.conf
+  register: kubelet_conf
+
+- name: Get worker join command from master
+  shell: kubeadm token create --print-join-command
+  delegate_to: "{{ groups['masters'][0] }}"
+  register: worker_join_command
+  when: not kubelet_conf.stat.exists
+  run_once: true
+
+- name: Join worker node to cluster
+  command: "{{ hostvars[groups['masters'][0]]['worker_join_command']['stdout'] if hostvars[groups['masters'][0]]['worker_join_command'] is defined else worker_join_command.stdout }}"
+  register: join_result
+  when: not kubelet_conf.stat.exists
+  failed_when: join_result.rc != 0
+
+- name: Wait for node to be ready
+  pause:
+    seconds: 30
+  when: not kubelet_conf.stat.exists
+
+- name: Verify node joined successfully
+  shell: systemctl is-active kubelet
+  register: kubelet_status
+  failed_when: kubelet_status.stdout != "active"
+
+- name: Label worker node
+  shell: kubectl label node {{ ansible_hostname }} node-role.kubernetes.io/worker=
+  delegate_to: "{{ groups['masters'][0] }}"
+  become_user: "{{ hostvars[groups['masters'][0]]['ansible_user'] }}"
+  environment:
+    KUBECONFIG: "/home/{{ hostvars[groups['masters'][0]]['ansible_user'] }}/.kube/config"
+  when: not kubelet_conf.stat.exists
+
+- name: Add node-specific annotations
+  shell: |
+    kubectl annotate node {{ ansible_hostname }} \
+      node.kubernetes.io/instance-type={{ ansible_virtualization_type | default('unknown') }} \
+      node.kubernetes.io/zone={{ ansible_default_ipv4.address.split('.')[2] }}
+  delegate_to: "{{ groups['masters'][0] }}"
+  become_user: "{{ hostvars[groups['masters'][0]]['ansible_user'] }}"
+  environment:
+    KUBECONFIG: "/home/{{ hostvars[groups['masters'][0]]['ansible_user'] }}/.kube/config"
+  when: not kubelet_conf.stat.exists
+  ignore_errors: yes
+
+- name: Configure kubelet for worker node
+  copy:
+    content: |
+      KUBELET_EXTRA_ARGS="--node-labels=node-role.kubernetes.io/worker=,nodeType=worker"
+    dest: /etc/default/kubelet
+    mode: '0644'
+  notify:
+    - restart kubelet
+
+- name: Restart kubelet to apply configuration
+  systemd:
+    name: kubelet
+    state: restarted
+    daemon_reload: yes
+
+- name: Get node status from master
+  shell: kubectl get node {{ ansible_hostname }} -o wide
+  delegate_to: "{{ groups['masters'][0] }}"
+  become_user: "{{ hostvars[groups['masters'][0]]['ansible_user'] }}"
+  environment:
+    KUBECONFIG: "/home/{{ hostvars[groups['masters'][0]]['ansible_user'] }}/.kube/config"
+  register: node_status
+
+- name: Display worker join status
+  debug:
+    msg: |
+      Worker Node Join Complete!
+      =========================
+      Node: {{ ansible_hostname }}
+      IP Address: {{ ansible_default_ipv4.address }}
+      
+      Join Status: {{ 'Already joined' if kubelet_conf.stat.exists else 'Successfully joined' }}
+      
+      Node Details:
+      {{ node_status.stdout }}
+      
+      Services Status:
+      - kubelet: {{ kubelet_status.stdout }}
+      - containerd: Active
+      
+      Node is ready to receive workloads!
+
+# Handler for kubelet restart
+- name: restart kubelet
+  systemd:
+    name: kubelet
+    state: restarted
+    daemon_reload: yes
+  listen: "restart kubelet"

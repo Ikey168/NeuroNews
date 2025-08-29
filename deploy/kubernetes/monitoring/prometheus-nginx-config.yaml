@@ -1,0 +1,268 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-nginx-config
+  namespace: neuronews
+  labels:
+    app: prometheus
+    component: nginx-monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+      external_labels:
+        cluster: 'neuronews'
+        environment: 'production'
+    
+    rule_files:
+      - "/etc/prometheus/rules/*.yml"
+    
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets:
+              - alertmanager:9093
+    
+    scrape_configs:
+      # NGINX metrics from stub_status
+      - job_name: 'nginx-stub-status'
+        static_configs:
+          - targets: ['nginx-monitoring-service:9113']
+        metrics_path: /nginx_status
+        scrape_interval: 5s
+        scrape_timeout: 5s
+        honor_labels: true
+        params:
+          format: ['prometheus']
+        
+      # NGINX Prometheus Exporter
+      - job_name: 'nginx-exporter'
+        static_configs:
+          - targets: ['nginx-exporter-service:9113']
+        metrics_path: /metrics
+        scrape_interval: 10s
+        scrape_timeout: 5s
+        honor_labels: true
+        
+      # NGINX pods directly (service discovery)
+      - job_name: 'nginx-pods'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - neuronews
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: kubernetes_pod_name
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: nginx-monitoring
+      
+      # FastAPI backend monitoring
+      - job_name: 'fastapi-backend'
+        static_configs:
+          - targets: ['neuronews-fastapi-service:8000']
+        metrics_path: /metrics
+        scrape_interval: 30s
+        scrape_timeout: 10s
+        
+      # Kubernetes system metrics
+      - job_name: 'kubernetes-nodes'
+        kubernetes_sd_configs:
+          - role: node
+        relabel_configs:
+          - action: labelmap
+            regex: __meta_kubernetes_node_label_(.+)
+          - target_label: __address__
+            replacement: kubernetes.default.svc:443
+          - source_labels: [__meta_kubernetes_node_name]
+            regex: (.+)
+            target_label: __metrics_path__
+            replacement: /api/v1/nodes/${1}/proxy/metrics
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+
+  # NGINX specific alerting rules
+  nginx-rules.yml: |
+    groups:
+    - name: nginx.rules
+      interval: 30s
+      rules:
+      
+      # Service availability alerts
+      - alert: NginxDown
+        expr: up{job=~"nginx.*"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: nginx
+        annotations:
+          summary: "NGINX service is down"
+          description: "NGINX service {{ $labels.instance }} has been down for more than 1 minute"
+          runbook_url: "https://github.com/Ikey168/NeuroNews/wiki/Runbooks#nginx-down"
+      
+      # Request rate alerts
+      - alert: NginxHighRequestRate
+        expr: rate(nginx_http_requests_total[5m]) > 1000
+        for: 2m
+        labels:
+          severity: warning
+          service: nginx
+        annotations:
+          summary: "High NGINX request rate detected"
+          description: "NGINX request rate is {{ $value | humanize }} req/sec on {{ $labels.instance }}"
+          runbook_url: "https://github.com/Ikey168/NeuroNews/wiki/Runbooks#high-request-rate"
+      
+      # Error rate alerts  
+      - alert: NginxHighErrorRate
+        expr: (rate(nginx_http_requests_total{status=~"5.."}[5m]) / rate(nginx_http_requests_total[5m])) * 100 > 5
+        for: 1m
+        labels:
+          severity: critical
+          service: nginx
+        annotations:
+          summary: "High NGINX 5xx error rate"
+          description: "NGINX 5xx error rate is {{ $value | humanizePercentage }} on {{ $labels.instance }}"
+          runbook_url: "https://github.com/Ikey168/NeuroNews/wiki/Runbooks#high-error-rate"
+      
+      - alert: NginxHighClientErrorRate
+        expr: (rate(nginx_http_requests_total{status=~"4.."}[5m]) / rate(nginx_http_requests_total[5m])) * 100 > 10
+        for: 3m
+        labels:
+          severity: warning
+          service: nginx
+        annotations:
+          summary: "High NGINX 4xx error rate"
+          description: "NGINX 4xx error rate is {{ $value | humanizePercentage }} on {{ $labels.instance }}"
+      
+      # Response time alerts
+      - alert: NginxHighResponseTime
+        expr: histogram_quantile(0.95, rate(nginx_http_request_duration_seconds_bucket[5m])) > 2
+        for: 3m
+        labels:
+          severity: warning
+          service: nginx
+        annotations:
+          summary: "High NGINX response time"
+          description: "NGINX 95th percentile response time is {{ $value | humanizeDuration }} on {{ $labels.instance }}"
+          runbook_url: "https://github.com/Ikey168/NeuroNews/wiki/Runbooks#high-response-time"
+      
+      # Connection alerts
+      - alert: NginxHighConnectionCount
+        expr: nginx_connections_active > 1000
+        for: 5m
+        labels:
+          severity: warning
+          service: nginx
+        annotations:
+          summary: "High NGINX active connections"
+          description: "NGINX has {{ $value }} active connections on {{ $labels.instance }}"
+      
+      - alert: NginxConnectionsDropped
+        expr: increase(nginx_connections_dropped_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          service: nginx
+        annotations:
+          summary: "NGINX connections being dropped"
+          description: "NGINX has dropped {{ $value }} connections in the last 5 minutes on {{ $labels.instance }}"
+      
+      # Configuration alerts
+      - alert: NginxConfigReloadFailed
+        expr: increase(nginx_reloads_total{status="failed"}[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          service: nginx
+        annotations:
+          summary: "NGINX configuration reload failed"
+          description: "NGINX configuration reload failed on {{ $labels.instance }}"
+      
+      # Backend health alerts
+      - alert: NginxUpstreamDown
+        expr: nginx_upstream_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: nginx
+        annotations:
+          summary: "NGINX upstream server is down"
+          description: "NGINX upstream server {{ $labels.upstream }} is down on {{ $labels.instance }}"
+          runbook_url: "https://github.com/Ikey168/NeuroNews/wiki/Runbooks#upstream-down"
+      
+      - alert: NginxUpstreamHighResponseTime
+        expr: nginx_upstream_response_time > 5
+        for: 2m
+        labels:
+          severity: warning
+          service: nginx
+        annotations:
+          summary: "High NGINX upstream response time"
+          description: "NGINX upstream {{ $labels.upstream }} response time is {{ $value }}s on {{ $labels.instance }}"
+
+  # Performance recording rules
+  nginx-performance-rules.yml: |
+    groups:
+    - name: nginx.performance
+      interval: 30s
+      rules:
+      
+      # Request rate calculations
+      - record: nginx:request_rate_5m
+        expr: rate(nginx_http_requests_total[5m])
+      
+      - record: nginx:request_rate_1h
+        expr: rate(nginx_http_requests_total[1h])
+      
+      # Error rate calculations
+      - record: nginx:error_rate_5m
+        expr: rate(nginx_http_requests_total{status=~"5.."}[5m]) / rate(nginx_http_requests_total[5m])
+      
+      - record: nginx:client_error_rate_5m
+        expr: rate(nginx_http_requests_total{status=~"4.."}[5m]) / rate(nginx_http_requests_total[5m])
+      
+      # Response time percentiles
+      - record: nginx:response_time_p50_5m
+        expr: histogram_quantile(0.50, rate(nginx_http_request_duration_seconds_bucket[5m]))
+      
+      - record: nginx:response_time_p95_5m
+        expr: histogram_quantile(0.95, rate(nginx_http_request_duration_seconds_bucket[5m]))
+      
+      - record: nginx:response_time_p99_5m
+        expr: histogram_quantile(0.99, rate(nginx_http_request_duration_seconds_bucket[5m]))
+      
+      # Throughput calculations
+      - record: nginx:bytes_per_second_5m
+        expr: rate(nginx_http_request_size_bytes_sum[5m])
+      
+      - record: nginx:response_bytes_per_second_5m
+        expr: rate(nginx_http_response_size_bytes_sum[5m])
+      
+      # Connection metrics
+      - record: nginx:connections_per_second_5m
+        expr: rate(nginx_connections_accepted_total[5m])
+      
+      - record: nginx:connections_active_avg_5m
+        expr: avg_over_time(nginx_connections_active[5m])

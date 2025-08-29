@@ -1,0 +1,205 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neuronews-fastapi
+  namespace: neuronews
+  labels:
+    app: neuronews-fastapi
+    version: v1.0.0
+    component: api
+    tier: backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: neuronews-fastapi
+  template:
+    metadata:
+      labels:
+        app: neuronews-fastapi
+        version: v1.0.0
+        component: api
+        tier: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      # Security Context
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        runAsNonRoot: true
+      
+      # Service Account
+      serviceAccountName: neuronews-fastapi
+      
+      containers:
+      - name: fastapi
+        image: neuronews/fastapi:latest
+        imagePullPolicy: Always
+        
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        
+        # Environment Variables
+        env:
+        - name: ENVIRONMENT
+          value: "production"
+        - name: HOST
+          value: "0.0.0.0"
+        - name: PORT
+          value: "8000"
+        - name: WORKERS
+          value: "4"
+        - name: DB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-postgres-secret
+              key: host
+        - name: DB_PORT
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-postgres-secret
+              key: port
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-postgres-secret
+              key: database
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-postgres-secret
+              key: username
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-postgres-secret
+              key: password
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: neuronews-config
+              key: redis.host
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: neuronews-config
+              key: redis.port
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-jwt-secret
+              key: secret-key
+        - name: AWS_REGION
+          valueFrom:
+            configMapKeyRef:
+              name: neuronews-config
+              key: aws.region
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-aws-secret
+              key: access-key-id
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: neuronews-aws-secret
+              key: secret-access-key
+        
+        # Resource Limits
+        resources:
+          requests:
+            cpu: 200m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+        
+        # Health Checks
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          successThreshold: 1
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        
+        # Startup Probe (for slow startup)
+        startupProbe:
+          httpGet:
+            path: /health
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 30
+        
+        # Volume Mounts
+        volumeMounts:
+        - name: app-logs
+          mountPath: /app/logs
+        - name: temp-storage
+          mountPath: /tmp
+      
+      # Volumes
+      volumes:
+      - name: app-logs
+        emptyDir: {}
+      - name: temp-storage
+        emptyDir:
+          sizeLimit: 1Gi
+      
+      # Pod Disruption Budget
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - neuronews-fastapi
+              topologyKey: kubernetes.io/hostname
+      
+      # Graceful Shutdown
+      terminationGracePeriodSeconds: 30
+      
+      # DNS Configuration
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: neuronews-fastapi
+  namespace: neuronews
+  labels:
+    app: neuronews-fastapi
+    component: api
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT-ID:role/neuronews-fastapi-role
+automountServiceAccountToken: true

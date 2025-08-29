@@ -1,0 +1,112 @@
+---
+# Blue-Green Deployment Promotion Playbook
+# Promotes the new deployment after successful verification
+
+- name: Promote Blue-Green Deployment
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    environment: "{{ environment | default('staging') }}"
+    namespace: "neuronews-{{ environment }}"
+    app_name: neuronews
+
+  tasks:
+    - name: Get current service configuration
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Service
+        name: "{{ app_name }}"
+        namespace: "{{ namespace }}"
+      register: current_service
+
+    - name: Determine current color
+      set_fact:
+        current_color: "{{ current_service.resources[0].spec.selector.color }}"
+      when: current_service.resources | length > 0
+
+    - name: Verify new deployment is healthy
+      kubernetes.core.k8s_info:
+        api_version: apps/v1
+        kind: Deployment
+        name: "{{ app_name }}-{{ current_color }}"
+        namespace: "{{ namespace }}"
+      register: new_deployment
+
+    - name: Confirm promotion
+      pause:
+        prompt: |
+          Ready to promote {{ current_color }} deployment to production traffic?
+          Current deployment: {{ app_name }}-{{ current_color }}
+          Replicas: {{ new_deployment.resources[0].status.readyReplicas }}/{{ new_deployment.resources[0].spec.replicas }}
+          
+          Type 'yes' to proceed with promotion
+      register: promotion_confirm
+      when: environment == "production"
+
+    - name: Validate promotion confirmation
+      assert:
+        that:
+          - promotion_confirm.user_input == "yes"
+        fail_msg: "Promotion cancelled by user"
+      when: environment == "production"
+
+    - name: Update service to point to new deployment
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: "{{ app_name }}"
+            namespace: "{{ namespace }}"
+            annotations:
+              deployment.neuronews/promoted-at: "{{ ansible_date_time.iso8601 }}"
+              deployment.neuronews/promoted-color: "{{ current_color }}"
+          spec:
+            selector:
+              app: "{{ app_name }}"
+              environment: "{{ environment }}"
+              color: "{{ current_color }}"
+
+    - name: Wait for traffic switch
+      pause:
+        seconds: 30
+        prompt: "Waiting for traffic to switch to new deployment..."
+
+    - name: Verify new deployment is receiving traffic
+      uri:
+        url: "http://{{ app_name }}.{{ namespace }}.svc.cluster.local/health"
+        method: GET
+        status_code: 200
+      register: traffic_verification
+      retries: 5
+      delay: 10
+
+    - name: Record promotion in deployment history
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: "{{ app_name }}-promotion-history"
+            namespace: "{{ namespace }}"
+          data:
+            "{{ ansible_date_time.epoch }}": |
+              promoted_at: {{ ansible_date_time.iso8601 }}
+              promoted_color: {{ current_color }}
+              environment: {{ environment }}
+              status: success
+
+    - name: Display promotion summary
+      debug:
+        msg: |
+          ========================================
+          BLUE-GREEN PROMOTION COMPLETED
+          ========================================
+          Environment: {{ environment }}
+          Promoted Color: {{ current_color }}
+          Traffic Switch: SUCCESSFUL
+          Timestamp: {{ ansible_date_time.iso8601 }}
+          ========================================

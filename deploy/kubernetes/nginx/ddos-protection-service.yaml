@@ -1,0 +1,156 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-ddos-protection-service
+  namespace: neuronews
+  labels:
+    app: nginx
+    component: ddos-protection
+    issue: "86"
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9113"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http
+  - port: 443
+    targetPort: 443
+    protocol: TCP
+    name: https
+  - port: 9113
+    targetPort: 9113
+    protocol: TCP
+    name: metrics
+  selector:
+    app: nginx
+    component: ddos-protection
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-ddos-protection-loadbalancer
+  namespace: neuronews
+  labels:
+    app: nginx
+    component: ddos-protection
+    issue: "86"
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http
+  - port: 443
+    targetPort: 443
+    protocol: TCP
+    name: https
+  selector:
+    app: nginx
+    component: ddos-protection
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 3600
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-ddos-protection-headless
+  namespace: neuronews
+  labels:
+    app: nginx
+    component: ddos-protection
+    issue: "86"
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http
+  - port: 9113
+    targetPort: 9113
+    protocol: TCP
+    name: metrics
+  selector:
+    app: nginx
+    component: ddos-protection
+
+---
+# Network Policy for additional security
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: nginx-ddos-protection-netpol
+  namespace: neuronews
+  labels:
+    app: nginx
+    component: ddos-protection
+    issue: "86"
+spec:
+  podSelector:
+    matchLabels:
+      app: nginx
+      component: ddos-protection
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow traffic from anywhere on HTTP/HTTPS ports
+  - from: []
+    ports:
+    - protocol: TCP
+      port: 80
+    - protocol: TCP
+      port: 443
+  # Allow metrics scraping from monitoring namespace
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 9113
+  # Allow health checks from kube-system
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: TCP
+      port: 80
+  egress:
+  # Allow DNS resolution
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  # Allow HTTPS for external services (GeoIP updates, etc.)
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+  # Allow communication with backend services
+  - to:
+    - podSelector:
+        matchLabels:
+          app: backend
+    ports:
+    - protocol: TCP
+      port: 8000
+  # Allow communication with Kubernetes API
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 6443

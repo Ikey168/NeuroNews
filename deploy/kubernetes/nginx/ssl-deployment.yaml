@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-ssl-proxy
+  namespace: neuronews
+  labels:
+    app: nginx-ssl-proxy
+    component: ssl-proxy
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: nginx-ssl-proxy
+  template:
+    metadata:
+      labels:
+        app: nginx-ssl-proxy
+        component: ssl-proxy
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25-alpine
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 443
+          name: https
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+        - name: ssl-certs
+          mountPath: /etc/ssl/certs
+          readOnly: true
+        - name: ssl-private
+          mountPath: /etc/ssl/private
+          readOnly: true
+        - name: certbot-webroot
+          mountPath: /var/www/certbot
+        livenessProbe:
+          httpGet:
+            path: /nginx-health
+            port: 443
+            scheme: HTTPS
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /nginx-health
+            port: 443
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 101
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: nginx-ssl-config
+      - name: ssl-certs
+        secret:
+          secretName: neuronews-tls
+          items:
+          - key: tls.crt
+            path: tls.crt
+      - name: ssl-private
+        secret:
+          secretName: neuronews-tls
+          items:
+          - key: tls.key
+            path: tls.key
+      - name: certbot-webroot
+        emptyDir: {}

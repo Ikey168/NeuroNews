@@ -1,0 +1,55 @@
+{
+  "fake_news_detection": {
+    "model_name": "roberta-base",
+    "max_length": 512,
+    "confidence_threshold": 0.7,
+    "batch_size": 16,
+    "cache_dir": "./models/fake_news_cache",
+    "model_path": "./models/fake_news_roberta",
+    "training": {
+      "learning_rate": 2e-5,
+      "num_epochs": 3,
+      "warmup_steps": 100,
+      "weight_decay": 0.01,
+      "validation_split": 0.2
+    },
+    "datasets": {
+      "liar": {
+        "enabled": true,
+        "train_path": "data/liar_dataset/train.tsv",
+        "validation_path": "data/liar_dataset/valid.tsv",
+        "test_path": "data/liar_dataset/test.tsv"
+      },
+      "fake_news_detection": {
+        "enabled": true,
+        "path": "data/fake_news/news.csv"
+      }
+    },
+    "api": {
+      "enable_caching": true,
+      "cache_ttl": 3600,
+      "max_content_length": 10000,
+      "rate_limit": {
+        "requests_per_minute": 60,
+        "requests_per_hour": 1000
+      }
+    },
+    "database": {
+      "store_predictions": true,
+      "table_name": "article_veracity",
+      "fields": [
+        "article_id",
+        "is_real",
+        "confidence_score",
+        "prediction_timestamp",
+        "model_version"
+      ]
+    },
+    "monitoring": {
+      "log_predictions": true,
+      "alert_on_low_confidence": true,
+      "low_confidence_threshold": 0.6,
+      "performance_tracking": true
+    }
+  }
+}

@@ -1,0 +1,238 @@
+---
+# Deploy FastAPI application tasks
+- name: "Deploy FastAPI application"
+  k8s:
+    state: present
+    definition:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: "{{ fastapi.name }}"
+        namespace: "{{ app.namespace }}"
+        labels:
+          app: "{{ fastapi.name }}"
+          component: "fastapi"
+          version: "{{ fastapi.tag }}"
+        annotations:
+          deployment.kubernetes.io/revision: "1"
+          ansible.com/managed: "true"
+          ansible.com/deployment-timestamp: "{{ deployment_timestamp }}"
+      spec:
+        replicas: "{{ fastapi.replicas }}"
+        strategy:
+          type: RollingUpdate
+          rollingUpdate:
+            maxSurge: 1
+            maxUnavailable: 0
+        selector:
+          matchLabels:
+            app: "{{ fastapi.name }}"
+        template:
+          metadata:
+            labels:
+              app: "{{ fastapi.name }}"
+              component: "fastapi"
+              version: "{{ fastapi.tag }}"
+            annotations:
+              prometheus.io/scrape: "true"
+              prometheus.io/port: "{{ fastapi.port }}"
+              prometheus.io/path: "/metrics"
+          spec:
+            serviceAccountName: "{{ fastapi.name }}-sa"
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 1000
+              fsGroup: 1000
+            containers:
+            - name: fastapi
+              image: "{{ fastapi.image }}:{{ fastapi.tag }}"
+              imagePullPolicy: Always
+              ports:
+              - containerPort: {{ fastapi.port }}
+                name: http
+                protocol: TCP
+              env:
+              - name: DB_USER
+                valueFrom:
+                  secretKeyRef:
+                    name: neuronews-db-credentials
+                    key: username
+              - name: DB_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: neuronews-db-credentials
+                    key: password
+              envFrom:
+              - configMapRef:
+                  name: "{{ fastapi.name }}-config"
+              resources:
+                requests:
+                  cpu: "{{ fastapi.resources.requests.cpu }}"
+                  memory: "{{ fastapi.resources.requests.memory }}"
+                limits:
+                  cpu: "{{ fastapi.resources.limits.cpu }}"
+                  memory: "{{ fastapi.resources.limits.memory }}"
+              livenessProbe:
+                httpGet:
+                  path: "{{ health_checks.liveness.path }}"
+                  port: {{ fastapi.port }}
+                  scheme: HTTP
+                initialDelaySeconds: {{ health_checks.liveness.initial_delay }}
+                periodSeconds: {{ health_checks.liveness.period }}
+                timeoutSeconds: {{ health_checks.liveness.timeout }}
+                failureThreshold: {{ health_checks.liveness.failure_threshold }}
+              readinessProbe:
+                httpGet:
+                  path: "{{ health_checks.readiness.path }}"
+                  port: {{ fastapi.port }}
+                  scheme: HTTP
+                initialDelaySeconds: {{ health_checks.readiness.initial_delay }}
+                periodSeconds: {{ health_checks.readiness.period }}
+                timeoutSeconds: {{ health_checks.readiness.timeout }}
+                failureThreshold: {{ health_checks.readiness.failure_threshold }}
+              volumeMounts:
+              - name: tmp
+                mountPath: /tmp
+              - name: var-run
+                mountPath: /var/run
+            volumes:
+            - name: tmp
+              emptyDir: {}
+            - name: var-run
+              emptyDir: {}
+            restartPolicy: Always
+            terminationGracePeriodSeconds: 30
+
+- name: "Wait for deployment to be ready"
+  k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    name: "{{ fastapi.name }}"
+    namespace: "{{ app.namespace }}"
+    wait: true
+    wait_condition:
+      type: Progressing
+      status: "True"
+      reason: NewReplicaSetAvailable
+    wait_timeout: "{{ health_check_timeout }}"
+
+- name: "Create FastAPI service"
+  k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: "{{ fastapi.name }}-service"
+        namespace: "{{ app.namespace }}"
+        labels:
+          app: "{{ fastapi.name }}"
+          component: "fastapi"
+        annotations:
+          service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+          service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "{{ ingress.tls.secret_name | default('') }}"
+      spec:
+        type: LoadBalancer
+        selector:
+          app: "{{ fastapi.name }}"
+        ports:
+        - name: http
+          port: 80
+          targetPort: {{ fastapi.port }}
+          protocol: TCP
+        - name: https
+          port: 443
+          targetPort: {{ fastapi.port }}
+          protocol: TCP
+        sessionAffinity: None
+
+- name: "Create ClusterIP service for internal access"
+  k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: "{{ fastapi.name }}-internal"
+        namespace: "{{ app.namespace }}"
+        labels:
+          app: "{{ fastapi.name }}"
+          component: "fastapi"
+          service-type: "internal"
+      spec:
+        type: ClusterIP
+        selector:
+          app: "{{ fastapi.name }}"
+        ports:
+        - name: http
+          port: {{ fastapi.port }}
+          targetPort: {{ fastapi.port }}
+          protocol: TCP
+
+- name: "Create Horizontal Pod Autoscaler"
+  k8s:
+    state: present
+    definition:
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: "{{ fastapi.name }}-hpa"
+        namespace: "{{ app.namespace }}"
+        labels:
+          app: "{{ fastapi.name }}"
+          component: "autoscaling"
+      spec:
+        scaleTargetRef:
+          apiVersion: apps/v1
+          kind: Deployment
+          name: "{{ fastapi.name }}"
+        minReplicas: "{{ fastapi.autoscaling.min_replicas }}"
+        maxReplicas: "{{ fastapi.autoscaling.max_replicas }}"
+        metrics:
+        - type: Resource
+          resource:
+            name: cpu
+            target:
+              type: Utilization
+              averageUtilization: "{{ fastapi.autoscaling.target_cpu_utilization }}"
+        - type: Resource
+          resource:
+            name: memory
+            target:
+              type: Utilization
+              averageUtilization: "{{ fastapi.autoscaling.target_memory_utilization }}"
+        behavior:
+          scaleDown:
+            stabilizationWindowSeconds: 300
+            policies:
+            - type: Percent
+              value: 10
+              periodSeconds: 60
+          scaleUp:
+            stabilizationWindowSeconds: 60
+            policies:
+            - type: Percent
+              value: 50
+              periodSeconds: 60
+  when: fastapi.autoscaling.enabled | bool
+
+- name: "Get deployment status"
+  k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    name: "{{ fastapi.name }}"
+    namespace: "{{ app.namespace }}"
+  register: deployment_status
+
+- name: "Display deployment information"
+  debug:
+    msg: |
+      ============================================
+      FastAPI Deployment Complete
+      ============================================
+      Deployment: {{ fastapi.name }}
+      Namespace: {{ app.namespace }}
+      Replicas: {{ deployment_status.resources[0].status.replicas | default(0) }}
+      Ready Replicas: {{ deployment_status.resources[0].status.readyReplicas | default(0) }}
+      Image: {{ fastapi.image }}:{{ fastapi.tag }}
+      ============================================

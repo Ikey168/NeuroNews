@@ -1,0 +1,176 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluentd-nginx-config
+  namespace: neuronews
+  labels:
+    app: nginx-monitoring
+    component: logging
+data:
+  fluent.conf: |
+    <source>
+      @type tail
+      @id nginx_access_logs
+      path /var/log/nginx/access.log
+      pos_file /var/log/fluentd-nginx-access.log.pos
+      tag nginx.access
+      format nginx
+      read_from_head true
+      refresh_interval 10
+    </source>
+    
+    <source>
+      @type tail
+      @id nginx_access_json_logs
+      path /var/log/nginx/access_json.log
+      pos_file /var/log/fluentd-nginx-access-json.log.pos
+      tag nginx.access.json
+      format json
+      read_from_head true
+      refresh_interval 5
+    </source>
+    
+    <source>
+      @type tail
+      @id nginx_performance_logs
+      path /var/log/nginx/performance.log
+      pos_file /var/log/fluentd-nginx-performance.log.pos
+      tag nginx.performance
+      format /^(?<time>[^|]*)\|(?<remote_addr>[^|]*)\|(?<request>[^|]*)\|(?<status>[^|]*)\|(?<request_time>[^|]*)\|(?<upstream_response_time>[^|]*)\|(?<body_bytes_sent>[^|]*)\|(?<user_agent>.*)$/
+      time_key time
+      time_format %d/%b/%Y:%H:%M:%S %z
+      read_from_head true
+      refresh_interval 5
+    </source>
+    
+    <source>
+      @type tail
+      @id nginx_error_logs
+      path /var/log/nginx/error.log
+      pos_file /var/log/fluentd-nginx-error.log.pos
+      tag nginx.error
+      format /^(?<time>\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}) \[(?<log_level>\w+)\] (?<pid>\d+)#(?<tid>\d+): (?<message>.*)$/
+      time_key time
+      time_format %Y/%m/%d %H:%M:%S
+      read_from_head true
+      refresh_interval 10
+    </source>
+    
+    <source>
+      @type tail
+      @id nginx_health_logs
+      path /var/log/nginx/health.log
+      pos_file /var/log/fluentd-nginx-health.log.pos
+      tag nginx.health
+      format nginx
+      read_from_head true
+      refresh_interval 30
+    </source>
+    
+    <source>
+      @type tail
+      @id nginx_api_logs
+      path /var/log/nginx/api.log
+      pos_file /var/log/fluentd-nginx-api.log.pos
+      tag nginx.api
+      format nginx
+      read_from_head true
+      refresh_interval 5
+    </source>
+    
+    # Filter to parse and enrich logs
+    <filter nginx.access>
+      @type parser
+      key_name message
+      reserve_data true
+      inject_key_prefix parsed_
+      <parse>
+        @type regexp
+        expression /^(?<remote_addr>[\d\.]+) - (?<remote_user>\S+) \[(?<time_local>[^\]]+)\] "(?<method>\S+) (?<path>\S+) (?<protocol>\S+)" (?<status>\d+) (?<body_bytes_sent>\d+) "(?<http_referer>[^"]*)" "(?<http_user_agent>[^"]*)" "(?<http_x_forwarded_for>[^"]*)" rt=(?<request_time>[\d\.]+) uct="(?<upstream_connect_time>[^"]*)" uht="(?<upstream_header_time>[^"]*)" urt="(?<upstream_response_time>[^"]*)" cs=(?<upstream_cache_status>\S+)/
+      </parse>
+    </filter>
+    
+    # Add Kubernetes metadata
+    <filter nginx.**>
+      @type kubernetes_metadata
+      @id filter_kube_metadata
+      kubernetes_url "#{ENV['KUBERNETES_SERVICE_HOST']}:#{ENV['KUBERNETES_SERVICE_PORT_HTTPS']}"
+      verify_ssl true
+      ca_file /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      bearer_token_file /var/run/secrets/kubernetes.io/serviceaccount/token
+      use_journal false
+      skip_labels false
+      skip_container_metadata false
+      skip_master_url false
+      skip_namespace_metadata false
+    </filter>
+    
+    # Performance metrics extraction
+    <filter nginx.performance>
+      @type record_transformer
+      enable_ruby true
+      <record>
+        response_time_ms ${record["request_time"].to_f * 1000}
+        upstream_response_time_ms ${record["upstream_response_time"] ? record["upstream_response_time"].to_f * 1000 : 0}
+        status_class ${record["status"].to_i / 100}
+        is_error ${record["status"].to_i >= 400}
+        is_slow ${record["request_time"].to_f > 1.0}
+        bytes_per_second ${record["body_bytes_sent"].to_i / [record["request_time"].to_f, 0.001].max}
+      </record>
+    </filter>
+    
+    # Error log enrichment
+    <filter nginx.error>
+      @type record_transformer
+      <record>
+        severity ${record["log_level"]}
+        component nginx
+        environment "#{ENV['ENVIRONMENT'] || 'production'}"
+      </record>
+    </filter>
+    
+    # Output to stdout for Kubernetes logging
+    <match nginx.**>
+      @type stdout
+      @id output_stdout
+      <format>
+        @type json
+      </format>
+    </match>
+    
+    # Optional: Output to Elasticsearch (if available)
+    <match nginx.**>
+      @type elasticsearch
+      @id output_elasticsearch
+      host elasticsearch-service.logging.svc.cluster.local
+      port 9200
+      logstash_format true
+      logstash_prefix nginx
+      logstash_dateformat %Y.%m.%d
+      include_tag_key true
+      tag_key @log_name
+      reload_connections false
+      reconnect_on_error true
+      reload_on_failure true
+      <buffer>
+        @type file
+        path /var/log/fluentd-buffers/nginx.buffer
+        flush_mode interval
+        retry_type exponential_backoff
+        flush_thread_count 2
+        flush_interval 5s
+        retry_forever
+        retry_max_interval 30
+        chunk_limit_size 2M
+        queue_limit_length 8
+        overflow_action block
+      </buffer>
+    </match>
+    
+    # System logs
+    <system>
+      log_level info
+      suppress_repeated_stacktrace true
+      emit_error_log_interval 30s
+      suppress_config_dump true
+    </system>

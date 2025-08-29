@@ -1,0 +1,288 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kg-api-redis
+  namespace: neuronews
+  labels:
+    app: kg-api-redis
+    component: cache
+    tier: backend
+    version: v7.0.0
+  annotations:
+    description: "Redis cache for Knowledge Graph API with high availability"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kg-api-redis
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: kg-api-redis
+        component: cache
+        tier: backend
+        version: v7.0.0
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9121"
+        prometheus.io/path: "/metrics"
+    spec:
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        runAsNonRoot: true
+      
+      containers:
+      - name: redis
+        image: redis:7.0-alpine
+        imagePullPolicy: IfNotPresent
+        
+        ports:
+        - name: redis
+          containerPort: 6379
+          protocol: TCP
+        
+        # Environment variables
+        env:
+        - name: REDIS_PORT
+          value: "6379"
+        
+        # Redis configuration
+        command:
+        - redis-server
+        - /etc/redis/redis.conf
+        
+        # Resource limits
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        
+        # Health checks
+        livenessProbe:
+          tcpSocket:
+            port: redis
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        
+        # Volume mounts
+        volumeMounts:
+        - name: redis-config
+          mountPath: /etc/redis/redis.conf
+          subPath: redis.conf
+        - name: redis-data
+          mountPath: /data
+      
+      # Redis Exporter for Prometheus metrics
+      - name: redis-exporter
+        image: oliver006/redis_exporter:v1.45.0
+        imagePullPolicy: IfNotPresent
+        
+        ports:
+        - name: metrics
+          containerPort: 9121
+          protocol: TCP
+        
+        env:
+        - name: REDIS_ADDR
+          value: "redis://localhost:6379"
+        - name: REDIS_EXPORTER_LOG_FORMAT
+          value: "json"
+        
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        
+        livenessProbe:
+          httpGet:
+            path: /metrics
+            port: metrics
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        
+        readinessProbe:
+          httpGet:
+            path: /metrics
+            port: metrics
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      
+      # Volumes
+      volumes:
+      - name: redis-config
+        configMap:
+          name: kg-api-redis-config
+      - name: redis-data
+        persistentVolumeClaim:
+          claimName: kg-api-redis-pvc
+      
+      # Pod scheduling
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: kg-api-redis
+              topologyKey: kubernetes.io/hostname
+      
+      # Tolerations for dedicated cache nodes
+      tolerations:
+      - key: "cache-node"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kg-api-redis-service
+  namespace: neuronews
+  labels:
+    app: kg-api-redis
+    component: cache
+    tier: backend
+  annotations:
+    description: "Redis service for Knowledge Graph API caching"
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9121"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP
+  selector:
+    app: kg-api-redis
+  ports:
+  - name: redis
+    port: 6379
+    targetPort: redis
+    protocol: TCP
+  - name: metrics
+    port: 9121
+    targetPort: metrics
+    protocol: TCP
+  sessionAffinity: None
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kg-api-redis-config
+  namespace: neuronews
+  labels:
+    app: kg-api-redis
+    component: cache-config
+data:
+  redis.conf: |
+    # Redis configuration for Knowledge Graph API cache
+    
+    # Network and Connection Settings
+    bind 0.0.0.0
+    port 6379
+    timeout 300
+    tcp-keepalive 60
+    tcp-backlog 511
+    
+    # Memory Management
+    maxmemory 768mb
+    maxmemory-policy allkeys-lru
+    maxmemory-samples 5
+    
+    # Persistence Settings (for cache, we use minimal persistence)
+    save 900 1
+    save 300 10
+    save 60 10000
+    stop-writes-on-bgsave-error yes
+    rdbcompression yes
+    rdbchecksum yes
+    dbfilename kg-cache.rdb
+    dir /data
+    
+    # AOF Settings (disabled for cache)
+    appendonly no
+    
+    # Logging
+    loglevel notice
+    logfile ""
+    syslog-enabled yes
+    syslog-ident redis-kg-cache
+    
+    # Performance Tuning
+    hash-max-ziplist-entries 512
+    hash-max-ziplist-value 64
+    list-max-ziplist-size -2
+    list-compress-depth 0
+    set-max-intset-entries 512
+    zset-max-ziplist-entries 128
+    zset-max-ziplist-value 64
+    hll-sparse-max-bytes 3000
+    
+    # Slow Log
+    slowlog-log-slower-than 10000
+    slowlog-max-len 128
+    
+    # Latency Monitoring
+    latency-monitor-threshold 100
+    
+    # Client Settings
+    # maxclients 10000
+    
+    # Security (basic settings)
+    protected-mode no
+    # requirepass can be set via secret if needed
+    
+    # Replication Settings (for future HA)
+    # repl-diskless-sync no
+    # repl-diskless-sync-delay 5
+    
+    # Memory usage optimizations for cache workload
+    activerehashing yes
+    client-output-buffer-limit normal 0 0 0
+    client-output-buffer-limit replica 256mb 64mb 60
+    client-output-buffer-limit pubsub 32mb 8mb 60
+    
+    # Enable memory usage tracking
+    memory-usage-sample-rate 100
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kg-api-redis-pvc
+  namespace: neuronews
+  labels:
+    app: kg-api-redis
+    component: storage
+  annotations:
+    description: "Persistent storage for Redis cache data"
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: gp3  # Use GP3 for better performance
+  volumeMode: Filesystem

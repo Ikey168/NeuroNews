@@ -1,0 +1,30 @@
+# Basic semantic model for articles (compatible with dbt 1.9.x)
+
+semantic_models:
+  - name: articles
+    description: "Core article data for analytics"
+    model: ref('articles_sample')  # Reference to a basic model
+    
+    entities:
+      - name: article_id
+        type: primary
+        expr: article_id
+    
+    dimensions:
+      - name: published_date
+        type: time
+        type_params:
+          time_granularity: day
+        expr: published_date
+        is_partition: true
+        
+      - name: category
+        type: categorical
+        expr: category
+    
+    measures:
+      - name: article_count
+        description: "Count of articles"
+        agg: count
+        expr: article_id
+        agg_time_dimension: published_date

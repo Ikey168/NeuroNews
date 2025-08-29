@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-api-proxy
+  namespace: neuronews
+  labels:
+    app: nginx-api-proxy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx-api-proxy
+  template:
+    metadata:
+      labels:
+        app: nginx-api-proxy
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: nginx-api-proxy-config

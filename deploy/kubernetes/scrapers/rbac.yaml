@@ -1,0 +1,148 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: neuronews-scrapers
+  namespace: neuronews
+  labels:
+    app: neuronews-scrapers
+    component: scraper
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT-ID:role/neuronews-scrapers-role
+automountServiceAccountToken: true
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: neuronews
+  name: neuronews-scrapers-role
+  labels:
+    app: neuronews-scrapers
+    component: scraper
+rules:
+# ConfigMaps access
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch"]
+# Secrets access
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list", "watch"]
+# Pods access (for self-monitoring)
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+# Events access (for job monitoring)
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["get", "list", "watch", "create"]
+# Jobs access (for job status monitoring)
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["get", "list", "watch"]
+# CronJobs access (for self-monitoring)
+- apiGroups: ["batch"]
+  resources: ["cronjobs"]
+  verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: neuronews-scrapers-binding
+  namespace: neuronews
+  labels:
+    app: neuronews-scrapers
+    component: scraper
+subjects:
+- kind: ServiceAccount
+  name: neuronews-scrapers
+  namespace: neuronews
+roleRef:
+  kind: Role
+  name: neuronews-scrapers-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: v1
+kind: NetworkPolicy
+metadata:
+  name: neuronews-scrapers-network-policy
+  namespace: neuronews
+  labels:
+    app: neuronews-scrapers
+    component: scraper
+spec:
+  podSelector:
+    matchLabels:
+      app: neuronews-scrapers
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow monitoring scraping
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 8080
+  # Allow internal cluster communication
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: neuronews
+    ports:
+    - protocol: TCP
+      port: 8080
+  egress:
+  # Allow DNS resolution
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 53
+  # Allow HTTPS outbound (for web scraping)
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+  # Allow HTTP outbound (for web scraping)
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 80
+  # Allow database access
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: neuronews
+    ports:
+    - protocol: TCP
+      port: 5432
+  # Allow Redis access
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: neuronews
+    ports:
+    - protocol: TCP
+      port: 6379
+  # Allow CloudWatch and AWS services
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+    namespaceSelector: {}
+  # Allow Prometheus PushGateway
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 9091

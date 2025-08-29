@@ -1,0 +1,104 @@
+---
+# Prepare Docker images tasks
+- name: "Check if Docker is running"
+  command: docker info
+  register: docker_status
+  failed_when: docker_status.rc != 0
+
+- name: "Login to Docker registry (if configured)"
+  docker_login:
+    registry: "{{ docker_registry.url | default('docker.io') }}"
+    username: "{{ docker_registry.username }}"
+    password: "{{ docker_registry.password }}"
+  when: 
+    - docker_registry is defined
+    - docker_registry.username is defined
+    - docker_registry.password is defined
+
+- name: "Build FastAPI Docker image"
+  docker_image:
+    build:
+      path: "../"  # Build from project root
+      dockerfile: "docker/fastapi.Dockerfile"
+      pull: yes
+      nocache: no
+    name: "{{ fastapi.image }}"
+    tag: "{{ fastapi.tag }}"
+    source: build
+    force_source: yes
+  register: fastapi_build
+
+- name: "Display build information"
+  debug:
+    msg: |
+      ============================================
+      Docker Image Build Complete
+      ============================================
+      Image: {{ fastapi.image }}:{{ fastapi.tag }}
+      Build ID: {{ fastapi_build.image.Id[:12] }}
+      Size: {{ (fastapi_build.image.Size / 1024 / 1024) | round(1) }} MB
+      Created: {{ fastapi_build.image.Created }}
+      ============================================
+
+- name: "Tag image for registry (if configured)"
+  docker_image:
+    name: "{{ fastapi.image }}:{{ fastapi.tag }}"
+    repository: "{{ docker_registry.url }}/{{ fastapi.image }}"
+    tag: "{{ fastapi.tag }}"
+    source: local
+  when: docker_registry is defined and docker_registry.url is defined
+
+- name: "Push image to registry (if configured)"
+  docker_image:
+    name: "{{ docker_registry.url }}/{{ fastapi.image }}"
+    tag: "{{ fastapi.tag }}"
+    push: yes
+    source: local
+  when: docker_registry is defined and docker_registry.url is defined
+  register: image_push
+
+- name: "Verify image is available in cluster"
+  k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Pod
+      metadata:
+        name: "image-test-{{ deployment_timestamp }}"
+        namespace: "{{ app.namespace }}"
+      spec:
+        restartPolicy: Never
+        containers:
+        - name: test
+          image: "{{ fastapi.image }}:{{ fastapi.tag }}"
+          command: ["echo", "Image test successful"]
+  register: image_test
+
+- name: "Wait for image test pod to complete"
+  k8s_info:
+    api_version: v1
+    kind: Pod
+    name: "image-test-{{ deployment_timestamp }}"
+    namespace: "{{ app.namespace }}"
+    wait: true
+    wait_condition:
+      type: Ready
+      status: "False"
+      reason: PodCompleted
+    wait_timeout: 60
+
+- name: "Clean up image test pod"
+  k8s:
+    state: absent
+    api_version: v1
+    kind: Pod
+    name: "image-test-{{ deployment_timestamp }}"
+    namespace: "{{ app.namespace }}"
+
+- name: "List available images for verification"
+  command: docker images {{ fastapi.image }}
+  register: available_images
+
+- name: "Display available images"
+  debug:
+    var: available_images.stdout_lines

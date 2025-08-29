@@ -1,0 +1,159 @@
+{
+  "summarization": {
+    "default_model": "sshleifer/distilbart-cnn-12-6",
+    "device": "auto",
+    "enable_caching": true,
+    "cache_timeout_seconds": 3600,
+    "max_concurrent_requests": 3,
+    "models": {
+      "distilbart": {
+        "name": "sshleifer/distilbart-cnn-12-6",
+        "description": "Lightweight BART model for fast summarization",
+        "recommended_for": ["production", "real-time"],
+        "memory_usage": "low",
+        "speed": "fast"
+      },
+      "bart": {
+        "name": "facebook/bart-large-cnn",
+        "description": "Full BART model for high-quality summarization",
+        "recommended_for": ["high-quality", "offline"],
+        "memory_usage": "high",
+        "speed": "medium"
+      },
+      "pegasus": {
+        "name": "google/pegasus-cnn_dailymail",
+        "description": "Pegasus model optimized for news summarization",
+        "recommended_for": ["news", "high-quality"],
+        "memory_usage": "high",
+        "speed": "slow"
+      },
+      "t5": {
+        "name": "t5-small",
+        "description": "Small T5 model for basic summarization",
+        "recommended_for": ["testing", "development"],
+        "memory_usage": "low",
+        "speed": "fast"
+      }
+    },
+    "length_configs": {
+      "short": {
+        "max_length": 50,
+        "min_length": 20,
+        "length_penalty": 2.0,
+        "num_beams": 4,
+        "description": "Brief summary (20-50 words)",
+        "target_compression": 0.1
+      },
+      "medium": {
+        "max_length": 150,
+        "min_length": 50,
+        "length_penalty": 1.5,
+        "num_beams": 4,
+        "description": "Standard summary (50-150 words)",
+        "target_compression": 0.2
+      },
+      "long": {
+        "max_length": 300,
+        "min_length": 100,
+        "length_penalty": 1.0,
+        "num_beams": 6,
+        "description": "Detailed summary (100-300 words)",
+        "target_compression": 0.3
+      }
+    },
+    "quality_thresholds": {
+      "confidence_score": {
+        "high": 0.8,
+        "medium": 0.6,
+        "low": 0.4
+      },
+      "compression_ratio": {
+        "optimal_min": 0.15,
+        "optimal_max": 0.35,
+        "acceptable_min": 0.1,
+        "acceptable_max": 0.5
+      },
+      "processing_time": {
+        "fast": 2.0,
+        "medium": 5.0,
+        "slow": 10.0
+      }
+    },
+    "fallback_strategy": {
+      "enable": true,
+      "fallback_model": "sshleifer/distilbart-cnn-12-6",
+      "max_retries": 2,
+      "timeout_seconds": 30,
+      "simple_fallback": {
+        "enable": true,
+        "method": "extractive",
+        "sentence_count": 3
+      }
+    }
+  },
+  "database": {
+    "connection": {
+      "host": "${REDSHIFT_HOST}",
+      "port": "${REDSHIFT_PORT}",
+      "database": "${REDSHIFT_DATABASE}",
+      "user": "${REDSHIFT_USER}",
+      "password": "${REDSHIFT_PASSWORD}",
+      "sslmode": "require"
+    },
+    "table_name": "article_summaries",
+    "cache": {
+      "enable": true,
+      "timeout_seconds": 3600,
+      "max_entries": 1000
+    },
+    "batch_processing": {
+      "max_batch_size": 10,
+      "batch_timeout_seconds": 300
+    }
+  },
+  "api": {
+    "rate_limiting": {
+      "requests_per_minute": 60,
+      "burst_limit": 10
+    },
+    "response_format": {
+      "include_metadata": true,
+      "include_metrics": true,
+      "compress_responses": true
+    },
+    "validation": {
+      "min_text_length": 100,
+      "max_text_length": 100000,
+      "allowed_languages": ["en"],
+      "content_filters": ["profanity", "spam"]
+    }
+  },
+  "monitoring": {
+    "enable_metrics": true,
+    "log_level": "INFO",
+    "performance_tracking": {
+      "track_processing_time": true,
+      "track_model_usage": true,
+      "track_quality_metrics": true,
+      "save_metrics_interval": 300
+    },
+    "alerts": {
+      "enable": true,
+      "thresholds": {
+        "processing_time_exceed": 15.0,
+        "error_rate_threshold": 0.05,
+        "low_confidence_threshold": 0.4
+      }
+    }
+  },
+  "experimental": {
+    "enable_multi_document": false,
+    "enable_custom_models": false,
+    "enable_fine_tuning": false,
+    "advanced_post_processing": {
+      "fact_checking": false,
+      "coherence_scoring": false,
+      "readability_optimization": false
+    }
+  }
+}
