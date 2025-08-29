@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from src.api.routes.news_routes import router as news_api_router
-from src.database.snowflake_connector import SnowflakeAnalyticsConnector
+from src.database.snowflake_analytics_connector import SnowflakeAnalyticsConnector
 
 
 @pytest.fixture(autouse=True)

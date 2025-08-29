@@ -941,8 +941,7 @@ if __name__ == "__main__":
     except Exception as e:
         print("❌ Test setup failed: {0}".format(e))
 
-    print(""
- Test Coverage: ")
+    print("Test Coverage:")
     print("  • Related entities endpoint with various parameters")
     print("  • Event timeline endpoint with date filtering")
     print("  • Entity details endpoint with comprehensive data")

@@ -357,23 +357,21 @@ if __name__ == "__main__":
 
         # Test user agent rotator
         ua_rotator = UserAgentRotator()
-        print(""
-Testing user agent rotation...")"
+        print("Testing user agent rotation...")
         for i in range(3):
             headers=ua_rotator.get_random_headers()
             print(f"Headers {i + 1}: {headers['User-Agent'][:50]}...")
 
         # Test CAPTCHA detection
         captcha_solver=CaptchaSolver(api_key="test_key")
-        print(""
-Testing CAPTCHA detection...")
+        print("Testing CAPTCHA detection...")
 
-        test_html = '<div class="g-recaptcha" data-sitekey="test123"></div>'"
+        test_html = '<div class="g-recaptcha" data-sitekey="test123"></div>'
         detected = await captcha_solver.detect_captcha(test_html)
         print("CAPTCHA detected: {0}".format(detected))
 
-        print(""
-All tests completed successfully!")"
+        print("Complete")
+        print("All tests completed successfully!")
 
     # Run manual tests
     asyncio.run(run_manual_tests())
