@@ -102,7 +102,7 @@ class GrafanaDashboardDemo:
         try:
             import os
             script_dir = os.path.dirname(os.path.abspath(__file__))
-            dashboard_dir = os.path.join(script_dir, "dashboards")
+            dashboard_dir = os.path.join(script_dir, "grafana", "dashboards")
             
             for dashboard_file in os.listdir(dashboard_dir):
                 if dashboard_file.endswith('.json'):
