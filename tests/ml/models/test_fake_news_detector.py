@@ -3,6 +3,7 @@ import tempfile
 from pathlib import Path
 import pytest
 from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch
 
 from neuronews.ml.models.fake_news_detection import FakeNewsDetector
 
