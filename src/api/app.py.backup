@@ -281,7 +281,7 @@ def configure_error_handlers_if_available(app):
     return False
 
 
-def add_waf_middleware_if_available(app):
+def add_waf_middleware_if_available():
     """Add WAF security middleware first for maximum protection (Issue #65)."""
     if WAF_SECURITY_AVAILABLE:
         waf_security_middleware = _imported_modules.get('WAFSecurityMiddleware')
@@ -293,7 +293,7 @@ def add_waf_middleware_if_available(app):
     return False
 
 
-def add_rate_limiting_middleware_if_available(app):
+def add_rate_limiting_middleware_if_available():
     """Add rate limiting middleware (Issue #59)."""
     if RATE_LIMITING_AVAILABLE:
         rate_limit_middleware = _imported_modules.get('RateLimitMiddleware')
@@ -304,7 +304,7 @@ def add_rate_limiting_middleware_if_available(app):
     return False
 
 
-def add_api_key_middleware_if_available(app):
+def add_api_key_middleware_if_available():
     """Add API key authentication middleware (Issue #61)."""
     if API_KEY_MANAGEMENT_AVAILABLE:
         api_key_auth_middleware = _imported_modules.get('APIKeyAuthMiddleware')
@@ -316,7 +316,7 @@ def add_api_key_middleware_if_available(app):
     return False
 
 
-def add_rbac_middleware_if_available(app):
+def add_rbac_middleware_if_available():
     """Add RBAC middleware (Issue #60)."""
     if RBAC_AVAILABLE:
         enhanced_rbac_middleware = _imported_modules.get('EnhancedRBACMiddleware')
@@ -328,7 +328,7 @@ def add_rbac_middleware_if_available(app):
     return False
 
 
-def add_cors_middleware(app):
+def add_cors_middleware():
     """Add CORS configuration."""
     app.add_middleware(
         CORSMiddleware,
@@ -340,28 +340,17 @@ def add_cors_middleware(app):
     return True
 
 
-def include_core_routers(app):
+def include_core_routers():
     """Include core routers that are always available."""
-    graph_routes = _imported_modules.get('graph_routes')
-    knowledge_graph_routes = _imported_modules.get('knowledge_graph_routes')
-    news_routes = _imported_modules.get('news_routes')
-    event_routes = _imported_modules.get('event_routes')
-    veracity_routes = _imported_modules.get('veracity_routes')
-    
-    if graph_routes:
-        app.include_router(graph_routes.router)
-    if knowledge_graph_routes:
-        app.include_router(knowledge_graph_routes.router)
-    if news_routes:
-        app.include_router(news_routes.router)
-    if event_routes:
-        app.include_router(event_routes.router)
-    if veracity_routes:
-        app.include_router(veracity_routes.router)
+    app.include_router(graph_routes.router)
+    app.include_router(knowledge_graph_routes.router)
+    app.include_router(news_routes.router)
+    app.include_router(event_routes.router)
+    app.include_router(veracity_routes.router)
     return True
 
 
-def include_optional_routers(app):
+def include_optional_routers():
     """Include optional routers based on availability."""
     routers_included = 0
     
@@ -454,60 +443,38 @@ def include_optional_routers(app):
     return routers_included
 
 
-def include_versioned_routers(app):
-    """Include versioned routers."""
-    # Include core routers with versioning
-    graph_routes = _imported_modules.get('graph_routes')
-    knowledge_graph_routes = _imported_modules.get('knowledge_graph_routes')
-    news_routes = _imported_modules.get('news_routes')
-    event_routes = _imported_modules.get('event_routes')
-    veracity_routes = _imported_modules.get('veracity_routes')
-    
-    if graph_routes:
-        app.include_router(graph_routes.router, prefix="/api/v1")
-    if knowledge_graph_routes:
-        app.include_router(knowledge_graph_routes.router, prefix="/api/v1")
-    if news_routes:
-        app.include_router(news_routes.router, prefix="/api/v1")
-    if event_routes:
-        app.include_router(event_routes.router, prefix="/api/v1")
-    if veracity_routes:
-        app.include_router(veracity_routes.router, prefix="/api/v1")
+def include_versioned_routers():
+    """Include news and graph routers with versioning and tags."""
+    app.include_router(news_routes.router, prefix="/api/v1/news", tags=["News"])
+    app.include_router(graph_routes.router, prefix="/api/v1/graph", tags=["Graph"])
     return True
 
 
 def initialize_app():
     """Initialize the FastAPI application with all configurations."""
-    # Create the app
-    app = create_app()
-    
     # Configure error handlers
-    configure_error_handlers_if_available(app)
+    configure_error_handlers_if_available()
     
     # Add middleware in proper order
-    add_waf_middleware_if_available(app)
-    add_rate_limiting_middleware_if_available(app)
-    add_api_key_middleware_if_available(app)
-    add_rbac_middleware_if_available(app)
-    add_cors_middleware(app)
+    add_waf_middleware_if_available()
+    add_rate_limiting_middleware_if_available()
+    add_api_key_middleware_if_available()
+    add_rbac_middleware_if_available()
+    add_cors_middleware()
     
     # Include routers
-    include_core_routers(app)
-    include_optional_routers(app)
-    include_versioned_routers(app)
+    include_core_routers()
+    include_optional_routers()
+    include_versioned_routers()
     
     return app
 
 
-# Create the application instance - but only if not in test mode
-import os
-if not os.environ.get('TESTING', False):
-    app = initialize_app()
-else:
-    # In test mode, create a minimal app to avoid heavy imports
-    app = FastAPI(title="NeuroNews API", version="0.1.0")
+# Initialize the application
+initialize_app()
 
 
+@app.get("/")
 async def root():
     """Root endpoint."""
     return {
@@ -528,11 +495,12 @@ async def root():
     }
 
 
+@app.get("/health")
 async def health_check():
     """Health check endpoint for monitoring."""
     return {
         "status": "healthy",
-        "timestamp": "2025-08-30T22:00:00Z",
+        "timestamp": "2025-08-17T22:00:00Z",
         "version": "0.1.0",
         "components": {
             "api": "operational",
@@ -549,8 +517,3 @@ async def health_check():
             "cache": "unknown",  # Would check Redis connection
         },
     }
-
-
-# Add the endpoints to the app
-app.add_api_route("/", root, methods=["GET"])
-app.add_api_route("/health", health_check, methods=["GET"])

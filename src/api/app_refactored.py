@@ -1,11 +1,12 @@
 """
-Main FastAPI application configuration.
+Main FastAPI application configuration - Refactored for 100% test coverage.
+All imports moved to functions to make ImportError blocks testable.
 """
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# Initialize feature flags - will be set by check_imports()
+# Initialize feature flags - will be set by import functions
 ERROR_HANDLERS_AVAILABLE = False
 ENHANCED_KG_AVAILABLE = False
 EVENT_TIMELINE_AVAILABLE = False
@@ -64,7 +65,7 @@ def try_import_event_timeline_routes():
 
 
 def try_import_quicksight_routes():
-    """Try to import quicksight dashboard routes (Issue #49)."""
+    """Try to import QuickSight routes (Issue #39)."""
     global QUICKSIGHT_AVAILABLE
     try:
         from src.api.routes import quicksight_routes
@@ -77,7 +78,7 @@ def try_import_quicksight_routes():
 
 
 def try_import_topic_routes():
-    """Try to import topic routes (Issue #29)."""
+    """Try to import topic routes (Issue #40)."""
     global TOPIC_ROUTES_AVAILABLE
     try:
         from src.api.routes import topic_routes
@@ -90,7 +91,7 @@ def try_import_topic_routes():
 
 
 def try_import_graph_search_routes():
-    """Try to import graph search routes (Issue #39)."""
+    """Try to import graph search routes (Issue #41)."""
     global GRAPH_SEARCH_AVAILABLE
     try:
         from src.api.routes import graph_search_routes
@@ -103,7 +104,7 @@ def try_import_graph_search_routes():
 
 
 def try_import_influence_routes():
-    """Try to import influence analysis routes (Issue #40)."""
+    """Try to import influence analysis routes (Issue #42)."""
     global INFLUENCE_ANALYSIS_AVAILABLE
     try:
         from src.api.routes import influence_routes
@@ -124,6 +125,7 @@ def try_import_rate_limiting():
             RateLimitMiddleware,
         )
         from src.api.routes import auth_routes, rate_limit_routes
+        
         _imported_modules['RateLimitConfig'] = RateLimitConfig
         _imported_modules['RateLimitMiddleware'] = RateLimitMiddleware
         _imported_modules['auth_routes'] = auth_routes
@@ -144,6 +146,7 @@ def try_import_rbac():
             RBACMetricsMiddleware,
         )
         from src.api.routes import rbac_routes
+        
         _imported_modules['EnhancedRBACMiddleware'] = EnhancedRBACMiddleware
         _imported_modules['RBACMetricsMiddleware'] = RBACMetricsMiddleware
         _imported_modules['rbac_routes'] = rbac_routes
@@ -163,6 +166,7 @@ def try_import_api_key_management():
             APIKeyMetricsMiddleware,
         )
         from src.api.routes import api_key_routes
+        
         _imported_modules['APIKeyAuthMiddleware'] = APIKeyAuthMiddleware
         _imported_modules['APIKeyMetricsMiddleware'] = APIKeyMetricsMiddleware
         _imported_modules['api_key_routes'] = api_key_routes
@@ -182,6 +186,7 @@ def try_import_waf_security():
             WAFMetricsMiddleware,
             WAFSecurityMiddleware,
         )
+        
         _imported_modules['waf_security_routes'] = waf_security_routes
         _imported_modules['WAFMetricsMiddleware'] = WAFMetricsMiddleware
         _imported_modules['WAFSecurityMiddleware'] = WAFSecurityMiddleware
@@ -193,7 +198,7 @@ def try_import_waf_security():
 
 
 def try_import_auth_routes():
-    """Try to import auth routes."""
+    """Try to import standalone auth routes."""
     global AUTH_AVAILABLE
     try:
         from src.api.routes import auth_routes
@@ -218,23 +223,6 @@ def try_import_search_routes():
         return False
 
 
-def check_all_imports():
-    """Check all optional imports and set feature flags."""
-    try_import_error_handlers()
-    try_import_enhanced_kg_routes()
-    try_import_event_timeline_routes()
-    try_import_quicksight_routes()
-    try_import_topic_routes()
-    try_import_graph_search_routes()
-    try_import_influence_routes()
-    try_import_rate_limiting()
-    try_import_rbac()
-    try_import_api_key_management()
-    try_import_waf_security()
-    try_import_auth_routes()
-    try_import_search_routes()
-
-
 def try_import_core_routes():
     """Try to import core routes that are always needed."""
     global _imported_modules
@@ -248,6 +236,23 @@ def try_import_core_routes():
         return True
     except ImportError:
         return False
+
+
+def check_all_imports():
+    """Check all imports to set feature flags."""
+    try_import_error_handlers()
+    try_import_enhanced_kg_routes()
+    try_import_event_timeline_routes()
+    try_import_quicksight_routes()
+    try_import_topic_routes()
+    try_import_graph_search_routes()
+    try_import_influence_routes()
+    try_import_rate_limiting()
+    try_import_rbac()
+    try_import_api_key_management()
+    try_import_waf_security()
+    try_import_auth_routes()
+    try_import_search_routes()
 
 
 def create_app():
@@ -361,6 +366,28 @@ def include_core_routers(app):
     return True
 
 
+def include_versioned_routers(app):
+    """Include versioned routers."""
+    # Include core routers with versioning
+    graph_routes = _imported_modules.get('graph_routes')
+    knowledge_graph_routes = _imported_modules.get('knowledge_graph_routes')
+    news_routes = _imported_modules.get('news_routes')
+    event_routes = _imported_modules.get('event_routes')
+    veracity_routes = _imported_modules.get('veracity_routes')
+    
+    if graph_routes:
+        app.include_router(graph_routes.router, prefix="/api/v1")
+    if knowledge_graph_routes:
+        app.include_router(knowledge_graph_routes.router, prefix="/api/v1")
+    if news_routes:
+        app.include_router(news_routes.router, prefix="/api/v1")
+    if event_routes:
+        app.include_router(event_routes.router, prefix="/api/v1")
+    if veracity_routes:
+        app.include_router(veracity_routes.router, prefix="/api/v1")
+    return True
+
+
 def include_optional_routers(app):
     """Include optional routers based on availability."""
     routers_included = 0
@@ -409,28 +436,28 @@ def include_optional_routers(app):
             app.include_router(event_timeline_routes.router)
             routers_included += 1
 
-    # Include quicksight dashboard routes if available (Issue #49)
+    # Include QuickSight routes if available (Issue #39)
     if QUICKSIGHT_AVAILABLE:
         quicksight_routes = _imported_modules.get('quicksight_routes')
         if quicksight_routes:
             app.include_router(quicksight_routes.router)
             routers_included += 1
 
-    # Include topic routes if available (Issue #29)
+    # Include topic routes if available (Issue #40)
     if TOPIC_ROUTES_AVAILABLE:
         topic_routes = _imported_modules.get('topic_routes')
         if topic_routes:
             app.include_router(topic_routes.router)
             routers_included += 1
 
-    # Include graph search routes if available (Issue #39)
+    # Include graph search routes if available (Issue #41)
     if GRAPH_SEARCH_AVAILABLE:
         graph_search_routes = _imported_modules.get('graph_search_routes')
         if graph_search_routes:
             app.include_router(graph_search_routes.router)
             routers_included += 1
 
-    # Include influence analysis routes if available (Issue #40)
+    # Include influence analysis routes if available (Issue #42)
     if INFLUENCE_ANALYSIS_AVAILABLE:
         influence_routes = _imported_modules.get('influence_routes')
         if influence_routes:
@@ -452,28 +479,6 @@ def include_optional_routers(app):
             routers_included += 1
 
     return routers_included
-
-
-def include_versioned_routers(app):
-    """Include versioned routers."""
-    # Include core routers with versioning
-    graph_routes = _imported_modules.get('graph_routes')
-    knowledge_graph_routes = _imported_modules.get('knowledge_graph_routes')
-    news_routes = _imported_modules.get('news_routes')
-    event_routes = _imported_modules.get('event_routes')
-    veracity_routes = _imported_modules.get('veracity_routes')
-    
-    if graph_routes:
-        app.include_router(graph_routes.router, prefix="/api/v1")
-    if knowledge_graph_routes:
-        app.include_router(knowledge_graph_routes.router, prefix="/api/v1")
-    if news_routes:
-        app.include_router(news_routes.router, prefix="/api/v1")
-    if event_routes:
-        app.include_router(event_routes.router, prefix="/api/v1")
-    if veracity_routes:
-        app.include_router(veracity_routes.router, prefix="/api/v1")
-    return True
 
 
 def initialize_app():
@@ -499,13 +504,8 @@ def initialize_app():
     return app
 
 
-# Create the application instance - but only if not in test mode
-import os
-if not os.environ.get('TESTING', False):
-    app = initialize_app()
-else:
-    # In test mode, create a minimal app to avoid heavy imports
-    app = FastAPI(title="NeuroNews API", version="0.1.0")
+# Create the application instance
+app = initialize_app()
 
 
 async def root():
@@ -532,7 +532,7 @@ async def health_check():
     """Health check endpoint for monitoring."""
     return {
         "status": "healthy",
-        "timestamp": "2025-08-30T22:00:00Z",
+        "timestamp": "2025-08-17T22:00:00Z",
         "version": "0.1.0",
         "components": {
             "api": "operational",
