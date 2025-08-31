@@ -657,5 +657,167 @@ class TestIntegrationScenarios:
             assert 'arn:aws:sns:us-east-1:123:custom-topic' in call_args[1]['AlarmActions']
 
 
+class TestAdditionalCoverageScenarios:
+    """Additional tests to reach 100% coverage."""
+    
+    @pytest.mark.asyncio
+    @patch('src.api.aws_rate_limiting.boto3')
+    async def test_create_usage_plans_no_client(self, mock_boto3):
+        """Test create_usage_plans when client is None."""
+        mock_boto3.client.side_effect = Exception("No credentials")
+        
+        manager = APIGatewayManager()
+        result = await manager.create_usage_plans()
+        
+        # Should return empty dict when client is None
+        assert result == {}
+
+    @pytest.mark.asyncio
+    @patch('src.api.aws_rate_limiting.boto3')
+    async def test_assign_user_to_plan_no_client(self, mock_boto3):
+        """Test assign_user_to_plan when client is None."""
+        mock_boto3.client.side_effect = Exception("No credentials")
+        
+        manager = APIGatewayManager()
+        result = await manager.assign_user_to_plan("user", "free", "key")
+        
+        # Should return False when client is None
+        assert result == False
+
+    @pytest.mark.asyncio
+    @patch('src.api.aws_rate_limiting.boto3')
+    async def test_assign_user_create_api_key_fails(self, mock_boto3):
+        """Test assign_user_to_plan when create_api_key_for_user returns None."""
+        mock_client = Mock()
+        mock_boto3.client.return_value = mock_client
+        
+        manager = APIGatewayManager()
+        with patch.object(manager, 'get_usage_plans', return_value={'free_tier': 'plan_123'}):
+            with patch.object(manager, 'create_api_key_for_user', return_value=None):
+                result = await manager.assign_user_to_plan("user", "free", "key")
+                
+                assert result == False
+
+    @pytest.mark.asyncio  
+    @patch('src.api.aws_rate_limiting.boto3')
+    async def test_assign_user_to_plan_exception_handling(self, mock_boto3):
+        """Test assign_user_to_plan exception handling."""
+        mock_client = Mock()
+        mock_boto3.client.return_value = mock_client
+        mock_client.create_usage_plan_key.side_effect = Exception("AWS Error")
+        
+        manager = APIGatewayManager()
+        with patch.object(manager, 'get_usage_plans', return_value={'free_tier': 'plan_123'}):
+            with patch.object(manager, 'create_api_key_for_user', return_value='key_123'):
+                result = await manager.assign_user_to_plan("user", "free", "key")
+                
+                assert result == False
+
+    @pytest.mark.asyncio
+    @patch('src.api.aws_rate_limiting.boto3')
+    async def test_create_api_key_no_client(self, mock_boto3):
+        """Test create_api_key_for_user when client is None."""
+        mock_boto3.client.side_effect = Exception("No credentials")
+        
+        manager = APIGatewayManager()
+        result = await manager.create_api_key_for_user("user", "key_value")
+        
+        # Should return None when client is None
+        assert result is None
+
+    @pytest.mark.asyncio
+    @patch('src.api.aws_rate_limiting.boto3')
+    async def test_get_usage_plans_no_client(self, mock_boto3):
+        """Test get_usage_plans when client is None."""
+        mock_boto3.client.side_effect = Exception("No credentials")
+        
+        manager = APIGatewayManager()
+        result = await manager.get_usage_plans()
+        
+        # Should return empty dict when client is None
+        assert result == {}
+
+    @pytest.mark.asyncio
+    @patch('src.api.aws_rate_limiting.boto3')
+    async def test_get_usage_statistics_no_client(self, mock_boto3):
+        """Test get_usage_statistics when client is None."""
+        mock_boto3.client.side_effect = Exception("No credentials")
+        
+        manager = APIGatewayManager()
+        result = await manager.get_usage_statistics("key", "2024-01-01", "2024-01-02")
+        
+        # Should return empty dict when client is None
+        assert result == {}
+
+    @pytest.mark.asyncio
+    @patch('src.api.aws_rate_limiting.boto3')
+    async def test_update_user_tier_no_client(self, mock_boto3):
+        """Test update_user_tier when client is None."""
+        mock_boto3.client.side_effect = Exception("No credentials")
+        
+        manager = APIGatewayManager()
+        result = await manager.update_user_tier("user", "free", "premium")
+        
+        # Should return False when client is None
+        assert result == False
+
+    @pytest.mark.asyncio
+    @patch('src.api.aws_rate_limiting.boto3')
+    async def test_update_user_tier_old_plan_removal_warning(self, mock_boto3):
+        """Test update_user_tier warning when removing from old plan fails."""
+        mock_client = Mock()
+        mock_boto3.client.return_value = mock_client
+        mock_client.get_api_keys.return_value = {
+            'items': [{'id': 'key_123', 'value': 'test_api_key', 'tags': {'user_id': 'test_user'}}]
+        }
+        mock_client.delete_usage_plan_key.side_effect = Exception("Cannot remove from old plan")
+        
+        manager = APIGatewayManager()
+        with patch.object(manager, 'get_usage_plans', return_value={'free_tier': 'old_plan_id'}):
+            with patch.object(manager, 'assign_user_to_plan', return_value=True):
+                result = await manager.update_user_tier("test_user", "free", "premium")
+                
+                # Should still succeed despite warning
+                assert result == True
+
+    @pytest.mark.asyncio
+    @patch('src.api.aws_rate_limiting.boto3')
+    async def test_monitor_throttling_events_no_client(self, mock_boto3):
+        """Test monitor_throttling_events when client is None."""
+        mock_boto3.client.side_effect = Exception("No credentials")
+        
+        manager = APIGatewayManager()
+        result = await manager.monitor_throttling_events()
+        
+        # Should return empty list when client is None
+        assert result == []
+
+    @pytest.mark.asyncio
+    @patch('src.api.aws_rate_limiting.boto3')
+    async def test_monitor_throttling_events_exception(self, mock_boto3):
+        """Test monitor_throttling_events exception handling."""
+        mock_client = Mock()
+        mock_boto3.client.return_value = mock_client
+        
+        manager = APIGatewayManager()
+        # Mock datetime.now() to cause an exception
+        with patch('src.api.aws_rate_limiting.datetime') as mock_datetime:
+            mock_datetime.now.side_effect = Exception("Time error")
+            result = await manager.monitor_throttling_events()
+            
+            # Should return empty list on exception
+            assert result == []
+
+    @pytest.mark.asyncio
+    @patch('src.api.aws_rate_limiting.boto3')
+    async def test_cloudwatch_create_alarms_no_client(self, mock_boto3):
+        """Test create_rate_limit_alarms when cloudwatch client is None."""
+        mock_boto3.client.side_effect = Exception("No credentials")
+        
+        metrics = CloudWatchMetrics()
+        # Should not raise exception when cloudwatch is None
+        await metrics.create_rate_limit_alarms()
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
