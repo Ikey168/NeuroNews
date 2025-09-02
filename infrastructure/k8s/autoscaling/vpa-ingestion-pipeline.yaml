@@ -1,0 +1,145 @@
+# VPA for Data Ingestion Pipeline Components
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: neuronews-ingestion-vpa
+  namespace: data-pipeline
+  labels:
+    app: neuronews-ingestion
+    component: vpa
+    pipeline: ingest
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: neuronews-ingestion
+  updatePolicy:
+    updateMode: "Off"  # Start with recommendations-only for 1-2 weeks
+  resourcePolicy:
+    containerPolicies:
+    - containerName: ingestion
+      minAllowed:
+        cpu: 100m
+        memory: 128Mi
+      maxAllowed:
+        cpu: 2000m
+        memory: 4Gi
+      controlledResources: ["cpu", "memory"]
+      controlledValues: RequestsAndLimits
+    - containerName: redis-sidecar  # If exists
+      mode: "Off"  # Don't manage sidecar containers
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: neuronews-consumer-vpa
+  namespace: data-pipeline
+  labels:
+    app: neuronews-consumer
+    component: vpa
+    pipeline: ingest
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: neuronews-consumer
+  updatePolicy:
+    updateMode: "Off"  # Start with recommendations-only
+  resourcePolicy:
+    containerPolicies:
+    - containerName: consumer
+      minAllowed:
+        cpu: 50m
+        memory: 64Mi
+      maxAllowed:
+        cpu: 1000m
+        memory: 2Gi
+      controlledResources: ["cpu", "memory"]
+      controlledValues: RequestsAndLimits
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: neuronews-article-processor-vpa
+  namespace: data-pipeline
+  labels:
+    app: neuronews-article-processor
+    component: vpa
+    pipeline: ingest
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: neuronews-article-processor
+  updatePolicy:
+    updateMode: "Off"  # Start with recommendations-only
+  resourcePolicy:
+    containerPolicies:
+    - containerName: article-processor
+      minAllowed:
+        cpu: 200m
+        memory: 256Mi
+      maxAllowed:
+        cpu: 4000m
+        memory: 8Gi
+      controlledResources: ["cpu", "memory"]
+      controlledValues: RequestsAndLimits
+---
+# VPA for Airflow Workers (if using Kubernetes Executor)
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: airflow-worker-vpa
+  namespace: data-pipeline
+  labels:
+    app: airflow-worker
+    component: vpa
+    pipeline: ingest
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: airflow-worker
+  updatePolicy:
+    updateMode: "Off"  # Start with recommendations-only
+  resourcePolicy:
+    containerPolicies:
+    - containerName: worker
+      minAllowed:
+        cpu: 100m
+        memory: 512Mi
+      maxAllowed:
+        cpu: 4000m
+        memory: 16Gi
+      controlledResources: ["cpu", "memory"]
+      controlledValues: RequestsAndLimits
+---
+# VPA for Spark Driver (if running in cluster mode)
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: spark-driver-vpa
+  namespace: data-pipeline
+  labels:
+    app: spark-driver
+    component: vpa
+    pipeline: ingest
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: spark-driver
+  updatePolicy:
+    updateMode: "Off"  # Start with recommendations-only
+  resourcePolicy:
+    containerPolicies:
+    - containerName: spark-driver
+      minAllowed:
+        cpu: 500m
+        memory: 1Gi
+      maxAllowed:
+        cpu: 8000m
+        memory: 32Gi
+      controlledResources: ["cpu", "memory"]
+      controlledValues: RequestsAndLimits

@@ -1,0 +1,95 @@
+{
+  "type": "record",
+  "name": "ArticleIngested",
+  "namespace": "com.neuronews.events.news",
+  "doc": "Event published when a news article is successfully ingested into the system",
+  "fields": [
+    {
+      "name": "articleId",
+      "type": "string",
+      "doc": "Globally unique article identifier (UUID v4 format)"
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "doc": "Article headline for display purposes"
+    },
+    {
+      "name": "summary",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Brief article summary (max 500 characters)"
+    },
+    {
+      "name": "sourceUrl",
+      "type": "string",
+      "doc": "Original URL where article was published"
+    },
+    {
+      "name": "sourceId",
+      "type": "string",
+      "doc": "Identifier of the news source/publisher"
+    },
+    {
+      "name": "language",
+      "type": {
+        "type": "enum",
+        "name": "Language",
+        "symbols": ["EN", "ES", "FR", "DE", "IT", "PT", "RU", "ZH", "JA", "AR", "UNKNOWN"]
+      },
+      "default": "UNKNOWN",
+      "doc": "Article language (ISO 639-1 codes)"
+    },
+    {
+      "name": "category",
+      "type": {
+        "type": "enum", 
+        "name": "ArticleCategory",
+        "symbols": ["TECHNOLOGY", "POLITICS", "BUSINESS", "SPORTS", "ENTERTAINMENT", "SCIENCE", "HEALTH", "ENVIRONMENT", "FINANCE", "OTHER"]
+      },
+      "default": "OTHER",
+      "doc": "Article category classification"
+    },
+    {
+      "name": "contentLengthBytes",
+      "type": "int",
+      "doc": "Size of article content in bytes"
+    },
+    {
+      "name": "publishedAt",
+      "type": "long",
+      "logicalType": "timestamp-millis",
+      "doc": "Original publication timestamp from source (milliseconds since epoch)"
+    },
+    {
+      "name": "ingestedAt",
+      "type": "long",
+      "logicalType": "timestamp-millis",
+      "doc": "Timestamp when article was ingested by NeuroNews (milliseconds since epoch)"
+    },
+    {
+      "name": "isBreakingNews",
+      "type": "boolean",
+      "default": false,
+      "doc": "Flag indicating if article is classified as breaking news"
+    },
+    {
+      "name": "tags",
+      "type": {
+        "type": "array",
+        "items": "string"
+      },
+      "default": [],
+      "doc": "Array of topic tags associated with the article"
+    },
+    {
+      "name": "metadata",
+      "type": ["null", {
+        "type": "map",
+        "values": "string"
+      }],
+      "default": null,
+      "doc": "Additional metadata fields as key-value pairs"
+    }
+  ]
+}

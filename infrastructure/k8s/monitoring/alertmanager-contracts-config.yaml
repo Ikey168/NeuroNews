@@ -1,0 +1,259 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-contracts-config
+  namespace: neuronews
+  labels:
+    app: alertmanager
+    component: data-contracts
+data:
+  alertmanager.yml: |
+    global:
+      slack_api_url: '${SLACK_WEBHOOK_URL}'
+      smtp_smarthost: '${SMTP_HOST}:${SMTP_PORT}'
+      smtp_from: 'alerts@neuronews.com'
+      smtp_auth_username: '${SMTP_USERNAME}'
+      smtp_auth_password: '${SMTP_PASSWORD}'
+
+    # Template definitions for consistent messaging
+    templates:
+      - '/etc/alertmanager/templates/*.tmpl'
+
+    # Route configuration
+    route:
+      group_by: ['alertname', 'cluster', 'service']
+      group_wait: 10s
+      group_interval: 5m
+      repeat_interval: 12h
+      receiver: 'default'
+      routes:
+        # Data contracts specific routing
+        - match:
+            component: data-contracts
+          receiver: 'data-contracts-team'
+          routes:
+            # Critical breaking changes go to oncall immediately
+            - match:
+                severity: critical
+                alertname: ContractBreakingChangeDetected
+              receiver: 'data-contracts-oncall'
+              group_wait: 0s
+              repeat_interval: 1h
+            
+            # Validation failures during business hours
+            - match:
+                severity: warning
+                alertname: ContractValidationFailureRateHigh
+              receiver: 'data-contracts-business-hours'
+              continue: true
+            
+            # CI breaking changes to development team
+            - match:
+                alertname: ContractBreakingChangeInCI
+              receiver: 'data-contracts-dev-team'
+
+    # Receiver definitions
+    receivers:
+      - name: 'default'
+        slack_configs:
+          - channel: '#alerts'
+            username: 'Prometheus'
+            title: 'NeuroNews Alert'
+            text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+
+      - name: 'data-contracts-team'
+        slack_configs:
+          - channel: '#data-contracts'
+            username: 'ContractsBot'
+            icon_emoji: ':warning:'
+            title: 'Data Contract Alert - {{ .GroupLabels.alertname }}'
+            text: |
+              *Pipeline:* {{ .GroupLabels.pipeline }}
+              *Source:* {{ .GroupLabels.source_id }}
+              *Schema:* {{ .GroupLabels.schema_name }}
+              
+              {{ range .Alerts }}
+              *Alert:* {{ .Annotations.summary }}
+              *Description:* {{ .Annotations.description }}
+              *Severity:* {{ .Labels.severity }}
+              
+              *Dashboard:* {{ .Annotations.dashboard_url }}
+              *Runbook:* {{ .Annotations.runbook_url }}
+              {{ end }}
+            actions:
+              - type: button
+                text: 'View Dashboard'
+                url: '{{ .Annotations.dashboard_url }}'
+              - type: button
+                text: 'Check Runbook'
+                url: '{{ .Annotations.runbook_url }}'
+        
+        email_configs:
+          - to: 'data-platform@neuronews.com'
+            from: 'alerts@neuronews.com'
+            subject: 'Data Contract Alert: {{ .GroupLabels.alertname }}'
+            body: |
+              Data contract alert detected:
+              
+              Pipeline: {{ .GroupLabels.pipeline }}
+              Source: {{ .GroupLabels.source_id }}
+              Schema: {{ .GroupLabels.schema_name }}
+              
+              {{ range .Alerts }}
+              Alert: {{ .Annotations.summary }}
+              Description: {{ .Annotations.description }}
+              Severity: {{ .Labels.severity }}
+              
+              Dashboard: {{ .Annotations.dashboard_url }}
+              Runbook: {{ .Annotations.runbook_url }}
+              {{ end }}
+
+      - name: 'data-contracts-oncall'
+        slack_configs:
+          - channel: '#data-contracts-oncall'
+            username: 'ContractsBot'
+            icon_emoji: ':rotating_light:'
+            title: 'CRITICAL: Breaking Change Detected'
+            text: |
+              :rotating_light: *CRITICAL DATA CONTRACT ALERT* :rotating_light:
+              
+              *Pipeline:* {{ .GroupLabels.pipeline }}
+              *Schema:* {{ .GroupLabels.schema_name }}
+              *Change Type:* {{ .GroupLabels.change_type }}
+              *Detection Source:* {{ .GroupLabels.detection_source }}
+              
+              {{ range .Alerts }}
+              {{ .Annotations.description }}
+              {{ end }}
+              
+              *IMMEDIATE ACTION REQUIRED*
+              
+              :point_right: Dashboard: {{ .Annotations.dashboard_url }}
+              :point_right: Runbook: {{ .Annotations.runbook_url }}
+        
+        email_configs:
+          - to: 'oncall@neuronews.com'
+            from: 'alerts@neuronews.com'
+            subject: 'CRITICAL: Data Contract Breaking Change - {{ .GroupLabels.schema_name }}'
+            body: |
+              CRITICAL: Breaking change detected in data contract
+              
+              Pipeline: {{ .GroupLabels.pipeline }}
+              Schema: {{ .GroupLabels.schema_name }}
+              Change Type: {{ .GroupLabels.change_type }}
+              Detection Source: {{ .GroupLabels.detection_source }}
+              
+              {{ range .Alerts }}
+              {{ .Annotations.description }}
+              {{ end }}
+              
+              IMMEDIATE ACTION REQUIRED
+              
+              Dashboard: {{ .Annotations.dashboard_url }}
+              Runbook: {{ .Annotations.runbook_url }}
+
+      - name: 'data-contracts-business-hours'
+        slack_configs:
+          - channel: '#data-contracts'
+            username: 'ContractsBot'
+            icon_emoji: ':warning:'
+            title: 'Contract Validation Failure Rate High'
+            text: |
+              *Validation Failure Rate Alert*
+              
+              *Pipeline:* {{ .GroupLabels.pipeline }}
+              *Source:* {{ .GroupLabels.source_id }}
+              
+              {{ range .Alerts }}
+              {{ .Annotations.description }}
+              {{ end }}
+              
+              :point_right: Dashboard: {{ .Annotations.dashboard_url }}
+
+      - name: 'data-contracts-dev-team'
+        slack_configs:
+          - channel: '#data-contracts-dev'
+            username: 'ContractsBot'
+            icon_emoji: ':construction:'
+            title: 'Breaking Change Detected in CI'
+            text: |
+              *CI Breaking Change Alert*
+              
+              *Pipeline:* {{ .GroupLabels.pipeline }}
+              *Schema:* {{ .GroupLabels.schema_name }}
+              *Change Type:* {{ .GroupLabels.change_type }}
+              
+              {{ range .Alerts }}
+              {{ .Annotations.description }}
+              {{ end }}
+              
+              Please review before deployment.
+              
+              :point_right: Dashboard: {{ .Annotations.dashboard_url }}
+              :point_right: Runbook: {{ .Annotations.runbook_url }}
+
+    # Inhibition rules to prevent spam
+    inhibit_rules:
+      # Inhibit warning validation failure alerts if critical alerts are firing
+      - source_match:
+          severity: 'critical'
+          component: 'data-contracts'
+        target_match:
+          severity: 'warning'
+          component: 'data-contracts'
+        equal: ['pipeline', 'source_id']
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-contracts-templates
+  namespace: neuronews
+  labels:
+    app: alertmanager
+    component: data-contracts
+data:
+  contracts.tmpl: |
+    {{ define "slack.contracts.title" }}
+    [{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] Data Contract Alert
+    {{ end }}
+
+    {{ define "slack.contracts.text" }}
+    {{ range .Alerts }}
+    {{ if .Annotations.summary }}*Summary:* {{ .Annotations.summary }}{{ end }}
+    {{ if .Annotations.description }}*Description:* {{ .Annotations.description }}{{ end }}
+    {{ if .Labels.pipeline }}*Pipeline:* {{ .Labels.pipeline }}{{ end }}
+    {{ if .Labels.source_id }}*Source:* {{ .Labels.source_id }}{{ end }}
+    {{ if .Labels.schema_name }}*Schema:* {{ .Labels.schema_name }}{{ end }}
+    {{ if .Labels.error_type }}*Error Type:* {{ .Labels.error_type }}{{ end }}
+    {{ if .Labels.change_type }}*Change Type:* {{ .Labels.change_type }}{{ end }}
+    
+    {{ if .Annotations.dashboard_url }}:chart_with_upwards_trend: <{{ .Annotations.dashboard_url }}|View Dashboard>{{ end }}
+    {{ if .Annotations.runbook_url }}:book: <{{ .Annotations.runbook_url }}|Check Runbook>{{ end }}
+    {{ end }}
+    {{ end }}
+
+    {{ define "email.contracts.subject" }}
+    [{{ .Status | toUpper }}] Data Contract Alert: {{ .GroupLabels.alertname }}
+    {{ end }}
+
+    {{ define "email.contracts.body" }}
+    Data contract alert detected:
+
+    {{ range .Alerts }}
+    Alert: {{ .Annotations.summary }}
+    Description: {{ .Annotations.description }}
+    Severity: {{ .Labels.severity }}
+    
+    {{ if .Labels.pipeline }}Pipeline: {{ .Labels.pipeline }}{{ end }}
+    {{ if .Labels.source_id }}Source: {{ .Labels.source_id }}{{ end }}
+    {{ if .Labels.schema_name }}Schema: {{ .Labels.schema_name }}{{ end }}
+    {{ if .Labels.error_type }}Error Type: {{ .Labels.error_type }}{{ end }}
+    {{ if .Labels.change_type }}Change Type: {{ .Labels.change_type }}{{ end }}
+    
+    {{ if .Annotations.dashboard_url }}Dashboard: {{ .Annotations.dashboard_url }}{{ end }}
+    {{ if .Annotations.runbook_url }}Runbook: {{ .Annotations.runbook_url }}{{ end }}
+    
+    ---
+    {{ end }}
+    {{ end }}

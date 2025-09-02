@@ -1,0 +1,272 @@
+---
+# Example: High-priority ingestion deployment with bin-packing optimizations
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neuronews-ingestion
+  namespace: data-pipeline
+  labels:
+    app: neuronews-ingestion
+    pipeline: ingest
+    tier: critical
+    component: autoscaling-example
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: neuronews-ingestion
+      pipeline: ingest
+  template:
+    metadata:
+      labels:
+        app: neuronews-ingestion
+        pipeline: ingest
+        tier: critical
+    spec:
+      # High priority to prevent eviction
+      priorityClassName: neuronews-critical
+      
+      # Resource requests/limits for proper bin-packing
+      containers:
+      - name: ingestion
+        image: neuronews/ingestion:latest
+        resources:
+          requests:
+            cpu: 200m
+            memory: 512Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi
+        ports:
+        - containerPort: 8080
+          name: http
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      
+      # Topology spread constraints for optimal distribution
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            pipeline: ingest
+      - maxSkew: 2
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: neuronews-ingestion
+      
+      # Node affinity for cost-optimized placement
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+              - key: node-lifecycle
+                operator: In
+                values:
+                - "on-demand"
+          - weight: 80
+            preference:
+              matchExpressions:
+              - key: node.kubernetes.io/instance-type
+                operator: In
+                values:
+                - "m5.large"
+                - "m5.xlarge"
+                - "c5.large"
+                - "c5.xlarge"
+
+---
+# Example: Batch job for ingestion pipeline with spot instance tolerance
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: neuronews-batch-processor
+  namespace: data-pipeline
+  labels:
+    app: neuronews-batch-processor
+    pipeline: ingest
+    tier: batch
+    component: autoscaling-example
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: neuronews-batch-processor
+            pipeline: ingest
+            tier: batch
+        spec:
+          # Low priority for batch jobs
+          priorityClassName: neuronews-batch
+          
+          # Restart policy for batch jobs
+          restartPolicy: OnFailure
+          
+          containers:
+          - name: batch-processor
+            image: neuronews/batch-processor:latest
+            resources:
+              requests:
+                cpu: 500m
+                memory: 1Gi
+              limits:
+                cpu: 2000m
+                memory: 4Gi
+            env:
+            - name: BATCH_SIZE
+              value: "1000"
+            - name: PROCESSING_MODE
+              value: "batch"
+          
+          # Tolerate spot instance interruptions
+          tolerations:
+          - key: "node-lifecycle"
+            operator: "Equal"
+            value: "spot"
+            effect: "NoSchedule"
+          - key: "node.kubernetes.io/not-ready"
+            operator: "Exists"
+            effect: "NoExecute"
+            tolerationSeconds: 300
+          - key: "node.kubernetes.io/unreachable"
+            operator: "Exists"
+            effect: "NoExecute"
+            tolerationSeconds: 300
+          
+          # Prefer spot instances for cost savings
+          affinity:
+            nodeAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+              - weight: 100
+                preference:
+                  matchExpressions:
+                  - key: node-lifecycle
+                    operator: In
+                    values:
+                    - "spot"
+              - weight: 80
+                preference:
+                  matchExpressions:
+                  - key: node.kubernetes.io/instance-type
+                    operator: In
+                    values:
+                    - "m5.large"
+                    - "m5.xlarge"
+                    - "c5.large"
+                    - "c5.xlarge"
+          
+          # Topology spread for better distribution
+          topologySpreadConstraints:
+          - maxSkew: 3
+            topologyKey: kubernetes.io/hostname
+            whenUnsatisfiable: ScheduleAnyway
+            labelSelector:
+              matchLabels:
+                tier: batch
+
+---
+# Example: DBT runner with standard priority
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: dbt-daily-run
+  namespace: data-pipeline
+  labels:
+    app: dbt-runner
+    pipeline: dbt
+    tier: standard
+    component: autoscaling-example
+spec:
+  schedule: "0 4 * * *"  # Daily at 4 AM
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: dbt-runner
+            pipeline: dbt
+            tier: standard
+        spec:
+          # Standard priority
+          priorityClassName: neuronews-standard
+          
+          restartPolicy: OnFailure
+          
+          containers:
+          - name: dbt-runner
+            image: neuronews/dbt:latest
+            resources:
+              requests:
+                cpu: 1000m
+                memory: 2Gi
+              limits:
+                cpu: 2000m
+                memory: 4Gi
+            command:
+            - dbt
+            - run
+            - --profiles-dir
+            - /opt/dbt/profiles
+            volumeMounts:
+            - name: dbt-profiles
+              mountPath: /opt/dbt/profiles
+              readOnly: true
+          
+          volumes:
+          - name: dbt-profiles
+            secret:
+              secretName: dbt-profiles
+          
+          # Moderate tolerance for spot instances
+          tolerations:
+          - key: "node-lifecycle"
+            operator: "Equal"
+            value: "spot"
+            effect: "NoSchedule"
+            tolerationSeconds: 1800  # 30 minutes
+          
+          # Prefer cost-optimized instances
+          affinity:
+            nodeAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+              - weight: 80
+                preference:
+                  matchExpressions:
+                  - key: node-lifecycle
+                    operator: In
+                    values:
+                    - "on-demand"
+              - weight: 60
+                preference:
+                  matchExpressions:
+                  - key: node-lifecycle
+                    operator: In
+                    values:
+                    - "spot"
+              - weight: 100
+                preference:
+                  matchExpressions:
+                  - key: node.kubernetes.io/instance-type
+                    operator: In
+                    values:
+                    - "c5.large"
+                    - "c5.xlarge"
+                    - "m5.large"
+                    - "m5.xlarge"
