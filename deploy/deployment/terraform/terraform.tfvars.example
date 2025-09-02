@@ -1,0 +1,50 @@
+# Environment Settings
+environment = "dev"
+aws_region  = "us-east-1"
+
+# Security
+allowed_ips = [
+  "10.0.0.0/8",      # Internal network
+  "172.16.0.0/12"    # VPN network
+]
+
+# Network Configuration
+vpc_cidr = "10.0.0.0/16"
+availability_zones = ["us-east-1a", "us-east-1b"]
+private_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24"]
+public_subnet_cidrs  = ["10.0.101.0/24", "10.0.102.0/24"]
+
+# Neptune Configuration
+neptune_cluster_identifier = "knowledge-graph-dev"
+neptune_instance_class = "db.r5.large"
+neptune_cluster_size = 1
+neptune_port = 8182
+neptune_enable_audit_logs = true
+neptune_backup_retention_period = 7
+neptune_preferred_backup_window = "03:00-04:00"
+neptune_skip_final_snapshot = false
+
+# Lambda Configuration
+lambda_function_prefix = "neuronews-dev"
+lambda_runtime = "python3.9"
+lambda_timeout = 300
+lambda_memory_size = 512
+lambda_log_retention_days = 30
+
+# S3 Configuration
+bucket_name_prefix = "neuronews-dev"
+
+# CloudTrail Configuration
+cloudtrail_retention_days = 365
+
+# Cross-Account Access
+create_cross_account_role = false
+trusted_account_id = ""  # Fill if cross-account access is needed
+
+# Resource Tags
+tags = {
+  Project     = "NeuroNews"
+  Environment = "Development"
+  Owner       = "DataTeam"
+  CostCenter  = "123456"
+}

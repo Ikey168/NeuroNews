@@ -645,22 +645,8 @@ async def clear_cache_v2_post(
         raise HTTPException(status_code=500, detail="Failed to clear cache")
 
 
-# Add router-level exception handlers
-@router.exception_handler(HTTPException)
-async def http_exception_handler(request, exc):
-    """Custom HTTP exception handler with enhanced error information."""
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={
-            "error": {
-                "code": exc.status_code,
-                "message": exc.detail,
-                "timestamp": datetime.now().isoformat(),
-                "api_version": "v2",
-                "path": str(request.url),
-            }
-        },
-    )
+# Note: Exception handlers should be added at the FastAPI app level, not router level
+# These would be registered in the main app.py file
 
 
 # Export the lifespan manager for app initialization

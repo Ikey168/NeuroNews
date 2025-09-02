@@ -1,0 +1,72 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cdc-to-iceberg-job
+  namespace: data-processing
+  labels:
+    app: cdc-processor
+    component: etl-job
+    pipeline: transform
+    team: data-engineering
+    env: prod
+    cost_center: data-platform
+spec:
+  template:
+    metadata:
+      labels:
+        app: cdc-processor
+        component: etl-job
+        pipeline: transform
+        team: data-engineering
+        env: prod
+        cost_center: data-platform
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: spark-etl-pipeline
+  namespace: data-processing
+  labels:
+    app: spark-etl
+    component: scheduler
+    pipeline: transform
+    team: data-engineering
+    env: prod
+    cost_center: data-platform
+spec:
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: spark-etl
+            component: scheduler
+            pipeline: transform
+            team: data-engineering
+            env: prod
+            cost_center: data-platform
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-operator
+  namespace: data-processing
+  labels:
+    app: spark-operator
+    component: orchestrator
+    pipeline: transform
+    team: data-engineering
+    env: prod
+    cost_center: data-platform
+spec:
+  template:
+    metadata:
+      labels:
+        app: spark-operator
+        component: orchestrator
+        pipeline: transform
+        team: data-engineering
+        env: prod
+        cost_center: data-platform

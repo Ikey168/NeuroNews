@@ -1,0 +1,217 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-unit-economics-rules
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: recording-rules
+    purpose: unit-economics
+data:
+  unit_economics.yml: |
+    groups:
+    - name: unit-economics
+      interval: 30s
+      rules:
+      # =============================================================================
+      # Cost Recording Rules
+      # =============================================================================
+      
+      # Total cluster hourly cost from OpenCost
+      - record: cost:cluster_hourly:sum
+        expr: sum(opencost_node_cost_hourly) 
+        labels:
+          cost_type: "total"
+          
+      # Cost breakdown by components
+      - record: cost:compute_hourly:sum
+        expr: sum(opencost_node_cost_hourly{cost_type="compute"})
+        labels:
+          cost_type: "compute"
+          
+      - record: cost:memory_hourly:sum  
+        expr: sum(opencost_node_cost_hourly{cost_type="memory"})
+        labels:
+          cost_type: "memory"
+          
+      - record: cost:storage_hourly:sum
+        expr: sum(opencost_pv_cost_hourly)
+        labels:
+          cost_type: "storage"
+          
+      - record: cost:network_hourly:sum
+        expr: sum(opencost_load_balancer_cost)
+        labels:
+          cost_type: "network"
+      
+      # =============================================================================
+      # Business Metrics Recording Rules  
+      # =============================================================================
+      
+      # Articles ingested rate (per hour)
+      - record: articles:rate_1h
+        expr: rate(neuro_articles_ingested_total[1h]) * 3600
+        labels:
+          metric_type: "business"
+          
+      # Articles ingested rate by pipeline (per hour)
+      - record: articles:rate_1h:by_pipeline
+        expr: rate(neuro_articles_ingested_total[1h]) * 3600
+        labels:
+          metric_type: "business"
+          
+      # Articles ingested rate by source (per hour)  
+      - record: articles:rate_1h:by_source
+        expr: rate(neuro_articles_ingested_total[1h]) * 3600
+        labels:
+          metric_type: "business"
+      
+      # RAG queries rate (per hour)
+      - record: ragq:rate_1h
+        expr: rate(neuro_rag_queries_total[1h]) * 3600
+        labels:
+          metric_type: "business"
+          
+      # RAG queries rate by endpoint (per hour)
+      - record: ragq:rate_1h:by_endpoint
+        expr: rate(neuro_rag_queries_total[1h]) * 3600
+        labels:
+          metric_type: "business"
+          
+      # RAG queries rate by provider (per hour)
+      - record: ragq:rate_1h:by_provider
+        expr: rate(neuro_rag_queries_total[1h]) * 3600
+        labels:
+          metric_type: "business"
+      
+      # =============================================================================
+      # Unit Economics Recording Rules
+      # =============================================================================
+      
+      # Cost per 1000 articles (hourly)
+      - record: unit_economics:cost_per_1k_articles_hourly
+        expr: |
+          (
+            cost:cluster_hourly:sum / 
+            (articles:rate_1h / 1000)
+          ) > 0
+        labels:
+          metric_type: "unit_economics"
+          unit: "eur_per_1k_articles"
+          timeframe: "hourly"
+          
+      # Cost per RAG query (hourly)
+      - record: unit_economics:cost_per_rag_query_hourly
+        expr: |
+          (
+            cost:cluster_hourly:sum / 
+            ragq:rate_1h
+          ) > 0
+        labels:
+          metric_type: "unit_economics"
+          unit: "eur_per_query"
+          timeframe: "hourly"
+      
+      # Cost per 1000 articles by pipeline (hourly)
+      - record: unit_economics:cost_per_1k_articles_hourly:by_pipeline
+        expr: |
+          (
+            cost:cluster_hourly:sum / 
+            (articles:rate_1h:by_pipeline / 1000)
+          ) > 0
+        labels:
+          metric_type: "unit_economics"
+          unit: "eur_per_1k_articles"
+          timeframe: "hourly"
+          
+      # Cost per RAG query by provider (hourly)
+      - record: unit_economics:cost_per_rag_query_hourly:by_provider
+        expr: |
+          (
+            cost:cluster_hourly:sum / 
+            ragq:rate_1h:by_provider
+          ) > 0
+        labels:
+          metric_type: "unit_economics" 
+          unit: "eur_per_query"
+          timeframe: "hourly"
+      
+      # =============================================================================
+      # Efficiency and Performance Recording Rules
+      # =============================================================================
+      
+      # Articles processed per euro spent
+      - record: efficiency:articles_per_euro_hourly
+        expr: |
+          articles:rate_1h / cost:cluster_hourly:sum
+        labels:
+          metric_type: "efficiency"
+          unit: "articles_per_eur"
+          
+      # RAG queries answered per euro spent  
+      - record: efficiency:queries_per_euro_hourly
+        expr: |
+          ragq:rate_1h / cost:cluster_hourly:sum
+        labels:
+          metric_type: "efficiency"
+          unit: "queries_per_eur"
+      
+      # =============================================================================
+      # Success Rate Recording Rules
+      # =============================================================================
+      
+      # Article ingestion success rate
+      - record: success_rate:articles_ingested
+        expr: |
+          rate(neuro_articles_ingested_total{status="success"}[1h]) / 
+          rate(neuro_articles_ingested_total[1h])
+        labels:
+          metric_type: "success_rate"
+          
+      # RAG query success rate
+      - record: success_rate:rag_queries
+        expr: |
+          rate(neuro_rag_queries_total{status="success"}[1h]) /
+          rate(neuro_rag_queries_total[1h])
+        labels:
+          metric_type: "success_rate"
+      
+      # =============================================================================
+      # Daily and Monthly Aggregations
+      # =============================================================================
+      
+      # Daily cost per 1000 articles
+      - record: unit_economics:cost_per_1k_articles_daily
+        expr: |
+          avg_over_time(unit_economics:cost_per_1k_articles_hourly[24h])
+        labels:
+          metric_type: "unit_economics"
+          unit: "eur_per_1k_articles"
+          timeframe: "daily"
+          
+      # Daily cost per RAG query
+      - record: unit_economics:cost_per_rag_query_daily
+        expr: |
+          avg_over_time(unit_economics:cost_per_rag_query_hourly[24h])
+        labels:
+          metric_type: "unit_economics"
+          unit: "eur_per_query"
+          timeframe: "daily"
+          
+      # Monthly cost per 1000 articles
+      - record: unit_economics:cost_per_1k_articles_monthly
+        expr: |
+          avg_over_time(unit_economics:cost_per_1k_articles_hourly[30d])
+        labels:
+          metric_type: "unit_economics"
+          unit: "eur_per_1k_articles"
+          timeframe: "monthly"
+          
+      # Monthly cost per RAG query
+      - record: unit_economics:cost_per_rag_query_monthly
+        expr: |
+          avg_over_time(unit_economics:cost_per_rag_query_hourly[30d])
+        labels:
+          metric_type: "unit_economics"
+          unit: "eur_per_query"
+          timeframe: "monthly"
