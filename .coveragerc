@@ -1,0 +1,11 @@
+[run]
+source = src/
+omit = */tests/*
+    */test_*
+
+[report]
+show_missing = True
+precision = 2
+
+[html]
+directory = htmlcov
