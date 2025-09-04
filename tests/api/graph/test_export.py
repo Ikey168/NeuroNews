@@ -34,9 +34,8 @@ from api.graph.export import (
     GraphExporter,
     ExportFormat,
     ExportOptions,
-    ValidationResult,
-    ExportJob,
-    ExportError
+    ExportResult,
+    BatchExportJob
 )
 
 
@@ -49,10 +48,10 @@ class TestExportFormat:
         assert ExportFormat.GRAPHML.value == "graphml"
         assert ExportFormat.GML.value == "gml"
         assert ExportFormat.DOT.value == "dot"
-        assert ExportFormat.CSV.value == "csv"
+        assert ExportFormat.CSV_NODES.value == "csv_nodes"
+        assert ExportFormat.CSV_EDGES.value == "csv_edges"
         assert ExportFormat.GEPHI.value == "gephi"
         assert ExportFormat.CYTOSCAPE.value == "cytoscape"
-        assert ExportFormat.PAJEK.value == "pajek"
 
 
 class TestExportOptions:
