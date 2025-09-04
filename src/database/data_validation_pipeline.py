@@ -352,7 +352,7 @@ class SourceReputationAnalyzer:
         return {
             "reputation_score": reputation_score,
             "credibility_level": credibility_level,
-            f"lags": flags,
+            "flags": flags,
             "domain": domain,
         }
 
@@ -406,8 +406,15 @@ class SourceReputationAnalyzer:
         flags = []
 
         # Check for suspicious patterns
-        title = article.get("title", "").lower()
-        content = article.get("content", "").lower()
+        original_title = article.get("title", "")
+        original_content = article.get("content", "")
+        
+        # Sensationalism indicators (check before lowercasing)
+        if re.search(r"[A-Z]{3,}", original_title):  # Excessive caps
+            flags.append("excessive_caps")
+        
+        title = original_title.lower()
+        content = original_content.lower()
 
         # Clickbait indicators
         clickbait_patterns = [
@@ -424,10 +431,6 @@ class SourceReputationAnalyzer:
             if re.search(pattern, title):
                 flags.append("clickbait_title")
                 break
-
-        # Sensationalism indicators
-        if re.search(r"[A-Z]{3,}", title):  # Excessive caps
-            flags.append("excessive_caps")
 
         if title.count("!") > 2:
             flags.append("excessive_exclamation")
