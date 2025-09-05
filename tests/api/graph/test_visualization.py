@@ -31,7 +31,14 @@ from api.graph.visualization import (
     VisualizationEdge,
     GraphVisualization
 )
+
+
+class TestDefaultStyles:
+    """Test default visualization styles."""
+    
+    def test_access_to_default_styles(self):
         """Test access to default styles."""
+        visualizer = GraphVisualizer()
         assert isinstance(visualizer.default_node_style, NodeStyle)
         assert isinstance(visualizer.default_edge_style, EdgeStyle)
         
