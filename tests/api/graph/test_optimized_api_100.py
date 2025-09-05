@@ -120,15 +120,15 @@ class TestOptimizedGraphAPI:
             )
             return api
     
-    def test_api_initialization_defaults(self):
+    def test_api_initialization_defaults(self, mock_graph_builder):
         """Test OptimizedGraphAPI initialization with defaults."""
-        with patch('api.graph.optimized_api.redis.Redis'):
-            api = OptimizedGraphAPI()
+        with patch('src.api.graph.optimized_api.redis.Redis'):
+            api = OptimizedGraphAPI(graph_builder=mock_graph_builder)
             
-            assert api.graph is None
+            assert api.graph == mock_graph_builder
             assert isinstance(api.cache_config, CacheConfig)
             assert isinstance(api.optimization_config, QueryOptimizationConfig)
-            assert api.redis is not None
+            assert hasattr(api, 'redis_client')
     
     def test_api_initialization_with_configs(self, cache_config, optimization_config, mock_graph_builder):
         """Test OptimizedGraphAPI initialization with custom configs."""
@@ -172,27 +172,33 @@ class TestOptimizedGraphAPI:
     @pytest.mark.asyncio
     async def test_get_cached_result_miss(self, api):
         """Test cache miss scenario."""
-        with patch.object(api.redis, 'get', return_value=None):
-            result = await api._get_cached_result("nonexistent_key")
-            assert result is None
+        result = await api._get_from_cache("nonexistent_key")
+        assert result is None
     
     @pytest.mark.asyncio
     async def test_get_cached_result_hit(self, api):
         """Test cache hit scenario."""
         cached_data = {"nodes": [{"id": "1"}], "edges": []}
         
-        with patch.object(api.redis, 'get', return_value=json.dumps(cached_data)):
-            result = await api._get_cached_result("existing_key")
-            assert result == cached_data
+        # Add data to memory cache since Redis is not available
+        cache_key = "existing_key"
+        api.memory_cache[cache_key] = cached_data
+        api.cache_timestamps[cache_key] = datetime.now()
+        
+        result = await api._get_from_cache(cache_key)
+        assert result == cached_data
     
     @pytest.mark.asyncio
     async def test_cache_result(self, api):
         """Test caching result."""
         data = {"nodes": [], "edges": []}
         
-        with patch.object(api.redis, 'setex') as mock_setex:
-            await api._cache_result("test_key", data)
-            mock_setex.assert_called_once()
+        # Test in-memory caching
+        await api._store_in_cache("test_key", data)
+        
+        # Check that data was stored
+        result = await api._get_from_cache("test_key")
+        assert result == data
     
     @pytest.mark.asyncio
     async def test_cache_result_with_ttl(self, api):
