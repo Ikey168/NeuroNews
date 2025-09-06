@@ -79,8 +79,7 @@ def test_lambda_function():
         return False
 
     # Test Lambda handler with mock environment
-    logger.info(""
- Testing Lambda handler...")"
+    logger.info("🔧 Testing Lambda handler...")
 
     # Set mock environment variables
     os.environ.update(
@@ -124,8 +123,7 @@ def test_lambda_function():
     all_tests_passed=True
 
     for test_case in test_events:
-        logger.info(f"
- Running {test_case['name']}...")
+        logger.info(f"🔧 Running {test_case['name']}...")
 
         try:
             # Mock context
@@ -163,8 +161,7 @@ def test_lambda_function():
             all_tests_passed = False
 
     # Test error handling
-    logger.info(""
-🚨 Testing error handling...")"
+    logger.info("🚨 Testing error handling...")
     try:
         context = mock_lambda_context()
 
@@ -189,37 +186,34 @@ def test_lambda_function():
         all_tests_passed = False
 
     # Summary
-    logger.info(""
-" + "=" * 60)"
+    logger.info("📊" + "=" * 60)
     if all_tests_passed:
         logger.info(" All Lambda function tests passed!")
         logger.info(" The function is ready for deployment")
     else:
         logger.error("❌ Some tests failed. Please review and fix issues.")
 
-    logger.info(""
- Test Summary:")
-    logger.info("   - Configuration extraction: ")"
+    logger.info("📊 Test Summary:")
+    logger.info("   - Configuration extraction: ✅")
     logger.info(
-        "   - Lambda handler execution: "
+        "   - Lambda handler execution: ✅"
         if all_tests_passed
         else "   - Lambda handler execution: ❌"
     )
-    logger.info("   - Error handling: ")
-    logger.info("   - Mock environment: ")
+    logger.info("   - Error handling: ✅")
+    logger.info("   - Mock environment: ✅")
 
     return all_tests_passed
 
 
 def validate_terraform_config():
     """Validate Terraform configuration files."""
-    logger.info(""
-🔧 Validating Terraform configuration...")"
+    logger.info("🔧 Validating Terraform configuration...")
 
     terraform_files = [
-        "/workspaces/NeuroNews/deployment/terraform/lambda.t",
-        "/workspaces/NeuroNews/deployment/terraform/variables.t",
-        "/workspaces/NeuroNews/deployment/terraform/cloudwatch.t",
+        "deployment/terraform/lambda.tf",
+        "deployment/terraform/variables.tf", 
+        "deployment/terraform/cloudwatch.tf",
     ]
 
     for file_path in terraform_files:
@@ -235,14 +229,13 @@ def validate_terraform_config():
 
 def validate_deployment_files():
     """Validate deployment-related files."""
-    logger.info(""
- Validating deployment files...")"
+    logger.info("🔧 Validating deployment files...")
 
     deployment_files = [
-        "/workspaces/NeuroNews/deployment/terraform/deploy_lambda.sh",
-        "/workspaces/NeuroNews/deployment/terraform/config_lambda_scraper.json",
-        "/workspaces/NeuroNews/deployment/terraform/lambda_functions/news_scraper.py",
-        "/workspaces/NeuroNews/LAMBDA_SCRAPER_AUTOMATION_GUIDE.md",
+        "deployment/terraform/deploy_lambda.sh",
+        "deployment/terraform/config_lambda_scraper.json", 
+        "deployment/terraform/lambda_functions/news_scraper.py",
+        "LAMBDA_SCRAPER_AUTOMATION_GUIDE.md",
     ]
 
     for file_path in deployment_files:
@@ -273,27 +266,24 @@ def main():
     function_tests_passed = test_lambda_function()
 
     # Final summary
-    logger.info(""
- FINAL TEST RESULTS")
+    logger.info("📊 FINAL TEST RESULTS")
     logger.info("=" * 60)
     logger.info(
-        f"Terraform Configuration: {' PASS' if terraform_valid else '❌ FAIL'}"
+        f"Terraform Configuration: {'✅ PASS' if terraform_valid else '❌ FAIL'}"
     )
-    logger.info(f"Deployment Files: {' PASS' if deployment_valid else '❌ FAIL'}")
-    logger.info(f"Lambda Function: {' PASS' if function_tests_passed else '❌ FAIL'}")"
+    logger.info(f"Deployment Files: {'✅ PASS' if deployment_valid else '❌ FAIL'}")
+    logger.info(f"Lambda Function: {'✅ PASS' if function_tests_passed else '❌ FAIL'}")
 
     if terraform_valid and deployment_valid and function_tests_passed:
-        logger.info(""
- ALL TESTS PASSED! Issue #20 implementation is ready!")
-        logger.info(" Next steps:")
+        logger.info("✅ ALL TESTS PASSED! Issue #20 implementation is ready!")
+        logger.info("📋 Next steps:")
         logger.info("   1. Deploy infrastructure: terraform apply")
         logger.info("   2. Package Lambda: ./deployment/terraform/deploy_lambda.sh")
-        logger.info("   3. Test in AWS environment")"
+        logger.info("   3. Test in AWS environment")
         return True
     else:
         logger.error(
-            ""
-❌ Some tests failed. Please review and fix issues before deployment.""
+            "❌ Some tests failed. Please review and fix issues before deployment."
         )
         return False
 
