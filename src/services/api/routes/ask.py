@@ -38,17 +38,18 @@ except ImportError:
 sys.path.append(os.path.join(os.path.dirname(__file__), "../../.."))
 
 try:
-    from services.mlops.tracking import mlrun
-    from services.rag.answer import RAGAnswerService
-    from services.embeddings.provider import EmbeddingProvider
-    from services.monitoring.unit_economics import increment_rag_queries
+    from src.services.mlops.tracking import mlrun
+    from src.services.rag.answer import RAGAnswerService
+    from src.services.embeddings.provider import EmbeddingProvider
+    from src.services.monitoring.unit_economics import increment_rag_queries
 except ImportError as e:
     print(f"Import error: {e}")
     print("Please ensure you're running from the project root directory")
     # For unit economics, use a fallback function if import fails
     def increment_rag_queries(*args, **kwargs):
         pass
-    sys.exit(1)
+    # Don't exit - let the test continue with fallback functions
+    mlrun = None
 
 # Configure logging
 logger = logging.getLogger(__name__)

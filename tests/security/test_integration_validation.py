@@ -33,11 +33,11 @@ from src.api.auth.audit_log import SecurityAuditLogger, security_logger
 from src.api.auth.jwt_auth import JWTAuth, auth_handler
 from src.api.auth.permissions import (
     Permission,
-    PermissionManager,
+    PermissionChecker,
     ROLE_PERMISSIONS,
     get_user_permissions,
     has_permission,
-    require_permission,
+    require_permissions,
 )
 from src.api.middleware.auth_middleware import (
     AuditLogMiddleware,

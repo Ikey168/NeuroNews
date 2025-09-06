@@ -4,10 +4,6 @@ Test suite for proxy rotation and anti-detection system.
 Tests proxy manager, user agent rotation, CAPTCHA solver, and Tor integration.
 """
 
-from scraper.user_agent_rotator import UserAgentRotator
-from scraper.tor_manager import TorManager
-from scraper.proxy_manager import ProxyConfig, ProxyRotationManager, ProxyStats
-from scraper.captcha_solver import CaptchaSolver
 import asyncio
 import json
 import sys
@@ -19,6 +15,11 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 sys.path.append("/workspaces/NeuroNews/src")
+
+from src.scraper.user_agent_rotator import UserAgentRotator
+from src.scraper.tor_manager import TorManager
+from src.scraper.proxy_manager import ProxyConfig, ProxyRotationManager, ProxyStats
+from src.scraper.captcha_solver import CaptchaSolver
 
 
 class TestProxyRotationManager:
@@ -227,7 +228,7 @@ class TestCaptchaSolver:
             captcha_solver, "get_captcha_result", return_value="solved_token"
         ):
             result = await captcha_solver.solve_recaptcha_v2(
-                site_key="test_sitekey", page_url="https://test.com"
+                site_key="test_sitekey", url="https://test.com"
             )
             assert result == "solved_token"
 
