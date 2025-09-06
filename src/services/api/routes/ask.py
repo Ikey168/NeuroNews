@@ -28,10 +28,9 @@ except ImportError:
     ValidatedAskResponse = None
     get_schema_validator = None
 
-# Import query cache from cache module
+# Import query cache from main
 try:
-    from services.api.cache import QueryCache
-    query_cache = QueryCache()
+    from services.api.main import query_cache
 except ImportError:
     query_cache = None
 

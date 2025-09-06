@@ -321,7 +321,7 @@ class QuickSightDashboardService:
                             "Name": dataset_config["name"],
                             "SqlQuery": dataset_config["sql"],
                             "Columns": self._get_dataset_columns(dataset_config["id"]),
-                        }
+                        },
                     },
                     "ImportMode": "DIRECT_QUERY",
                     "Permissions": [
@@ -344,7 +344,8 @@ class QuickSightDashboardService:
                                 "quicksight:UpdateDataSetPermissions",
                             ],
                         }
-                    ]
+                    ],
+                }
                 response = self.quicksight_client.create_data_set(
                     **dataset_params)
 

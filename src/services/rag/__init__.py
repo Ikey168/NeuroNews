@@ -15,7 +15,7 @@ from .lexical import (
 )
 from .vector import VectorSearchService, VectorSearchResult, VectorSearchFilters
 from .rerank import CrossEncoderReranker
-from .retriever import HybridRetriever, HybridSearchFilters, get_hybrid_retriever, hybrid_search
+from .retriever import HybridRetriever
 
 __all__ = [
     'ArticleNormalizer', 'normalize_article',
@@ -24,5 +24,5 @@ __all__ = [
     'get_lexical_search_service', 'lexical_search', 'simple_lexical_search',
     'VectorSearchService', 'VectorSearchResult', 'VectorSearchFilters',
     'CrossEncoderReranker',
-    'HybridRetriever', 'HybridSearchFilters', 'get_hybrid_retriever', 'hybrid_search'
+    'HybridRetriever'
 ]
