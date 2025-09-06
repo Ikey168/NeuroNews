@@ -23,7 +23,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
 try:
     from services.mlops.tracking import mlrun
     from services.embeddings.provider import EmbeddingProvider
-    from workflows.jobs.rag.indexer import RAGIndexer
+    from jobs.rag.indexer import RAGIndexer
 except ImportError as e:
     print(f"Import error: {e}")
     print("Please ensure you're running from the project root directory")

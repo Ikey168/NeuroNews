@@ -1,12 +1,14 @@
 #!/bin/bash
-# Test script for CDC observability implementation - Issue #378
-#
-# This script validates the complete observability solution including:
-# 1. Kafka consumer lag monitoring
-# 2. Throughput and processing rate tracking
-# 3. OpenLineage data lineage emission
-# 4. Grafana dashboard functionality
-# 5. Prometheus metrics collection
+"""
+Test script for CDC observability implementation - Issue #378
+
+This script validates the complete observability solution including:
+1. Kafka consumer lag monitoring
+2. Throughput and processing rate tracking
+3. OpenLineage data lineage emission
+4. Grafana dashboard functionality
+5. Prometheus metrics collection
+"""
 
 set -e
 

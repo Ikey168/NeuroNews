@@ -1,5 +1,0 @@
-extends: ["spectral:oas"]
-rules:
-  # Use default OpenAPI rules
-  operation-description: error
-  operation-tags: error
