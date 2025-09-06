@@ -349,7 +349,7 @@ class TestEnhancedKnowledgeGraphPopulator:
             "metadata": {
                 "category": "Technology",
                 "source_url": "https://example.com/apple-ai-initiative",
-                "author": "Tech Journalist",'
+                "author": "Tech Journalist"
             },
         }
 
