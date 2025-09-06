@@ -1,0 +1,91 @@
+# NeuroNews Makefile
+
+.PHONY: help test test-all test-deps test-modular test-functional test-ml test-integration test-unit install-test-deps clean
+
+# Default target
+help:
+	@echo "NeuroNews Test Commands"
+	@echo "======================"
+	@echo ""
+	@echo "Setup:"
+	@echo "  install-test-deps    Install test dependencies"
+	@echo ""
+	@echo "Test Execution:"
+	@echo "  test-all            Run all test systems (unified runner)"
+	@echo "  test-modular        Run modular test suite (75 tests)"
+	@echo "  test-functional     Run functional tests"
+	@echo "  test-integration    Run integration tests"
+	@echo "  test-ml             Run ML module tests"
+	@echo "  test-unit           Run unit tests with pytest"
+	@echo ""
+	@echo "Individual Test Systems:"
+	@echo "  test-dod            Run DoD requirements tests"
+	@echo "  test-lambda         Run Lambda automation tests"
+	@echo "  test-validation     Run quick validation tests"
+	@echo "  test-imports        Run import validation tests"
+	@echo ""
+	@echo "Utilities:"
+	@echo "  clean               Clean test artifacts and cache"
+	@echo "  help                Show this help message"
+
+# Install test dependencies
+install-test-deps:
+	@echo "📦 Installing test dependencies..."
+	python install_test_deps.py
+
+# Run all tests
+test-all:
+	@echo "🚀 Running all test systems..."
+	python run_all_tests.py
+
+# Individual test systems
+test-modular:
+	@echo "🔧 Running modular test suite..."
+	python run_modular_tests.py
+
+test-functional:
+	@echo "⚙️ Running functional tests..."
+	python tests/functional/test_issue_31_simple.py
+
+test-integration:
+	@echo "🔗 Running integration tests..."
+	python -m pytest tests/integration/ -v
+
+test-ml:
+	@echo "🤖 Running ML module tests..."
+	python scripts/run_ml_tests.py
+
+test-unit:
+	@echo "🧪 Running unit tests..."
+	python -m pytest tests/unit/ -v
+
+test-dod:
+	@echo "✅ Running DoD requirements tests..."
+	python tests/unit/test_dod_requirements.py
+
+test-lambda:
+	@echo "☁️ Running Lambda automation tests..."
+	python tests/integration/test_lambda_automation.py
+
+test-validation:
+	@echo "🔍 Running quick validation tests..."
+	python scripts/utilities/quick_validation.py
+
+test-imports:
+	@echo "📦 Running import validation tests..."
+	python scripts/test_imports.py
+
+# Clean up
+clean:
+	@echo "🧹 Cleaning test artifacts..."
+	rm -rf .pytest_cache/
+	rm -rf htmlcov/
+	rm -rf htmlcov_modular/
+	rm -rf .coverage
+	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	find . -name "*.pyc" -delete
+	@echo "✅ Cleanup complete"
+
+# Aliases for convenience
+test: test-all
+test-deps: install-test-deps
