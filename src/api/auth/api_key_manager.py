@@ -431,6 +431,10 @@ class APIKeyManager:
 
         return None  # Placeholder - would implement full lookup
 
+    async def validate_api_key(self, api_key: str) -> Optional[APIKey]:
+        """Alias for verify_api_key for compatibility with tests."""
+        return await self.verify_api_key(api_key)
+
     async def get_user_api_keys(self, user_id: str) -> List[Dict[str, Any]]:
         """Get all API keys for a user (without the actual key values)."""
         keys = await self.store.get_user_api_keys(user_id)

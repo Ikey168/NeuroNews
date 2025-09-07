@@ -9,7 +9,9 @@ import time
 from pathlib import Path
 
 # Add project root to path
-sys.path.insert(0, str(Path(__file__).parent))
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
+sys.path.insert(0, str(project_root / "src"))
 
 
 def test_basic_functionality():
@@ -103,8 +105,7 @@ def test_basic_functionality():
         factory_pipeline.cleanup()
         print(" Successfully cleaned up pipelines")
 
-        print(""
- All tests passed! Optimized pipeline is working correctly.")"
+        print("✅ All tests passed! Optimized pipeline is working correctly.")
         return True
 
     except ImportError as e:
@@ -121,9 +122,8 @@ def test_basic_functionality():
 
 def test_scrapy_integration():
     """Test Scrapy integration components."""
-    print(""
-🔧 Testing Scrapy Integration")
-    print("=" * 30)"
+    print("🔧 Testing Scrapy Integration")
+    print("=" * 30)
 
     try:
         from src.ingestion.scrapy_integration import (
@@ -182,12 +182,10 @@ def main():
     if not test_scrapy_integration():
         success = False
 
-    print(""
-" + "=" * 65)"
+    print("📊" + "=" * 65)
     if success:
-        print(" ALL TESTS PASSED - Optimized pipeline is ready for use!")
-        print(""
-Next steps:")"
+        print("✅ ALL TESTS PASSED - Optimized pipeline is ready for use!")
+        print("📋 Next steps:")
         print(
             "1. Run full test suite: python -m pytest tests/test_optimized_pipeline.py"
         )
@@ -195,11 +193,10 @@ Next steps:")"
         print("3. Deploy to production environment")
     else:
         print("❌ SOME TESTS FAILED - Please check the errors above")
-        print(""
-Troubleshooting:")
+        print("🔧 Troubleshooting:")
         print("1. Ensure all dependencies are installed")
         print("2. Check Python path configuration")
-        print("3. Verify file permissions and accessibility")"
+        print("3. Verify file permissions and accessibility")
 
     print("=" * 65)
     return success

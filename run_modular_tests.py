@@ -48,13 +48,10 @@ def main():
     print(f"Test modules directory: {modules_dir}")
     print(f"Running {len(test_files)} test modules")
     
-    # Run pytest with coverage
+    # Run pytest without coverage for now
     pytest_args = [
         *test_paths,
-        "-v",
-        "--cov=src",
-        "--cov-report=term",
-        "--cov-report=html:htmlcov_modular",
+        "-v", 
         "--tb=short"
     ]
     

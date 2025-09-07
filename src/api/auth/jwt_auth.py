@@ -140,6 +140,14 @@ class JWTAuth:
         request.state.user = payload
         return payload
 
+    def verify_token(self, token: str) -> bool:
+        """Verify JWT token - compatibility method for tests."""
+        try:
+            self.decode_token(token)
+            return True
+        except HTTPException:
+            return False
+
 
 # Create global auth handler instance
 auth_handler = JWTAuth()
