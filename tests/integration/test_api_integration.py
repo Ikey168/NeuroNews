@@ -290,16 +290,19 @@ class TestMiddlewareModules:
 
     def test_rate_limit_middleware_coverage(self):
         """Test RateLimitMiddleware comprehensive coverage."""
+        from fastapi import FastAPI
+        
         # Test initialization
-        middleware = RateLimitMiddleware()
+        app = FastAPI()
+        middleware = RateLimitMiddleware(app)
         
         # Test configuration attributes
         assert hasattr(middleware, 'store')
         assert hasattr(middleware, 'config')
         
         # Test methods exist
-        assert hasattr(middleware, 'add_middleware')
-        assert callable(getattr(middleware, 'add_middleware'))
+        assert hasattr(middleware, 'dispatch')
+        assert callable(getattr(middleware, 'dispatch'))
 
     @patch('src.api.auth.jwt_auth.jwt')
     def test_jwt_auth_coverage(self, mock_jwt):

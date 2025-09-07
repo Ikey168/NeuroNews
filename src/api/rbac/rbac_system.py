@@ -441,3 +441,6 @@ class RBACManager:
 
 # Global RBAC manager instance
 rbac_manager = RBACManager()
+
+# Alias for compatibility with tests
+RBACSystem = RBACManager
