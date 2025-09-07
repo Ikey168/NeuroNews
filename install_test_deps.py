@@ -39,6 +39,14 @@ def install_dependencies():
         "python-dotenv",  # Required for environment variable loading
         "pyyaml",  # Required for YAML config loading
         "jinja2",  # Required for template rendering
+        "streamlit",  # Required for Streamlit app tests
+        "redis",  # Required for Redis tests
+        "snowflake-connector-python",  # Required for Snowflake tests
+        "qdrant-client",  # Required for vector database tests
+        "openai",  # Required for OpenAI API tests
+        "tiktoken",  # Required for token counting in OpenAI tests
+        "plotly",  # Required for visualization tests
+        "dash",  # Required for dashboard tests
     ]
     
     for dep in test_deps:

@@ -836,7 +836,6 @@ if __name__ == "__main__":
     except Exception as e:
         print("❌ Test setup failed: {0}".format(e))
 
- Test Coverage: ")
     print("Test Coverage:")
     print("  • Event timeline service functionality")
     print("  • Historical event tracking and storage")
@@ -846,4 +845,4 @@ if __name__ == "__main__":
     print("  • Error handling and validation")
     print("  • Request/response model validation")
     print("  • Neptune storage and relationships")
-    print("  • Analytics and insights")"
+    print("  • Analytics and insights")

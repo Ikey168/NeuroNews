@@ -7,18 +7,18 @@ from fastapi.middleware.cors import CORSMiddleware
 
 # Initialize feature flags - will be set by check_imports()
 ERROR_HANDLERS_AVAILABLE = False
-ENHANCED_KG_AVAILABLE = False
-EVENT_TIMELINE_AVAILABLE = False
-QUICKSIGHT_AVAILABLE = False
+ENHANCED_KG_ROUTES_AVAILABLE = False
+EVENT_TIMELINE_ROUTES_AVAILABLE = False
+QUICKSIGHT_ROUTES_AVAILABLE = False
 TOPIC_ROUTES_AVAILABLE = False
-GRAPH_SEARCH_AVAILABLE = False
-INFLUENCE_ANALYSIS_AVAILABLE = False
+GRAPH_SEARCH_ROUTES_AVAILABLE = False
+INFLUENCE_ROUTES_AVAILABLE = False
 RATE_LIMITING_AVAILABLE = False
 RBAC_AVAILABLE = False
 API_KEY_MANAGEMENT_AVAILABLE = False
 WAF_SECURITY_AVAILABLE = False
-AUTH_AVAILABLE = False
-SEARCH_AVAILABLE = False
+AUTH_ROUTES_AVAILABLE = False
+SEARCH_ROUTES_AVAILABLE = False
 
 # Store imported modules globally
 _imported_modules = {}
@@ -39,40 +39,40 @@ def try_import_error_handlers():
 
 def try_import_enhanced_kg_routes():
     """Try to import enhanced knowledge graph routes (Issue #37)."""
-    global ENHANCED_KG_AVAILABLE
+    global ENHANCED_KG_ROUTES_AVAILABLE
     try:
         from src.api.routes import enhanced_kg_routes
         _imported_modules['enhanced_kg_routes'] = enhanced_kg_routes
-        ENHANCED_KG_AVAILABLE = True
+        ENHANCED_KG_ROUTES_AVAILABLE = True
         return True
     except ImportError:
-        ENHANCED_KG_AVAILABLE = False
+        ENHANCED_KG_ROUTES_AVAILABLE = False
         return False
 
 
 def try_import_event_timeline_routes():
     """Try to import event timeline routes (Issue #38)."""
-    global EVENT_TIMELINE_AVAILABLE
+    global EVENT_TIMELINE_ROUTES_AVAILABLE
     try:
         from src.api.routes import event_timeline_routes
         _imported_modules['event_timeline_routes'] = event_timeline_routes
-        EVENT_TIMELINE_AVAILABLE = True
+        EVENT_TIMELINE_ROUTES_AVAILABLE = True
         return True
     except ImportError:
-        EVENT_TIMELINE_AVAILABLE = False
+        EVENT_TIMELINE_ROUTES_AVAILABLE = False
         return False
 
 
 def try_import_quicksight_routes():
     """Try to import quicksight dashboard routes (Issue #49)."""
-    global QUICKSIGHT_AVAILABLE
+    global QUICKSIGHT_ROUTES_AVAILABLE
     try:
         from src.api.routes import quicksight_routes
         _imported_modules['quicksight_routes'] = quicksight_routes
-        QUICKSIGHT_AVAILABLE = True
+        QUICKSIGHT_ROUTES_AVAILABLE = True
         return True
     except ImportError:
-        QUICKSIGHT_AVAILABLE = False
+        QUICKSIGHT_ROUTES_AVAILABLE = False
         return False
 
 
@@ -91,27 +91,27 @@ def try_import_topic_routes():
 
 def try_import_graph_search_routes():
     """Try to import graph search routes (Issue #39)."""
-    global GRAPH_SEARCH_AVAILABLE
+    global GRAPH_SEARCH_ROUTES_AVAILABLE
     try:
         from src.api.routes import graph_search_routes
         _imported_modules['graph_search_routes'] = graph_search_routes
-        GRAPH_SEARCH_AVAILABLE = True
+        GRAPH_SEARCH_ROUTES_AVAILABLE = True
         return True
     except ImportError:
-        GRAPH_SEARCH_AVAILABLE = False
+        GRAPH_SEARCH_ROUTES_AVAILABLE = False
         return False
 
 
 def try_import_influence_routes():
     """Try to import influence analysis routes (Issue #40)."""
-    global INFLUENCE_ANALYSIS_AVAILABLE
+    global INFLUENCE_ROUTES_AVAILABLE
     try:
         from src.api.routes import influence_routes
         _imported_modules['influence_routes'] = influence_routes
-        INFLUENCE_ANALYSIS_AVAILABLE = True
+        INFLUENCE_ROUTES_AVAILABLE = True
         return True
     except ImportError:
-        INFLUENCE_ANALYSIS_AVAILABLE = False
+        INFLUENCE_ROUTES_AVAILABLE = False
         return False
 
 
@@ -194,27 +194,27 @@ def try_import_waf_security():
 
 def try_import_auth_routes():
     """Try to import auth routes."""
-    global AUTH_AVAILABLE
+    global AUTH_ROUTES_AVAILABLE
     try:
         from src.api.routes import auth_routes
         _imported_modules['auth_routes_standalone'] = auth_routes
-        AUTH_AVAILABLE = True
+        AUTH_ROUTES_AVAILABLE = True
         return True
     except ImportError:
-        AUTH_AVAILABLE = False
+        AUTH_ROUTES_AVAILABLE = False
         return False
 
 
 def try_import_search_routes():
     """Try to import search routes."""
-    global SEARCH_AVAILABLE
+    global SEARCH_ROUTES_AVAILABLE
     try:
         from src.api.routes import search_routes
         _imported_modules['search_routes'] = search_routes
-        SEARCH_AVAILABLE = True
+        SEARCH_ROUTES_AVAILABLE = True
         return True
     except ImportError:
-        SEARCH_AVAILABLE = False
+        SEARCH_ROUTES_AVAILABLE = False
         return False
 
 
@@ -438,14 +438,14 @@ def include_optional_routers(app):
             routers_included += 1
 
     # Include auth router if available
-    if AUTH_AVAILABLE:
+    if AUTH_ROUTES_AVAILABLE:
         auth_routes_standalone = _imported_modules.get('auth_routes_standalone')
         if auth_routes_standalone:
             app.include_router(auth_routes_standalone.router, prefix="/api/v1/auth", tags=["Authentication"])
             routers_included += 1
 
     # Include search router if available
-    if SEARCH_AVAILABLE:
+    if SEARCH_ROUTES_AVAILABLE:
         search_routes = _imported_modules.get('search_routes')
         if search_routes:
             app.include_router(search_routes.router, prefix="/api/v1/search", tags=["Search"])
