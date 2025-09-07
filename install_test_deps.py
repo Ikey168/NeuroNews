@@ -20,7 +20,7 @@ def install_dependencies():
         "fastapi",
         "requests",
         "httpx",  # Required for FastAPI TestClient
-        "gremlin-python",  # Required for graph database tests
+        "gremlinpython",  # Required for graph database tests (note: different package name)
         "boto3",  # Required for AWS service tests
         "sqlalchemy",  # Required for database tests
         "pandas",  # Required for data processing tests
@@ -33,6 +33,12 @@ def install_dependencies():
         "aiohttp",  # Required for async HTTP tests
         "uvicorn",  # Required for FastAPI server tests
         "pydantic",  # Required for API validation tests
+        "aiofiles",  # Required for async file operations
+        "sentence-transformers",  # Required for Issue #31 tests
+        "mlflow",  # Required for ML workflow tests
+        "python-dotenv",  # Required for environment variable loading
+        "pyyaml",  # Required for YAML config loading
+        "jinja2",  # Required for template rendering
     ]
     
     for dep in test_deps:
