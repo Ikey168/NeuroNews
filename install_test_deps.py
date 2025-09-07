@@ -19,6 +19,20 @@ def install_dependencies():
         "pytest-asyncio",
         "fastapi",
         "requests",
+        "httpx",  # Required for FastAPI TestClient
+        "gremlin-python",  # Required for graph database tests
+        "boto3",  # Required for AWS service tests
+        "sqlalchemy",  # Required for database tests
+        "pandas",  # Required for data processing tests
+        "numpy",  # Required for data processing tests
+        "scikit-learn",  # Required for ML tests
+        "transformers",  # Required for NLP tests
+        "torch",  # Required for ML/NLP tests
+        "scrapy",  # Required for scraper tests
+        "beautifulsoup4",  # Required for web scraping tests
+        "aiohttp",  # Required for async HTTP tests
+        "uvicorn",  # Required for FastAPI server tests
+        "pydantic",  # Required for API validation tests
     ]
     
     for dep in test_deps:

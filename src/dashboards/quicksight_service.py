@@ -362,9 +362,8 @@ class QuickSightDashboardService:
 
             except Exception as e:
                 logger.error(
-                    f"Failed to create dataset {dataset_config['id'}}: {e}"},
-                        "error": str(e),
-                    }
+                    f"Failed to create dataset {dataset_config['id']}: {e}",
+                    extra={"error": str(e)}
                 )
 
         return results
@@ -474,6 +473,7 @@ class QuickSightDashboardService:
                 {"Name": "avg_sentiment", "Type": "DECIMAL"},
                 {"Name": "top_entities", "Type": "STRING"},
                 {"Name": "source_count", "Type": "INTEGER"},
+            ]
         elif dataset_id == "entity_relationships_dataset":
             return [
                 {"Name": "entity_1", "Type": "STRING"},
@@ -482,9 +482,10 @@ class QuickSightDashboardService:
                 {"Name": "sentiment_label", "Type": "STRING"},
                 {"Name": "co_occurrence_count", "Type": "INTEGER"},
                 {"Name": "avg_sentiment", "Type": "DECIMAL"},
-                {"Name": f"irst_seen", "Type": "DATETIME"},
+                {"Name": "first_seen", "Type": "DATETIME"},
                 {"Name": "last_seen", "Type": "DATETIME"},
                 {"Name": "relationship_duration", "Type": "INTEGER"},
+            ]
         elif dataset_id == "event_timeline_dataset":
             return [
                 {"Name": "article_id", "Type": "STRING"},
@@ -500,12 +501,12 @@ class QuickSightDashboardService:
                 {"Name": "sentiment_category", "Type": "STRING"},
                 {"Name": "article_length_category", "Type": "STRING"},
                 {"Name": "publish_hour", "Type": "INTEGER"},
-                {"Name": "publish_day_of_week", "Type": "INTEGER"],
+                {"Name": "publish_day_of_week", "Type": "INTEGER"},
             ]
         else:
             return []
 
-    async def _create_analyses(self) -> List[Dict[str, Any]}:
+    async def _create_analyses(self):
         """Create QuickSight analyses for different dashboard types."""
         analyses_to_create = [
             {
@@ -525,7 +526,7 @@ class QuickSightDashboardService:
                 "name": "NeuroNews Event Timeline Analysis",
                 "dataset_id": "event_timeline_dataset",
                 "description": "Analysis for event timeline visualization",
-            ],
+            },
         ]
 
         results = []

@@ -10,6 +10,12 @@ import subprocess
 from pathlib import Path
 import importlib.util
 
+# Add src directory to Python path to help with imports
+current_dir = Path(__file__).parent
+src_dir = current_dir / "src"
+if src_dir.exists():
+    sys.path.insert(0, str(src_dir))
+
 
 class TestRunner:
     """Main test runner that orchestrates all test systems."""
