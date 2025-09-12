@@ -1,0 +1,50 @@
+# NeuroNews Test Coverage Makefile
+.PHONY: coverage coverage-html coverage-xml coverage-unit test help
+
+# Default target
+help:
+	@echo "NeuroNews Test Coverage Commands:"
+	@echo "  coverage      - Run test coverage for /src directory (terminal output)"
+	@echo "  coverage-html - Generate HTML coverage report for /src directory" 
+	@echo "  coverage-xml  - Generate XML coverage report for /src directory"
+	@echo "  coverage-unit - Run test coverage for /src using unit tests only"
+	@echo "  test          - Run all working tests with coverage"
+	@echo "  clean         - Clean coverage reports and cache files"
+
+# Update coverage script to use working test by default (avoids dependency issues)
+coverage:
+	@echo "Running test coverage for /src directory..."
+	python run_coverage.py --format=term
+
+# Generate HTML coverage report for /src directory
+coverage-html:
+	@echo "Generating HTML coverage report for /src directory..."
+	python run_coverage.py --format=html
+	@echo "📊 HTML report generated in htmlcov/"
+	@echo "🌐 Open htmlcov/index.html in your browser"
+
+# Generate XML coverage report for /src directory
+coverage-xml:
+	@echo "Generating XML coverage report for /src directory..."
+	python run_coverage.py --format=xml
+
+# Run test coverage for /src using unit tests only
+coverage-unit:
+	@echo "Running unit test coverage for /src directory..."
+	python run_coverage.py --unit-only --format=term
+
+# Run working tests with basic coverage
+test:
+	@echo "Running working tests with coverage..."
+	python run_coverage.py --test-path=tests/unit/test_simple_coverage.py
+
+# Clean coverage reports and cache files
+clean:
+	@echo "Cleaning coverage reports and cache files..."
+	rm -rf htmlcov/
+	rm -rf .coverage
+	rm -rf .pytest_cache/
+	rm -rf __pycache__/
+	find . -name "*.pyc" -delete
+	find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+	@echo "✨ Cleanup complete"
