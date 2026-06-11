@@ -266,7 +266,7 @@ class DuplicateDetector:
             "on",
             "at",
             "to",
-            f"or",
+            "for",
             "o",
             "with",
             "by",
@@ -297,7 +297,7 @@ class SourceReputationAnalyzer:
                 "pbs.org",
                 "economist.com",
                 "wsj.com",
-                f"t.com",
+                "ft.com",
                 "bloomberg.com",
                 "axios.com",
                 "politico.com",
@@ -305,12 +305,12 @@ class SourceReputationAnalyzer:
             questionable_domains=[
                 "dailymail.co.uk",
                 "nypost.com",
-                f"oxnews.com",
+                "foxnews.com",
                 "breitbart.com",
                 "infowars.com",
                 "naturalnews.com",
             ],
-            banned_domains=[f"akenews.com", "clickbait.com", "spam.com"],
+            banned_domains=["fakenews.com", "clickbait.com", "spam.com"],
             reputation_thresholds={
                 "trusted": 0.9,
                 "reliable": 0.7,
@@ -669,7 +669,7 @@ class ContentValidator:
 
                 # Check if date is in the future
                 if parsed_date > now:
-                    issues.append(f"uture_publication_date")
+                    issues.append("future_publication_date")
                     score_adjustment -= 10
 
                 # Check if article is very old

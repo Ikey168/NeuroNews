@@ -914,7 +914,7 @@ class EventTimelineService:
                 return "business_transaction"
             elif any(
                 word in title or word in content
-                for word in ["research", "study", f"indings"]
+                for word in ["research", "study", "findings"]
             ):
                 return "research"
             elif "technology" in category or "tech" in category:

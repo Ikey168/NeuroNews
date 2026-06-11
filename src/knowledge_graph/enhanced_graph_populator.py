@@ -209,14 +209,14 @@ class EnhancedKnowledgeGraphPopulator:
                 "article_vertex_id": article_vertex_id,
                 "entities": {
                     "extracted": len(entities),
-                    f"iltered": len(filtered_entities),
+                    "filtered": len(filtered_entities),
                     "created": len(entity_results["created"]),
                     "linked": len(entity_results["linked"]),
                     "merged": len(entity_results["merged"]),
                 },
                 "relationships": {
                     "extracted": len(relationships),
-                    f"iltered": len(filtered_relationships),
+                    "filtered": len(filtered_relationships),
                     "created": len(relationship_results["created"]),
                     "skipped": len(relationship_results["skipped"]),
                 },

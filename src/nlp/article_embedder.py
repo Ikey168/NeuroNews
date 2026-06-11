@@ -451,7 +451,7 @@ class ArticleEmbedder:
                                 if row["created_at"]
                                 else None
                             ),
-                            f"rom_cache": True,
+                            "from_cache": True,
                         }
 
             return None
@@ -738,7 +738,7 @@ EMBEDDING_MODELS = {
     "all-MiniLM-L6-v2": {
         "dimension": 384,
         "description": "Fast and efficient, good for most use cases",
-        "speed": f"ast",
+        "speed": "fast",
         "quality": "good",
     },
     "all-mpnet-base-v2": {

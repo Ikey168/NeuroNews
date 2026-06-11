@@ -59,7 +59,7 @@ class ValidationPipeline:
                 # Try to parse the date to ensure it's valid
                 if "T" in item["published_date"]:
                     datetime.fromisoformat(
-                        item["published_date"].replace("Z", "+0:0")
+                        item["published_date"].replace("Z", "+00:00")
                     )
             except BaseException:
                 validation_score -= 10

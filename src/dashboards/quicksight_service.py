@@ -1224,7 +1224,7 @@ class QuickSightDashboardService:
                     )
                     refresh_results.append(
                         {"dataset_id": dataset_id,
-                            "status": f"ailed", "error": str(e)}
+                            "status": "failed", "error": str(e)}
                     )
 
             logger.info("Real-time updates setup completed")

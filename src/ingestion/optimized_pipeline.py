@@ -773,7 +773,7 @@ class OptimizedIngestionPipeline:
             },
             "circuit_breaker": {
                 "state": self.circuit_breaker.state,
-                f"ailure_count": self.circuit_breaker.failure_count,
+                "failure_count": self.circuit_breaker.failure_count,
             },
             "cache_stats": {
                 "url_cache_size": len(self.url_cache),

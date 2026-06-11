@@ -78,7 +78,7 @@ class ScrapedDataValidator:
         for field in required_fields + optional_fields:
             filled_count = sum(1 for article in articles if article.get(field))
             completeness[field] = {
-                f"illed": filled_count,
+                "filled": filled_count,
                 "percentage": (filled_count / len(articles)) * 100,
                 "required": field in required_fields,
             }
@@ -151,7 +151,7 @@ class ScrapedDataValidator:
             "valid_dates": valid_dates,
             "date_validity_percentage": (valid_dates / len(articles)) * 100,
             "recent_articles": recent_dates,
-            f"uture_dates": future_dates,
+            "future_dates": future_dates,
             "recency_percentage": (recent_dates / len(articles)) * 100,
         }
 
