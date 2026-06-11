@@ -45,11 +45,18 @@ def setup_test_env():
         yield
         return
 
-    # Set up test database
-    setup_test_database()
+    # Set up test database (the setup helpers are async coroutines).
+    # A database is optional - tests fall back to mocks when unavailable.
+    try:
+        asyncio.run(setup_test_database())
+    except Exception as e:
+        print(f"Test database unavailable, continuing with mocks: {e}")
     yield
     # Clean up after all tests
-    cleanup_test_database()
+    try:
+        asyncio.run(cleanup_test_database())
+    except Exception:
+        pass
 
 
 @pytest.fixture(scope="function")
