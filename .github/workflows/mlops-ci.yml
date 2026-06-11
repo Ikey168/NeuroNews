@@ -1,0 +1,98 @@
+name: MLflow CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  mlflow-evaluation:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          gfortran \
+          libopenblas-dev \
+          liblapack-dev \
+          pkg-config
+        
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip wheel setuptools
+        # Install numpy first to avoid compilation issues
+        pip install numpy
+        # Install pre-compiled packages when available
+        pip install --only-binary=scipy,scikit-learn scipy scikit-learn
+        # Install core dependencies for MLflow evaluation
+        pip install mlflow pandas sentence-transformers torch
+        pip install nltk spacy
+        pip install transformers
+        pip install scikit-learn
+        pip install asyncio-compat
+        
+    - name: Download NLTK data and spaCy models
+      run: |
+        python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords'); nltk.download('averaged_perceptron_tagger')"
+        python -m spacy download en_core_web_sm || echo "spaCy model download failed, using fallback"
+        
+    - name: Set up MLflow tracking with file URI
+      run: |
+        mkdir -p _mlruns_ci
+        export MLFLOW_TRACKING_URI=file:./_mlruns_ci
+        echo "MLFLOW_TRACKING_URI=file:./_mlruns_ci" >> $GITHUB_ENV
+        echo "NEURONEWS_PIPELINE=rag_evaluation_ci" >> $GITHUB_ENV
+        echo "NEURONEWS_DATA_VERSION=v1.0" >> $GITHUB_ENV
+        
+    - name: Run tiny RAG evaluation
+      run: |
+        cd ${{ github.workspace }}
+        export MLFLOW_TRACKING_URI=file:./_mlruns_ci
+        export NEURONEWS_PIPELINE=rag_evaluation_ci
+        export NEURONEWS_DATA_VERSION=v1.0
+        python evals/run_eval.py --tiny
+        
+    - name: Verify MLflow runs were created
+      run: |
+        echo "Checking MLflow runs directory..."
+        ls -la _mlruns_ci/
+        if [ -d "_mlruns_ci" ] && [ "$(ls -A _mlruns_ci)" ]; then
+          echo "✅ MLflow runs created successfully"
+          find _mlruns_ci -type f -name "*.txt" -o -name "*.json" -o -name "*.yaml" | head -10
+        else
+          echo "❌ No MLflow runs found"
+          exit 1
+        fi
+        
+    - name: Upload MLflow runs as artifacts
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: mlflow-runs-${{ matrix.python-version }}-${{ github.run_number }}
+        path: _mlruns_ci/
+        retention-days: 30
+        
+    - name: Upload evaluation summary
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: evaluation-summary-${{ matrix.python-version }}-${{ github.run_number }}
+        path: |
+          _mlruns_ci/**/*.json
+          _mlruns_ci/**/*.yaml
+        retention-days: 7

@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # Marquez - Data lineage and metadata service
+  marquez:
+    image: marquezproject/marquez:latest
+    container_name: marquez
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+    environment:
+      - MARQUEZ_PORT=5000
+      - MARQUEZ_ADMIN_PORT=5001
+      - MARQUEZ_CONFIG=config/marquez.yml
+    volumes:
+      - ./marquez/config:/usr/src/app/config
+      - marquez_data:/opt/marquez
+    depends_on:
+      - marquez-db
+    networks:
+      - neuronews-network
+
+  # PostgreSQL database for Marquez
+  marquez-db:
+    image: postgres:13
+    container_name: marquez-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=marquez
+      - POSTGRES_PASSWORD=marquez
+      - POSTGRES_DB=marquez
+    volumes:
+      - marquez_db_data:/var/lib/postgresql/data
+      - ./marquez/init:/docker-entrypoint-initdb.d
+    networks:
+      - neuronews-network
+
+  # Marquez Web UI
+  marquez-web:
+    image: marquezproject/marquez-web:latest
+    container_name: marquez-web
+    ports:
+      - "3000:3000"
+    environment:
+      - MARQUEZ_HOST=marquez
+      - MARQUEZ_PORT=5000
+    depends_on:
+      - marquez
+    networks:
+      - neuronews-network
+
+  # Existing services (if you want to extend existing docker-compose)
+  # Add these to your existing docker-compose.yml or use this as a separate file
+
+volumes:
+  marquez_data:
+  marquez_db_data:
+
+networks:
+  neuronews-network:
+    external: true  # Assumes you have this network from main docker-compose
