@@ -150,7 +150,7 @@ class TestDynamoDBFailureManager:
                     "max_retries": {"N": "5"},
                     "next_retry_time": {"N": str(time.time() - 100)},
                     "is_permanent_failure": {"BOOL": False},
-                ]
+                }
             ]
         }
 
@@ -377,8 +377,6 @@ class TestMonitoringConfiguration:
         # Check if config file exists and is valid JSON
         try:
             with open(config_path, "r") as f:
-except Exception:
-    pass
                 config = json.load(f)
 
             assert "monitoring" in config
@@ -402,9 +400,8 @@ if __name__ == "__main__":
         print("Testing monitoring and error handling system...")
 
         # Test CloudWatch logger
-        print(""
-1. Testing CloudWatch Logger...")
-        cloudwatch_logger = CloudWatchLogger(region_name="us-east-1")"
+        print("\n1. Testing CloudWatch Logger...")
+        cloudwatch_logger = CloudWatchLogger(region_name="us-east-1")
 
         metrics = ScrapingMetrics(
             url="https://test.com",
@@ -416,23 +413,18 @@ if __name__ == "__main__":
 
         try:
             await cloudwatch_logger.log_scraping_attempt(metrics)
-except Exception:
-    pass
             print(" CloudWatch logging test passed")
         except Exception as e:
             print("❌ CloudWatch logging test failed: {0}".format(e))
 
         # Test DynamoDB manager
-        print(""
-2. Testing DynamoDB Failure Manager...")"
+        print("\n2. Testing DynamoDB Failure Manager...")
         failure_manager = DynamoDBFailureManager(
             table_name="test-failed-urls", region_name="us-east-1"
         )
 
         try:
             failed_url = await failure_manager.record_failure(
-except Exception:
-    pass
                 url="https://test-failure.com",
                 failure_reason="timeout",
                 error_details="Connection timeout after 30s",
@@ -444,12 +436,9 @@ except Exception:
             print("❌ DynamoDB failure recording test failed: {0}".format(e))
 
         # Test SNS alert manager
-        print(""
-3. Testing SNS Alert Manager...")"
+        print("\n3. Testing SNS Alert Manager...")
         try:
             alert_manager = SNSAlertManager(
-except Exception:
-    pass
                 topic_arn="arn:aws:sns:us-east-1:123456789012:test-topic",
                 region_name="us-east-1",
             )
@@ -469,8 +458,7 @@ except Exception:
             print("⚠️ SNS alert manager test: {0}".format(e))
 
         # Test retry manager
-        print(""
-4. Testing Enhanced Retry Manager...")"
+        print("\n4. Testing Enhanced Retry Manager...")
         retry_manager = EnhancedRetryManager()
 
         call_count = 0
@@ -484,8 +472,6 @@ except Exception:
 
         try:
             result = await retry_manager.retry_with_backoff(
-except Exception:
-    pass
                 test_function,
                 url="https://test-retry.com",
                 retry_config=RetryConfig(max_retries=3, base_delay=0.1),
@@ -498,8 +484,7 @@ except Exception:
         except Exception as e:
             print("❌ Retry manager test failed: {0}".format(e))
 
-        print(""
- Manual tests completed!")"
+        print("\n Manual tests completed!")
 
     # Run manual tests
     asyncio.run(run_manual_tests())

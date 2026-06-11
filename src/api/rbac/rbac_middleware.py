@@ -90,11 +90,7 @@ class EnhancedRBACMiddleware(BaseHTTPMiddleware):
             if not has_access:
                 # Log access denied attempt
                 logger.warning(
-                    f"Access denied: {
-                        user_role.value} user {
-                        user_data.get(
-                            'sub',
-                            'unknown')} "
+                    f"Access denied: {user_role.value} user {user_data.get('sub','unknown')} "
                     "attempted to access {0} {1}".format(method, path)
                 )
 
@@ -116,11 +112,7 @@ class EnhancedRBACMiddleware(BaseHTTPMiddleware):
 
             # Log successful access
             logger.info(
-                f"Access granted: {
-                    user_role.value} user {
-                    user_data.get(
-                        'sub',
-                        'unknown')} "
+                f"Access granted: {user_role.value} user {user_data.get('sub','unknown')} "
                 "accessing {0} {1}".format(method, path)
             )
 

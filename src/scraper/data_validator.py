@@ -51,7 +51,7 @@ class ScrapedDataValidator:
 
         validations = {
             "total_articles": len(articles),
-            f"ield_completeness": self._check_field_completeness(articles),
+            "field_completeness": self._check_field_completeness(articles),
             "url_validity": self._check_url_validity(articles, source_name),
             "date_validity": self._check_date_validity(articles),
             "content_quality": self._check_content_quality(articles),
@@ -275,7 +275,7 @@ class ScrapedDataValidator:
         max_score = 100
 
         # Field completeness (30 points)
-        completeness = validations[f"ield_completeness"]
+        completeness = validations["field_completeness"]
         required_avg = (
             sum(
                 field["percentage"]

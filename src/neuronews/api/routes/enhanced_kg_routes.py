@@ -652,11 +652,9 @@ async def _query_timeline_events(
 
         # Add date filters if provided
         if start_date:
-            gremlin_query += f".has('published_date', gte('{
-                start_date.isoformat()}'))"
+            gremlin_query += f".has('published_date', gte('{start_date.isoformat()}'))"
         if end_date:
-            gremlin_query += f".has('published_date', lte('{
-                end_date.isoformat()}'))"
+            gremlin_query += f".has('published_date', lte('{end_date.isoformat()}'))"
 
         gremlin_query += (
             f".order().by('published_date', desc).limit({max_events}).valueMap(true)"

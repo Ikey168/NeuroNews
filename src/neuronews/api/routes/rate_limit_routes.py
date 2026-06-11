@@ -340,8 +340,7 @@ async def reset_user_limits(
             _reset_user_limits_memory(user_id)
 
         logger.info(
-            f"Rate limits reset for user {user_id} by admin {
-                current_user.get('user_id')}"
+            f"Rate limits reset for user {user_id} by admin {current_user.get('user_id')}"
         )
 
         return {

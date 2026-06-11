@@ -96,9 +96,7 @@ class AsyncScraperRunner:
         """Run the async scraper."""
         self.logger.info(" Starting Async News Scraper")
         self.logger.info(
-            f" Configuration: {
-                self.config['max_concurrent']} concurrent, {
-                self.config['max_threads']} threads"
+            f" Configuration: {self.config['max_concurrent']} concurrent, {self.config['max_threads']} threads"
         )
         self.logger.info(" Sources: {0}".format([s.name for s in sources]))
 

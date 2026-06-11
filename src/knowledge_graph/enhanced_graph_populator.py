@@ -999,12 +999,10 @@ if __name__ == "__main__":
             print(f"  • Entities extracted: {result['entities']['extracted']}")
             print(f"  • Entities created: {result['entities']['created']}")
             print(
-                f"  • Relationships found: {
-                    result['relationships']['extracted']}"
+                f"  • Relationships found: {result['relationships']['extracted']}"
             )
             print(
-                f"  • Relationships created: {
-                    result['relationships']['created']}"
+                f"  • Relationships created: {result['relationships']['created']}"
             )
             print(f"  • Processing time: {result['processing_time']:.2f}s")
 
@@ -1041,12 +1039,10 @@ if __name__ == "__main__":
                 f"  • Relationships created: {stats['relationships_created']}"
             )
             print(
-                f"  • Average entities per article: {
-                    stats['entities_per_article']:.1f}"
+                f"  • Average entities per article: {stats['entities_per_article']:.1f}"
             )
             print(
-                f"  • Average relationships per article: {
-                    stats['relationships_per_article']:.1f}"
+                f"  • Average relationships per article: {stats['relationships_per_article']:.1f}"
             )
 
             # Clean up

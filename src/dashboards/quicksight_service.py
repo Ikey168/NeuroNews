@@ -362,7 +362,13 @@ class QuickSightDashboardService:
 
             except Exception as e:
                 logger.error(
-                    f"Failed to create dataset {dataset_config['id'}}: {e}"},
+                    "Failed to create dataset {0}: {1}".format(dataset_config["id"], e)
+                )
+                results.append(
+                    {
+                        "success": False,
+                        "action": "failed",
+                        "name": dataset_config["name"],
                         "error": str(e),
                     }
                 )
@@ -474,6 +480,7 @@ class QuickSightDashboardService:
                 {"Name": "avg_sentiment", "Type": "DECIMAL"},
                 {"Name": "top_entities", "Type": "STRING"},
                 {"Name": "source_count", "Type": "INTEGER"},
+            ]
         elif dataset_id == "entity_relationships_dataset":
             return [
                 {"Name": "entity_1", "Type": "STRING"},
@@ -482,9 +489,10 @@ class QuickSightDashboardService:
                 {"Name": "sentiment_label", "Type": "STRING"},
                 {"Name": "co_occurrence_count", "Type": "INTEGER"},
                 {"Name": "avg_sentiment", "Type": "DECIMAL"},
-                {"Name": f"irst_seen", "Type": "DATETIME"},
+                {"Name": "first_seen", "Type": "DATETIME"},
                 {"Name": "last_seen", "Type": "DATETIME"},
                 {"Name": "relationship_duration", "Type": "INTEGER"},
+            ]
         elif dataset_id == "event_timeline_dataset":
             return [
                 {"Name": "article_id", "Type": "STRING"},
@@ -500,12 +508,12 @@ class QuickSightDashboardService:
                 {"Name": "sentiment_category", "Type": "STRING"},
                 {"Name": "article_length_category", "Type": "STRING"},
                 {"Name": "publish_hour", "Type": "INTEGER"},
-                {"Name": "publish_day_of_week", "Type": "INTEGER"],
+                {"Name": "publish_day_of_week", "Type": "INTEGER"},
             ]
         else:
             return []
 
-    async def _create_analyses(self) -> List[Dict[str, Any]}:
+    async def _create_analyses(self) -> List[Dict[str, Any]]:
         """Create QuickSight analyses for different dashboard types."""
         analyses_to_create = [
             {
@@ -525,7 +533,7 @@ class QuickSightDashboardService:
                 "name": "NeuroNews Event Timeline Analysis",
                 "dataset_id": "event_timeline_dataset",
                 "description": "Analysis for event timeline visualization",
-            ],
+            },
         ]
 
         results = []
@@ -574,9 +582,10 @@ class QuickSightDashboardService:
                                 "quicksight:QueryAnalysis",
                                 "quicksight:DescribeAnalysis",
                                 "quicksight:UpdateAnalysis",
-                            },
+                            ],
                         }
-                    },
+                    ],
+                }
                 response = self.quicksight_client.create_analysis(
                     **analysis_params)
 
@@ -593,7 +602,13 @@ class QuickSightDashboardService:
 
             except Exception as e:
                 logger.error(
-                    f"Failed to create analysis {analysis_config['id'}}: {e}"},
+                    "Failed to create analysis {0}: {1}".format(analysis_config["id"], e)
+                )
+                results.append(
+                    {
+                        "success": False,
+                        "action": "failed",
+                        "name": analysis_config["name"],
                         "error": str(e),
                     }
                 )
@@ -613,14 +628,19 @@ class QuickSightDashboardService:
                         self.config.region, self.config.aws_account_id, dataset_id
                     ),
                     "Identifier": dataset_id,
-                ]
+                }
             ],
             "Sheets": [
                 {
-                    "SheetId": f"{analysis_config['id'}}_sheet_1"], dataset_id
+                    "SheetId": "{0}_sheet_1".format(analysis_config["id"]),
+                    "Name": "Sheet 1",
+                    "Visuals": self._get_sheet_visuals(
+                        analysis_config["id"], dataset_id
                     ),
                 }
-            },
+            ],
+        }
+
     def _get_sheet_visuals(
         self, analysis_id: str, dataset_id: str
     ) -> List[Dict[str, Any]]:
@@ -644,7 +664,7 @@ class QuickSightDashboardService:
                     "Title": {
                         "Visibility": "VISIBLE",
                         "FormatText": {"PlainText": "Sentiment Trends Over Time"},
-                    ],
+                    },
                     "FieldWells": {
                         "LineChartAggregatedFieldWells": {
                             "Category": [
@@ -656,7 +676,7 @@ class QuickSightDashboardService:
                                             "ColumnName": "date",
                                         },
                                     }
-                                ]
+                                }
                             ],
                             "Values": [
                                 {
@@ -667,7 +687,7 @@ class QuickSightDashboardService:
                                             "ColumnName": "avg_sentiment",
                                         },
                                     }
-                                ]
+                                }
                             ],
                             "Colors": [
                                 {
@@ -678,8 +698,9 @@ class QuickSightDashboardService:
                                             "ColumnName": "sentiment_label",
                                         },
                                     }
-                                ]
-                            },
+                                }
+                            ],
+                        }
                     },
                 },
             }
@@ -697,7 +718,7 @@ class QuickSightDashboardService:
                     "Title": {
                         "Visibility": "VISIBLE",
                         "FormatText": {"PlainText": "Entity Relationship Network"},
-                    ],
+                    },
                     "FieldWells": {
                         "ScatterPlotCategoricallyAggregatedFieldWells": {
                             "XAxis": [
@@ -709,7 +730,7 @@ class QuickSightDashboardService:
                                             "ColumnName": "entity_1",
                                         },
                                     }
-                                ]
+                                }
                             ],
                             "YAxis": [
                                 {
@@ -720,7 +741,7 @@ class QuickSightDashboardService:
                                             "ColumnName": "entity_2",
                                         },
                                     }
-                                ]
+                                }
                             ],
                             "Size": [
                                 {
@@ -731,8 +752,9 @@ class QuickSightDashboardService:
                                             "ColumnName": "co_occurrence_count",
                                         },
                                     }
-                                ]
-                            },
+                                }
+                            ],
+                        }
                     },
                 },
             }
@@ -748,7 +770,7 @@ class QuickSightDashboardService:
                     "Title": {
                         "Visibility": "VISIBLE",
                         "FormatText": {"PlainText": "Event Timeline Analysis"},
-                    ],
+                    },
                     "FieldWells": {
                         "LineChartAggregatedFieldWells": {
                             "Category": [
@@ -760,7 +782,7 @@ class QuickSightDashboardService:
                                             "ColumnName": "published_date",
                                         },
                                     }
-                                ]
+                                }
                             ],
                             "Values": [
                                 {
@@ -774,7 +796,7 @@ class QuickSightDashboardService:
                                             "SimpleNumericalAggregation": "COUNT"
                                         },
                                     }
-                                ]
+                                }
                             ],
                             "Colors": [
                                 {
@@ -785,8 +807,9 @@ class QuickSightDashboardService:
                                             "ColumnName": "sentiment_category",
                                         },
                                     }
-                                ]
-                            },
+                                }
+                            ],
+                        }
                     },
                 },
             }
@@ -803,7 +826,7 @@ class QuickSightDashboardService:
                     "sentiment_trends_analysis",
                     "entity_relationships_analysis",
                     "event_timeline_analysis",
-                },
+                ],
             }
         ]
 
@@ -856,9 +879,10 @@ class QuickSightDashboardService:
                                 "quicksight:DeleteDashboard",
                                 "quicksight:DescribeDashboardPermissions",
                                 "quicksight:UpdateDashboardPublishedVersion",
-                            },
+                            ],
                         }
-                    },
+                    ],
+                }
                 response = self.quicksight_client.create_dashboard(
                     **dashboard_params)
 
@@ -875,10 +899,10 @@ class QuickSightDashboardService:
 
             except Exception as e:
                 logger.error(
-                    f"Failed to create dashboard {dashboard_config['id'}}: {e}
+                    "Failed to create dashboard {0}: {1}".format(dashboard_config["id"], e)
                 )
                 results.append(
-                    {"
+                    {
                         "success": False,
                         "name": dashboard_config["name"],
                         "id": dashboard_config["id"],
@@ -911,7 +935,7 @@ class QuickSightDashboardService:
                         self.config.region, self.config.aws_account_id
                     ),
                     "Identifier": "event_timeline_dataset",
-                ],
+                },
             ],
             "Sheets": [
                 {
@@ -923,10 +947,12 @@ class QuickSightDashboardService:
                             "entity_relationships_dataset"
                         ),
                         *self._get_event_timeline_visuals("event_timeline_dataset"),
-                    },
+                    ],
                     "FilterControls": self._get_dashboard_filters(),
                 }
-            },
+            ],
+        }
+
     def _get_dashboard_filters(self) -> List[Dict[str, Any]]:
         """
         Enable filtering by date, entity, and sentiment.
@@ -966,7 +992,7 @@ class QuickSightDashboardService:
                         "ColumnName": "category",
                     },
                 },
-            ],
+            },
         ]
 
     async def create_dashboard_layout(
@@ -1001,7 +1027,7 @@ class QuickSightDashboardService:
                                 self._get_dataset_for_layout(layout_type),
                             ),
                             "Identifier": self._get_dataset_for_layout(layout_type),
-                        ]
+                        }
                     ],
                     "Sheets": [
                         {
@@ -1009,7 +1035,7 @@ class QuickSightDashboardService:
                             "Name": layout_config.name,
                             "Visuals": layout_config.visuals,
                             "FilterControls": layout_config.filters,
-                        ]
+                        }
                     ],
                 },
                 "Permissions": [
@@ -1026,9 +1052,10 @@ class QuickSightDashboardService:
                             "quicksight:QueryDashboard",
                             "quicksight:UpdateDashboard",
                             "quicksight:DeleteDashboard",
-                        },
+                        ],
                     }
-                },
+                ],
+            }
             response = self.quicksight_client.create_dashboard(
                 **dashboard_params)
 
@@ -1080,7 +1107,7 @@ class QuickSightDashboardService:
                                 "ColumnName": "sentiment_label",
                             },
                         },
-                    ],
+                    },
                 ],
             )
         elif layout_type == DashboardType.ENTITY_RELATIONSHIPS:
@@ -1102,6 +1129,7 @@ class QuickSightDashboardService:
                                 "ColumnName": "entity_1",
                             },
                         },
+                    },
                 ],
             )
         elif layout_type == DashboardType.EVENT_TIMELINE:
@@ -1122,6 +1150,7 @@ class QuickSightDashboardService:
                                 "ColumnName": "published_date",
                             },
                         },
+                    },
                 ],
             )
         else:
@@ -1248,7 +1277,8 @@ class QuickSightDashboardService:
                         "name": dashboard["Name"],
                         "url": self._get_dashboard_url(dashboard["DashboardId"]),
                         "last_updated": dashboard["LastUpdatedTime"],
-                        "created_time": dashboard["CreatedTime"},
+                        "created_time": dashboard["CreatedTime"],
+                    }
                     for dashboard in response["DashboardSummaryList"]
                     if "neuronews" in dashboard["DashboardId"].lower()
                 ]
@@ -1272,7 +1302,7 @@ class QuickSightDashboardService:
             "datasets_valid": [],
             "analyses_valid": [],
             "dashboards_valid": [],
-            "errors": [},
+            "errors": [],
         }
 
         try:
@@ -1346,7 +1376,16 @@ class QuickSightDashboardService:
             )
 
             logger.info(
-                f"Validation completed: {'Success' if validation_results['overall_valid'}else 'Issues found'}"Validation failed: {0}".format(e))
+                "Validation completed: {0}".format(
+                    "Success"
+                    if validation_results["overall_valid"]
+                    else "Issues found"
+                )
+            )
+            return validation_results
+
+        except Exception as e:
+            logger.error("Validation failed: {0}".format(e))
             validation_results["errors"].append(str(e))
             return validation_results
 
@@ -1365,39 +1404,44 @@ async def demo_quicksight_dashboard_service():
         print(" QuickSight service initialized")
 
         # 1. Set up QuickSight resources
-        print(""
- Setting up QuickSight resources...")
+        print("\n Setting up QuickSight resources...")
         setup_result = await service.setup_quicksight_resources()
-        print(f"Data source created: {setup_result['data_source_created'}})"
-        print(f"Datasets created: {len(setup_result['datasets_created'})})"
-        print(f"Analyses created: {len(setup_result['analyses_created'})})"
-        print(f"Dashboards created: {len(setup_result['dashboards_created'})}")""
+        print("Data source created: {0}".format(setup_result["data_source_created"]))
+        print("Datasets created: {0}".format(len(setup_result["datasets_created"])))
+        print("Analyses created: {0}".format(len(setup_result["analyses_created"])))
+        print("Dashboards created: {0}".format(len(setup_result["dashboards_created"])))
 
         # 2. Create specific dashboard layouts
-        print(""
- Creating dashboard layouts...")"
+        print("\n Creating dashboard layouts...")
         for layout_type in DashboardType:
             if layout_type != DashboardType.COMPREHENSIVE:
                 layout_result = await service.create_dashboard_layout(layout_type)
                 print(
-                    f"{layout_type.value}: {'' if layout_result['success'} else '❌'}
+                    "{0}: {1}".format(
+                        layout_type.value,
+                        "" if layout_result["success"] else "❌",
+                    )
                 )
 
-        # 3. Set up real-time updates"
-        print(""
-🔄 Setting up real-time updates...")
+        # 3. Set up real-time updates
+        print("\n🔄 Setting up real-time updates...")
         updates_result = await service.setup_real_time_updates()
-        print(f"Real-time updates: {'' if updates_result['success'} else '❌'}")""
+        print(
+            "Real-time updates: {0}".format(
+                "" if updates_result["success"] else "❌"
+            )
+        )
 
         # 4. Validate setup
-        print(""
- Validating setup...")"
+        print("\n Validating setup...")
         validation_result = await service.validate_setup()
         print(
-            f"Overall validation: {'' if validation_result['overall_valid'}else '❌'}"• {dashboard['name'}}: {dashboard['url'}}")""
+            "Overall validation: {0}".format(
+                "" if validation_result["overall_valid"] else "❌"
+            )
+        )
 
-        print(""
- QuickSight Dashboard Service demo completed!")"
+        print("\n QuickSight Dashboard Service demo completed!")
 
     except Exception as e:
         print("❌ Demo failed: {0}".format(e))

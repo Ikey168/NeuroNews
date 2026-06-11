@@ -352,7 +352,7 @@ class SourceReputationAnalyzer:
         return {
             "reputation_score": reputation_score,
             "credibility_level": credibility_level,
-            f"lags": flags,
+            "flags": flags,
             "domain": domain,
         }
 
@@ -751,7 +751,7 @@ class DataValidationPipeline:
             )
 
             # Step 6: Determine if article passes validation
-            all_issues = content_validation["issues"] + source_analysis[f"lags"]
+            all_issues = content_validation["issues"] + source_analysis["flags"]
             all_warnings = content_validation["warnings"]
 
             # Check for critical issues that cause automatic rejection

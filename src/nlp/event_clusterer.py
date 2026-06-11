@@ -381,10 +381,7 @@ class EventClusterer:
             peak_activity_date = self._find_peak_activity(articles)
 
             # Generate unique cluster ID
-            cluster_uid = f"{
-                category or 'general'}_event_{
-                datetime.now().strftime('%Y%m%d')}_{
-                cluster_id:03d}"
+            cluster_uid = f"{category or 'general'}_event_{datetime.now().strftime('%Y%m%d')}_{cluster_id:03d}"
 
             # Calculate distances for assignment confidence
             embeddings_matrix = np.array(
@@ -891,8 +888,7 @@ class EventClusterer:
 
                         except Exception as e:
                             logger.warning(
-                                f"Error storing event {
-                                    event['cluster_id']}: {e}"
+                                f"Error storing event {event['cluster_id']}: {e}"
                             )
                             continue
 
@@ -1006,9 +1002,7 @@ if __name__ == "__main__":
                     f"- {event['cluster_name']} ({event['event_type']}) - {event['cluster_size']} articles"
                 )
                 print(
-                    f"  Trending: {
-                        event['trending_score']:.2f}, Impact: {
-                        event['impact_score']:.2f}"
+                    f"  Trending: {event['trending_score']:.2f}, Impact: {event['impact_score']:.2f}"
                 )
         else:
             print("No embeddings found for testing")

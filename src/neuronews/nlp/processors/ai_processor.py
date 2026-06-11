@@ -319,10 +319,7 @@ class KubernetesAIProcessor:
 
             except Exception as e:
                 logger.error(
-                    f"Failed to preprocess article {
-                        article.get(
-                            'article_id',
-                            'unknown')}: {e}"
+                    f"Failed to preprocess article {article.get('article_id','unknown')}: {e}"
                 )
                 # Add empty string to maintain alignment
                 processed_texts.append("")
@@ -643,8 +640,7 @@ class KubernetesAIProcessor:
 
                 except Exception as e:
                     logger.error(
-                        f"Failed to process article {
-                            article['article_id']}: {e}"
+                        f"Failed to process article {article['article_id']}: {e}"
                     )
                     self.stats["articles_failed"] += 1
 
@@ -795,32 +791,24 @@ class KubernetesAIProcessor:
             logger.info("Processing statistics saved to {0}".format(stats_file))
             logger.info("AI Topic Modeling Job Summary:")
             logger.info(
-                f"  Articles Processed: {
-                    self.stats['articles_processed']}"
+                f"  Articles Processed: {self.stats['articles_processed']}"
             )
             logger.info(f"  Articles Failed: {self.stats['articles_failed']}")
             logger.info(
-                f"  Topics Extracted: {
-                    self.stats['topics_extracted']}"
+                f"  Topics Extracted: {self.stats['topics_extracted']}"
             )
             logger.info(
-                f"  Embeddings Generated: {
-                    self.stats['embeddings_generated']}"
+                f"  Embeddings Generated: {self.stats['embeddings_generated']}"
             )
             logger.info(
-                f"  Batches Processed: {
-                    self.stats['batches_processed']}"
+                f"  Batches Processed: {self.stats['batches_processed']}"
             )
             logger.info(
-                f"  Total Duration: {
-                    self.stats['total_duration_seconds']:.2f}s"
+                f"  Total Duration: {self.stats['total_duration_seconds']:.2f}s"
             )
             if self.stats["articles_processed"] > 0:
                 logger.info(
-                    f"  Throughput: {
-                        self.stats.get(
-                            'throughput_articles_per_second',
-                            0):.2f} articles/sec"
+                    f"  Throughput: {self.stats.get('throughput_articles_per_second',0):.2f} articles/sec"
                 )
 
         except Exception as e:
@@ -868,12 +856,10 @@ class KubernetesAIProcessor:
 
             logger.info("AI topic modeling job completed successfully")
             logger.info(
-                f"Processed {
-                    self.stats['articles_processed']} articles"
+                f"Processed {self.stats['articles_processed']} articles"
             )
             logger.info(
-                f"Extracted {
-                    self.stats['topics_extracted']} topics total"
+                f"Extracted {self.stats['topics_extracted']} topics total"
             )
 
         except Exception as e:

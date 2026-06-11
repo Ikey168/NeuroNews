@@ -230,8 +230,7 @@ async def get_event_timeline(
         )
     except Exception as e:
         logger.error(
-            f"Error getting event timeline for topic '{topic}': {
-                str(e)}"
+            f"Error getting event timeline for topic '{topic}': {str(e)}"
         )
         import traceback
 

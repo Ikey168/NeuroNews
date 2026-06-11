@@ -394,21 +394,15 @@ class UserAgentRotator:
     def _generate_sec_ch_ua(self, profile: BrowserProfile) -> str:
         """Generate realistic Sec-CH-UA header."""
         if profile.browser_name == "Chrome":
-            return f'"Google Chrome";v="{
-                profile.version.split(".")[0]}", "Chromium";v="{
-                profile.version.split(".")[0]}", "Not_A Brand";v="8"'
+            return f'"Google Chrome";v="{profile.version.split(".")[0]}", "Chromium";v="{profile.version.split(".")[0]}", "Not_A Brand";v="8"'
         elif profile.browser_name == "Firefox":
             return f'"Firefox";v="{profile.version.split(".")[0]}"'
         elif profile.browser_name == "Safari":
             return f'"Safari";v="{profile.version.split(".")[0]}"'
         elif profile.browser_name == "Edge":
-            return f'"Microsoft Edge";v="{
-                profile.version.split(".")[0]}", "Chromium";v="{
-                profile.version.split(".")[0]}", "Not_A Brand";v="8"'
+            return f'"Microsoft Edge";v="{profile.version.split(".")[0]}", "Chromium";v="{profile.version.split(".")[0]}", "Not_A Brand";v="8"'
         else:
-            return f'"{
-                profile.browser_name}";v="{
-                profile.version.split(".")[0]}"'
+            return f'"{profile.browser_name}";v="{profile.version.split(".")[0]}"'
 
     def get_realistic_delays(self) -> Tuple[float, float]:
         """Get realistic delay ranges for human-like behavior."""

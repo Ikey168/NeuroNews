@@ -72,14 +72,10 @@ class AsyncPipelineProcessor:
             )
         )
         self.logger.info(
-            f" Validation: {
-                self.validation_stats['passed']} passed, {
-                self.validation_stats['failed']} failed"
+            f" Validation: {self.validation_stats['passed']} passed, {self.validation_stats['failed']} failed"
         )
         self.logger.info(
-            f" Duplicates: {
-                self.duplicate_stats['unique']} unique, {
-                self.duplicate_stats['duplicates']} duplicates"
+            f" Duplicates: {self.duplicate_stats['unique']} unique, {self.duplicate_stats['duplicates']} duplicates"
         )
 
         return valid_articles
@@ -111,9 +107,7 @@ class AsyncPipelineProcessor:
 
             except Exception as e:
                 self.logger.error(
-                    f"Error processing article {
-                        article.get(
-                            'url', 'unknown')}: {e}"
+                    f"Error processing article {article.get('url', 'unknown')}: {e}"
                 )
                 return None
 

@@ -199,9 +199,7 @@ class MultiLanguagePipeline:
             if result.get("errors"):
                 self.stats["translation_errors"] += 1
                 logger.warning(
-                    f"Translation errors for {
-                        article_data['id']}: {
-                        result['errors']}"
+                    f"Translation errors for {article_data['id']}: {result['errors']}"
                 )
 
             # Add processing metadata to item
@@ -227,10 +225,7 @@ class MultiLanguagePipeline:
         except Exception as e:
             self.stats["items_dropped"] += 1
             logger.error(
-                f"Error processing item {
-                    item.get(
-                        'url',
-                        'unknown')}: {e}"
+                f"Error processing item {item.get('url','unknown')}: {e}"
             )
             raise DropItem("Processing failed: {0}".format(str(e)))
 

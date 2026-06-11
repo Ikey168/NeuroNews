@@ -163,8 +163,7 @@ class OptimizedSentimentAnalyzer:
                 )
             except Exception as e:
                 logger.error(
-                    f"Legacy sentiment analysis failed for article {
-                        article.get('id')}: {e}"
+                    f"Legacy sentiment analysis failed for article {article.get('id')}: {e}"
                 )
                 results.append(
                     {"article_id": article.get("id"), "error": str(e), "fallback": True}
@@ -666,35 +665,28 @@ if __name__ == "__main__":
             print("Integrated NLP Processing Results:")
             print(f"Articles processed: {len(results['articles'])}")
             print(
-                f"Processing time: {
-                    results['performance_metrics']['total_processing_time']:.2f}s"
+                f"Processing time: {results['performance_metrics']['total_processing_time']:.2f}s"
             )
             print(
-                f"Throughput: {
-                    results['performance_metrics']['articles_per_second']:.2f} articles/sec"
+                f"Throughput: {results['performance_metrics']['articles_per_second']:.2f} articles/sec"
             )
             print(
-                f"Cache hit rate: {
-                    results['performance_metrics']['cache_hit_rate']:.2%}"
+                f"Cache hit rate: {results['performance_metrics']['cache_hit_rate']:.2%}"
             )
             print(
-                f"Memory usage: {
-                    results['performance_metrics']['memory_usage_mb']:.1f}MB"
+                f"Memory usage: {results['performance_metrics']['memory_usage_mb']:.1f}MB"
             )
 
             if results["clustering"]:
                 print(
-                    f"Event clusters found: {
-                        results['clustering'].get(
-                            'cluster_count', 0)}"
+                    f"Event clusters found: {results['clustering'].get('cluster_count', 0)}"
                 )
 
             # Get comprehensive stats
             stats = processor.get_comprehensive_stats()
             print(f"Total sessions: {stats['total_stats']['sessions']}")
             print(
-                f"Total articles processed: {
-                    stats['total_stats']['articles_processed']}"
+                f"Total articles processed: {stats['total_stats']['articles_processed']}"
             )
 
         finally:

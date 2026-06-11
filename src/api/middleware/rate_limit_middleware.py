@@ -439,8 +439,7 @@ class SuspiciousActivityDetector:
         self.alerts.append(alert_data)
 
         logger.warning(
-            f"Suspicious activity detected for user {user_id}: {
-                ', '.join(alerts)}",
+            f"Suspicious activity detected for user {user_id}: {', '.join(alerts)}",
             extra=alert_data,
         )
 

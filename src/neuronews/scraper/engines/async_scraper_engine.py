@@ -458,9 +458,7 @@ class AsyncNewsScraperEngine:
         async with rate_limiter:
             try:
                 self.logger.info(
-                    f"Scraping {
-                        source.name} ({
-                        'JS' if source.requires_js else 'HTTP'})"
+                    f"Scraping {source.name} ({'JS' if source.requires_js else 'HTTP'})"
                 )
 
                 if source.requires_js:

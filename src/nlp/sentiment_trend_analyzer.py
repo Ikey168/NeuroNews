@@ -746,8 +746,7 @@ class SentimentTrendAnalyzer:
 
         # Generate alert ID
         timestamp = datetime.now(timezone.utc)
-        alert_id = f"{topic}_{alert_type}_{
-            timestamp.strftime('%Y%m%d_%H%M%S')}"
+        alert_id = f"{topic}_{alert_type}_{timestamp.strftime('%Y%m%d_%H%M%S')}"
 
         # Create description
         direction = "improved" if current_sentiment > previous_sentiment else "declined"

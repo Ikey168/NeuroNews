@@ -246,8 +246,7 @@ class S3ArticleStorage:
         missing_fields = [field for field in required_fields if not article.get(field)]
         if missing_fields:
             raise ValueError(
-                f"Missing required fields: {
-                    ', '.join(missing_fields)}"
+                f"Missing required fields: {', '.join(missing_fields)}"
             )
 
         try:
@@ -805,16 +804,7 @@ class S3Storage(S3ArticleStorage):
         year, month, day = date_parts
 
         # Generate content hash
-        content = f"{
-            article.get(
-                'title',
-                '')}{
-            article.get(
-                'content',
-                '')}{
-                    article.get(
-                        'url',
-                        '')}"
+        content = f"{article.get('title','')}{article.get('content','')}{article.get('url','')}"
         content_hash = self._calculate_content_hash(content)[:8]
 
         # Create legacy key structure
@@ -831,8 +821,7 @@ class S3Storage(S3ArticleStorage):
         missing_fields = [field for field in required_fields if not article.get(field)]
         if missing_fields:
             raise ValueError(
-                f"Missing required fields: {
-                    ', '.join(missing_fields)}"
+                f"Missing required fields: {', '.join(missing_fields)}"
             )
 
         if not self.s3_client:

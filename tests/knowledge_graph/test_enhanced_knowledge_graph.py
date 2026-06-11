@@ -86,8 +86,7 @@ class TestEnhancedEntityExtractor:
 
     @pytest.fixture
     def sample_article_content(self):
-        """Sample article content for testing."""
-        return """
+        """Sample article content for testing.""\n        return ""
         Apple Inc., the technology giant based in Cupertino, California, announced a major
         partnership with Google LLC to develop advanced artificial intelligence systems.
         The collaboration, led by CEO Tim Cook of Apple and CEO Sundar Pichai of Google,
@@ -794,8 +793,7 @@ if __name__ == "__main__":
                 type(populator).__name__))
 
             print(
-                ""
- Run full tests with: pytest test_enhanced_knowledge_graph.py -v""
+                "\n Run full tests with: pytest test_enhanced_knowledge_graph.py -v"
             )
         else:
             print("❌ Enhanced knowledge graph components not available")
@@ -804,8 +802,7 @@ if __name__ == "__main__":
     except Exception as e:
         print("❌ Test setup failed: {0}".format(e))
 
-    print(""
- Test Coverage:")
+    print("\nTest Coverage:")
     print("  • Entity extraction with advanced patterns")
     print("  • Relationship detection and validation")
     print("  • Neptune graph population")
@@ -813,4 +810,4 @@ if __name__ == "__main__":
     print("  • Entity linking and deduplication")
     print("  • Batch processing performance")
     print("  • Error handling and robustness")
-    print("  • End-to-end integration workflows")"
+    print("  • End-to-end integration workflows")

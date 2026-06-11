@@ -827,8 +827,7 @@ if __name__ == "__main__":
             request = EventTrackingRequest(topic="Test Topic", max_events=50)
             print(" EventTrackingRequest created: {0}".format(request.topic))
 
-            print(""
- Run full tests with: pytest test_event_timeline_api.py - v")"
+            print("\n Run full tests with: pytest test_event_timeline_api.py - v")
         else:
             print("❌ Event timeline components not available")
             print("   Install required dependencies and verify imports")
@@ -836,7 +835,6 @@ if __name__ == "__main__":
     except Exception as e:
         print("❌ Test setup failed: {0}".format(e))
 
- Test Coverage: ")
     print("Test Coverage:")
     print("  • Event timeline service functionality")
     print("  • Historical event tracking and storage")
@@ -846,4 +844,4 @@ if __name__ == "__main__":
     print("  • Error handling and validation")
     print("  • Request/response model validation")
     print("  • Neptune storage and relationships")
-    print("  • Analytics and insights")"
+    print("  • Analytics and insights")

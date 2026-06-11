@@ -296,8 +296,7 @@ class KubernetesNERProcessor:
 
                 except Exception as e:
                     logger.error(
-                        f"Failed to process article {
-                            article['article_id']}: {e}"
+                        f"Failed to process article {article['article_id']}: {e}"
                     )
                     self.stats["articles_failed"] += 1
 
@@ -447,34 +446,24 @@ class KubernetesNERProcessor:
             logger.info("Processing statistics saved to {0}".format(stats_file))
             logger.info("NER Job Summary:")
             logger.info(
-                f"  Articles Processed: {
-                    self.stats['articles_processed']}"
+                f"  Articles Processed: {self.stats['articles_processed']}"
             )
             logger.info(f"  Articles Failed: {self.stats['articles_failed']}")
             logger.info(
-                f"  Entities Extracted: {
-                    self.stats['entities_extracted']}"
+                f"  Entities Extracted: {self.stats['entities_extracted']}"
             )
             logger.info(
-                f"  Batches Processed: {
-                    self.stats['batches_processed']}"
+                f"  Batches Processed: {self.stats['batches_processed']}"
             )
             logger.info(
-                f"  Total Duration: {
-                    self.stats['total_duration_seconds']:.2f}s"
+                f"  Total Duration: {self.stats['total_duration_seconds']:.2f}s"
             )
             if self.stats["articles_processed"] > 0:
                 logger.info(
-                    f"  Throughput: {
-                        self.stats.get(
-                            'throughput_articles_per_second',
-                            0):.2f} articles/sec"
+                    f"  Throughput: {self.stats.get('throughput_articles_per_second',0):.2f} articles/sec"
                 )
                 logger.info(
-                    f"  Avg Entities/Article: {
-                        self.stats.get(
-                            'average_entities_per_article',
-                            0):.2f}"
+                    f"  Avg Entities/Article: {self.stats.get('average_entities_per_article',0):.2f}"
                 )
 
         except Exception as e:
@@ -542,12 +531,10 @@ class KubernetesNERProcessor:
 
             logger.info("Entity extraction job completed successfully")
             logger.info(
-                f"Processed {
-                    self.stats['articles_processed']} articles"
+                f"Processed {self.stats['articles_processed']} articles"
             )
             logger.info(
-                f"Extracted {
-                    self.stats['entities_extracted']} entities total"
+                f"Extracted {self.stats['entities_extracted']} entities total"
             )
 
         except Exception as e:
