@@ -14,8 +14,7 @@ openlineage-python==1.9.0
 apache-airflow-providers-postgres==5.8.0
 apache-airflow-providers-mysql==5.4.0
 
-# Cloud providers for AWS integration
-apache-airflow-providers-amazon==8.15.0
+# HTTP provider (local integrations)
 apache-airflow-providers-http==4.7.0
 
 # Data processing and analysis libraries (for DAGs)
@@ -80,4 +79,3 @@ xlrd==2.0.1
 
 # Network and connectivity
 psycopg2-binary==2.9.9
-boto3==1.34.0

@@ -1,28 +1,32 @@
 """
-SNS integration for sending alerts when scrapers fail multiple times.
-Provides intelligent alerting with rate limiting and escal             try:
-            # Prepare SNS message  
-            subject = f"[{alert.severity.value}] NeuroNews Scraper Alert: {alert.title}"
-            message = alert.to_sns_message()
+Local alerting integration for sending alerts when scrapers fail multiple times.
+Provides intelligent alerting with rate limiting and escalation.
 
-            # Add message attributes for filtering            # Prepare SNS message
-            subject = "[{0}] NeuroNews Scraper Alert: {1}".format(
-                alert.severity.value, alert.title
-            )
-            message = alert.to_sns_message()      subject = "[{0}] NeuroNews Scraper Alert: {1}".format(
-                alert.severity.value, alert.title
-            )on.
+Replaces the deprecated AWS SNS integration: alerts are appended as JSON
+lines to a local alerts file under NEURONEWS_LOG_DIR (default ./logs) and
+optionally POSTed to a webhook URL from NEURONEWS_ALERT_WEBHOOK_URL.
 """
 
 import json
 import logging
+import os
 import time
+import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-import boto3
+
+def _get_log_dir() -> str:
+    """Return the local log directory (env NEURONEWS_LOG_DIR, default ./logs)."""
+    log_dir = os.environ.get("NEURONEWS_LOG_DIR", "./logs")
+    os.makedirs(log_dir, exist_ok=True)
+    return log_dir
+
+
+class AlertDeliveryError(Exception):
+    """Raised when local alert delivery fails (replaces botocore ClientError)."""
 
 
 class AlertSeverity(Enum):
@@ -56,8 +60,8 @@ class Alert:
     timestamp: float
     metadata: Dict[str, Any]
 
-    def to_sns_message(self) -> str:
-        """Convert alert to SNS message format."""
+    def to_message(self) -> str:
+        """Convert alert to JSON message format."""
         alert_data = {
             "timestamp": datetime.fromtimestamp(
                 self.timestamp, tz=timezone.utc
@@ -70,33 +74,38 @@ class Alert:
         }
         return json.dumps(alert_data, indent=2)
 
+    # Backward-compatibility alias (deprecated name from the old SNS integration)
+    to_sns_message = to_message
 
-class SNSAlertManager:
-    """SNS integration for scraper failure alerts and notifications."""
+
+class LocalAlertManager:
+    """Local alerting integration for scraper failure alerts and notifications."""
 
     def __init__(
         self,
-        topic_arn: str,
-        region_name: str = "us-east-1",
+        topic_arn: str = "local-alerts",
+        region_name: str = "local",
         rate_limit_window: int = 3600,
         max_alerts_per_window: int = 10,
     ):
         """
-        Initialize SNS alert manager.
+        Initialize local alert manager.
 
         Args:
-            topic_arn: SNS topic ARN for sending alerts
-            region_name: AWS region for SNS
+            topic_arn: Logical alert channel name (deprecated AWS-style argument,
+                       kept for backward compatibility; only used as a label)
+            region_name: Deprecated, kept for backward compatibility (ignored)
             rate_limit_window: Time window for rate limiting (seconds)
             max_alerts_per_window: Maximum alerts per window
         """
         self.topic_arn = topic_arn
-        self.region_name = region_name
+        self.region_name = region_name  # Deprecated, unused
         self.rate_limit_window = rate_limit_window
         self.max_alerts_per_window = max_alerts_per_window
 
-        # Initialize SNS client
-        self.sns = boto3.client("sns", region_name=region_name)
+        # Local alert storage and optional webhook delivery
+        self.alerts_file = os.path.join(_get_log_dir(), "alerts.jsonl")
+        self.webhook_url = os.environ.get("NEURONEWS_ALERT_WEBHOOK_URL")
 
         # Setup logging
         self.logger = logging.getLogger(__name__)
@@ -110,9 +119,55 @@ class SNSAlertManager:
         self.consecutive_failure_threshold = 5
         self.response_time_threshold = 30000  # 30 seconds
 
+    def _deliver_alert(self, subject: str, alert: Alert) -> str:
+        """
+        Deliver an alert: append it to the local alerts file and optionally
+        POST it to the configured webhook URL (fail soft).
+
+        Returns:
+            A local message id for the delivered alert
+        """
+        message_id = "local-{0}".format(int(alert.timestamp * 1000))
+
+        record = {
+            "message_id": message_id,
+            "channel": self.topic_arn,
+            "subject": subject,
+            "timestamp": datetime.fromtimestamp(
+                alert.timestamp, tz=timezone.utc
+            ).isoformat(),
+            "severity": alert.severity.value,
+            "alert_type": alert.alert_type.value,
+            "title": alert.title,
+            "message": alert.message,
+            "metadata": alert.metadata,
+        }
+
+        # Append to the local alerts file (JSON lines)
+        with open(self.alerts_file, "a") as f:
+            f.write(json.dumps(record) + "\n")
+
+        # Optionally POST to a webhook (fail soft)
+        if self.webhook_url:
+            try:
+                request = urllib.request.Request(
+                    self.webhook_url,
+                    data=json.dumps(record).encode("utf-8"),
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with urllib.request.urlopen(request, timeout=10):
+                    pass
+            except Exception as e:
+                self.logger.warning(
+                    "Failed to POST alert to webhook: {0}".format(str(e))
+                )
+
+        return message_id
+
     async def send_alert(self, alert: Alert, force: bool = False) -> bool:
         """
-        Send an alert via SNS with rate limiting.
+        Send an alert locally with rate limiting.
 
         Args:
             alert: Alert object to send
@@ -123,14 +178,14 @@ class SNSAlertManager:
         """
         current_time = time.time()
 
-        # Check if we're in a mute period'
+        # Check if we're in a mute period
         if current_time < self.muted_until and not force:
             self.logger.debug("Alert muted due to rate limiting")
             return False
 
         # Check rate limiting
         if not force and not self._is_within_rate_limit():
-            # Mute alerts for the next hour if we've exceeded the limit'
+            # Mute alerts for the next hour if we've exceeded the limit
             self.muted_until = current_time + self.rate_limit_window
             self.logger.warning(
                 "Alert rate limit exceeded, muting alerts for 1 hour")
@@ -140,41 +195,22 @@ class SNSAlertManager:
             return False
 
         try:
-            # Prepare SNS message
+            # Prepare alert message
             subject = f"[{alert.severity.value}] NeuroNews Scraper Alert: {alert.title}"
-            message = alert.to_sns_message()
 
-            # Add message attributes for filtering
-            message_attributes = {
-                "severity": {"DataType": "String", "StringValue": alert.severity.value},
-                "alert_type": {
-                    "DataType": "String",
-                    "StringValue": alert.alert_type.value,
-                },
-                "timestamp": {
-                    "DataType": "Number",
-                    "StringValue": str(alert.timestamp),
-                },
-            }
-
-            # Send to SNS
-            response = self.sns.publish(
-                TopicArn=self.topic_arn,
-                Subject=subject,
-                Message=message,
-                MessageAttributes=message_attributes,
-            )
+            # Deliver locally (file + optional webhook)
+            message_id = self._deliver_alert(subject, alert)
 
             # Track alert for rate limiting
             self.alert_history.append(current_time)
             self._cleanup_old_alerts()
 
             self.logger.info(
-                f"Sent alert: {alert.title} (MessageId: {response['MessageId']})"
+                f"Sent alert: {alert.title} (MessageId: {message_id})"
             )
             return True
 
-        except Exception as e:
+        except (OSError, AlertDeliveryError, ValueError) as e:
             self.logger.error(f"Error sending alert: {str(e)}")
             return False
 
@@ -212,11 +248,9 @@ class SNSAlertManager:
             subject = "[{0}] NeuroNews Scraper Alert: {1}".format(
                 alert.severity.value, alert.title
             )
-            message = alert.to_sns_message()
 
-            self.sns.publish(TopicArn=self.topic_arn,
-                             Subject=subject, Message=message)
-        except Exception as e:
+            self._deliver_alert(subject, alert)
+        except (OSError, AlertDeliveryError, ValueError) as e:
             self.logger.error(
                 "Error sending rate limit notification: {0}".format(str(e)))
 
@@ -286,7 +320,7 @@ class SNSAlertManager:
             timestamp=time.time(),
             metadata={
                 "failure_rate": failure_rate,
-            "time_period_hours": time_period,
+                "time_period_hours": time_period,
                 "failed_count": failed_count,
                 "total_count": total_count,
             },
@@ -414,7 +448,7 @@ class SNSAlertManager:
             alert_type=AlertType.SYSTEM_ERROR,
             severity=AlertSeverity.INFO,
             title="Test Alert",
-            message="This is a test alert to verify the SNS alert system is working properly.",
+            message="This is a test alert to verify the local alert system is working properly.",
             timestamp=time.time(),
             metadata={"test": True},
         )
@@ -426,14 +460,16 @@ class SNSAlertManager:
         self.failure_rate_threshold = threshold
         self.logger.info("Set failure rate threshold to {0}%".format(threshold))
 
-
     def set_consecutive_failure_threshold(self, threshold: int):
         """Set the consecutive failure threshold for alerts."""
         self.consecutive_failure_threshold = threshold
         self.logger.info("Set consecutive failure threshold to {0}".format(threshold))
 
-
     def set_response_time_threshold(self, threshold: float):
         """Set the response time threshold for alerts."""
         self.response_time_threshold = threshold
         self.logger.info("Set response time threshold to {0}ms".format(threshold))
+
+
+# Backward-compatibility alias (deprecated name from the old SNS integration)
+SNSAlertManager = LocalAlertManager

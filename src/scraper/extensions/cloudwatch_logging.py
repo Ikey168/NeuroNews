@@ -1,5 +1,8 @@
 """
-CloudWatch logging extension for Scrapy.
+Local file logging extension for Scrapy.
+
+Replaces the deprecated AWS CloudWatch Logs extension with rotating local
+log files written under NEURONEWS_LOG_DIR (default ./logs).
 """
 
 import logging
@@ -10,17 +13,20 @@ from scrapy.exceptions import NotConfigured
 from ..log_utils import configure_cloudwatch_logging
 
 
-class CloudWatchLoggingExtension:
+class LocalFileLoggingExtension:
     """
-    Scrapy extension to send logs to AWS CloudWatch Logs.
+    Scrapy extension to send logs to rotating local log files.
     """
 
     @classmethod
     def from_crawler(cls, crawler):
         """Initialize the extension from a crawler."""
-        # Check if CloudWatch logging is enabled
-        if not crawler.settings.getbool("CLOUDWATCH_LOGGING_ENABLED", False):
-            raise NotConfigured("CloudWatch logging is not enabled")
+        # Check if file logging is enabled (CLOUDWATCH_* key is a deprecated alias)
+        if not (
+            crawler.settings.getbool("LOCAL_FILE_LOGGING_ENABLED", False)
+            or crawler.settings.getbool("CLOUDWATCH_LOGGING_ENABLED", False)
+        ):
+            raise NotConfigured("Local file logging is not enabled")
 
         # Create an instance of the extension
         ext = cls()
@@ -43,7 +49,7 @@ class CloudWatchLoggingExtension:
         Args:
             spider: The spider that was opened
         """
-        # Configure CloudWatch logging
+        # Configure local file logging
         handler = configure_cloudwatch_logging(self.crawler.settings, spider.name)
 
         if handler:
@@ -62,9 +68,9 @@ class CloudWatchLoggingExtension:
             spider_logger = logging.getLogger(spider.name)
             spider_logger.addHandler(handler)
 
-            # Log that CloudWatch logging is configured
+            # Log that local file logging is configured
             spider.logger.info(
-                "CloudWatch logging configured: group={0}, stream={1}".format(
+                "Local file logging configured: group={0}, stream={1}".format(
                     handler.log_group_name, handler.log_stream_name
                 )
             )
@@ -78,7 +84,7 @@ class CloudWatchLoggingExtension:
         """
         if hasattr(self, "handler"):
             # Log that the spider is closing
-            spider.logger.info("Spider closing, shutting down CloudWatch logging")
+            spider.logger.info("Spider closing, shutting down local file logging")
 
             # Remove the handler from the root logger
             root_logger = logging.getLogger()
@@ -94,3 +100,7 @@ class CloudWatchLoggingExtension:
 
             # Close the handler
             self.handler.close()
+
+
+# Backward-compatibility alias (deprecated name from the old CloudWatch integration)
+CloudWatchLoggingExtension = LocalFileLoggingExtension
