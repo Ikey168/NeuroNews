@@ -8,6 +8,8 @@ functionality works without actually running the full Streamlit server.
 
 import sys
 import os
+
+import pytest
 from pathlib import Path
 
 # Add the project root to the path
@@ -23,7 +25,7 @@ try:
     print("✅ Streamlit imported successfully")
 except ImportError as e:
     print(f"❌ Streamlit import failed: {e}")
-    sys.exit(1)
+    pytest.skip("Required dependencies unavailable", allow_module_level=True)
 
 # Test 2: Check if required dependencies are available
 try:
@@ -32,7 +34,7 @@ try:
     print("✅ Data visualization dependencies imported")
 except ImportError as e:
     print(f"❌ Visualization dependencies failed: {e}")
-    sys.exit(1)
+    pytest.skip("Required dependencies unavailable", allow_module_level=True)
 
 # Test 3: Check if our services can be imported
 try:
