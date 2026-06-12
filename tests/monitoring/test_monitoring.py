@@ -147,8 +147,8 @@ class TestDynamoDBFailureManager:
             "Items": [
                 {
                     "url": {"S": "https://test.com"},
-                    f"ailure_reason": {"S": "timeout"},
-                    f"irst_failure_time": {"N": str(time.time() - 3600)},
+                    "failure_reason": {"S": "timeout"},
+                    "first_failure_time": {"N": str(time.time() - 3600)},
                     "last_failure_time": {"N": str(time.time() - 600)},
                     "retry_count": {"N": "2"},
                     "max_retries": {"N": "5"},

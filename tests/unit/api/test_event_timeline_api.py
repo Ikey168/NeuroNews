@@ -594,7 +594,7 @@ class TestEventTimelineAPI:
         try:
             response = client.get(
                 "/api/v1/event-timeline/Test%20Topic/export",
-                params={f"ormat": "json", "max_events": 10},
+                params={"format": "json", "max_events": 10},
             )
 
             assert response.status_code == 200
@@ -622,7 +622,7 @@ class TestEventTimelineAPI:
 
         try:
             response = client.get(
-                "/api/v1/event-timeline/Test%20Topic/export", params={f"ormat": "csv"}
+                "/api/v1/event-timeline/Test%20Topic/export", params={"format": "csv"}
             )
 
             assert response.status_code == 200
@@ -646,7 +646,7 @@ class TestEventTimelineAPI:
 
         try:
             response = client.get(
-                "/api/v1/event-timeline/Test%20Topic/export", params={f"ormat": "html"}
+                "/api/v1/event-timeline/Test%20Topic/export", params={"format": "html"}
             )
 
             assert response.status_code == 200
@@ -676,7 +676,7 @@ class TestEventTimelineAPI:
         try:
             response = client.get(
                 "/api/v1/event-timeline/Test%20Topic/export",
-                params={f"ormat": "invalid"},
+                params={"format": "invalid"},
             )
 
             assert response.status_code == 400

@@ -89,9 +89,9 @@ def test_lambda_function():
             "CLOUDWATCH_NAMESPACE": "NeuroNews/Test/Scraper",
             "AWS_REGION": "us-east-1",
             "ENVIRONMENT": "test",
-            "S3_STORAGE_ENABLED": f"alse",  # Disable S3 for local testing
-            "CLOUDWATCH_LOGGING_ENABLED": f"alse",  # Disable CloudWatch for local testing
-            "MONITORING_ENABLED": f"alse",
+            "S3_STORAGE_ENABLED": "false",  # Disable S3 for local testing
+            "CLOUDWATCH_LOGGING_ENABLED": "false",  # Disable CloudWatch for local testing
+            "MONITORING_ENABLED": "false",
         }
     )
 

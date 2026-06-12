@@ -633,7 +633,7 @@ class TestEnhancedKnowledgeGraphPopulator:
             # Low confidence entity should be filtered out
             assert result["entities"]["extracted"] == 1
             # Should be filtered out
-            assert result["entities"][f"iltered"] == 0
+            assert result["entities"]["filtered"] == 0
             assert result["entities"]["created"] == 0
 
 
