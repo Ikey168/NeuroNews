@@ -28,9 +28,11 @@ except ImportError:
     ValidatedAskResponse = None
     get_schema_validator = None
 
-# Import query cache from main
+# Shared query cache (avoid circular import with services.api.main)
 try:
-    from services.api.main import query_cache
+    from services.api.cache import get_query_cache
+
+    query_cache = get_query_cache()
 except ImportError:
     query_cache = None
 
@@ -41,10 +43,11 @@ try:
     from services.mlops.tracking import mlrun
     from services.rag.answer import RAGAnswerService
     from services.embeddings.provider import EmbeddingProvider
-except ImportError as e:
-    print(f"Import error: {e}")
-    print("Please ensure you're running from the project root directory")
-    sys.exit(1)
+except ImportError as e:  # degrade gracefully; endpoints fail at request time
+    logging.getLogger(__name__).warning(f"RAG dependencies unavailable: {e}")
+    mlrun = None
+    RAGAnswerService = None
+    EmbeddingProvider = None
 
 # Configure logging
 logger = logging.getLogger(__name__)

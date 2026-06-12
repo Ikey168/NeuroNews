@@ -27,8 +27,31 @@ class SnowflakeConfig:
 class SnowflakeAnalyticsConnector:
     """Connector for Snowflake analytics operations."""
     
-    def __init__(self, config: Optional[SnowflakeConfig] = None):
-        """Initialize the Snowflake analytics connector."""
+    def __init__(
+        self,
+        config: Optional[SnowflakeConfig] = None,
+        account: Optional[str] = None,
+        user: Optional[str] = None,
+        password: Optional[str] = None,
+        warehouse: Optional[str] = None,
+        database: Optional[str] = None,
+        schema: Optional[str] = None,
+        role: Optional[str] = None,
+    ):
+        """Initialize the connector from a config object or keyword arguments."""
+        if config is None and any(
+            v is not None
+            for v in (account, user, password, warehouse, database, schema)
+        ):
+            config = SnowflakeConfig(
+                account=account or "",
+                user=user or "",
+                password=password or "",
+                warehouse=warehouse or "ANALYTICS_WH",
+                database=database or "NEURONEWS",
+                schema=schema or "PUBLIC",
+                role=role,
+            )
         self.config = config
         self.connection = None
         self._is_connected = False

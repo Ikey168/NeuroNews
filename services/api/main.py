@@ -11,18 +11,13 @@ import sys
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from services.api.cache import QueryCache
+from services.api.cache import QueryCache, get_query_cache
 from services.api.middleware.ratelimit import SlidingWindowRateLimiter
 
 # Add to path for imports
 sys.path.append(os.path.dirname(__file__))
 
-try:
-    from services.api.routes.ask import router as ask_router
-except ImportError as e:
-    print(f"Import error: {e}")
-    print("Please ensure you're running from the project root directory")
-    sys.exit(1)
+from services.api.routes.ask import router as ask_router
 
 # Create FastAPI app
 app = FastAPI(
@@ -49,7 +44,7 @@ app.add_middleware(SlidingWindowRateLimiter)
 app.include_router(ask_router, prefix="/api")
 
 # Initialize global query cache (can be injected or used in ask endpoint)
-query_cache = QueryCache()
+query_cache = get_query_cache()
 
 @app.get("/")
 async def root():

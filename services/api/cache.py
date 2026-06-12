@@ -72,3 +72,16 @@ class QueryCache:
             self.client.flushdb()
         else:
             self._cache.clear()
+
+
+# Shared default cache instance (avoids circular imports between
+# services.api.main and route modules).
+_default_query_cache = None
+
+
+def get_query_cache() -> "QueryCache":
+    """Return the process-wide QueryCache instance."""
+    global _default_query_cache
+    if _default_query_cache is None:
+        _default_query_cache = QueryCache()
+    return _default_query_cache
