@@ -13,6 +13,16 @@ from unittest.mock import patch, MagicMock
 from services.embeddings import EmbeddingProvider, get_embedding_provider
 from services.embeddings.backends.local_sentence_transformers import LocalSentenceTransformersBackend
 
+# These tests exercise a real sentence-transformers model; skip the module
+# when the model cannot be loaded (e.g. no network access to Hugging Face).
+try:
+    LocalSentenceTransformersBackend(model_name="all-MiniLM-L6-v2")
+except Exception as _e:
+    pytest.skip(
+        "sentence-transformers model unavailable: {0}".format(_e),
+        allow_module_level=True,
+    )
+
 
 class TestEmbeddingProvider:
     """Test cases for the main EmbeddingProvider class."""
