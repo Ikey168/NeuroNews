@@ -4,12 +4,9 @@ Test suite for proxy rotation and anti-detection system.
 Tests proxy manager, user agent rotation, CAPTCHA solver, and Tor integration.
 """
 
-from scraper.user_agent_rotator import UserAgentRotator
-from scraper.tor_manager import TorManager
-from scraper.proxy_manager import ProxyConfig, ProxyRotationManager, ProxyStats
-from scraper.captcha_solver import CaptchaSolver
 import asyncio
 import json
+import os
 import sys
 import tempfile
 import time
@@ -18,7 +15,14 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-sys.path.append("/workspaces/NeuroNews/src")
+sys.path.insert(
+    0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "src")
+)
+
+from scraper.user_agent_rotator import UserAgentRotator
+from scraper.tor_manager import TorManager
+from scraper.proxy_manager import ProxyConfig, ProxyRotationManager, ProxyStats
+from scraper.captcha_solver import CaptchaSolver
 
 
 class TestProxyRotationManager:
