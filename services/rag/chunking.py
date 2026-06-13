@@ -246,8 +246,10 @@ class TextChunker:
                     chunks.append(chunk)
                     chunk_id += 1
                 
-                # Calculate overlap
+                # Calculate overlap (must always advance at least one word to
+                # avoid an infinite loop when overlap_chars >= max_chars)
                 overlap_words = max(0, len(current_words) * self.config.overlap_chars // self.config.max_chars)
+                overlap_words = min(overlap_words, len(current_words) - 1)
                 i -= overlap_words
         
         return chunks
