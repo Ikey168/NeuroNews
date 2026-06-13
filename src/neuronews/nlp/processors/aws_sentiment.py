@@ -199,9 +199,7 @@ class AWSComprehendSentimentAnalyzer:
                         "label": "ERROR",
                         "score": 0.0,
                         "text": texts[error_idx],
-                        "message": f"AWS error {
-                            error['ErrorCode']}: {
-                            error['ErrorMessage']}",
+                        "message": f"AWS error {error['ErrorCode']}: {error['ErrorMessage']}",
                         "provider": "aws_comprehend",
                     }
 

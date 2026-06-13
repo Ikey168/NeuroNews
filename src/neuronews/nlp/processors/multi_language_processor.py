@@ -318,9 +318,7 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
 
             if title_translation["error"] or content_translation["error"]:
                 logger.warning(
-                    f"Translation errors: title={
-                        title_translation['error']}, content={
-                        content_translation['error']}"
+                    f"Translation errors: title={title_translation['error']}, content={content_translation['error']}"
                 )
                 return result
 
@@ -689,8 +687,7 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
                 )
                 self.connection.commit()
                 logger.debug(
-                    f"Language detection stored for article {
-                        detection_data.get('article_id')}"
+                    f"Language detection stored for article {detection_data.get('article_id')}"
                 )
                 return True
         except Exception as e:
@@ -733,8 +730,7 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
                 )
                 self.connection.commit()
                 logger.debug(
-                    f"Translation stored for article {
-                        translation_data.get('article_id')}"
+                    f"Translation stored for article {translation_data.get('article_id')}"
                 )
                 return True
         except Exception as e:

@@ -470,7 +470,7 @@ class TestRBACRoutes:
 
         result = response.json()
         assert result["has_access"] is True
-        assert result["user_role"] == f"ree"
+        assert result["user_role"] == "free"
         assert result["endpoint"] == "GET /api/articles"
 
 

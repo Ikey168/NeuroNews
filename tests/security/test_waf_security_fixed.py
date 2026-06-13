@@ -296,8 +296,7 @@ class WAFSecurityTester:
 
     def generate_security_report(self) -> Dict[str, Any]:
         """Generate comprehensive security test report."""
-        logger.info(""
-🔒 Generating AWS WAF Security Report for Issue #65...")"
+        logger.info("\n🔒 Generating AWS WAF Security Report for Issue #65...")
 
         report = {
             "timestamp": datetime.utcnow().isoformat(),
@@ -367,20 +366,19 @@ class WAFSecurityTester:
 
     def print_security_status(self, report: Dict[str, Any]):
         """Print formatted security status."""
-        print(""
-" + "=" * 80)
+        print("\n" + "=" * 80)
         print("🔒 AWS WAF SECURITY IMPLEMENTATION STATUS - ISSUE #65")
-        print("=" * 80)"
+        print("=" * 80)
 
-        print(f""
- Overall Status: {report['overall_status']}")
+        print(f"\nOverall Status: {report['overall_status']}")
         print(
-            f" Tests Passed: {report['test_summary']['passed_tests']}/{report['test_summary']['total_tests']} ({report['test_summary']['success_rate']})""
+            f" Tests Passed: {report['test_summary']['passed_tests']}"
+            f"/{report['test_summary']['total_tests']}"
+            f" ({report['test_summary']['success_rate']})"
         )
 
-        print(""
-🔧 Component Test Results:")
-        for test_name, result in report["component_tests"].items():"
+        print("\n🔧 Component Test Results:")
+        for test_name, result in report["component_tests"].items():
             status_icon = (
                 ""
                 if result["status"] == "PASS"
@@ -388,9 +386,8 @@ class WAFSecurityTester:
             )
             print(f"  {status_icon} {test_name}: {result['status']}")
 
-        print(""
-⚔️ Security Attack Simulation:")
-        sim = report["security_simulation"]"
+        print("\n⚔️ Security Attack Simulation:")
+        sim = report["security_simulation"]
 
         sql_detected = sum(
             1
@@ -408,31 +405,27 @@ class WAFSecurityTester:
             f"  🛡️ XSS Attack Detection: {xss_detected}/{len(sim.get('xss_attempts', []))}"
         )
 
-        print(""
- IMPLEMENTED FEATURES:")
+        print("\n IMPLEMENTED FEATURES:")
         print("   Deploy AWS WAF (Web Application Firewall) for API protection")
         print("   Block SQL injection attacks")
         print("   Block cross-site scripting (XSS) attacks")
         print("   Enable geofencing (limit access by country)")
-        print("   Monitor real-time attack attempts")"
+        print("   Monitor real-time attack attempts")
 
-        print(""
- ISSUE #65 REQUIREMENTS STATUS:")
+        print("\n ISSUE #65 REQUIREMENTS STATUS:")
         print("   Task 1: Deploy AWS WAF - IMPLEMENTED")
         print("   Task 2: Block SQL injection attacks - IMPLEMENTED")
         print("   Task 3: Block XSS attacks - IMPLEMENTED")
         print("   Task 4: Enable geofencing - IMPLEMENTED")
-        print("   Task 5: Monitor real-time attacks - IMPLEMENTED")"
+        print("   Task 5: Monitor real-time attacks - IMPLEMENTED")
 
-        print(""
-🏗️ ARCHITECTURE COMPONENTS:")
+        print("\n🏗️ ARCHITECTURE COMPONENTS:")
         print("   src/api/security/aws_waf_manager.py - Core WAF management")
         print("   src/api/security/waf_middleware.py - Real-time security middleware")
         print("   src/api/routes/waf_security_routes.py - WAF management API")
-        print("   src/api/app.py - FastAPI integration")"
+        print("   src/api/app.py - FastAPI integration")
 
-        print(""
- SECURITY CAPABILITIES:")
+        print("\n SECURITY CAPABILITIES:")
         print("  🛡️ Multi-layer protection (AWS WAF + Application middleware)")
         print("  🌍 Geofencing with country-based blocking")
         print("  🚫 SQL injection pattern detection and blocking")
@@ -440,10 +433,9 @@ class WAFSecurityTester:
         print("  ⏱️ Real-time threat monitoring and alerting")
         print("   CloudWatch metrics and dashboard integration")
         print("  🤖 Bot traffic detection and mitigation")
-        print("  🔄 Rate limiting with sliding window algorithm")"
+        print("  🔄 Rate limiting with sliding window algorithm")
 
-        print(""
-" + "=" * 80)"
+        print("\n" + "=" * 80)
 
 
 async def main():
@@ -462,16 +454,13 @@ async def main():
     with open("waf_security_test_report.json", "w") as f:
         json.dump(report, f, indent=2)
 
-    print(""
-📄 Detailed report saved to: waf_security_test_report.json")"
+    print("\n📄 Detailed report saved to: waf_security_test_report.json")
 
     if report["overall_status"] in ["EXCELLENT", "GOOD"]:
-        print(""
- AWS WAF Security Implementation is READY for production!")
-        print("💯 Issue #65 requirements have been successfully implemented!")"
+        print("\n AWS WAF Security Implementation is READY for production!")
+        print("💯 Issue #65 requirements have been successfully implemented!")
     else:
-        print(f"
-⚠️ Implementation status: {report['overall_status']}")
+        print(f"\n⚠️ Implementation status: {report['overall_status']}")
         print("🔧 Some components may need attention before production deployment.")
 
 

@@ -266,7 +266,7 @@ class DuplicateDetector:
             "on",
             "at",
             "to",
-            f"or",
+            "for",
             "o",
             "with",
             "by",
@@ -297,7 +297,7 @@ class SourceReputationAnalyzer:
                 "pbs.org",
                 "economist.com",
                 "wsj.com",
-                f"t.com",
+                "ft.com",
                 "bloomberg.com",
                 "axios.com",
                 "politico.com",
@@ -305,12 +305,12 @@ class SourceReputationAnalyzer:
             questionable_domains=[
                 "dailymail.co.uk",
                 "nypost.com",
-                f"oxnews.com",
+                "foxnews.com",
                 "breitbart.com",
                 "infowars.com",
                 "naturalnews.com",
             ],
-            banned_domains=[f"akenews.com", "clickbait.com", "spam.com"],
+            banned_domains=["fakenews.com", "clickbait.com", "spam.com"],
             reputation_thresholds={
                 "trusted": 0.9,
                 "reliable": 0.7,
@@ -669,7 +669,7 @@ class ContentValidator:
 
                 # Check if date is in the future
                 if parsed_date > now:
-                    issues.append(f"uture_publication_date")
+                    issues.append("future_publication_date")
                     score_adjustment -= 10
 
                 # Check if article is very old
@@ -754,7 +754,7 @@ class DataValidationPipeline:
             )
 
             # Step 6: Determine if article passes validation
-            all_issues = content_validation["issues"] + source_analysis[f"lags"]
+            all_issues = content_validation["issues"] + source_analysis["flags"]
             all_warnings = content_validation["warnings"]
 
             # Check for critical issues that cause automatic rejection
@@ -799,6 +799,45 @@ class DataValidationPipeline:
             self.rejected_count += 1
             return None
 
+
+    def validate_article(self, article: Dict[str, Any]) -> ValidationResult:
+        """
+        Validate a single article, always returning a ValidationResult.
+
+        Unlike process_article, rejected articles yield a result with
+        is_valid=False and the detected issues instead of None.
+        """
+        result = self.process_article(article)
+        if result is not None:
+            return result
+
+        if not isinstance(article, dict) or not article:
+            return ValidationResult(
+                score=0.0,
+                is_valid=False,
+                issues=["invalid_input"],
+                warnings=[],
+                cleaned_data={},
+            )
+
+        cleaned = self._clean_article(article)
+        content_validation = self.content_validator.validate_content(cleaned)
+        source_analysis = self.source_analyzer.analyze_source(cleaned)
+        score = self._calculate_overall_score(content_validation, source_analysis)
+        issues = content_validation["issues"] + source_analysis["flags"]
+        return ValidationResult(
+            score=score,
+            is_valid=False,
+            issues=issues or ["rejected"],
+            warnings=content_validation["warnings"],
+            cleaned_data=cleaned,
+        )
+
+    def batch_validate_articles(
+        self, articles: List[Dict[str, Any]]
+    ) -> List[ValidationResult]:
+        """Validate a list of articles, returning a result for each."""
+        return [self.validate_article(article) for article in articles]
 
     def _clean_article(self, article: Dict[str, Any]) -> Dict[str, Any]:
         """Clean article content and metadata."""

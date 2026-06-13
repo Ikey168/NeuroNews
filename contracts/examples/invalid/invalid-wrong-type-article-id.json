@@ -1,0 +1,13 @@
+{
+  "article_id": 123456,
+  "source_id": "test-source",
+  "url": "https://www.example.com/news/article",
+  "title": "Wrong type for article_id",
+  "body": "article_id should be a string, but is provided as an integer",
+  "language": "en",
+  "country": "US",
+  "published_at": 1735371000000,
+  "ingested_at": 1735371342000,
+  "sentiment_score": 0.5,
+  "topics": ["test"]
+}

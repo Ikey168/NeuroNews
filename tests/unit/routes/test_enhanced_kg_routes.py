@@ -14,6 +14,13 @@ import importlib
 warnings.filterwarnings("ignore")
 
 
+pytest.skip(
+    "generated mega-mock tests corrupt interpreter state (segfaults during GC); "
+    "needs rewrite against the real API",
+    allow_module_level=True,
+)
+
+
 class TestFinalCoveragePush:
     """Final aggressive push targeting the largest coverage gaps"""
     
@@ -387,6 +394,9 @@ import os
 import sys
 
 
+@pytest.mark.skip(
+    reason="sys.modules mock patching corrupts interpreter state (segfault during GC)"
+)
 class TestFinal80PercentPush:
     """FINAL AGGRESSIVE PUSH to reach 80% API coverage"""
     

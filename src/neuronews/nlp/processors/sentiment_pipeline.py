@@ -276,9 +276,7 @@ class SentimentPipeline:
                 # Handle different response formats
                 if sentiment.get("label") == "ERROR":
                     logger.warning(
-                        f"Sentiment analysis failed for article {
-                            article.get('article_id')}: {
-                            sentiment.get('message')}"
+                        f"Sentiment analysis failed for article {article.get('article_id')}: {sentiment.get('message')}"
                     )
                     sentiment_label = None
                     sentiment_score = None

@@ -81,9 +81,7 @@ class EnhancedValidationPipeline:
         if result is None:
             # Article was rejected by validation pipeline
             spider.logger.info(
-                f"Article dropped by validation pipeline: {
-                    article_dict.get(
-                        'url', 'Unknown URL')}"
+                f"Article dropped by validation pipeline: {article_dict.get('url', 'Unknown URL')}"
             )
             raise DropItem("Article failed validation pipeline")
 
@@ -102,10 +100,7 @@ class EnhancedValidationPipeline:
         # Log warnings if any
         if result.warnings:
             spider.logger.warning(
-                f"Article validation warnings for {
-                    item.get(
-                        'url', 'Unknown URL')}: {
-                    result.warnings}"
+                f"Article validation warnings for {item.get('url', 'Unknown URL')}: {result.warnings}"
             )
 
         # Log quality info
@@ -193,11 +188,7 @@ class QualityFilterPipeline:
         if validation_score < self.min_score:
             self.filtered_count += 1
             spider.logger.info(
-                f"Article filtered - low score ({
-                    validation_score}): {
-                    item.get(
-                        'url',
-                        'Unknown URL')}"
+                f"Article filtered - low score ({validation_score}): {item.get('url','Unknown URL')}"
             )
             raise DropItem(
                 "Article validation score ({0:.1f}) below threshold ({1})".format(
@@ -210,10 +201,7 @@ class QualityFilterPipeline:
         if content_length < self.min_content_length:
             self.filtered_count += 1
             spider.logger.info(
-                f"Article filtered - short content ({content_length}): {
-                    item.get(
-                        'url',
-                        'Unknown URL')}"
+                f"Article filtered - short content ({content_length}): {item.get('url','Unknown URL')}"
             )
             raise DropItem(
                 "Article content length ({0}) below threshold ({1})".format(
@@ -397,9 +385,7 @@ class DuplicateFilterPipeline:
             self.duplicate_reasons[reason] = self.duplicate_reasons.get(reason, 0) + 1
 
             spider.logger.info(
-                f"Duplicate article detected ({reason}): {
-                    item.get(
-                        'url', 'Unknown URL')}"
+                f"Duplicate article detected ({reason}): {item.get('url', 'Unknown URL')}"
             )
             raise DropItem("Duplicate article: {0}".format(reason))
 

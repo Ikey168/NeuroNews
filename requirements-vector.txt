@@ -1,0 +1,38 @@
+# Vector Store Requirements for NeuroNews RAG System
+# Install with: pip install -r requirements-vector.txt
+
+# Database connectivity
+psycopg2-binary==2.9.7
+pgvector==0.2.4
+
+# Vector operations and ML
+numpy==1.24.3
+sentence-transformers==2.2.2
+torch==2.0.1
+transformers==4.33.2
+
+# Data processing
+pandas==2.0.3
+scikit-learn==1.3.0
+
+# API and web framework (for future RAG API)
+fastapi==0.103.1
+uvicorn==0.23.2
+pydantic==2.3.0
+
+# Utilities
+python-dotenv==1.0.0
+click==8.1.7
+tqdm==4.66.1
+requests==2.31.0
+
+# Development and testing
+pytest==7.4.2
+pytest-asyncio==0.21.1
+black==23.7.0
+flake8==6.0.0
+
+# Optional: Advanced embedding models
+openai==0.28.0  # For OpenAI embeddings
+cohere==4.27  # For Cohere embeddings
+pinecone-client==2.2.4  # For comparison with other vector stores

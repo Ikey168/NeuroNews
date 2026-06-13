@@ -1,0 +1,244 @@
+name: Schema Breaking Change Detection
+
+on:
+  pull_request:
+    paths:
+      - 'contracts/schemas/**'
+      - 'scripts/contracts/**'
+      - '.github/workflows/contracts-ci.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'contracts/schemas/**'
+
+jobs:
+  detect-breaking-changes:
+    name: Detect Schema Breaking Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for git diff
+          
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Add any additional dependencies if needed
+          
+      - name: Make schema diff script executable
+        run: chmod +x scripts/contracts/diff_schema.py
+        
+      - name: Detect breaking changes in schemas
+        id: schema-check
+        run: |
+          echo "🔍 Checking for breaking changes in schema files..."
+          
+          # Run the breaking change detector
+          if python scripts/contracts/diff_schema.py --base-ref origin/main --head-ref HEAD --verbose; then
+            echo "✅ No breaking changes detected"
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Breaking changes detected"
+            echo "status=failure" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+        
+      - name: Comment on PR (if breaking changes found)
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { execSync } = require('child_process');
+            
+            // Get the detailed output from the schema checker
+            let output;
+            try {
+              execSync('python scripts/contracts/diff_schema.py --base-ref origin/main --head-ref HEAD', 
+                       { stdio: 'pipe' });
+              output = "✅ No breaking changes detected in schema files.";
+            } catch (error) {
+              output = error.stdout.toString() || error.stderr.toString();
+            }
+            
+            const comment = `## 🚨 Schema Breaking Changes Detected
+            
+            This pull request contains breaking changes to schema files that violate **BACKWARD_TRANSITIVE** compatibility rules.
+            
+            <details>
+            <summary>📋 Detailed Analysis</summary>
+            
+            \`\`\`
+            ${output}
+            \`\`\`
+            
+            </details>
+            
+            ### 🔧 How to Fix
+            
+            To maintain backward compatibility, please ensure:
+            
+            - ✅ **Add only optional fields** with default values
+            - ✅ **Widen types** (e.g., int → long, float → double)  
+            - ✅ **Add new enum values** (don't remove existing ones)
+            - ✅ **Update documentation** without changing structure
+            
+            ❌ **Avoid these breaking changes:**
+            - Removing required fields
+            - Changing field types incompatibly
+            - Making optional fields required
+            - Removing enum values
+            - Renaming fields
+            
+            ### 📚 Resources
+            - [Schema Evolution Guidelines](https://docs.confluent.io/platform/current/schema-registry/avro.html#compatibility-types)
+            - [Data Contracts Governance](./contracts/policies.md)
+            
+            ---
+            *This check is enforced to protect downstream consumers from breaking changes.*`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+            
+      - name: Set status check
+        if: always()
+        run: |
+          if [ "${{ steps.schema-check.outputs.status }}" = "failure" ]; then
+            echo "::error::Breaking schema changes detected. PR cannot be merged."
+            exit 1
+          else
+            echo "::notice::Schema compatibility check passed"
+          fi
+
+  validate-schema-syntax:
+    name: Validate Schema Syntax
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install schema validation tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install jsonschema fastavro
+          
+      - name: Validate JSON Schemas
+        run: |
+          echo "🔍 Validating JSON Schema syntax..."
+          find contracts/schemas -name "*.json" -type f | while read -r file; do
+            echo "Validating $file"
+            python -c "
+            import json
+            import sys
+            try:
+                with open('$file', 'r') as f:
+                    json.load(f)
+                print('✅ Valid JSON: $file')
+            except Exception as e:
+                print(f'❌ Invalid JSON in $file: {e}')
+                sys.exit(1)
+            "
+          done
+          
+      - name: Validate Avro Schemas
+        run: |
+          echo "🔍 Validating Avro Schema syntax..."
+          find contracts/schemas -name "*.avsc" -type f | while read -r file; do
+            echo "Validating $file"
+            python -c "
+            import json
+            import sys
+            try:
+                import fastavro
+                with open('$file', 'r') as f:
+                    schema_dict = json.load(f)
+                fastavro.parse_schema(schema_dict)
+                print('✅ Valid Avro schema: $file')
+            except Exception as e:
+                print(f'❌ Invalid Avro schema in $file: {e}')
+                sys.exit(1)
+            "
+          done
+          
+      - name: Check schema naming conventions
+        run: |
+          echo "🔍 Checking schema naming conventions..."
+          
+          # Check for version suffixes in schema files
+          find contracts/schemas -name "*.avsc" -o -name "*.json" | while read -r file; do
+            filename=$(basename "$file")
+            if [[ ! "$filename" =~ -v[0-9]+\. ]]; then
+              echo "⚠️  WARNING: Schema file should include version suffix: $file"
+              echo "   Example: article-ingest-v1.avsc, user-profile-v2.json"
+            else
+              echo "✅ Proper versioning: $file"
+            fi
+          done
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Scan for sensitive data in schemas
+        run: |
+          echo "🔍 Scanning for sensitive data in schema files..."
+          
+          # Check for potential sensitive field names
+          sensitive_patterns=(
+            "password"
+            "secret"
+            "token" 
+            "key"
+            "credential"
+            "ssn"
+            "social_security"
+            "credit_card"
+            "phone"
+            "email"
+          )
+          
+          found_sensitive=false
+          
+          for pattern in "${sensitive_patterns[@]}"; do
+            matches=$(find contracts/schemas -type f \( -name "*.json" -o -name "*.avsc" \) -exec grep -l -i "$pattern" {} \;)
+            if [ -n "$matches" ]; then
+              echo "⚠️  WARNING: Potential sensitive data pattern '$pattern' found in:"
+              echo "$matches"
+              found_sensitive=true
+            fi
+          done
+          
+          if [ "$found_sensitive" = true ]; then
+            echo ""
+            echo "🔒 Please ensure sensitive data is properly handled:"
+            echo "- Use data classification tags"
+            echo "- Consider field-level encryption"
+            echo "- Follow data privacy guidelines"
+            echo "- Avoid storing sensitive data in schemas if possible"
+          else
+            echo "✅ No obvious sensitive data patterns detected"
+          fi

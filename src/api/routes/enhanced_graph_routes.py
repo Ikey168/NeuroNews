@@ -635,8 +635,7 @@ async def clear_cache_v2_post(
         }
 
         logger.info(
-            f"Cache cleared via POST: {
-                result['cleared_entries']} entries"
+            f"Cache cleared via POST: {result['cleared_entries']} entries"
         )
         return result
 

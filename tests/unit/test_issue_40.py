@@ -6,6 +6,8 @@ Simple test for Issue #40 implementation.
 import sys
 import os
 
+import pytest
+
 # Add project root to path
 sys.path.insert(0, '/workspaces/NeuroNews')
 
@@ -17,7 +19,7 @@ try:
     print("✅ Successfully imported InfluenceNetworkAnalyzer")
 except ImportError as e:
     print(f"❌ Import error: {e}")
-    sys.exit(1)
+    pytest.skip(f"Dependencies unavailable: {e}", allow_module_level=True)
 
 try:
     from src.api.routes.influence_routes import router

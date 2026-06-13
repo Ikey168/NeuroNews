@@ -212,7 +212,7 @@ class TestDashboardVisualizationComponents:
     def mock_visualization_components(self):
         """Mock visualization components"""
         try:
-            from dashboards.visualization_components import *
+            import dashboards.visualization_components  # noqa: F401
         except ImportError:
             pass
         yield

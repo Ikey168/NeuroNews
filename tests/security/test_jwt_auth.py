@@ -79,7 +79,7 @@ class TestJWTAuth:
         """Test access token expiration time."""
         user_data = {"sub": "user123"}
         
-        before_creation = datetime.now(timezone.utc)
+        before_creation = datetime.now(timezone.utc).replace(microsecond=0)
         token = jwt_auth.create_access_token(user_data)
         after_creation = datetime.now(timezone.utc)
         
@@ -113,7 +113,7 @@ class TestJWTAuth:
         """Test refresh token expiration time."""
         user_data = {"sub": "user123"}
         
-        before_creation = datetime.now(timezone.utc)
+        before_creation = datetime.now(timezone.utc).replace(microsecond=0)
         token = jwt_auth.create_refresh_token(user_data)
         after_creation = datetime.now(timezone.utc)
         

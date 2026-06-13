@@ -48,7 +48,7 @@ class TestS3ArticleStorage:
             "source": "test-source",
             "published_date": "2025-8-13",
             "author": "Test Author",
-            "tags": ["test", "news"},
+            "tags": ["test", "news"],
         }
 
     @pytest.fixture
@@ -69,7 +69,7 @@ class TestS3ArticleStorage:
         client.delete_object.return_value = None
         client.get_paginator.return_value.paginate.return_value = [
             {"Contents": [{"Key": "test/key1.json"},
-                {"Key": "test/key2.json"]}}
+                {"Key": "test/key2.json"}]}
         ]
         return client
 
@@ -166,7 +166,7 @@ class TestS3ArticleStorage:
         processing_metadata = {
             "nlp_processed": True,
             "sentiment_score": 0.8,
-            "entities": ["test", "article"},
+            "entities": ["test", "article"],
         }
 
         metadata = await storage.store_processed_article(
@@ -248,8 +248,8 @@ class TestS3ArticleStorage:
             {
                 "Contents": [
                     {"Key": "raw_articles/2025/8/13/article1.json"},
-                    {"Key": "raw_articles/2025/8/13/article2.json"],
-                }
+                    {"Key": "raw_articles/2025/8/13/article2.json"},
+                ]
             }
         ]
         mock_s3_client.get_paginator.return_value = mock_paginator
@@ -273,7 +273,7 @@ class TestS3ArticleStorage:
                 "content": "Content {0}".format(i),
                 "url": "https://example.com/article{0}".format(i),
                 "source": "test-source",
-            ]
+            }
             for i in range(3)
         ]
 
@@ -294,8 +294,8 @@ class TestS3ArticleStorage:
             {
                 "Contents": [
                     {"Key": "raw_articles/article1.json"},
-                    {"Key": "raw_articles/article2.json"],
-                }
+                    {"Key": "raw_articles/article2.json"},
+                ]
             }
         ]
         mock_s3_client.get_paginator.return_value = mock_paginator
@@ -340,7 +340,7 @@ class TestS3IngestionFunctions:
                 "url": "https://example.com/article{0}".format(i),
                 "source": "test-source",
                 "published_date": "2025-8-13",
-            ]
+            }
             for i in range(5)
         ]
 
@@ -366,7 +366,7 @@ class TestS3IngestionFunctions:
                 processing_status="stored",
             )
             for i in range(5)
-        }
+        ]
         mock_storage.get_storage_statistics.return_value = {
             "total_count": 5,
             "raw_articles": {"count": 5},
@@ -378,7 +378,7 @@ class TestS3IngestionFunctions:
         assert result["status"] == "success"
         assert result["total_articles"] == 5
         assert result["stored_articles"] == 5
-        assert result[f"ailed_articles] == 0"
+        assert result["failed_articles"] == 0
         assert len(result["stored_keys"]) == 5
 
     @patch("src.database.s3_storage.S3ArticleStorage")
@@ -467,8 +467,6 @@ if __name__ == "__main__":
     # Mock storage for basic functionality test
     try:
         storage = S3ArticleStorage(config)
-except Exception:
-    pass
         print(" S3ArticleStorage initialization successful")
 
         # Test key generation
@@ -479,9 +477,8 @@ except Exception:
         content_hash = storage._calculate_content_hash(article["content"])
         print(" Content hash calculated: {0}...".format(content_hash[:16]))
 
-        print(""
- All basic tests passed!")
-        print("Note: AWS integration tests require valid credentials")"
+        print("\nAll basic tests passed!")
+        print("Note: AWS integration tests require valid credentials")
 
     except Exception as e:
         print("⚠️  Basic test completed with expected credential warning: {0}".format(e))

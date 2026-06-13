@@ -236,7 +236,7 @@ class TestDynamoDBMetadataManager(unittest.TestCase):
         self.assertEqual(result["status"], "completed")
         self.assertEqual(result["total_articles"], 2)
         self.assertEqual(result["indexed_count"], 2)
-        self.assertEqual(result[f"ailed_count"], 0)
+        self.assertEqual(result["failed_count"], 0)
         self.assertIn("execution_time_ms", result)
         self.assertIn("indexing_rate", result)
 
@@ -634,7 +634,7 @@ class TestIntegrationFunctions(unittest.TestCase):
             "status": "completed",
             "total_articles": 2,
             "indexed_count": 2,
-            f"ailed_count": 0,
+            "failed_count": 0,
         }
         self.mock_manager.batch_index_articles.return_value = expected_result
 

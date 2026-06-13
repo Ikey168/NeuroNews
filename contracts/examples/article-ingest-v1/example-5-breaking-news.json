@@ -1,0 +1,13 @@
+{
+  "article_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "source_id": "breaking-news-wire",
+  "url": "https://breakingnews.com/urgent/major-earthquake-japan",
+  "title": "Major Earthquake Strikes Japan",
+  "body": "A powerful earthquake measuring 7.2 on the Richter scale has struck off the coast of Japan. Tsunami warnings have been issued for coastal areas. Emergency services are responding to the situation.",
+  "language": "en",
+  "country": "JP",
+  "published_at": "2025-08-28T03:15:22Z",
+  "ingested_at": "2025-08-28T03:16:01Z",
+  "sentiment_score": -0.65,
+  "topics": ["breaking-news", "earthquake", "japan", "tsunami", "emergency", "natural-disaster"]
+}

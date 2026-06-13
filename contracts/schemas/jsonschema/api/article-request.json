@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "https://api.neuronews.com/schemas/article-request.json",
+  "title": "Article Request",
+  "description": "Schema for creating or updating articles via REST API",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Article headline for display purposes"
+    },
+    "content": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50000,
+      "description": "Full article content in plain text or markdown"
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Brief article summary (optional)"
+    },
+    "sourceUrl": {
+      "type": "string",
+      "format": "uri",
+      "description": "Original URL where article was published"
+    },
+    "sourceId": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_-]+$",
+      "description": "Identifier of the news source/publisher"
+    },
+    "language": {
+      "type": "string",
+      "enum": ["en", "es", "fr", "de", "it", "pt", "ru", "zh", "ja", "ar", "unknown"],
+      "default": "unknown",
+      "description": "Article language (ISO 639-1 codes)"
+    },
+    "category": {
+      "type": "string",
+      "enum": ["technology", "politics", "business", "sports", "entertainment", "science", "health", "environment", "finance", "other"],
+      "default": "other",
+      "description": "Article category classification"
+    },
+    "publishedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Original publication timestamp (ISO 8601 format)"
+    },
+    "isBreakingNews": {
+      "type": "boolean",
+      "default": false,
+      "description": "Flag indicating if article is classified as breaking news"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 50
+      },
+      "maxItems": 10,
+      "uniqueItems": true,
+      "description": "Array of topic tags associated with the article"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Additional metadata fields as key-value pairs"
+    }
+  },
+  "required": ["title", "content", "sourceUrl", "sourceId", "publishedAt"],
+  "additionalProperties": false,
+  "examples": [
+    {
+      "title": "New AI Breakthrough in Natural Language Processing",
+      "content": "Researchers have developed a new model that...",
+      "summary": "Scientists create advanced AI model for better language understanding",
+      "sourceUrl": "https://techcrunch.com/2025/08/28/ai-breakthrough",
+      "sourceId": "techcrunch",
+      "language": "en",
+      "category": "technology",
+      "publishedAt": "2025-08-28T10:30:00Z",
+      "isBreakingNews": false,
+      "tags": ["AI", "NLP", "research", "technology"],
+      "metadata": {
+        "author": "Jane Smith",
+        "wordCount": "1250"
+      }
+    }
+  ]
+}

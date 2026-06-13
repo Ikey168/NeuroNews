@@ -240,9 +240,7 @@ class OptimizedGraphAPI:
                 self.metrics["query_time_total"] += query_time
 
                 logger.debug(
-                    f"Query '{query_description}' completed in {
-                        query_time}s, {
-                        len(results)} results"
+                    f"Query '{query_description}' completed in {query_time}s, {len(results)} results"
                 )
                 return results
 

@@ -1,0 +1,260 @@
+name: dbt Spark Iceberg CI
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'dbt/**'
+      - '.github/workflows/dbt-spark.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'dbt/**'
+
+env:
+  DBT_PROFILES_DIR: ./dbt
+  SPARK_THRIFT_HOST: localhost
+  SPARK_THRIFT_PORT: 10000
+
+jobs:
+  dbt-test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_PASSWORD: hive
+          POSTGRES_USER: hive
+          POSTGRES_DB: metastore
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Set up Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '11'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y netcat
+
+    - name: Install Python dependencies
+      run: |
+        cd dbt
+        pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Download Spark
+      run: |
+        wget -q https://archive.apache.org/dist/spark/spark-3.4.2/spark-3.4.2-bin-hadoop3.tgz
+        tar -xzf spark-3.4.2-bin-hadoop3.tgz
+        sudo mv spark-3.4.2-bin-hadoop3 /opt/spark
+        echo "SPARK_HOME=/opt/spark" >> $GITHUB_ENV
+        echo "/opt/spark/bin" >> $GITHUB_PATH
+
+    - name: Download Iceberg JARs
+      run: |
+        mkdir -p /opt/spark/jars
+        wget -q -O /opt/spark/jars/iceberg-spark-runtime-3.4_2.12-1.4.2.jar \
+          https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.4_2.12/1.4.2/iceberg-spark-runtime-3.4_2.12-1.4.2.jar
+
+    - name: Start Spark Thrift Server
+      run: |
+        export SPARK_HOME=/opt/spark
+        # Start Spark Master
+        $SPARK_HOME/sbin/start-master.sh
+        sleep 10
+        
+        # Start Spark Worker
+        $SPARK_HOME/sbin/start-worker.sh spark://localhost:7077
+        sleep 10
+        
+        # Start Thrift Server
+        $SPARK_HOME/sbin/start-thriftserver.sh \
+          --master spark://localhost:7077 \
+          --conf spark.sql.warehouse.dir=/tmp/warehouse \
+          --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
+          --conf spark.sql.catalog.spark_catalog=org.apache.iceberg.spark.SparkSessionCatalog \
+          --conf spark.sql.catalog.spark_catalog.type=hive \
+          --conf spark.sql.catalog.local=org.apache.iceberg.spark.SparkCatalog \
+          --conf spark.sql.catalog.local.type=hadoop \
+          --conf spark.sql.catalog.local.warehouse=/tmp/warehouse \
+          --hiveconf javax.jdo.option.ConnectionURL=jdbc:postgresql://localhost:5432/metastore \
+          --hiveconf javax.jdo.option.ConnectionDriverName=org.postgresql.Driver \
+          --hiveconf javax.jdo.option.ConnectionUserName=hive \
+          --hiveconf javax.jdo.option.ConnectionPassword=hive &
+        
+        # Wait for Thrift Server
+        for i in {1..30}; do
+          if nc -z localhost 10000; then
+            echo "Spark Thrift Server is ready"
+            break
+          fi
+          echo "Waiting for Spark Thrift Server... ($i/30)"
+          sleep 10
+        done
+
+    - name: Set up test data
+      run: |
+        export SPARK_HOME=/opt/spark
+        cat > /tmp/setup_test_data.sql << 'EOF'
+        CREATE DATABASE IF NOT EXISTS demo;
+        USE demo;
+        CREATE SCHEMA IF NOT EXISTS news;
+        
+        CREATE TABLE IF NOT EXISTS news.articles_raw (
+          id STRING,
+          url STRING,
+          title STRING,
+          body STRING,
+          source STRING,
+          category STRING,
+          published_at TIMESTAMP,
+          processed_at TIMESTAMP,
+          created_at TIMESTAMP,
+          updated_at TIMESTAMP,
+          year INT,
+          month INT,
+          day INT,
+          hour INT,
+          language STRING,
+          tags ARRAY<STRING>,
+          sentiment_score DOUBLE,
+          sentiment_label STRING,
+          hash_content STRING,
+          dedup_key STRING
+        ) USING ICEBERG PARTITIONED BY (year, month);
+        
+        CREATE TABLE IF NOT EXISTS news.articles_enriched (
+          id STRING,
+          url STRING,
+          title STRING,
+          body STRING,
+          source STRING,
+          category STRING,
+          published_at TIMESTAMP,
+          processed_at TIMESTAMP,
+          enriched_at TIMESTAMP,
+          created_at TIMESTAMP,
+          updated_at TIMESTAMP,
+          sentiment_score DOUBLE,
+          sentiment_label STRING,
+          sentiment_confidence DOUBLE,
+          topics ARRAY<STRING>,
+          topic_scores ARRAY<DOUBLE>,
+          primary_topic STRING,
+          entities ARRAY<STRING>,
+          entity_types ARRAY<STRING>,
+          entity_sentiment ARRAY<DOUBLE>,
+          keywords ARRAY<STRING>,
+          tags ARRAY<STRING>,
+          auto_tags ARRAY<STRING>,
+          readability_score DOUBLE,
+          word_count INT,
+          language STRING,
+          language_confidence DOUBLE,
+          embedding_vector ARRAY<DOUBLE>,
+          cluster_id INT,
+          similar_articles ARRAY<STRING>,
+          trend_score DOUBLE,
+          viral_potential DOUBLE,
+          engagement_prediction DOUBLE,
+          content_quality_score DOUBLE,
+          bias_score DOUBLE,
+          factuality_score DOUBLE,
+          year INT,
+          month INT,
+          day INT,
+          hour INT,
+          hash_content STRING,
+          enrichment_version STRING
+        ) USING ICEBERG PARTITIONED BY (year, month);
+        
+        INSERT INTO news.articles_raw VALUES
+        ('test1', 'https://test.com/1', 'Test Article 1', 'Test content 1', 'test_source', 'tech',
+         '2024-01-15 10:00:00', '2024-01-15 10:01:00', '2024-01-15 10:01:00', '2024-01-15 10:01:00',
+         2024, 1, 15, 10, 'en', array('test'), 0.5, 'positive', 'hash1', 'dedup1');
+        
+        INSERT INTO news.articles_enriched VALUES
+        ('test1', 'https://test.com/1', 'Test Article 1', 'Test content 1', 'test_source', 'tech',
+         '2024-01-15 10:00:00', '2024-01-15 10:01:00', '2024-01-15 10:02:00', '2024-01-15 10:01:00', '2024-01-15 10:02:00',
+         0.5, 'positive', 0.85, array('test'), array(0.8), 'test',
+         array('TestCorp'), array('ORG'), array(0.6),
+         array('test'), array('test'), array('testing'),
+         0.75, 50, 'en', 0.95, array(0.1, 0.2), 1, array(),
+         0.6, 0.7, 0.8, 0.85, 0.1, 0.9, 2024, 1, 15, 10, 'hash1', 'v1.0');
+        EOF
+        
+        $SPARK_HOME/bin/spark-sql \
+          --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
+          --conf spark.sql.catalog.spark_catalog=org.apache.iceberg.spark.SparkSessionCatalog \
+          --conf spark.sql.catalog.spark_catalog.type=hive \
+          -f /tmp/setup_test_data.sql
+
+    - name: Install dbt dependencies
+      run: |
+        cd dbt
+        dbt deps
+
+    - name: Test dbt connection
+      run: |
+        cd dbt
+        dbt debug
+
+    - name: Run dbt models
+      run: |
+        cd dbt
+        dbt run
+
+    - name: Run dbt tests
+      run: |
+        cd dbt
+        dbt test
+
+    - name: Generate dbt docs
+      run: |
+        cd dbt
+        dbt docs generate
+
+    - name: Upload dbt artifacts
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: dbt-artifacts
+        path: |
+          dbt/target/
+          dbt/logs/
+
+    - name: Validate marts creation
+      run: |
+        export SPARK_HOME=/opt/spark
+        $SPARK_HOME/bin/spark-sql \
+          --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
+          --conf spark.sql.catalog.spark_catalog=org.apache.iceberg.spark.SparkSessionCatalog \
+          --conf spark.sql.catalog.spark_catalog.type=hive \
+          -e "SHOW TABLES IN neuronews.marts;"
+
+    - name: Stop Spark services
+      if: always()
+      run: |
+        export SPARK_HOME=/opt/spark
+        $SPARK_HOME/sbin/stop-thriftserver.sh || true
+        $SPARK_HOME/sbin/stop-worker.sh || true
+        $SPARK_HOME/sbin/stop-master.sh || true

@@ -50,6 +50,11 @@ class PerformanceDashboard:
             "active_threads": 0,
         }
 
+        # Custom metrics, performance points, and alerting
+        self.custom_metrics: Dict[str, Any] = {}
+        self.performance_points: List[Dict[str, Any]] = []
+        self.alert_thresholds: Dict[str, Any] = {}
+
         # Monitoring state
         self.monitoring = False
         self.monitor_thread = None
@@ -89,29 +94,31 @@ class PerformanceDashboard:
     def _collect_system_metrics(self):
         """Collect system performance metrics."""
         try:
-            process = psutil.Process()
+            self.system_metrics["cpu_usage"].append(psutil.cpu_percent())
+            self.system_metrics["memory_usage"].append(
+                psutil.virtual_memory().percent
+            )
+            self._collect_network_metrics()
+            self._collect_disk_metrics()
+        except Exception as e:
+            self.logger.debug("System metrics collection error: {0}".format(e))
 
-            # CPU and memory
-            cpu_percent = process.cpu_percent()
-            memory_info = process.memory_info()
-            memory_mb = memory_info.rss / 1024 / 1024
-
-            # Network I/O
+    def _collect_network_metrics(self):
+        """Collect network I/O metrics."""
+        try:
             net_io = psutil.net_io_counters()
-
-            # Disk I/O
-            disk_io = psutil.disk_io_counters()
-
-            # Update metrics
-            self.system_metrics["cpu_usage"].append(cpu_percent)
-            self.system_metrics["memory_usage"].append(memory_mb)
-
             if net_io:
                 self.system_metrics["network_io"].append(
                     {"bytes_sent": net_io.bytes_sent,
                         "bytes_recv": net_io.bytes_recv}
                 )
+        except Exception as e:
+            self.logger.debug("Network metrics collection error: {0}".format(e))
 
+    def _collect_disk_metrics(self):
+        """Collect disk I/O metrics."""
+        try:
+            disk_io = psutil.disk_io_counters()
             if disk_io:
                 self.system_metrics["disk_io"].append(
                     {
@@ -119,9 +126,8 @@ class PerformanceDashboard:
                         "write_bytes": disk_io.write_bytes,
                     }
                 )
-
         except Exception as e:
-            self.logger.debug("System metrics collection error: {0}".format(e))
+            self.logger.debug("Disk metrics collection error: {0}".format(e))
 
     def _update_metrics_history(self):
         """Update metrics history."""
@@ -191,6 +197,252 @@ class PerformanceDashboard:
 
         if response_time is not None:
             self.source_metrics[source]["response_times"].append(response_time)
+
+    def get_current_rates(self) -> Dict[str, float]:
+        """Per-minute article and request rates since startup."""
+        elapsed_minutes = max(self.get_uptime() / 60, 1e-9)
+        requests = max(
+            self.counters["total_requests"],
+            self.counters["successful_requests"] + self.counters["failed_requests"],
+        )
+        return {
+            "articles_per_minute": self.counters["total_articles"] / elapsed_minutes,
+            "requests_per_minute": requests / elapsed_minutes,
+        }
+
+    def record_error(self, source: str, error_message: str = None):
+        """Record an error for a source."""
+        self.source_metrics[source]["errors"] += 1
+        if error_message:
+            self.logger.debug("Error from {0}: {1}".format(source, error_message))
+
+    def get_performance_summary(self) -> Dict[str, Any]:
+        """Get a summary of overall scraping performance."""
+        total_requests = self.counters["total_requests"]
+        success_rate = (
+            self.counters["successful_requests"] / total_requests * 100
+            if total_requests
+            else 0.0
+        )
+        all_times = [
+            t
+            for metrics in self.source_metrics.values()
+            for t in metrics["response_times"]
+        ]
+        return {
+            "total_articles": self.counters["total_articles"],
+            "total_requests": total_requests,
+            "success_rate": success_rate,
+            "average_response_time": (
+                sum(all_times) / len(all_times) if all_times else 0.0
+            ),
+            "uptime_seconds": self.get_uptime(),
+        }
+
+    def get_source_metrics(self, source: str) -> Dict[str, Any]:
+        """Get raw metrics for a single source."""
+        return self.source_metrics[source]
+
+    def calculate_average_response_time(self, source: str) -> float:
+        """Average response time for a source."""
+        times = self.source_metrics[source]["response_times"]
+        return sum(times) / len(times) if times else 0.0
+
+    def increment_concurrent_connections(self) -> None:
+        self.counters["concurrent_connections"] += 1
+
+    def decrement_concurrent_connections(self) -> None:
+        if self.counters["concurrent_connections"] > 0:
+            self.counters["concurrent_connections"] -= 1
+
+    def set_active_threads(self, count: int) -> None:
+        self.counters["active_threads"] = count
+
+    def get_uptime(self) -> float:
+        """Seconds since the dashboard was created."""
+        return time.time() - self.start_time
+
+    def get_error_rate(self) -> float:
+        """Fraction of requests that failed (0.0 - 1.0)."""
+        total = self.counters["total_requests"]
+        return self.counters["failed_requests"] / total if total else 0.0
+
+    def record_performance_point(self, **metrics) -> None:
+        """Record an arbitrary performance data point."""
+        point = dict(metrics)
+        point["timestamp"] = time.time()
+        self.performance_points.append(point)
+
+    def get_peak_performance(self) -> Dict[str, Any]:
+        """Return the recorded point with the highest articles_per_minute."""
+        if not self.performance_points:
+            return {}
+        return max(
+            self.performance_points,
+            key=lambda p: p.get("articles_per_minute", 0),
+        )
+
+    def set_alert_thresholds(
+        self,
+        max_response_time: float = None,
+        max_error_rate: float = None,
+        min_success_rate: float = None,
+    ) -> None:
+        """Configure performance alerting thresholds."""
+        self.alert_thresholds = {
+            "max_response_time": max_response_time,
+            "max_error_rate": max_error_rate,
+            "min_success_rate": min_success_rate,
+        }
+
+    def check_performance_alerts(self) -> List[Dict[str, Any]]:
+        """Evaluate current metrics against configured thresholds."""
+        alerts = []
+        thresholds = getattr(self, "alert_thresholds", {})
+
+        max_rt = thresholds.get("max_response_time")
+        if max_rt is not None:
+            for source, metrics in self.source_metrics.items():
+                slow = [t for t in metrics["response_times"] if t > max_rt]
+                if slow:
+                    alerts.append(
+                        {
+                            "type": "response_time",
+                            "source": source,
+                            "threshold": max_rt,
+                            "observed": max(slow),
+                        }
+                    )
+
+        max_err = thresholds.get("max_error_rate")
+        if max_err is not None and self.get_error_rate() > max_err:
+            alerts.append(
+                {
+                    "type": "error_rate",
+                    "threshold": max_err,
+                    "observed": self.get_error_rate(),
+                }
+            )
+
+        min_success = thresholds.get("min_success_rate")
+        total = self.counters["total_requests"]
+        if min_success is not None and total:
+            success_rate = self.counters["successful_requests"] / total
+            if success_rate < min_success:
+                alerts.append(
+                    {
+                        "type": "success_rate",
+                        "threshold": min_success,
+                        "observed": success_rate,
+                    }
+                )
+
+        return alerts
+
+    def calculate_baseline_performance(self) -> Dict[str, Any]:
+        """Snapshot current averages to use as a performance baseline."""
+        all_times = [
+            t
+            for metrics in self.source_metrics.values()
+            for t in metrics["response_times"]
+        ]
+        return {
+            "average_response_time": (
+                sum(all_times) / len(all_times) if all_times else 0.0
+            ),
+            "sample_count": len(all_times),
+        }
+
+    def get_current_performance(self, window: int = 5) -> Dict[str, Any]:
+        """Average over the most recent response times."""
+        all_times = [
+            t
+            for metrics in self.source_metrics.values()
+            for t in metrics["response_times"]
+        ]
+        recent = all_times[-window:] if all_times else []
+        return {
+            "average_response_time": (
+                sum(recent) / len(recent) if recent else 0.0
+            ),
+            "sample_count": len(recent),
+        }
+
+    def detect_performance_regression(
+        self,
+        baseline: Dict[str, Any],
+        current: Dict[str, Any],
+        tolerance: float = 1.2,
+    ) -> bool:
+        """True when current response times exceed baseline by tolerance."""
+        base = baseline.get("average_response_time", 0.0)
+        cur = current.get("average_response_time", 0.0)
+        if base <= 0:
+            return False
+        return cur > base * tolerance
+
+    def export_metrics(self) -> Dict[str, Any]:
+        """Export all metrics as a plain dictionary."""
+        return {
+            "counters": dict(self.counters),
+            "source_metrics": {
+                source: {
+                    "articles": m["articles"],
+                    "errors": m["errors"],
+                    "response_times": list(m["response_times"]),
+                    "last_updated": m["last_updated"],
+                }
+                for source, m in self.source_metrics.items()
+            },
+            "system_metrics": {
+                k: list(v) for k, v in self.system_metrics.items()
+            },
+            "timestamp": datetime.now().isoformat(),
+        }
+
+    def reset_metrics(self) -> None:
+        """Reset all counters, history, and per-source metrics."""
+        for key in self.counters:
+            self.counters[key] = 0
+        self.metrics_history.clear()
+        self.source_metrics.clear()
+        self.performance_points.clear()
+        self.custom_metrics.clear()
+
+    def add_custom_metric(self, name: str, value: Any = 0) -> None:
+        self.custom_metrics[name] = value
+
+    def increment_custom_metric(self, name: str, delta: float = 1) -> None:
+        self.custom_metrics[name] = self.custom_metrics.get(name, 0) + delta
+
+    def get_custom_metric(self, name: str) -> Any:
+        return self.custom_metrics.get(name)
+
+    def calculate_response_time_percentiles(self, source: str) -> Dict[str, float]:
+        """Calculate p50/p95/p99 response time percentiles for a source."""
+        times = sorted(self.source_metrics[source]["response_times"])
+        if not times:
+            return {"p50": 0.0, "p95": 0.0, "p99": 0.0}
+
+        def percentile(p):
+            idx = min(int(len(times) * p / 100), len(times) - 1)
+            return times[idx]
+
+        return {
+            "p50": percentile(50),
+            "p95": percentile(95),
+            "p99": percentile(99),
+        }
+
+    def record_article_scraped(self, source: str, response_time: float = None):
+        """Alias for record_article using (source, response_time) order."""
+        self.record_article(source, response_time)
+
+    def record_request_made(
+        self, source: str = "unknown", success: bool = True, response_time: float = None
+    ):
+        """Alias for record_request using (source, success, response_time) order."""
+        self.record_request(success, response_time, source)
 
     def update_concurrent_connections(self, count: int):
         """Update concurrent connections count."""

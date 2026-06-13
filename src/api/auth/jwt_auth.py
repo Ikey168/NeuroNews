@@ -3,6 +3,7 @@ JWT-based authentication system for the NeuroNews API.
 """
 
 import os
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict
 
@@ -40,7 +41,7 @@ class JWTAuth:
         expire = datetime.now(timezone.utc) + timedelta(
             minutes=self.access_token_expire
         )
-        to_encode.update({"exp": expire})
+        to_encode.update({"exp": expire, "jti": uuid.uuid4().hex})
 
         return jwt.encode(to_encode, self.jwt_secret, algorithm=self.jwt_algorithm)
 
@@ -58,7 +59,7 @@ class JWTAuth:
         if "sub" in to_encode:
             to_encode["sub"] = str(to_encode["sub"])
         expire = datetime.now(timezone.utc) + timedelta(days=self.refresh_token_expire)
-        to_encode.update({"exp": expire, "refresh": True})
+        to_encode.update({"exp": expire, "refresh": True, "jti": uuid.uuid4().hex})
 
         return jwt.encode(to_encode, self.jwt_secret, algorithm=self.jwt_algorithm)
 
@@ -76,11 +77,92 @@ class JWTAuth:
             HTTPException: If token is invalid or expired
         """
         try:
-            return jwt.decode(token, self.jwt_secret, algorithms=[self.jwt_algorithm])
+            # Audience claims are not used by this service; skip aud checks
+            return jwt.decode(
+                token,
+                self.jwt_secret,
+                algorithms=[self.jwt_algorithm],
+                options={"verify_aud": False},
+            )
         except jwt.ExpiredSignatureError:
             raise HTTPException(status_code=401, detail="Token has expired")
         except jwt.InvalidTokenError:
             raise HTTPException(status_code=401, detail="Invalid token")
+
+    def verify_token(self, token: str) -> Dict[str, Any] | None:
+        """
+        Verify a JWT token, returning its claims or None when invalid.
+
+        Unlike decode_token, this never raises - it returns None for
+        expired, malformed, tampered, or missing tokens.
+
+        Args:
+            token: JWT token string to verify
+
+        Returns:
+            Dictionary of decoded claims, or None if the token is invalid
+        """
+        if not token:
+            return None
+        try:
+            return jwt.decode(
+                token,
+                self.jwt_secret,
+                algorithms=[self.jwt_algorithm],
+                options={"verify_aud": False},
+            )
+        except jwt.InvalidTokenError:
+            return None
+
+    async def get_current_user(
+        self,
+        credentials: HTTPAuthorizationCredentials | None,
+        request: Request | None = None,
+    ) -> Dict[str, Any]:
+        """
+        Resolve the current user from bearer credentials.
+
+        Args:
+            credentials: HTTP bearer credentials containing the access token
+            request: Optional FastAPI request; user claims are stored on its state
+
+        Returns:
+            Dictionary of validated token claims
+
+        Raises:
+            HTTPException: If credentials are missing or the token is invalid
+        """
+        if credentials is None:
+            raise HTTPException(
+                status_code=401, detail="Authorization header required"
+            )
+
+        payload = self.decode_token(credentials.credentials)
+
+        if payload.get("refresh"):
+            raise HTTPException(status_code=401, detail="Invalid token type")
+
+        if request is not None:
+            request.state.user = payload
+        return payload
+
+    def refresh_access_token(self, refresh_token: str) -> str | None:
+        """
+        Create a new access token from a refresh token.
+
+        Args:
+            refresh_token: Current refresh token
+
+        Returns:
+            New access token string, or None if the refresh token is invalid
+        """
+        payload = self.verify_token(refresh_token)
+        if payload is None:
+            return None
+
+        payload.pop("exp", None)
+        payload.pop("refresh", None)
+        return self.create_access_token(payload)
 
     def refresh_tokens(self, refresh_token: str) -> Dict[str, str]:
         """

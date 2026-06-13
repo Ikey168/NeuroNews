@@ -32,8 +32,7 @@ def test_spider_imports():
 
 def test_configuration():
     """Test that configuration is loaded correctly."""
-    print(""
-Testing configuration...")"
+    print("\nTesting configuration...")
 
     try:
         config_path="config/settings.json"
@@ -56,8 +55,7 @@ Testing configuration...")"
 
 def test_data_validator():
     """Test data validator functionality."""
-    print(""
-Testing data validator...")"
+    print("\nTesting data validator...")
 
     try:
         ScrapedDataValidator()
@@ -70,8 +68,7 @@ Testing data validator...")"
 
 def test_pipelines():
     """Test pipeline imports."""
-    print(""
-Testing pipeline imports...")"
+    print("\nTesting pipeline imports...")
 
     try:
         # Import the module directly
@@ -109,8 +106,7 @@ Testing pipeline imports...")"
 
 def test_items():
     """Test items structure."""
-    print(""
-Testing items structure...")"
+    print("\nTesting items structure...")
 
     try:
         from src.scraper.items import NewsItem
@@ -132,8 +128,7 @@ Testing items structure...")"
 
 def run_all_tests():
     """Run all tests."""
-    print(" Running Multi-Source Scraper Tests"
-" + "=" * 50)"
+    print(" Running Multi-Source Scraper Tests\n" + "=" * 50)
 
     tests=[
         test_configuration,
@@ -161,11 +156,10 @@ def run_all_tests():
 
     if failed == 0:
         print("All tests passed! Multi-source scraper is ready to use.")
-        print("")
-Next steps:")
+        print("\nNext steps:")
         print("1. Run a test scraper: python -m src.scraper.run --spider cnn")
         print("2. Run all sources: python -m src.scraper.run --multi-source")
-        print("3. Generate a report: python -m src.scraper.run --report")"
+        print("3. Generate a report: python -m src.scraper.run --report")
     else:
         print("⚠️  Some tests failed. Please fix the issues before using the scraper.")
 

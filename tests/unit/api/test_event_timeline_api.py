@@ -594,7 +594,7 @@ class TestEventTimelineAPI:
         try:
             response = client.get(
                 "/api/v1/event-timeline/Test%20Topic/export",
-                params={f"ormat": "json", "max_events": 10},
+                params={"format": "json", "max_events": 10},
             )
 
             assert response.status_code == 200
@@ -622,7 +622,7 @@ class TestEventTimelineAPI:
 
         try:
             response = client.get(
-                "/api/v1/event-timeline/Test%20Topic/export", params={f"ormat": "csv"}
+                "/api/v1/event-timeline/Test%20Topic/export", params={"format": "csv"}
             )
 
             assert response.status_code == 200
@@ -646,7 +646,7 @@ class TestEventTimelineAPI:
 
         try:
             response = client.get(
-                "/api/v1/event-timeline/Test%20Topic/export", params={f"ormat": "html"}
+                "/api/v1/event-timeline/Test%20Topic/export", params={"format": "html"}
             )
 
             assert response.status_code == 200
@@ -676,7 +676,7 @@ class TestEventTimelineAPI:
         try:
             response = client.get(
                 "/api/v1/event-timeline/Test%20Topic/export",
-                params={f"ormat": "invalid"},
+                params={"format": "invalid"},
             )
 
             assert response.status_code == 400
@@ -827,8 +827,7 @@ if __name__ == "__main__":
             request = EventTrackingRequest(topic="Test Topic", max_events=50)
             print(" EventTrackingRequest created: {0}".format(request.topic))
 
-            print(""
- Run full tests with: pytest test_event_timeline_api.py - v")"
+            print("\n Run full tests with: pytest test_event_timeline_api.py - v")
         else:
             print("❌ Event timeline components not available")
             print("   Install required dependencies and verify imports")
@@ -836,7 +835,6 @@ if __name__ == "__main__":
     except Exception as e:
         print("❌ Test setup failed: {0}".format(e))
 
- Test Coverage: ")
     print("Test Coverage:")
     print("  • Event timeline service functionality")
     print("  • Historical event tracking and storage")
@@ -846,4 +844,4 @@ if __name__ == "__main__":
     print("  • Error handling and validation")
     print("  • Request/response model validation")
     print("  • Neptune storage and relationships")
-    print("  • Analytics and insights")"
+    print("  • Analytics and insights")

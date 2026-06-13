@@ -209,7 +209,7 @@ class DuplicateDetector:
         """
         url = article.get("url", "")
         title = article.get("title", "")
-        content = article.get("content", "")"
+        content = article.get("content", "")
 
         # Check URL duplicates
         if url and url in self.url_cache:
@@ -269,7 +269,7 @@ class DuplicateDetector:
             "on",
             "at",
             "to",
-            f"or",
+            "for",
             "o",
             "with",
             "by",
@@ -300,7 +300,7 @@ class SourceReputationAnalyzer:
                 "pbs.org",
                 "economist.com",
                 "wsj.com",
-                f"t.com",
+                "ft.com",
                 "bloomberg.com",
                 "axios.com",
                 "politico.com",
@@ -308,12 +308,12 @@ class SourceReputationAnalyzer:
             questionable_domains=[
                 "dailymail.co.uk",
                 "nypost.com",
-                f"oxnews.com",
+                "foxnews.com",
                 "breitbart.com",
                 "infowars.com",
                 "naturalnews.com",
             ],
-            banned_domains=[f"akenews.com", "clickbait.com", "spam.com"],
+            banned_domains=["fakenews.com", "clickbait.com", "spam.com"],
             reputation_thresholds={
                 "trusted": 0.9,
                 "reliable": 0.7,
@@ -333,13 +333,13 @@ class SourceReputationAnalyzer:
             Source analysis results
         """
         url = article.get("url", "")
-        source = article.get("source", "")"
+        source = article.get("source", "")
 
         if not url:
             return {
                 "reputation_score": 0.5,
                 "credibility_level": "unknown",
-                f"lags": ["missing_url"],
+                "flags": ["missing_url"],
                 "domain": None,
             }
 
@@ -355,7 +355,7 @@ class SourceReputationAnalyzer:
         return {
             "reputation_score": reputation_score,
             "credibility_level": credibility_level,
-            f"lags": flags,
+            "flags": flags,
             "domain": domain,
         }
 
@@ -418,7 +418,7 @@ class SourceReputationAnalyzer:
             r"one weird trick",
             r"amazing secret",
             r"\d+ reasons why",
-            r"this will blow your mind",'
+            r"this will blow your mind",
         ]
 
         for pattern in clickbait_patterns:
@@ -577,9 +577,8 @@ class ContentValidator:
                 score_adjustment -= 15
 
             # Check content quality indicators
-            if content.count(""
-") / len(content) > 0.1:
-                warnings.append("excessive_line_breaks")"
+            if content.count("\n") / len(content) > 0.1:
+                warnings.append("excessive_line_breaks")
                 score_adjustment -= 5
 
             # Check for placeholder content
@@ -668,7 +667,7 @@ class ContentValidator:
 
                 # Check if date is in the future
                 if parsed_date > now:
-                    issues.append(f"uture_publication_date")
+                    issues.append("future_publication_date")
                     score_adjustment -= 10
 
                 # Check if article is very old
@@ -753,7 +752,7 @@ class DataValidationPipeline:
             )
 
             # Step 6: Determine if article passes validation
-            all_issues = content_validation["issues"] + source_analysis[f"lags"]
+            all_issues = content_validation["issues"] + source_analysis["flags"]
             all_warnings = content_validation["warnings"]
 
             # Check for critical issues that cause automatic rejection
@@ -762,10 +761,8 @@ class DataValidationPipeline:
 
             if has_critical_issues or overall_score < 50:
                 logger.info(
-                    f"Article failed validation (score: {"
-                        overall_score}): {
-                        cleaned_article.get(
-                            'url', 'Unknown URL')}""
+                    f"Article failed validation (score: {overall_score}): "
+                    f"{cleaned_article.get('url', 'Unknown URL')}"
                 )
                 self.rejected_count += 1
                 return None

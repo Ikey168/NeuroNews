@@ -705,13 +705,11 @@ if __name__ == "__main__":
     print("Running NLP Pipeline Optimization Tests...")
     run_tests()
 
-    print(""
-To run performance benchmarks, use:")
-    print("python test_nlp_optimization.py --benchmark")"
+    print("\nTo run performance benchmarks, use:")
+    print("python test_nlp_optimization.py --benchmark")
 
     import sys
 
     if "--benchmark" in sys.argv:
-        print(""
-Running performance benchmarks...")"
+        print("\nRunning performance benchmarks...")
         run_performance_tests()

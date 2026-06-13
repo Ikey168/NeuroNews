@@ -233,8 +233,7 @@ async def populate_article_endpoint(
     """
     try:
         logger.info(
-            f"API request to populate article: {
-                article_data.get('id')}"
+            f"API request to populate article: {article_data.get('id')}"
         )
 
         # Validate required fields
@@ -254,8 +253,7 @@ async def populate_article_endpoint(
                 )
             except ValueError:
                 logger.warning(
-                    f"Invalid published_date format: {
-                        article_data['published_date']}"
+                    f"Invalid published_date format: {article_data['published_date']}"
                 )
 
         # Process article
@@ -277,9 +275,7 @@ async def populate_article_endpoint(
         raise
     except Exception as e:
         logger.error(
-            f"Error populating article {
-                article_data.get('id')}: {
-                str(e)}"
+            f"Error populating article {article_data.get('id')}: {str(e)}"
         )
         raise HTTPException(
             status_code=500, detail="Failed to populate article: {0}".format(str(e))

@@ -21,8 +21,6 @@ def build_sample_graph():
 
     try:
         # Create sample article
-except Exception:
-    pass
         article_props = {
             "headline": "Tech Giants Collaborate on AI Safety Standards",
             "url": "https://example.com/tech-ai-safety",
@@ -35,7 +33,7 @@ except Exception:
                 "technology",
                 "safety",
                 "collaboration",
-            },
+            ],
         }
         article_id = graph.add_article(article_props)
 
@@ -44,14 +42,14 @@ except Exception:
             {
                 "orgName": "TechCorp",
                 "orgType": "Corporation",
-                "industry": ["Technology", "AI"},
+                "industry": ["Technology", "AI"],
                 "headquarters": "San Francisco, USA",
                 "employeeCount": 50000,
             },
             {
                 "orgName": "AI Safety Institute",
                 "orgType": "Research Institute",
-                "industry": ["AI", "Research"},
+                "industry": ["AI", "Research"],
                 "headquarters": "Cambridge, UK",
                 "employeeCount": 200,
             },
@@ -67,13 +65,13 @@ except Exception:
             {
                 "name": "Dr. Emily Thompson",
                 "title": "Chief AI Safety Officer",
-                "occupation": ["Computer Scientist", "AI Researcher"},
+                "occupation": ["Computer Scientist", "AI Researcher"],
                 "nationality": "US",
             },
             {
                 "name": "James Wilson",
                 "title": "Director of AI Ethics",
-                "occupation": ["Ethics Researcher", "Policy Advisor"},
+                "occupation": ["Ethics Researcher", "Policy Advisor"],
                 "nationality": "UK",
             },
         ]
@@ -90,7 +88,7 @@ except Exception:
             "startDate": datetime(2025, 9, 15),
             "endDate": datetime(2025, 9, 17),
             "location": "London, UK",
-            "keywords": ["AI safety", "ethics", "standards"},
+            "keywords": ["AI safety", "ethics", "standards"],
             "importance": 5,
         }
         event_id = graph.add_event(event_props)
@@ -99,8 +97,8 @@ except Exception:
         relationships = [
             # People work for organizations
             {
-                f"rom_id: person_ids[0],"
-                "to_id": org_ids[0},
+                "from_id": person_ids[0],
+                "to_id": org_ids[0],
                 "label": "WORKS_FOR",
                 "properties": {
                     "role": "Chief AI Safety Officer",
@@ -108,15 +106,15 @@ except Exception:
                 },
             },
             {
-                f"rom_id: person_ids[1],"
-                "to_id": org_ids[1},
+                "from_id": person_ids[1],
+                "to_id": org_ids[1],
                 "label": "WORKS_FOR",
                 "properties": {"role": "Director", "startDate": "2022-6-1"},
             },
             # Organizations collaborate
             {
-                f"rom_id: org_ids[0],"
-                "to_id": org_ids[1},
+                "from_id": org_ids[0],
+                "to_id": org_ids[1],
                 "label": "PARTNERS_WITH",
                 "properties": {
                     "partnership_type": "Research Collaboration",
@@ -125,38 +123,38 @@ except Exception:
             },
             # Event relationships
             {
-                f"rom_id: org_ids[0},"
+                "from_id": org_ids[0],
                 "to_id": event_id,
                 "label": "HOSTED",
                 "properties": {},
             },
             {
-                f"rom_id: org_ids[1},"
+                "from_id": org_ids[1],
                 "to_id": event_id,
                 "label": "SPONSORED",
                 "properties": {"amount": 100000},
             },
             # Article mentions
             {
-                f"rom_id: article_id,"
-                "to_id": org_ids[0},
+                "from_id": article_id,
+                "to_id": org_ids[0],
                 "label": "MENTIONS_ORG",
                 "properties": {"sentiment": 0.8, "count": 5},
             },
             {
-                f"rom_id: article_id,"
-                "to_id": org_ids[1},
+                "from_id": article_id,
+                "to_id": org_ids[1],
                 "label": "MENTIONS_ORG",
                 "properties": {"sentiment": 0.7, "count": 3},
             },
             {
-                f"rom_id: article_id,"
-                "to_id": person_ids[0},
+                "from_id": article_id,
+                "to_id": person_ids[0],
                 "label": "MENTIONS_PERSON",
                 "properties": {"sentiment": 0.9, "count": 2},
             },
             {
-                f"rom_id: article_id,"
+                "from_id": article_id,
                 "to_id": event_id,
                 "label": "COVERS_EVENT",
                 "properties": {"prominence": 0.9},
@@ -166,22 +164,19 @@ except Exception:
         # Add all relationships
         for rel in relationships:
             graph.add_relationship(
-                rel[f"rom_id"], rel["to_id"], rel["label"], rel["properties"]
+                rel["from_id"], rel["to_id"], rel["label"], rel["properties"]
             )
 
         # Example queries
-        print(""
-Example Queries: ")"
+        print("\nExample Queries:")
 
         # Find all organizations mentioned in the article
-        print(""
-1. Organizations mentioned in the article: ")
-        orgs = graph.g.V(article_id).out("MENTIONS_ORG").values("orgName").toList()"
+        print("\n1. Organizations mentioned in the article:")
+        orgs = graph.g.V(article_id).out("MENTIONS_ORG").values("orgName").toList()
         print(orgs)
 
         # Find event details and sponsors
-        print(""
-2. Event sponsors and their contributions:")"
+        print("\n2. Event sponsors and their contributions:")
         sponsors = (
             graph.g.V()
             .hasLabel("Event")
@@ -193,8 +188,7 @@ Example Queries: ")"
         print(json.dumps(sponsors, indent=2))
 
         # Find collaboration network
-        print(""
-3. Organization collaboration network:")"
+        print("\n3. Organization collaboration network:")
         collabs = (
             graph.g.V()
             .hasLabel("Organization")

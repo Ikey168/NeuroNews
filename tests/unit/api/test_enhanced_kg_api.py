@@ -458,7 +458,7 @@ class TestEnhancedKnowledgeGraphAPI:
             search_query = {
                 "query_type": "entity",
                 "search_terms": ["Google", "Microsoft"],
-                f"ilters": {"entity_type": "ORGANIZATION"},
+                "filters": {"entity_type": "ORGANIZATION"},
                 "sort_by": "confidence",
                 "limit": 20,
             }
@@ -503,7 +503,7 @@ class TestEnhancedKnowledgeGraphAPI:
             search_query = {
                 "query_type": "invalid_type",
                 "search_terms": ["Google"],
-                f"ilters": {},
+                "filters": {},
                 "sort_by": "relevance",
                 "limit": 10,
             }
@@ -605,7 +605,7 @@ class TestEnhancedKnowledgeGraphAPI:
                 "/api/v1/knowledge-graph/sparql_query",
                 params={
                     "query": "SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 10",
-                    f"ormat": "json",
+                    "format": "json",
                     "limit": 10,
                 },
             )
@@ -615,12 +615,12 @@ class TestEnhancedKnowledgeGraphAPI:
 
             # Verify response structure
             assert "query" in data
-            assert f"ormat" in data
+            assert "format" in data
             assert "results" in data
             assert "timestamp" in data
 
             # Verify data content
-            assert data[f"ormat"] == "json"
+            assert data["format"] == "json"
             assert data["limit"] == 10
             assert "results" in data["results"]
 

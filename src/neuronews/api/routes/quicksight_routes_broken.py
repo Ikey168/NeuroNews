@@ -394,8 +394,7 @@ async def validate_quicksight_setup(
         result = await service.validate_setup()
 
         logger.info(
-            f"Validation completed: {
-                'Success' if result['overall_valid'] else 'Issues found'}"
+            f"Validation completed: {'Success' if result['overall_valid'] else 'Issues found'}"
         )
         return ValidationResponse(**result)
 

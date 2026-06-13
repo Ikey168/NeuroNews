@@ -502,8 +502,7 @@ async def get_topic_sentiment_trends(
         }
 
         logger.info(
-            f"Retrieved sentiment trends for topic '{topic}' with {
-                len(trend_points)} data points"
+            f"Retrieved sentiment trends for topic '{topic}' with {len(trend_points)} data points"
         )
         return response
 

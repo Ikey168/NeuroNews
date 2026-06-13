@@ -46,9 +46,7 @@ class MultiSourceRunner:
         """Run a single spider."""
         if spider_name not in self.spiders:
             raise ValueError(
-                f"Spider '{spider_name}' not found. Available: {
-                    list(
-                        self.spiders.keys())}"
+                f"Spider '{spider_name}' not found. Available: {list(self.spiders.keys())}"
             )
 
         process = CrawlerProcess(self.settings)

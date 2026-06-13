@@ -130,9 +130,7 @@ class DynamoDBMetadataPipeline:
         self.logger.info(f"  - Failed articles: {self.stats['failed_articles']}")
         self.logger.info("  - Total time: {0}s".format(total_time))
         self.logger.info(
-            f"  - Average indexing time: {
-                self.stats['total_processing_time'] / max(
-                    1, self.stats['indexed_articles']):.3f}s"
+            f"  - Average indexing time: {self.stats['total_processing_time'] / max(1, self.stats['indexed_articles']):.3f}s"
         )
 
     async def process_item(self, item, spider):
@@ -366,8 +364,7 @@ class RedshiftMetadataSync:
             )
             if success:
                 self.logger.debug(
-                    f"Updated metadata for Redshift load: {
-                        redshift_record.get('article_id')}"
+                    f"Updated metadata for Redshift load: {redshift_record.get('article_id')}"
                 )
             return success
         except Exception as e:
