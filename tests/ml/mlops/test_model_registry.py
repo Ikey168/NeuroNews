@@ -1,5 +1,5 @@
 import pytest
-from neuronews.ml.registry.registry import ModelRegistry
+from src.ml.registry.registry import ModelRegistry
 
 
 def test_registry_register_and_retrieve():

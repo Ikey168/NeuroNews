@@ -1,7 +1,7 @@
 import time
 import pytest
 
-from neuronews.ml.inference.service import InferenceService
+from src.ml.inference.service import InferenceService
 
 
 class MockDetector:

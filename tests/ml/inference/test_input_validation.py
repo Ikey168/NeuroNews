@@ -1,6 +1,6 @@
 import pytest
 
-from neuronews.ml.validation.input_validator import InputValidator, ValidationError
+from src.ml.validation.input_validator import InputValidator, ValidationError
 
 
 def test_validate_success():

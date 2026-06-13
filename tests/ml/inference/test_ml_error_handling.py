@@ -1,7 +1,7 @@
 import pytest
 
-from neuronews.ml.inference.service import InferenceService
-from neuronews.ml.validation.input_validator import InputValidator, ValidationError
+from src.ml.inference.service import InferenceService
+from src.ml.validation.input_validator import InputValidator, ValidationError
 
 
 class ErrorDetector:

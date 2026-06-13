@@ -1,6 +1,6 @@
 """Tests for input validation module."""
 import pytest
-from neuronews.ml.validation.input_validator import InputValidator, ValidatedArticle, ValidationError
+from src.ml.validation.input_validator import InputValidator, ValidatedArticle, ValidationError
 
 
 def test_validator_none_inputs():

@@ -1,6 +1,6 @@
-from neuronews.ml.training.trainer import SimpleTrainer
-from neuronews.ml.mlops.experiment import ExperimentTracker
-from neuronews.ml.registry.registry import ModelRegistry
+from src.ml.training.trainer import SimpleTrainer
+from src.ml.mlops.experiment import ExperimentTracker
+from src.ml.registry.registry import ModelRegistry
 
 
 def test_simple_trainer_registers_and_logs():

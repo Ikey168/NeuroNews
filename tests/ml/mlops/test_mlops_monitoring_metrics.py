@@ -1,4 +1,4 @@
-from neuronews.ml.monitoring.metrics import PerformanceMonitor, DriftMonitor
+from src.ml.monitoring.metrics import PerformanceMonitor, DriftMonitor
 
 
 def test_performance_monitor_basic():
