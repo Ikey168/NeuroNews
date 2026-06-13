@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from src.services.vector_service import (
+from services.vector_service import (
     PgVectorBackend,
     QdrantBackend,
     UnifiedVectorService,

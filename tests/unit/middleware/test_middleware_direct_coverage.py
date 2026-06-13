@@ -268,7 +268,7 @@ class TestServicesMiddlewareCore:
     def test_metrics_middleware(self):
         """Test metrics middleware."""
         try:
-            from src.services.api.middleware.metrics import RAGMetricsMiddleware
+            from services.api.middleware.metrics import RAGMetricsMiddleware
             
             app = Mock()
             middleware = RAGMetricsMiddleware(app)
@@ -282,7 +282,7 @@ class TestServicesMiddlewareCore:
     def test_sliding_window_rate_limiter(self):
         """Test sliding window rate limiter."""
         try:
-            from src.services.api.middleware.ratelimit import SlidingWindowRateLimiter
+            from services.api.middleware.ratelimit import SlidingWindowRateLimiter
             
             app = Mock()
             limiter = SlidingWindowRateLimiter(app)
