@@ -264,3 +264,9 @@ docker-compose.override.yml
 # Artifacts directory
 .artifacts/
 backup_*/
+
+# MLflow local tracking artifacts
+mlruns/
+
+# editor/backup files
+*.bak
