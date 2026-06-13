@@ -729,6 +729,47 @@ class AWSWAFManager:
         """
         return self._detect_xss(content)
 
+    def _detect_sql_injection(self, content: str) -> bool:
+        """Return True when content contains common SQL injection patterns."""
+        if not content:
+            return False
+        import re
+
+        lowered = content.lower()
+        patterns = [
+            r"'\s*or\s+\d+\s*=\s*\d+",          # ' OR 1=1
+            r"'\s*and\s+\d+\s*=\s*\d+",         # ' AND 1=1
+            r"\bunion\b\s+\bselect\b",          # UNION SELECT
+            r"\bdrop\s+table\b",                # DROP TABLE
+            r"\binsert\s+into\b",
+            r"\bdelete\s+from\b",
+            r"--",                                # SQL comment
+            r"#$",                                # trailing MySQL comment
+            r";\s*drop\b",
+            r"\bexec(\s|\+)+(s|x)p\w+",          # exec stored proc
+        ]
+        return any(re.search(p, lowered) for p in patterns)
+
+    def _detect_xss(self, content: str) -> bool:
+        """Return True when content contains common XSS patterns."""
+        if not content:
+            return False
+        import re
+
+        lowered = content.lower()
+        patterns = [
+            r"<\s*script",                        # <script>
+            r"</\s*script",
+            r"javascript:",                       # javascript: URI
+            r"\bon\w+\s*=",                       # onerror=, onload=, etc.
+            r"<\s*img[^>]*\bon\w+",
+            r"<\s*svg[^>]*\bon\w+",
+            r"<\s*iframe",
+            r"document\.(cookie|location)",
+        ]
+        return any(re.search(p, lowered) for p in patterns)
+
+
 
 # Global WAF manager instance
 waf_manager = AWSWAFManager()
