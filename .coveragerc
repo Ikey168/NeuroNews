@@ -1,6 +1,11 @@
 [run]
-source = src
-omit = 
+source =
+    src
+    services
+omit =
+    # src/neuronews is an unfinished restructure mirror that byte-duplicates
+    # the packages already measured above; counting it double-counts code.
+    */src/neuronews/*
     */tests/*
     */test_*
     */__pycache__/*

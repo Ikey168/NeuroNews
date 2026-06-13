@@ -406,8 +406,15 @@ class SourceReputationAnalyzer:
         flags = []
 
         # Check for suspicious patterns
-        title = article.get("title", "").lower()
-        content = article.get("content", "").lower()
+        original_title = article.get("title", "")
+        original_content = article.get("content", "")
+        
+        # Sensationalism indicators (check before lowercasing)
+        if re.search(r"[A-Z]{3,}", original_title):  # Excessive caps
+            flags.append("excessive_caps")
+        
+        title = original_title.lower()
+        content = original_content.lower()
 
         # Clickbait indicators
         clickbait_patterns = [
@@ -424,10 +431,6 @@ class SourceReputationAnalyzer:
             if re.search(pattern, title):
                 flags.append("clickbait_title")
                 break
-
-        # Sensationalism indicators
-        if re.search(r"[A-Z]{3,}", title):  # Excessive caps
-            flags.append("excessive_caps")
 
         if title.count("!") > 2:
             flags.append("excessive_exclamation")
@@ -796,6 +799,45 @@ class DataValidationPipeline:
             self.rejected_count += 1
             return None
 
+
+    def validate_article(self, article: Dict[str, Any]) -> ValidationResult:
+        """
+        Validate a single article, always returning a ValidationResult.
+
+        Unlike process_article, rejected articles yield a result with
+        is_valid=False and the detected issues instead of None.
+        """
+        result = self.process_article(article)
+        if result is not None:
+            return result
+
+        if not isinstance(article, dict) or not article:
+            return ValidationResult(
+                score=0.0,
+                is_valid=False,
+                issues=["invalid_input"],
+                warnings=[],
+                cleaned_data={},
+            )
+
+        cleaned = self._clean_article(article)
+        content_validation = self.content_validator.validate_content(cleaned)
+        source_analysis = self.source_analyzer.analyze_source(cleaned)
+        score = self._calculate_overall_score(content_validation, source_analysis)
+        issues = content_validation["issues"] + source_analysis["flags"]
+        return ValidationResult(
+            score=score,
+            is_valid=False,
+            issues=issues or ["rejected"],
+            warnings=content_validation["warnings"],
+            cleaned_data=cleaned,
+        )
+
+    def batch_validate_articles(
+        self, articles: List[Dict[str, Any]]
+    ) -> List[ValidationResult]:
+        """Validate a list of articles, returning a result for each."""
+        return [self.validate_article(article) for article in articles]
 
     def _clean_article(self, article: Dict[str, Any]) -> Dict[str, Any]:
         """Clean article content and metadata."""

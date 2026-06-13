@@ -19,7 +19,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import boto3
 from boto3.dynamodb.conditions import Attr, Key
@@ -234,16 +234,18 @@ class DynamoDBMetadataManager:
 
     def __init__(
         self,
-        config: DynamoDBMetadataConfig,
+        config: Union[DynamoDBMetadataConfig, str],
         aws_credentials: Optional[Dict[str, str]] = None,
     ):
         """
         Initialize DynamoDB metadata manager.
 
         Args:
-            config: DynamoDB configuration
+            config: DynamoDB configuration, or a table name string
             aws_credentials: Optional AWS credentials
         """
+        if isinstance(config, str):
+            config = DynamoDBMetadataConfig(table_name=config)
         self.config = config
         self.table_name = config.table_name
         self.logger = logging.getLogger(__name__)
