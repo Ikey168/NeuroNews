@@ -139,7 +139,6 @@ class DynamoDBFailureManager:
                             {"AttributeName": "next_retry_time", "KeyType": "HASH"}
                         ],
                         "Projection": {"ProjectionType": "ALL"},
-                        "BillingMode": "PAY_PER_REQUEST",
                     }
                 ],
                 BillingMode="PAY_PER_REQUEST",
