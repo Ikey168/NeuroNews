@@ -21,8 +21,9 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
-import boto3
 from boto3.dynamodb.conditions import Attr, Key
+
+from src.utils.local_cloud import get_client, get_resource
 from botocore.exceptions import ClientError
 
 
@@ -203,6 +204,10 @@ class DynamoDBMetadataConfig:
     table_name: str = "neuronews-article-metadata"
     region: str = "us-east-1"
 
+    # Local endpoint for a DynamoDB-compatible emulator (e.g. DynamoDB Local).
+    # When None, the shared client factory resolves a local default at runtime.
+    endpoint_url: Optional[str] = None
+
     # Performance settings
     read_capacity_units: int = 10
     write_capacity_units: int = 10
@@ -250,14 +255,16 @@ class DynamoDBMetadataManager:
         self.table_name = config.table_name
         self.logger = logging.getLogger(__name__)
 
-        # Initialize AWS clients
-        session_kwargs = {"region_name": config.region}
-        if aws_credentials:
-            session_kwargs.update(aws_credentials)
-
-        self.session = boto3.Session(**session_kwargs)
-        self.dynamodb = self.session.resource("dynamodb")
-        self.dynamodb_client = self.session.client("dynamodb")
+        # Initialize local DynamoDB-compatible clients (DynamoDB Local emulator)
+        client_kwargs = dict(aws_credentials or {})
+        if config.endpoint_url:
+            client_kwargs["endpoint_url"] = config.endpoint_url
+        self.dynamodb = get_resource(
+            "dynamodb", region_name=config.region, **client_kwargs
+        )
+        self.dynamodb_client = get_client(
+            "dynamodb", region_name=config.region, **client_kwargs
+        )
 
         # Initialize table
         self.table = None

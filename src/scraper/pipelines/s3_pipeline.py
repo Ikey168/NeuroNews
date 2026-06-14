@@ -5,9 +5,10 @@ S3 storage pipeline for NeuroNews scrapers.
 import json
 from datetime import datetime
 
-import boto3
 from botocore.exceptions import ClientError
 from scrapy.exceptions import DropItem
+
+from src.utils.local_cloud import get_client
 
 
 class S3StoragePipeline:
@@ -34,7 +35,7 @@ class S3StoragePipeline:
     def open_spider(self, spider):
         """Called when the spider is opened."""
         # Initialize S3 client
-        self.s3_client = boto3.client(
+        self.s3_client = get_client(
             "s3",
             aws_access_key_id=self.aws_access_key_id,
             aws_secret_access_key=self.aws_secret_access_key,

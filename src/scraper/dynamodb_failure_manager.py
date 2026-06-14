@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-import boto3
+from src.utils.local_cloud import get_client
 
 
 @dataclass
@@ -97,7 +97,7 @@ class DynamoDBFailureManager:
         self.retry_strategy = retry_strategy
 
         # Initialize DynamoDB client
-        self.dynamodb = boto3.client("dynamodb", region_name=region_name)
+        self.dynamodb = get_client("dynamodb", region_name=region_name)
 
         # Setup logging
         self.logger = logging.getLogger(__name__)
