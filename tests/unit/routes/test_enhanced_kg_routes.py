@@ -305,7 +305,7 @@ class TestFinalCoveragePush:
         
         security_modules = [
             'src.api.security.waf_middleware',
-            'src.api.security.aws_waf_manager',
+            'src.api.security.local_waf_manager',
             'src.api.middleware.rate_limit_middleware',
             'src.api.aws_rate_limiting',
         ]
@@ -738,10 +738,10 @@ class TestFinal80PercentPush:
         except ImportError:
             pytest.skip("api_key_manager not available")
     
-    def test_aws_waf_manager_mega_coverage(self):
-        """MASSIVE coverage test for security/aws_waf_manager.py - 228 statements, 155 missing"""
+    def test_local_waf_manager_mega_coverage(self):
+        """MASSIVE coverage test for security/local_waf_manager.py - 228 statements, 155 missing"""
         try:
-            import src.api.security.aws_waf_manager as awm
+            import src.api.security.local_waf_manager as awm
             
             with patch.dict('sys.modules', {
                 'boto3': Mock(),
@@ -794,7 +794,7 @@ class TestFinal80PercentPush:
                                 pass
                             
         except ImportError:
-            pytest.skip("aws_waf_manager not available")
+            pytest.skip("local_waf_manager not available")
     
     def test_rate_limit_middleware_mega_coverage(self):
         """MASSIVE coverage test for middleware/rate_limit_middleware.py - 287 statements, 202 missing"""
@@ -1195,7 +1195,7 @@ class TestCoverageBypassImports:
         with patch.dict('sys.modules', mock_modules):
             # Test security modules
             security_modules = [
-                'src.api.security.aws_waf_manager',
+                'src.api.security.local_waf_manager',
                 'src.api.security.waf_middleware',
                 'src.api.middleware.rate_limit_middleware',
             ]
@@ -1596,7 +1596,7 @@ class TestUltraAggressive80Percent:
         route_modules = [
             'src.api.routes.event_timeline_routes',
             'src.api.routes.waf_security_routes', 
-            'src.api.routes.aws_waf_manager',
+            'src.api.routes.local_waf_manager',
             'src.api.routes.sentiment_routes',
             'src.api.routes.summary_routes',
             'src.api.routes.knowledge_graph_routes',
@@ -1724,7 +1724,7 @@ class TestUltraAggressive80Percent:
         
         security_modules = [
             'src.api.security.waf_middleware',
-            'src.api.security.aws_waf_manager',
+            'src.api.security.local_waf_manager',
             'src.api.middleware.rate_limit_middleware',
             'src.api.rbac.rbac_middleware',
             'src.api.rbac.rbac_system',
@@ -2162,7 +2162,7 @@ class TestStrategicCoverageEnhancement:
         """Target security modules (AWS WAF, middleware) for enhanced coverage"""
         
         security_modules = [
-            'src.api.security.aws_waf_manager',
+            'src.api.security.local_waf_manager',
             'src.api.security.waf_middleware',
             'src.api.middleware.rate_limit_middleware',
             'src.api.aws_rate_limiting',
@@ -2813,7 +2813,7 @@ class TestUltimate80PercentAchievement:
         remaining_modules = [
             'src.api.routes.event_timeline_routes',
             'src.api.security.waf_middleware', 
-            'src.api.security.aws_waf_manager',
+            'src.api.security.local_waf_manager',
             'src.api.routes.enhanced_graph_routes',
             'src.api.middleware.rate_limit_middleware',
             'src.api.routes.sentiment_routes',
@@ -3304,7 +3304,7 @@ class TestUltraAggressive80Push:
                 'src.api.auth': Mock(),
                 'src.api.database': Mock(),
                 'src.api.security': Mock(),
-                'src.api.security.aws_waf_manager': Mock(),
+                'src.api.security.local_waf_manager': Mock(),
             }
             
             with patch.dict('sys.modules', mock_modules):
@@ -3993,7 +3993,7 @@ class TestNuclear80PercentFinal:
         
         security_modules = [
             'src.api.security.waf_middleware',
-            'src.api.security.aws_waf_manager',
+            'src.api.security.local_waf_manager',
             'src.api.middleware.rate_limit_middleware',
             'src.api.rbac.rbac_middleware',
             'src.api.rbac.rbac_system',
@@ -4415,18 +4415,18 @@ class TestTargeted50PercentPush:
         assert True
     
     @patch('boto3.client')
-    def test_aws_waf_manager_basic_init(self, mock_boto):
+    def test_local_waf_manager_basic_init(self, mock_boto):
         """Exercise AWS WAF manager basic initialization (currently 32%)."""
         mock_waf_client = Mock()
         mock_cloudwatch_client = Mock()
         mock_boto.side_effect = [mock_waf_client, mock_cloudwatch_client]
         
         try:
-            from src.api.security.aws_waf_manager import AWSWAFManager
+            from src.api.security.local_waf_manager import LocalWAFManager
             
             # Try to create instance
             try:
-                manager = AWSWAFManager("test-arn")
+                manager = LocalWAFManager("test-arn")
                 # Exercise basic attributes
                 if hasattr(manager, 'web_acl_arn'):
                     arn = manager.web_acl_arn

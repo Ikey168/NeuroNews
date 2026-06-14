@@ -346,10 +346,10 @@ class TestSecurityModuleCoverage:
             pytest.skip("WAF middleware not available")
     
     @patch('boto3.client')
-    def test_aws_waf_manager_coverage(self, mock_boto):
+    def test_local_waf_manager_coverage(self, mock_boto):
         """Test AWS WAF manager."""
         try:
-            from src.api.security.aws_waf_manager import WAFManager
+            from src.api.security.local_waf_manager import WAFManager
             
             # Mock AWS clients
             mock_waf = Mock()

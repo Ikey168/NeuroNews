@@ -890,7 +890,7 @@ class TestFinalSprintTo80Percent:
         """Final assault on security and middleware modules"""
         
         security_modules = [
-            'src.api.security.aws_waf_manager',  # 98 missing (57% -> push higher)
+            'src.api.security.local_waf_manager',  # 98 missing (57% -> push higher)
             'src.api.security.waf_middleware',  # 156 missing (19% -> push higher)
             'src.api.middleware.rate_limit_middleware',  # 202 missing (30% -> push higher)
             'src.api.rbac.rbac_system',  # 104 missing (47% -> push higher)

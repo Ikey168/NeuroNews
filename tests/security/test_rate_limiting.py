@@ -12,7 +12,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.api.aws_rate_limiting import APIGatewayManager
+from src.api.aws_rate_limiting import LocalUsagePlanManager
 
 # Test imports
 from src.api.middleware.rate_limit_middleware import (
@@ -394,7 +394,7 @@ class TestAWSIntegration:
     def api_manager(self):
         """Create API Gateway manager with mocked AWS client."""
         with patch("boto3.client") as mock_boto:
-            manager = APIGatewayManager()
+            manager = LocalUsagePlanManager()
             manager.client = Mock()
             manager.usage_client = Mock()
             return manager

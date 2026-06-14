@@ -25,7 +25,7 @@ def fix_common_issues():
         "src/api/routes/summary_routes.py",
         "src/api/routes/topic_routes.py",
         "src/api/routes/veracity_routes.py",
-        "src/api/security/aws_waf_manager.py",
+        "src/api/security/local_waf_manager.py",
     ]
 
     print(f"Checking {len(problem_files)} files for common issues...")

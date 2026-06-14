@@ -52,8 +52,8 @@ def validate_imports() -> Dict[str, bool]:
     # Test core service import
     try:
         from src.dashboards.quicksight_service import (
-            DashboardType, QuickSightConfig, QuickSightDashboardService,
-            QuickSightResourceType)
+            DashboardType, LocalDashboardConfig, LocalDashboardService,
+            LocalResourceType)
 
         print_test_result(
             "QuickSight service imports", True, "All core classes imported successfully"
@@ -109,11 +109,11 @@ def validate_service_functionality() -> Dict[str, bool]:
 
     try:
         from src.dashboards.quicksight_service import (
-            DashboardType, QuickSightConfig, QuickSightDashboardService)
+            DashboardType, LocalDashboardConfig, LocalDashboardService)
 
         # Test configuration creation
         try:
-            config=QuickSightConfig(
+            config=LocalDashboardConfig(
                 aws_account_id="123456789012",
                 region="us-east-1",
                 redshift_host="test-cluster.redshift.amazonaws.com",
@@ -142,7 +142,7 @@ def validate_service_functionality() -> Dict[str, bool]:
                 mock_client.exceptions.ResourceNotFoundException=Exception
                 mock_boto3.return_value=mock_client
 
-                service=QuickSightDashboardService(config)
+                service=LocalDashboardService(config)
                 print_test_result(
                     "Service initialization",
                     True,
@@ -161,7 +161,7 @@ def validate_service_functionality() -> Dict[str, bool]:
                 mock_client.exceptions.ResourceNotFoundException=Exception
                 mock_boto3.return_value=mock_client
 
-                service=QuickSightDashboardService(config)
+                service=LocalDashboardService(config)
 
                 # Test sentiment trends SQL
                 sentiment_sql=service._get_sentiment_trends_sql()
@@ -230,7 +230,7 @@ def validate_service_functionality() -> Dict[str, bool]:
                 mock_client.exceptions.ResourceNotFoundException=Exception
                 mock_boto3.return_value=mock_client
 
-                service=QuickSightDashboardService(config)
+                service=LocalDashboardService(config)
 
                 # Test all dataset types
                 datasets=[
@@ -414,7 +414,7 @@ def validate_issue_49_requirements() -> Dict[str, bool]:
 
     try:
         from src.dashboards.quicksight_service import (
-            DashboardType, QuickSightDashboardService)
+            DashboardType, LocalDashboardService)
 
         # Requirement 1: Set up AWS QuickSight for interactive visualization
         try:
@@ -426,10 +426,10 @@ def validate_issue_49_requirements() -> Dict[str, bool]:
                 mock_client.exceptions.ResourceNotFoundException=Exception
                 mock_boto3.return_value=mock_client
 
-                service=QuickSightDashboardService()
+                service=LocalDashboardService()
 
                 # Check if setup method exists and has correct signature
-                assert hasattr(service, "setup_quicksight_resources")
+                assert hasattr(service, "setup_dashboard_resources")
                 print_test_result(
                     "Requirement 1: QuickSight setup", True, "Method implemented"
                 )
@@ -447,7 +447,7 @@ def validate_issue_49_requirements() -> Dict[str, bool]:
                 mock_client.exceptions.ResourceNotFoundException=Exception
                 mock_boto3.return_value=mock_client
 
-                service=QuickSightDashboardService()
+                service=LocalDashboardService()
 
                 # Check if layout creation method exists
                 assert hasattr(service, "create_dashboard_layout")
@@ -482,7 +482,7 @@ def validate_issue_49_requirements() -> Dict[str, bool]:
                 mock_client.exceptions.ResourceNotFoundException=Exception
                 mock_boto3.return_value=mock_client
 
-                service=QuickSightDashboardService()
+                service=LocalDashboardService()
 
                 # Check if filter configuration method exists
                 assert hasattr(service, "_get_dashboard_filters")
@@ -517,7 +517,7 @@ def validate_issue_49_requirements() -> Dict[str, bool]:
                 mock_client.exceptions.ResourceNotFoundException=Exception
                 mock_boto3.return_value=mock_client
 
-                service=QuickSightDashboardService()
+                service=LocalDashboardService()
 
                 # Check if real-time update method exists
                 assert hasattr(service, "setup_real_time_updates")
@@ -581,7 +581,7 @@ def validate_redshift_integration() -> Dict[str, bool]:
             import unittest.mock
 
             from src.dashboards.quicksight_service import
-                QuickSightDashboardService
+                LocalDashboardService
 
             with unittest.mock.patch("boto3.client") as mock_boto3:
                 mock_client=unittest.mock.Mock()
@@ -589,7 +589,7 @@ def validate_redshift_integration() -> Dict[str, bool]:
                 mock_client.exceptions.ResourceNotFoundException=Exception
                 mock_boto3.return_value=mock_client
 
-                service=QuickSightDashboardService()
+                service=LocalDashboardService()
 
                 # Check SQL queries reference news_articles table
                 sentiment_sql=service._get_sentiment_trends_sql()
@@ -618,7 +618,7 @@ def validate_redshift_integration() -> Dict[str, bool]:
             import unittest.mock
 
             from src.dashboards.quicksight_service import
-                QuickSightDashboardService
+                LocalDashboardService
 
             with unittest.mock.patch("boto3.client") as mock_boto3:
                 mock_client=unittest.mock.Mock()
@@ -626,7 +626,7 @@ def validate_redshift_integration() -> Dict[str, bool]:
                 mock_client.exceptions.ResourceNotFoundException=Exception
                 mock_boto3.return_value=mock_client
 
-                service=QuickSightDashboardService()
+                service=LocalDashboardService()
 
                 # Check for essential columns in SQL
                 timeline_sql=service._get_event_timeline_sql()

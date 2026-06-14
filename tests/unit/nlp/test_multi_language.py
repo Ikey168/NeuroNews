@@ -54,8 +54,8 @@ from src.scraper.pipelines.multi_language_pipeline import (
 )
 from src.nlp.multi_language_processor import MultiLanguageArticleProcessor
 from src.nlp.language_processor import (
-    AWSTranslateService,
     LanguageDetector,
+    LocalTranslationService,
     TranslationQualityChecker,
 )
 
@@ -135,79 +135,57 @@ class TestLanguageDetector:
         assert result["language"] in ["en", "fr", "es", "unknown"]
 
 
-class TestAWSTranslateService:
-    """Test AWS Translate service integration."""
+class TestLocalTranslationService:
+    """Test local (offline) translation service."""
 
     def setup_method(self):
-        pass
+        self.service = LocalTranslationService()
 
-    @patch("src.nlp.language_processor.boto3.Session")
-    def test_translate_text_success(self, mock_session):
-        """Test successful text translation."""
-        # Create mock session and client
-        mock_client = Mock()
-        mock_client.translate_text.return_value = {
-            "TranslatedText": "This is a test",
-            "SourceLanguageCode": "es",
-            "TargetLanguageCode": "en",
-        }
+    def test_translate_text_passthrough(self):
+        """Local translation is a graceful pass-through (no real MT)."""
+        result = self.service.translate_text("Esto es una prueba", "es", "en")
 
-        mock_session_instance = Mock()
-        mock_session_instance.client.return_value = mock_client
-        mock_session.return_value = mock_session_instance
-
-        # Create service with mocked client
-        service = AWSTranslateService()
-
-        result = service.translate_text("Esto es una prueba", "es", "en")
-
-        assert result["translated_text"] == "This is a test"
+        # Pass-through: original text returned unchanged.
+        assert result["translated_text"] == "Esto es una prueba"
         assert result["source_language"] == "es"
         assert result["target_language"] == "en"
+        assert result["translation_performed"] is False
         assert result["error"] is None
 
-    @patch("src.nlp.language_processor.boto3.Session")
-    def test_translate_text_error(self, mock_session):
-        """Test translation error handling."""
-        # Create mock session and client that raises exception
-        mock_client = Mock()
-        mock_client.translate_text.side_effect = Exception("Translation failed")
+    def test_translate_text_same_language(self):
+        """No translation when source equals target."""
+        result = self.service.translate_text("Hello world", "en", "en")
+        assert result["translated_text"] == "Hello world"
+        assert result["translation_performed"] is False
+        assert result["error"] is None
 
-        mock_session_instance = Mock()
-        mock_session_instance.client.return_value = mock_client
-        mock_session.return_value = mock_session_instance
-
-        service = AWSTranslateService()
-        result = service.translate_text("Test text", "es", "en")
+    def test_translate_text_empty(self):
+        """Empty text returns an error and empty result."""
+        result = self.service.translate_text("", "es", "en")
+        assert result["translated_text"] == ""
+        assert result["translation_performed"] is False
         assert result["error"] is not None
-        assert "Translation failed" in result["error"]
 
-    @patch("src.nlp.language_processor.boto3.Session")
-    def test_cache_functionality(self, mock_session):
-        """Test translation caching."""
-        # Create mock session and client
-        mock_client = Mock()
-        mock_client.translate_text.return_value = {
-            "TranslatedText": "Cached translation",
-            "SourceLanguageCode": "es",
-            "TargetLanguageCode": "en",
-        }
+    def test_cache_functionality(self):
+        """Repeated translations are served from the cache (same object)."""
+        result1 = self.service.translate_text("Una prueba de cache", "es", "en")
+        result2 = self.service.translate_text("Una prueba de cache", "es", "en")
+        assert result1 == result2
 
-        mock_session_instance = Mock()
-        mock_session_instance.client.return_value = mock_client
-        mock_session.return_value = mock_session_instance
+    def test_detect_language_local(self):
+        """Local language detection returns a code and confidence, no AWS."""
+        result = self.service.detect_language(
+            "This is an English news article about technology and science."
+        )
+        assert "language_code" in result
+        assert "confidence" in result
+        assert result["error"] is None
 
-        # Create service with mocked client
-        service = AWSTranslateService()
-
-        # First call
-        result1 = service.translate_text("Test", "es", "en")
-        # Second call (should use cache)
-        result2 = service.translate_text("Test", "es", "en")
-
-        # Should only call AWS once due to caching
-        mock_client.translate_text.assert_called_once()
-        assert result1["translated_text"] == result2["translated_text"]
+    def test_get_supported_languages(self):
+        """Supported languages come from a static local list."""
+        langs = self.service.get_supported_languages()
+        assert "en" in langs
+        assert "es" in langs
 
 
 class TestTranslationQualityChecker:
@@ -403,8 +381,7 @@ class TestMultiLanguagePipeline:
             # Create pipeline with settings
             self.pipeline = MultiLanguagePipeline(
                 snowflake_account="localhost",  # Use localhost instead of test_host
-                redshift_port=5439,
-                redshift_database="test_db",
+                snowflake_database="test_db",
                 snowflake_user="test_user",
                 snowflake_password="test_pass",
             )
@@ -418,7 +395,7 @@ class TestMultiLanguagePipeline:
             pipeline.open_spider(self.spider)
 
         assert pipeline.snowflake_account == "localhost"
-        assert pipeline.redshift_database == "test_db"
+        assert pipeline.snowflake_database == "test_db"
 
     def test_item_processing(self):
         """Test item processing through pipeline."""
@@ -482,8 +459,7 @@ class TestMultiLanguagePipeline:
         # Create disabled pipeline
         pipeline = MultiLanguagePipeline(
             snowflake_account="localhost",
-            redshift_port=5439,
-            redshift_database="test_db",
+            snowflake_database="test_db",
             snowflake_user="test_user",
             snowflake_password="test_pass",
         )
@@ -563,22 +539,12 @@ class TestIntegrationWorkflow:
             "aws": {"region": "us-east-1", "translate_client": {}},
         }
 
-    @patch("boto3.client")
-    def test_full_processing_workflow(self, mock_boto):
+    def test_full_processing_workflow(self):
         """Test complete multi-language processing workflow."""
         # Use the global mock that's already established
         import sys
         psycopg2_mock = sys.modules["psycopg2"]
         mock_db = psycopg2_mock.connect
-        
-        # Setup mocks
-        mock_translate = Mock()
-        mock_translate.translate_text.return_value = {
-            "TranslatedText": "This is a technology news article.",
-            "SourceLanguageCode": "es",
-            "TargetLanguageCode": "en",
-        }
-        mock_boto.return_value = mock_translate
 
         mock_cursor = Mock()
         mock_conn = Mock()

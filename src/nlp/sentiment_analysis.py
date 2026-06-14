@@ -154,7 +154,7 @@ def create_analyzer(
 
     Args:
         model_name: Name of the model to use (for HuggingFace transformers)
-        provider: Provider type ('huggingface', 'aws', 'aws_comprehend')
+        provider: Provider type ('huggingface', 'local', 'aws', 'aws_comprehend')
         **kwargs: Additional configuration for the analyzer
 
     Returns:
@@ -170,23 +170,21 @@ def create_analyzer(
 
     provider = provider.lower()
 
-    if provider in ["aws", "aws_comprehend"]:
+    if provider in ["local", "aws", "aws_comprehend"]:
         try:
-            from .aws_sentiment import AWSComprehendSentimentAnalyzer
+            from .aws_sentiment import LocalSentimentAnalyzer
 
-            return AWSComprehendSentimentAnalyzer(**kwargs)
+            return LocalSentimentAnalyzer(**kwargs)
         except ImportError as e:
             logger.warning(
-                "AWS Comprehend not available: {0}. Falling back to HuggingFace.".format(
-                    e
-                )
+                "Local sentiment analyzer not available: {0}. "
+                "Falling back to HuggingFace.".format(e)
             )
             provider = "huggingface"
         except Exception as e:
             logger.error(
-                "Failed to initialize AWS Comprehend: {0}. Falling back to HuggingFace.".format(
-                    e
-                )
+                "Failed to initialize local sentiment analyzer: {0}. "
+                "Falling back to HuggingFace.".format(e)
             )
             provider = "huggingface"
 

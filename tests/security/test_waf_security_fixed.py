@@ -34,7 +34,7 @@ class WAFSecurityTester:
     def test_waf_manager_import(self) -> bool:
         """Test WAF manager component imports."""
         try:
-            from src.api.security.aws_waf_manager import (
+            from src.api.security.local_waf_manager import (
                 ActionType,
                 ThreatType,
                 waf_manager,
@@ -105,7 +105,7 @@ class WAFSecurityTester:
     def test_waf_manager_functionality(self) -> bool:
         """Test WAF manager core functionality."""
         try:
-            from src.api.security.aws_waf_manager import waf_manager
+            from src.api.security.local_waf_manager import waf_manager
 
             # Test health check
             health = waf_manager.health_check()
@@ -227,7 +227,7 @@ class WAFSecurityTester:
         }
 
         try:
-            from src.api.security.aws_waf_manager import waf_manager
+            from src.api.security.local_waf_manager import waf_manager
 
             # SQL injection attacks using WAF manager
             sql_payloads = [
@@ -275,7 +275,7 @@ class WAFSecurityTester:
     def test_cloudwatch_integration(self) -> bool:
         """Test CloudWatch monitoring integration."""
         try:
-            from src.api.security.aws_waf_manager import waf_manager
+            from src.api.security.local_waf_manager import waf_manager
 
             # Test metrics collection
             metrics = waf_manager.get_security_metrics()
@@ -420,7 +420,7 @@ class WAFSecurityTester:
         print("   Task 5: Monitor real-time attacks - IMPLEMENTED")
 
         print("\n🏗️ ARCHITECTURE COMPONENTS:")
-        print("   src/api/security/aws_waf_manager.py - Core WAF management")
+        print("   src/api/security/local_waf_manager.py - Core WAF management")
         print("   src/api/security/waf_middleware.py - Real-time security middleware")
         print("   src/api/routes/waf_security_routes.py - WAF management API")
         print("   src/api/app.py - FastAPI integration")

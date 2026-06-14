@@ -6,10 +6,18 @@ import logging
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
-import boto3
-from botocore.exceptions import BotoCoreError, ClientError
-
 logger = logging.getLogger(__name__)
+
+# Optional offline language-detection library. If ``langdetect`` is installed
+# it improves detection accuracy; otherwise we fall back to the built-in
+# heuristic ``LanguageDetector`` below. No network / AWS access is required.
+try:  # pragma: no cover - depends on optional dependency being installed
+    from langdetect import detect_langs as _langdetect_detect_langs
+
+    _HAS_LANGDETECT = True
+except Exception:  # pragma: no cover - langdetect not installed
+    _langdetect_detect_langs = None
+    _HAS_LANGDETECT = False
 
 
 class LanguageDetector:
@@ -402,8 +410,23 @@ class LanguageDetector:
         return list(self.LANGUAGE_PATTERNS.keys())
 
 
-class AWSTranslateService:
-    """AWS Translate service wrapper for translating text."""
+class LocalTranslationService:
+    """
+    Local, offline replacement for the former AWS Translate / Comprehend wrapper.
+
+    No AWS account, ``boto3`` or network access is required:
+
+    * ``translate_text`` performs a graceful pass-through ("identity") translation.
+      AWS Translate has no free local equivalent, so the original text is returned
+      unchanged with ``translation_performed=False`` to signal that no real
+      machine translation occurred. The return shape matches the previous AWS
+      implementation so all callers keep working.
+    * ``detect_language`` uses the optional ``langdetect`` library when available
+      and otherwise falls back to the built-in heuristic :class:`LanguageDetector`.
+    """
+
+    # Languages the local heuristic detector / pass-through understands.
+    SUPPORTED_LANGUAGES = ["en", "es", "fr", "de", "zh", "ja", "ru", "ar", "pt", "it"]
 
     def __init__(
         self,
@@ -412,29 +435,19 @@ class AWSTranslateService:
         aws_secret_access_key: Optional[str] = None,
     ):
         """
-        Initialize AWS Translate service.
+        Initialize the local translation service.
 
-        Args:
-            region_name: AWS region
-            aws_access_key_id: AWS access key ID
-            aws_secret_access_key: AWS secret access key
+        The ``region_name`` / ``aws_*`` arguments are accepted only for backward
+        compatibility with the previous constructor signature so that existing
+        callers (and configuration) do not break. They are ignored locally.
         """
+        # Kept purely for signature compatibility; not used locally.
         self.region_name = region_name
 
-        # Initialize AWS session
-        session_kwargs = {"region_name": region_name}
-        if aws_access_key_id and aws_secret_access_key:
-            session_kwargs.update(
-                {
-                    "aws_access_key_id": aws_access_key_id,
-                    "aws_secret_access_key": aws_secret_access_key,
-                }
-            )
+        # Local heuristic detector used when langdetect is unavailable.
+        self._heuristic_detector = LanguageDetector()
 
-        self.session = boto3.Session(**session_kwargs)
-        self.translate_client = self.session.client("translate")
-
-        # Translation cache to avoid redundant translations
+        # Translation cache to avoid redundant work.
         self._translation_cache = {}
 
     def translate_text(
@@ -445,13 +458,18 @@ class AWSTranslateService:
         max_length: int = 5000,
     ) -> Dict[str, Any]:
         """
-        Translate text from source to target language.
+        "Translate" text from source to target language.
+
+        This is a local pass-through: the original text is returned unchanged.
+        The return shape mirrors the previous AWS-backed implementation so
+        callers continue to work, with an extra ``translation_performed`` flag
+        indicating that no real translation took place.
 
         Args:
             text: Text to translate
             source_language: Source language code
             target_language: Target language code
-            max_length: Maximum text length for translation
+            max_length: Maximum text length to process
 
         Returns:
             Dict containing translation result and metadata
@@ -462,28 +480,30 @@ class AWSTranslateService:
                 "source_language": source_language,
                 "target_language": target_language,
                 "confidence": 0.0,
+                "translation_performed": False,
                 "error": "Empty text provided",
             }
 
-        # Don't translate if already in target language
+        # Already in the target language: nothing to do (genuine identity).
         if source_language == target_language:
             return {
                 "translated_text": text,
                 "source_language": source_language,
                 "target_language": target_language,
                 "confidence": 1.0,
+                "translation_performed": False,
                 "error": None,
             }
 
-        # Check cache first
+        # Check cache first.
         cache_key = "{0}:{1}:{2}".format(
             source_language, target_language, hash(text[:100])
         )
         if cache_key in self._translation_cache:
-            logger.info("Using cached translation")
+            logger.debug("Using cached translation")
             return self._translation_cache[cache_key]
 
-        # Truncate text if too long
+        # Truncate text if too long.
         if len(text) > max_length:
             logger.warning(
                 "Text truncated from {0} to {1} characters".format(
@@ -492,96 +512,78 @@ class AWSTranslateService:
             )
             text = text[:max_length]
 
-        try:
-            response = self.translate_client.translate_text(
-                Text=text,
-                SourceLanguageCode=source_language,
-                TargetLanguageCode=target_language,
-            )
+        # Local pass-through "translation": return the source text unchanged.
+        logger.info(
+            "Local translation is pass-through; returning original text "
+            "(%s -> %s, translation skipped)",
+            source_language,
+            target_language,
+        )
+        result = {
+            "translated_text": text,
+            "source_language": source_language,
+            "target_language": target_language,
+            "confidence": 0.0,
+            "translation_performed": False,
+            "error": None,
+        }
 
-            result = {
-                "translated_text": response["TranslatedText"],
-                "source_language": response["SourceLanguageCode"],
-                "target_language": response["TargetLanguageCode"],
-                "confidence": 1.0,  # AWS doesn't provide confidence score
-                "error": None,
-            }
-
-            # Cache successful translation
-            self._translation_cache[cache_key] = result
-
-            logger.info(
-                "Successfully translated text from {0} to {1}".format(
-                    source_language, target_language
-                )
-            )
-            return result
-
-        except (BotoCoreError, ClientError, Exception) as e:
-            error_msg = "AWS Translate error: {0}".format(str(e))
-            logger.error(error_msg)
-            return {
-                "translated_text": text,  # Return original text on error
-                "source_language": source_language,
-                "target_language": target_language,
-                "confidence": 0.0,
-                "error": error_msg,
-            }
+        self._translation_cache[cache_key] = result
+        return result
 
     def get_supported_languages(self) -> List[str]:
-        """Get list of supported language codes from AWS Translate."""
-        try:
-            response = self.translate_client.list_languages()
-            return [lang["LanguageCode"] for lang in response["Languages"]]
-        except (BotoCoreError, ClientError) as e:
-            logger.error("Error fetching supported languages: {0}".format(e))
-            return [
-                "en",
-                "es",
-                "fr",
-                "de",
-                "zh",
-                "ja",
-                "ru",
-                "ar",
-                "pt",
-                "it",
-            ]  # Fallback list
+        """Get list of supported language codes (local, static list)."""
+        return list(self.SUPPORTED_LANGUAGES)
 
     def detect_language(self, text: str) -> Dict[str, Any]:
         """
-        Use AWS Comprehend to detect language (as alternative to local detection).
+        Detect the dominant language of ``text`` locally.
+
+        Uses the optional ``langdetect`` library when installed; otherwise falls
+        back to the built-in heuristic :class:`LanguageDetector`. No AWS
+        Comprehend / network access is involved.
 
         Args:
             text: Text to analyze
 
         Returns:
-            Dict containing detection result
+            Dict containing detection result (``language_code``, ``confidence``,
+            ``error``).
         """
-        try:
-            comprehend_client = self.session.client("comprehend")
-            response = comprehend_client.detect_dominant_language(
-                Text=text[:5000]
-            )  # Comprehend limit
+        sample = (text or "")[:5000]
 
-            if response["Languages"]:
-                best_match = max(response["Languages"], key=lambda x: x["Score"])
-                return {
-                    "language_code": best_match["LanguageCode"],
-                    "confidence": best_match["Score"],
-                    "error": None,
-                }
-            else:
-                return {
-                    "language_code": "en",
-                    "confidence": 0.5,
-                    "error": "No language detected",
-                }
+        if not sample.strip():
+            return {
+                "language_code": "en",
+                "confidence": 0.5,
+                "error": "No language detected",
+            }
 
-        except (BotoCoreError, ClientError) as e:
-            error_msg = "AWS Comprehend error: {0}".format(str(e))
-            logger.error(error_msg)
-            return {"language_code": "en", "confidence": 0.5, "error": error_msg}
+        if _HAS_LANGDETECT:
+            try:
+                candidates = _langdetect_detect_langs(sample)
+                if candidates:
+                    best = candidates[0]
+                    # langdetect returns codes like "en", "zh-cn"; normalize.
+                    code = best.lang.split("-")[0]
+                    return {
+                        "language_code": code,
+                        "confidence": float(best.prob),
+                        "error": None,
+                    }
+            except Exception as e:  # pragma: no cover - langdetect edge cases
+                logger.warning("langdetect failed, using heuristic: %s", e)
+
+        # Heuristic fallback.
+        detection = self._heuristic_detector.detect_language(sample, min_length=1)
+        language = detection.get("language", "unknown")
+        if language == "unknown":
+            language = "en"
+        return {
+            "language_code": language,
+            "confidence": float(detection.get("confidence", 0.5)),
+            "error": None,
+        }
 
 
 class TranslationQualityChecker:

@@ -1,5 +1,14 @@
 """
 Security audit logging for authentication and authorization events.
+
+Replaces the deprecated AWS CloudWatch / CloudWatch Logs integration: security
+audit events and security metrics are appended as newline-delimited JSON to
+local files under NEURONEWS_LOG_DIR (default ./logs):
+
+  - audit_log.jsonl      one JSON object per security event
+  - audit_metrics.jsonl  one JSON object per emitted security metric
+
+Uses the Python standard library only (no boto3/botocore, no AWS account).
 """
 
 import json
@@ -8,7 +17,6 @@ import os
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
-import boto3
 from fastapi import Request
 
 # Configure logger
@@ -16,42 +24,33 @@ logger = logging.getLogger("security_audit")
 logger.setLevel(logging.INFO)
 
 
-class SecurityAuditLogger:
-    """Handle security event logging and monitoring."""
+def _get_log_dir() -> str:
+    """Return the local log directory (env NEURONEWS_LOG_DIR, default ./logs)."""
+    log_dir = os.environ.get("NEURONEWS_LOG_DIR", "./logs")
+    os.makedirs(log_dir, exist_ok=True)
+    return log_dir
 
-    def __init__(self, log_group: str = "/aws/neuronews/security"):
+
+class SecurityAuditLogger:
+    """Handle security event logging and monitoring using local files."""
+
+    def __init__(self, log_group: str = "neuronews-security"):
         """
         Initialize security logger.
 
         Args:
-            log_group: CloudWatch log group name
+            log_group: Logical log group name (recorded in each event; no longer
+                an AWS CloudWatch log group)
         """
         self.log_group = log_group
-        aws_region = os.getenv("AWS_DEFAULT_REGION")
-        if aws_region:
-            self.cloudwatch = boto3.client("cloudwatch", region_name=aws_region)
-            self.logs = boto3.client("logs", region_name=aws_region)
-        else:
-            # Fallback to no-op clients when region not configured (e.g. tests)
-            self.cloudwatch = None
-            self.logs = None
 
-        if self.logs:
-            try:
-                self.logs.create_log_group(logGroupName=log_group)
-            except self.logs.exceptions.ResourceAlreadyExistsException:
-                pass
+        # Local storage paths (newline-delimited JSON)
+        self.log_dir = _get_log_dir()
+        self.events_file = os.path.join(self.log_dir, "audit_log.jsonl")
+        self.metrics_file = os.path.join(self.log_dir, "audit_metrics.jsonl")
 
+        # Stream name kept for parity with prior log records
         self.stream_name = datetime.now(timezone.utc).strftime("%Y/%m/%d/security")
-        if self.logs:
-            try:
-                self.logs.create_log_stream(
-                    logGroupName=log_group, logStreamName=self.stream_name
-                )
-            except self.logs.exceptions.ResourceAlreadyExistsException:
-                pass
-
-        self.sequence_token = None
 
     def _format_log_event(
         self,
@@ -98,6 +97,23 @@ class SecurityAuditLogger:
 
         return log_entry
 
+    def _write_record(self, file_path: str, record: Dict[str, Any]) -> None:
+        """Append a single JSON record (one line) to a local file."""
+        with open(file_path, "a") as f:
+            f.write(json.dumps(record) + "\n")
+
+    def _emit_metric(self, event_type: str) -> None:
+        """Record a security metric locally (replaces CloudWatch put_metric_data)."""
+        metric_record = {
+            "Namespace": "NeuroNews/Security",
+            "MetricName": "SecurityEvent{0}".format(event_type),
+            "Value": 1,
+            "Unit": "Count",
+            "Dimensions": [{"Name": "Environment", "Value": "production"}],
+            "Timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        self._write_record(self.metrics_file, metric_record)
+
     async def log_security_event(
         self,
         event_type: str,
@@ -106,7 +122,7 @@ class SecurityAuditLogger:
         user: Optional[Dict[str, Any]] = None,
     ) -> None:
         """
-        Log a security event to CloudWatch.
+        Log a security event to the local audit log and record a metric.
 
         Args:
             event_type: Type of security event
@@ -117,39 +133,16 @@ class SecurityAuditLogger:
         log_entry = self._format_log_event(event_type, event_data, request, user)
 
         try:
-            kwargs = {
-                "logGroupName": self.log_group,
-                "logStreamName": self.stream_name,
-                "logEvents": [
-                    {
-                        "timestamp": int(datetime.now(timezone.utc).timestamp() * 1000),
-                        "message": json.dumps(log_entry),
-                    }
-                ],
-            }
+            # Annotate with log group/stream for parity with the old records
+            record = dict(log_entry)
+            record["log_group"] = self.log_group
+            record["log_stream"] = self.stream_name
 
-            if self.sequence_token:
-                kwargs["sequenceToken"] = self.sequence_token
+            # Append the security event to the local audit log
+            self._write_record(self.events_file, record)
 
-            if self.logs:
-                response = self.logs.put_log_events(**kwargs)
-                self.sequence_token = response.get("nextSequenceToken")
-
-            # Emit CloudWatch metrics
-            if self.cloudwatch:
-                self.cloudwatch.put_metric_data(
-                    Namespace="NeuroNews/Security",
-                    MetricData=[
-                        {
-                            "MetricName": "SecurityEvent{0}".format(event_type),
-                            "Value": 1,
-                            "Unit": "Count",
-                            "Dimensions": [
-                                {"Name": "Environment", "Value": "production"}
-                            ],
-                        }
-                    ],
-                )
+            # Emit a local security metric
+            self._emit_metric(event_type)
 
         except Exception as e:
             logger.error("Failed to log security event: {0}".format(e), extra=log_entry)

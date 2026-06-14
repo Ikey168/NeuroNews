@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
 # Import our components
 try:
-    from src.nlp.language_processor import (AWSTranslateService,
+    from src.nlp.language_processor import (LocalTranslationService,
 except Exception:
     pass
                                             LanguageDetector,
@@ -208,7 +208,7 @@ except Exception:
             # Create service instance (will work without AWS credentials in mock mode)
 except Exception:
     pass
-            translate_service = AWSTranslateService()
+            translate_service = LocalTranslationService()
 
             # Test translation with mock data
             test_text = "This is a test of the translation service."

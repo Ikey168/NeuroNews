@@ -238,9 +238,14 @@ terraform.tfvars
 terraform.tfvars.json
 
 # Project organization
-# Keep logs directory but ignore log files
+# Keep logs directory but ignore runtime artifacts written by local service backends
 logs/*.log
 logs/*.txt
+logs/*.json
+logs/*.jsonl
+# Local cloud-emulator data stores (S3/DynamoDB/dashboards local backends)
+dashboards_local/
+data/dashboards/
 
 # Temporary files and artifacts
 *.tmp

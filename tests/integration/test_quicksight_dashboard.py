@@ -22,9 +22,9 @@ from fastapi.testclient import TestClient
 from src.api.app import app
 from src.dashboards.quicksight_service import (
     DashboardType,
-    QuickSightConfig,
-    QuickSightDashboardService,
-    QuickSightResourceType,
+    LocalDashboardConfig,
+    LocalDashboardService,
+    LocalResourceType,
 )
 
 
@@ -34,7 +34,7 @@ class TestQuickSightService:
     @pytest.fixture
     def mock_config(self):
         """Mock QuickSight configuration."""
-        return QuickSightConfig(
+        return LocalDashboardConfig(
             aws_account_id="123456789012",
             region="us-east-1",
             snowflake_account="test-cluster.redshift.amazonaws.com",
@@ -107,7 +107,7 @@ class TestQuickSightService:
         """Create QuickSight service with mocked dependencies."""
         with patch("boto3.client") as mock_boto3:
             mock_boto3.return_value = mock_quicksight_client
-            service = QuickSightDashboardService(mock_config)
+            service = LocalDashboardService(mock_config)
             service.quicksight_client = mock_quicksight_client
             return service
 
@@ -116,7 +116,7 @@ class TestQuickSightService:
         with patch("boto3.client") as mock_boto3:
             mock_boto3.return_value = Mock()
 
-            service = QuickSightDashboardService(mock_config)
+            service = LocalDashboardService(mock_config)
 
             assert service.config.aws_account_id == "123456789012"
             assert service.config.region == "us-east-1"
@@ -136,7 +136,7 @@ class TestQuickSightService:
                 "SNOWFLAKE_PASSWORD": "env_password",
             },
         ):
-            config = QuickSightConfig.from_env()
+            config = LocalDashboardConfig.from_env()
 
             assert config.aws_account_id == "123456789012"
             assert config.region == "us-west-2"
@@ -316,9 +316,9 @@ class TestQuickSightService:
         assert len(result["refresh_schedules"]) == 3
 
     @pytest.mark.asyncio
-    async def test_setup_quicksight_resources(self, service, mock_quicksight_client):
+    async def test_setup_dashboard_resources(self, service, mock_quicksight_client):
         """Test complete QuickSight resource setup."""
-        result = await service.setup_quicksight_resources()
+        result = await service.setup_dashboard_resources()
 
         assert result["data_source_created"] is True
         assert len(result["datasets_created"]) >= 2
@@ -391,7 +391,7 @@ class TestQuickSightAPI:
     @pytest.fixture
     def mock_service(self):
         """Mock QuickSight service."""
-        return Mock(spec=QuickSightDashboardService)
+        return Mock(spec=LocalDashboardService)
 
     def test_health_check(self, client):
         """Test health check endpoint."""
@@ -404,11 +404,11 @@ class TestQuickSightAPI:
         assert data["issue"] == "49"
 
     @patch("src.api.routes.quicksight_routes.get_quicksight_service")
-    def test_setup_quicksight_resources(self, mock_get_service, client):
+    def test_setup_dashboard_resources(self, mock_get_service, client):
         """Test QuickSight setup endpoint."""
         # Mock service
         mock_service = AsyncMock()
-        mock_service.setup_quicksight_resources.return_value = {
+        mock_service.setup_dashboard_resources.return_value = {
             "data_source_created": True,
             "datasets_created": ["sentiment_trends_dataset"],
             "analyses_created": ["sentiment_trends_analysis"],
@@ -564,12 +564,12 @@ class TestIntegration:
         assert DashboardType.COMPREHENSIVE.value == "comprehensive"
 
     def test_resource_type_enum(self):
-        """Test QuickSightResourceType enum values."""
-        assert QuickSightResourceType.DATA_SOURCE.value == "data_source"
-        assert QuickSightResourceType.DATA_SET.value == "data_set"
-        assert QuickSightResourceType.ANALYSIS.value == "analysis"
-        assert QuickSightResourceType.DASHBOARD.value == "dashboard"
-        assert QuickSightResourceType.TEMPLATE.value == "template"
+        """Test LocalResourceType enum values."""
+        assert LocalResourceType.DATA_SOURCE.value == "data_source"
+        assert LocalResourceType.DATA_SET.value == "data_set"
+        assert LocalResourceType.ANALYSIS.value == "analysis"
+        assert LocalResourceType.DASHBOARD.value == "dashboard"
+        assert LocalResourceType.TEMPLATE.value == "template"
 
     @pytest.mark.asyncio
     async def test_issue_49_requirements_coverage(self):
@@ -577,38 +577,38 @@ class TestIntegration:
         # This test verifies that the implementation addresses all requirements
 
         # Requirement 1: Set up AWS QuickSight for interactive visualization
-        #  Covered by QuickSightDashboardService.setup_quicksight_resources()
+        #  Covered by LocalDashboardService.setup_dashboard_resources()
 
         # Requirement 2: Create dashboard layout for trending topics by sentiment,
         # knowledge graph entity relationships, event timeline analysis
-        #  Covered by QuickSightDashboardService.create_dashboard_layout()
+        #  Covered by LocalDashboardService.create_dashboard_layout()
         #  Supported layouts: sentiment_trends, entity_relationships, event_timeline
 
         # Requirement 3: Enable filtering by date, entity, and sentiment
         #  Covered by _get_dashboard_filters() method
 
         # Requirement 4: Implement real-time updates from Redshift
-        #  Covered by QuickSightDashboardService.setup_real_time_updates()
+        #  Covered by LocalDashboardService.setup_real_time_updates()
 
         requirements_covered = [
-            "setup_quicksight_resources",  # Requirement 1
+            "setup_dashboard_resources",  # Requirement 1
             "create_dashboard_layout",  # Requirement 2
             "_get_dashboard_filters",  # Requirement 3
             "setup_real_time_updates",  # Requirement 4
         ]
 
         # Check that all required methods exist in the service class
-        from src.dashboards.quicksight_service import QuickSightDashboardService
+        from src.dashboards.quicksight_service import LocalDashboardService
 
         service_methods = [
             method
-            for method in dir(QuickSightDashboardService)
+            for method in dir(LocalDashboardService)
             if not method.startswith("_") or method in ["_get_dashboard_filters"]
         ]
 
         for requirement in requirements_covered:
             assert requirement in service_methods or hasattr(
-                QuickSightDashboardService, requirement
+                LocalDashboardService, requirement
             )
 
         # Check that all dashboard types are supported

@@ -1,4 +1,4 @@
-"""Comprehensive tests for src/api/security/aws_waf_manager.py."""
+"""Comprehensive tests for src/api/security/local_waf_manager.py."""
 
 import os
 import sys
@@ -10,9 +10,9 @@ SRC = os.path.join(os.path.dirname(__file__), "..", "..", "..", "src")
 if SRC not in sys.path:
     sys.path.insert(0, SRC)
 
-from api.security.aws_waf_manager import (  # noqa: E402
+from api.security.local_waf_manager import (  # noqa: E402
     ActionType,
-    AWSWAFManager,
+    LocalWAFManager,
     SecurityEvent,
     ThreatType,
     WAFRule,
@@ -25,7 +25,7 @@ def waf(monkeypatch):
     # No AWS creds -> clients stay None; we exercise pure logic + mock as needed
     for var in ("AWS_REGION", "WAF_WEB_ACL_NAME", "WAF_ALLOWED_COUNTRIES", "WAF_RATE_LIMIT"):
         monkeypatch.delenv(var, raising=False)
-    return AWSWAFManager()
+    return LocalWAFManager()
 
 
 class TestEnumsAndDataclasses:
@@ -63,7 +63,7 @@ class TestInit:
         monkeypatch.setenv("AWS_REGION", "eu-west-1")
         monkeypatch.setenv("WAF_RATE_LIMIT", "500")
         monkeypatch.setenv("WAF_ALLOWED_COUNTRIES", "US,CA")
-        m = AWSWAFManager()
+        m = LocalWAFManager()
         assert m.region == "eu-west-1"
         assert m.rate_limit_requests == 500
         assert m.allowed_countries == ["US", "CA"]
@@ -139,7 +139,7 @@ class TestHealthAndMetrics:
         assert isinstance(metrics, dict)
 
     def test_account_id_fallback(self, waf, monkeypatch):
-        import api.security.aws_waf_manager as mod
+        import api.security.local_waf_manager as mod
         if getattr(mod, "boto3", None) is not None:
             monkeypatch.setattr(mod.boto3, "client", MagicMock(side_effect=Exception("no")))
         assert waf._get_account_id() == "123456789012"

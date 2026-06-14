@@ -73,7 +73,7 @@ class MockRBACSystem:
     def check_permission(self, user, action, resource):
         return True
 
-class MockAWSWAFManager:
+class MockLocalWAFManager:
     def check_request(self, request):
         return True
 
@@ -125,7 +125,7 @@ def mock_rbac_system():
 @pytest.fixture
 def mock_aws_waf():
     """Mock AWS WAF manager for testing."""
-    return MockAWSWAFManager()
+    return MockLocalWAFManager()
 
 
 class TestAPICoreModules:
@@ -384,7 +384,7 @@ class TestSecurityModules:
         has_permission = mock_rbac_system.check_permission("test_user", "write", "admin")
         assert has_permission is True  # Mock always returns True
     
-    def test_mock_aws_waf_manager(self, mock_aws_waf):
+    def test_mock_local_waf_manager(self, mock_aws_waf):
         """Test AWS WAF manager with mock implementation."""
         # Test request validation
         is_valid = mock_aws_waf.check_request({"ip": "192.168.1.1", "user_agent": "test"})
@@ -1584,7 +1584,7 @@ class TestRemainingAPIModulesForComplete100PercentCoverage:
     
     def test_all_security_modules_functionality(self):
         """Test all security modules for coverage."""
-        security_modules = ['aws_waf_manager', 'waf_middleware']
+        security_modules = ['local_waf_manager', 'waf_middleware']
         
         for module_name in security_modules:
             try:
@@ -1881,7 +1881,7 @@ class TestTargeted80PercentCoverage:
             'src.api.auth.permissions',
             'src.api.rbac.rbac_middleware',
             'src.api.rbac.rbac_system',
-            'src.api.security.aws_waf_manager',
+            'src.api.security.local_waf_manager',
             'src.api.security.waf_middleware'
         ]
         
@@ -2172,7 +2172,7 @@ class TestSpecificHighImpactCoverage:
             'src.api.event_timeline_service',
             'src.api.auth.api_key_manager',
             'src.api.rbac.rbac_system',
-            'src.api.security.aws_waf_manager'
+            'src.api.security.local_waf_manager'
         ]
         
         for module_name in service_modules:
@@ -2459,10 +2459,10 @@ class TestMegaCoverageBoost:
         except ImportError:
             pytest.skip("event_timeline_routes not available")
     
-    def test_aws_waf_manager_comprehensive(self):
-        """Test security/aws_waf_manager.py - 228 statements, 155 missing"""
+    def test_local_waf_manager_comprehensive(self):
+        """Test security/local_waf_manager.py - 228 statements, 155 missing"""
         try:
-            import src.api.security.aws_waf_manager as awm
+            import src.api.security.local_waf_manager as awm
             
             with patch('boto3.client'), \
                  patch('logging.getLogger'), \
@@ -2494,7 +2494,7 @@ class TestMegaCoverageBoost:
                             str(attr)
                             
         except ImportError:
-            pytest.skip("aws_waf_manager not available")
+            pytest.skip("local_waf_manager not available")
     
     def test_api_key_manager_comprehensive(self):
         """Test auth/api_key_manager.py - 217 statements, 132 missing"""
