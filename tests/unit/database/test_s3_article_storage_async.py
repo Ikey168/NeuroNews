@@ -169,3 +169,30 @@ class TestDelete:
         storage.delete_article(meta.s3_key)
         with pytest.raises(ValueError):
             await storage.retrieve_article(meta.s3_key)
+
+
+class TestExport:
+    @pytest.mark.asyncio
+    async def test_export_all(self, storage, tmp_path):
+        await storage.store_raw_article(raw_article())
+        await storage.store_processed_article(raw_article(id="p1"))
+        out = tmp_path / "export"
+        count = await storage.export_articles_to_local(str(out))
+        assert count == 2
+        assert out.exists()
+        assert len(list(out.iterdir())) == 2
+
+    @pytest.mark.asyncio
+    async def test_export_by_type(self, storage, tmp_path):
+        await storage.store_raw_article(raw_article())
+        await storage.store_processed_article(raw_article(id="p1"))
+        out = tmp_path / "export_raw"
+        count = await storage.export_articles_to_local(
+            str(out), article_type=ArticleType.RAW
+        )
+        assert count == 1
+
+    @pytest.mark.asyncio
+    async def test_export_no_client(self, storage, tmp_path):
+        storage.s3_client = None
+        assert await storage.export_articles_to_local(str(tmp_path / "x")) == 0
