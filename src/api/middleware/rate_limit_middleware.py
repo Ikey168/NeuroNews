@@ -110,12 +110,18 @@ class RateLimitStore:
             logger.info("Rate limiting using in-memory backend")
 
     def _redis_available(self) -> bool:
-        """Check if Redis is available."""
+        """Check if Redis is importable and reachable."""
         try:
-            pass
-
+            client = redis.Redis(
+                host=os.getenv("REDIS_HOST", "localhost"),
+                port=int(os.getenv("REDIS_PORT", 6379)),
+                db=int(os.getenv("REDIS_DB", 0)),
+                socket_connect_timeout=0.5,
+            )
+            client.ping()
             return True
-        except ImportError:
+        except Exception:
+            logger.warning("Redis not reachable; using in-memory rate limiting")
             return False
 
     def _get_redis_client(self):
