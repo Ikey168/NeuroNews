@@ -176,7 +176,7 @@ async def get_enhanced_graph_populator() -> EnhancedKnowledgeGraphPopulator:
 
             neptune_endpoint = os.getenv(
                 "NEPTUNE_ENDPOINT",
-                "wss://demo-cluster.neptune.amazonaws.com:8182/gremlin",
+                "ws://localhost:8182/gremlin",
             )
 
         populator = create_enhanced_knowledge_graph_populator(neptune_endpoint)
