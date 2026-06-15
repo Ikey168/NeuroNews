@@ -1,245 +1,217 @@
-
 ![Airflow DAG Check](https://github.com/Ikey168/NeuroNews/actions/workflows/airflow-dag-check.yml/badge.svg)
 ![MLflow CI](https://github.com/Ikey168/NeuroNews/actions/workflows/mlops-ci.yml/badge.svg)
-# NeuroNews – AI-Powered News Intelligence Pipeline
 
-📡 **Real-Time ETL Pipeline for Politics & Technology News** | 🚀 **AI-Driven Insights** | 📊 **Sentiment & Trend Analysis**
+# NeuroNews - AI-Powered News Intelligence Pipeline
 
----
-
-## 🔍 Overview
-
-**NeuroNews** is an advanced **ETL pipeline** designed to **scrape, analyze, and visualize** politics and technology news using **AI-powered NLP, sentiment analysis, and knowledge graph-based insights**. Built on **AWS cloud infrastructure**, it enables **real-time event detection, entity linking, and customizable dashboards** for deeper news intelligence.
+Real-time ETL pipeline for politics and technology news, with AI-driven insights,
+sentiment analysis, and trend detection.
 
 ---
 
-## ⚡ Features
+## Overview
 
-✅ **Automated News Scraping** – Extracts articles from multiple sources using **Scrapy + Playwright/Selenium**.
-
-✅ **AI-Powered Event Detection** – Clusters related news articles into significant political & tech events.
-
-## Documentation
-
-- [Exactly-Once Delivery Design](docs/EXACTLY_ONCE_DESIGN.md)
-
-✅ **NLP & Sentiment Analysis** – Extracts **named entities, sentiment scores, and keyword trends**.
-
-✅ **Knowledge Graph Integration** – Links entities, policies, and historical context using **AWS Neptune**.
-
-✅ **Custom Dashboards & Reports** – Generates **interactive visualizations and AI-driven summaries**.
-
-✅ **Historical News Context** – Tracks **timeline-based evolution** of news topics.
-
-✅ **API for Insights & Reporting** – REST API for accessing structured **event summaries, trends, and sentiment data**.
-
-✅ **AWS Cloud Integration** – Serverless processing with **AWS Lambda, Snowflake, S3, Step Functions & SageMaker**.
+NeuroNews is an ETL pipeline that scrapes, analyzes, and visualizes politics and
+technology news using NLP, sentiment analysis, and knowledge-graph-based insights.
+It runs entirely against local, self-hostable services - object storage, a
+document/metadata store, and a graph database - so it can be developed and tested
+without any managed cloud account. Each backend speaks a standard protocol, so the
+same code runs against a local emulator in development and a hosted equivalent in
+production by changing only an endpoint.
 
 ---
 
-## 📌 Use Cases
+## Features
 
-🔹 **Journalists & Analysts** – Quickly access AI-generated summaries and sentiment shifts.
-
-🔹 **Policy Makers & Think Tanks** – Track **legislative impact & policy evolution**.
-
-🔹 **Business Intelligence Teams** – Analyze **tech industry trends & company sentiment**.
-
-🔹 **Researchers & Data Scientists** – Leverage **knowledge graph insights & historical data**.
-
----
-
-## 🛠️ Tech Stack
-
-🔹 **Backend & Scraping**: Python, Scrapy, Selenium, Playwright, AWS Lambda
-🔹 **NLP & AI Models**: Hugging Face Transformers, AWS Comprehend, GPT-4, Pegasus
-🔹 **Database & Storage**: Snowflake, AWS Neptune (Graph DB), S3, DynamoDB
-🔹 **Event Detection & Summarization**: BERT Embeddings, k-Means Clustering
-🔹 **Visualization & Reporting**: AWS QuickSight, Streamlit, Matplotlib
+- Automated news scraping - extracts articles from multiple sources using Scrapy
+  with optional Playwright/Selenium rendering.
+- AI-powered event detection - clusters related articles into significant
+  political and technology events.
+- NLP and sentiment analysis - extracts named entities, sentiment scores, and
+  keyword/topic trends.
+- Knowledge graph integration - links entities, policies, and historical context
+  using a Gremlin-compatible graph database.
+- Custom dashboards and reports - interactive visualizations and AI-driven
+  summaries via Streamlit.
+- Historical news context - tracks the timeline-based evolution of news topics.
+- REST API for insights - structured access to event summaries, trends, and
+  sentiment data.
 
 ---
 
-## 🚀 Getting Started
+## Architecture (local-first)
 
-### 📁 Project Structure
+NeuroNews replaces managed cloud services with local, standards-compatible
+alternatives. No proprietary cloud SDK calls are required to run the stack.
 
-This project is organized for clean development and maintenance. See [`docs/PROJECT_STRUCTURE.md`](docs/PROJECT_STRUCTURE.md) for a detailed overview of the directory structure and organization guidelines.
+| Concern             | Local backend                                             |
+| ------------------- | --------------------------------------------------------- |
+| Object storage      | S3-compatible store (e.g. MinIO) via a configurable endpoint |
+| Article metadata    | DynamoDB-compatible store (e.g. DynamoDB Local)           |
+| Knowledge graph     | Gremlin server (e.g. TinkerPop/JanusGraph), `NEPTUNE_ENDPOINT` |
+| Analytics warehouse | Local Snowflake-compatible connector                      |
+| Streaming ingest    | Kafka (`bootstrap.servers` defaults to `localhost:9092`)  |
+| Vector search       | Qdrant and PostgreSQL/pgvector                            |
+| Alerting & metrics  | Local JSON/log files (no managed monitoring service)      |
+| Request firewall    | In-process WAF (SQL-injection / XSS detection)            |
+| Sentiment & translation | Local Python models and lexicons                      |
 
-### 1️⃣ Clone the Repository
+Endpoints are environment-driven (for example `S3_ENDPOINT_URL`,
+`DYNAMODB_ENDPOINT_URL`, `NEPTUNE_ENDPOINT`, `AWS_ENDPOINT_URL`), defaulting to
+localhost so the system works out of the box for development and tests.
 
-```bash
+---
 
-git clone https://github.com/your-username/newsgraph-ai.git
-cd newsgraph-ai
+## Use Cases
 
-```text
+- Journalists and analysts - quick access to AI-generated summaries and sentiment
+  shifts.
+- Policy makers and think tanks - track legislative impact and policy evolution.
+- Business intelligence teams - analyze technology trends and company sentiment.
+- Researchers and data scientists - leverage knowledge-graph insights and
+  historical data.
 
-### 2️⃣ Install Dependencies
+---
 
-```bash
+## Tech Stack
 
-pip install -r requirements.txt
+- Backend and scraping: Python, Scrapy, Selenium, Playwright, FastAPI.
+- NLP and AI: Hugging Face Transformers, sentence-transformers, scikit-learn.
+- Storage: S3-compatible object storage, DynamoDB-compatible metadata store,
+  PostgreSQL, Qdrant.
+- Event detection and summarization: embeddings, k-means / LDA clustering.
+- Visualization and reporting: Streamlit, Plotly.
+- Orchestration and MLOps: Apache Airflow, MLflow.
 
-```text
+---
 
-### 3️⃣ Docker Development (Recommended)
+## Getting Started
 
-```bash
+### Project structure
 
-# Run with Docker Compose for development
+See [`docs/PROJECT_STRUCTURE.md`](docs/PROJECT_STRUCTURE.md) for a detailed
+overview of the directory layout and organization guidelines.
 
-docker compose up --build
-
-# Run tests in containerized environment
-
-docker compose -f docker-compose.test-minimal.yml up --build --abort-on-container-exit
-
-```text
-
-### 4️⃣ Configure AWS Credentials
-
-- Add your **AWS_ACCESS_KEY_ID** & **AWS_SECRET_ACCESS_KEY**.
-
-- Ensure **IAM roles** have permissions for Lambda, S3, Snowflake, and Neptune.
-
-### 5️⃣ Run Tests and Generate Coverage Report
-
-Before running the test suite make sure the Terraform CLI is installed. On
-Ubuntu you can install it from HashiCorp's APT repository:
-
-```bash
-
-sudo apt-get install -y gnupg software-properties-common curl
-curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-sudo apt-get update && sudo apt-get install terraform
-
-```text
-
-This ensures the Terraform validation steps succeed.
+### 1. Clone the repository
 
 ```bash
-
-# Initialize and validate the Terraform code just like the CI workflow
-
-terraform -chdir=deployment/terraform init -backend=false
-terraform -chdir=deployment/terraform validate
-
-```text
-
-```bash
-
-# Run tests with coverage reporting
-
-pytest
-
-# View the coverage report
-
-# Open coverage_report/index.html in your browser
-
-```text
-
-The coverage report provides:
-
-- Line-by-line code coverage analysis
-
-- Branch coverage statistics
-
-- Untested code identification
-
-- Module-level coverage summaries
-
-### 6️⃣ Run Demo Scripts
-
-```bash
-
-# Explore available demos
-
-ls demo/
-
-# Run specific demo (example)
-
-python demo/demo_sentiment_pipeline.py
-
+git clone https://github.com/Ikey168/NeuroNews.git
+cd NeuroNews
 ```
 
-### 6.1️⃣ MLflow Autologging Demo
+### 2. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Docker development (recommended)
+
+```bash
+# Run with Docker Compose for development
+docker compose up --build
+
+# Run tests in a containerized environment
+docker compose -f docker-compose.test-minimal.yml up --build --abort-on-container-exit
+```
+
+### 4. Configure local services
+
+Set the endpoints for the local backends (sensible localhost defaults are used
+when unset):
+
+```bash
+export S3_ENDPOINT_URL=http://localhost:9000        # MinIO
+export DYNAMODB_ENDPOINT_URL=http://localhost:8000  # DynamoDB Local
+export NEPTUNE_ENDPOINT=ws://localhost:8182/gremlin # local Gremlin server
+```
+
+Any non-empty credentials are accepted by the local emulators.
+
+### 5. Run tests and generate a coverage report
+
+```bash
+# Run the test suite with coverage
+pytest
+
+# Open coverage_report/index.html in your browser to view the report
+```
+
+The coverage report provides line and branch coverage, untested-code
+identification, and module-level summaries.
+
+If you also run the Terraform validation steps, install the Terraform CLI first,
+then:
+
+```bash
+terraform -chdir=deployment/terraform init -backend=false
+terraform -chdir=deployment/terraform validate
+```
+
+### 6. Run demo scripts
+
+```bash
+# Explore available demos
+ls demo/
+
+# Run a specific demo
+python demo/demo_airflow_bootstrap.py
+```
+
+### 7. MLflow autologging demo
 
 Experience MLflow's automatic experiment tracking with scikit-learn models:
 
 ```bash
-# Run the complete MLflow autologging demonstration
+# Run the MLflow autologging demonstration
 python examples/train_sklearn_demo.py
 
-# View results in MLflow UI (if server is running)
-# Otherwise, results are stored in ./mlruns directory
+# Results are stored in ./mlruns (or viewable in the MLflow UI if running)
 
 # Explore the interactive Jupyter notebook
 jupyter notebook notebooks/mlflow_autolog_demo.ipynb
 ```
 
-**Features demonstrated:**
-- ✅ **Automatic parameter logging** - All model hyperparameters captured
-- ✅ **Metrics tracking** - Training and test performance metrics
-- ✅ **Model artifacts** - Serialized models with signatures for serving
-- ✅ **Custom logging** - Additional metrics, plots, and data artifacts
-- ✅ **Model comparison** - Easy performance comparison across experiments
-- ✅ **Model loading** - Seamless model reuse and deployment
+What gets logged automatically:
 
-**What gets logged automatically:**
-- Model hyperparameters (C, n_estimators, max_depth, etc.)
-- Training metrics and scores
-- Model artifacts (serialized models)
-- Model signatures (input/output schema)
-- Feature importance (for tree-based models)
+- Model hyperparameters (C, n_estimators, max_depth, and similar).
+- Training and test metrics.
+- Model artifacts (serialized models) and signatures (input/output schema).
+- Feature importance for tree-based models.
 
-### 7️⃣ Run the Scraper
+### 8. Run the scraper
 
 ```bash
+python src/scraper/run.py
+```
 
-python src/scraper.py
+### 9. Access dashboards and reports
 
-```text
-
-### 8️⃣ Run the NLP Pipeline
-
-```bash
-
-python src/nlp_processor.py
-
-```text
-
-### 9️⃣ Access Dashboards & Reports
-
-- AWS QuickSight for **visualizations & insights**.
-
-- REST API for **news sentiment, event tracking, and historical context**.
+- Streamlit dashboards for visualizations and insights.
+- REST API for news sentiment, event tracking, and historical context.
 
 ---
 
-## 📅 Roadmap
+## Documentation
 
-🛠 **Phase 1:** Web Scraping & Data Ingestion ✅
-
-🛠 **Phase 2:** NLP Processing & Sentiment Analysis ✅
-
-🛠 **Phase 3:** Event Detection & AI Summarization ✅
-
-🛠 **Phase 4:** Knowledge Graph & Deep Linking ✅
-
-🛠 **Phase 5:** Interactive Dashboards & API Development ✅
-
-🚀 **Future Expansion:** Predictive analytics, real-time fact-checking, blockchain-based news verification
+- [Project structure](docs/PROJECT_STRUCTURE.md)
+- [Exactly-once delivery design](docs/EXACTLY_ONCE_DESIGN.md)
 
 ---
 
-## 📬 Contact & Contributions
+## Roadmap
 
-🔗 **GitHub Issues:** Report bugs & request features.
+- Phase 1: Web scraping and data ingestion - complete.
+- Phase 2: NLP processing and sentiment analysis - complete.
+- Phase 3: Event detection and AI summarization - complete.
+- Phase 4: Knowledge graph and deep linking - complete.
+- Phase 5: Interactive dashboards and API development - complete.
+- Future: predictive analytics, real-time fact-checking, and news verification.
 
-🔗 **Pull Requests:** Contributions welcome! See **CONTRIBUTING.md** for guidelines.
+---
 
-📧 **Email:** ikey168@proton.me
+## Contact and Contributions
 
-🔖 **License:** MIT
-
+- GitHub Issues: report bugs and request features.
+- Pull Requests: contributions welcome - see CONTRIBUTING.md for guidelines.
+- Email: ikey168@proton.me
+- License: MIT
