@@ -104,3 +104,17 @@ class TestAdaptiveRateLimit:
         assert result["adaptive_rate_limit"] is True
         assert result["current_delay"] == pipe.current_delay
         assert pipe.items_processed == 1
+
+
+class TestOptimizedScrapyPipeline:
+    def test_init_and_item_to_dict(self):
+        from ingestion.scrapy_integration import OptimizedScrapyPipeline
+        pipe = OptimizedScrapyPipeline()
+        assert pipe.buffer_size == 50
+        assert pipe.items_processed == 0
+        assert pipe.config is not None
+        d = pipe._item_to_dict({"title": "T", "url": "u", "content": "c", "source": "s"})
+        assert d["title"] == "T"
+        assert d["content_length"] == 0
+        assert d["word_count"] == 0
+        pipe.thread_pool.shutdown(wait=False)
