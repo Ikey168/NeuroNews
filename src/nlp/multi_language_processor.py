@@ -12,8 +12,8 @@ from psycopg2.extras import RealDictCursor
 
 from .article_processor import ArticleProcessor
 from .language_processor import (
-    AWSTranslateService,
     LanguageDetector,
+    LocalTranslationService,
     TranslationQualityChecker,
 )
 
@@ -123,7 +123,7 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
         self.language_detector = LanguageDetector(fallback_language=target_language)
 
         if translation_enabled:
-            self.translate_service = AWSTranslateService(
+            self.translate_service = LocalTranslationService(
                 region_name=aws_region,
                 aws_access_key_id=aws_access_key_id,
                 aws_secret_access_key=aws_secret_access_key,
@@ -158,7 +158,7 @@ class MultiLanguageArticleProcessor(ArticleProcessor):
                             translation_issues TEXT,
                             translation_recommendations TEXT,
                             translated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                            translation_provider VARCHAR(50) DEFAULT 'aws_translate',
+                            translation_provider VARCHAR(50) DEFAULT 'local_passthrough',
                             UNIQUE(article_id, target_language)
                         )
                     """

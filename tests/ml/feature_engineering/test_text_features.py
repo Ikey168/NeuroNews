@@ -1,4 +1,4 @@
-from neuronews.ml.feature_engineering.text_features import extract_basic_features
+from src.ml.feature_engineering.text_features import extract_basic_features
 
 
 def test_extract_basic_features():

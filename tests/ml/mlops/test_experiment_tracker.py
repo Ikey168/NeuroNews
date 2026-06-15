@@ -1,4 +1,4 @@
-from neuronews.ml.mlops.experiment import ExperimentTracker
+from src.ml.mlops.experiment import ExperimentTracker
 
 
 def test_experiment_run_lifecycle():

@@ -169,7 +169,9 @@ class DynamoDBPermissionStore:
 
         if BOTO3_AVAILABLE:
             try:
-                self.dynamodb = boto3.resource("dynamodb", region_name=self.region)
+                from src.utils.local_cloud import get_resource
+
+                self.dynamodb = get_resource("dynamodb", region_name=self.region)
                 self.table = self.dynamodb.Table(self.table_name)
                 self._ensure_table_exists()
             except Exception as e:

@@ -8,8 +8,9 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
+
+from src.utils.local_cloud import get_client
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -85,7 +86,7 @@ class S3ArticleStorage:
                     }
                 )
 
-            self.s3_client = boto3.client("s3", **session_config)
+            self.s3_client = get_client("s3", **session_config)
 
             # Verify bucket access and create if needed
             self._ensure_bucket_exists()

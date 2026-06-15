@@ -15,7 +15,8 @@ from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
 import aiofiles
-import boto3
+
+from src.utils.local_cloud import get_client
 
 
 class AsyncPipelineProcessor:
@@ -35,7 +36,7 @@ class AsyncPipelineProcessor:
         if all(
             os.getenv(key) for key in ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]
         ):
-            self.s3_client = boto3.client("s3")
+            self.s3_client = get_client("s3")
 
     async def process_articles_async(
         self, articles: List[Dict[str, Any]]

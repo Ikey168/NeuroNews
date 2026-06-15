@@ -5,7 +5,7 @@ import pytest
 from unittest.mock import Mock, patch
 from unittest.mock import Mock, patch
 
-from neuronews.ml.models.fake_news_detection import FakeNewsDetector
+from src.ml.models.fake_news_detection import FakeNewsDetector
 
 
 class DummyClassifierList:
@@ -99,12 +99,12 @@ def test_get_model_info():
 
 def test_manual_model_loading_fallback():
     """Test manual model loading when pipeline fails."""
-    with patch('neuronews.ml.models.fake_news_detection.pipeline') as mock_pipeline:
+    with patch('src.ml.models.fake_news_detection.pipeline') as mock_pipeline:
         # Make pipeline fail
         mock_pipeline.side_effect = Exception("Pipeline failed")
         
-        with patch('neuronews.ml.models.fake_news_detection.AutoTokenizer') as mock_tokenizer:
-            with patch('neuronews.ml.models.fake_news_detection.AutoModelForSequenceClassification') as mock_model:
+        with patch('src.ml.models.fake_news_detection.AutoTokenizer') as mock_tokenizer:
+            with patch('src.ml.models.fake_news_detection.AutoModelForSequenceClassification') as mock_model:
                 # Mock successful manual loading
                 mock_tokenizer.from_pretrained.return_value = Mock()
                 mock_model_instance = Mock()
@@ -121,8 +121,8 @@ def test_manual_model_loading_fallback():
 
 def test_complete_model_initialization_failure():
     """Test complete model initialization failure."""
-    with patch('neuronews.ml.models.fake_news_detection.pipeline') as mock_pipeline:
-        with patch('neuronews.ml.models.fake_news_detection.AutoTokenizer') as mock_tokenizer:
+    with patch('src.ml.models.fake_news_detection.pipeline') as mock_pipeline:
+        with patch('src.ml.models.fake_news_detection.AutoTokenizer') as mock_tokenizer:
             # Make both pipeline and manual loading fail
             mock_pipeline.side_effect = Exception("Pipeline failed")
             mock_tokenizer.from_pretrained.side_effect = Exception("Manual loading failed")
@@ -136,7 +136,7 @@ def test_complete_model_initialization_failure():
 
 def test_transformer_prediction_error():
     """Test transformer prediction error handling."""
-    with patch('neuronews.ml.models.fake_news_detection.pipeline') as mock_pipeline:
+    with patch('src.ml.models.fake_news_detection.pipeline') as mock_pipeline:
         mock_classifier = Mock()
         mock_classifier.side_effect = Exception("Prediction failed")
         mock_pipeline.return_value = mock_classifier

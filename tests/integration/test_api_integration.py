@@ -73,7 +73,7 @@ class MockRBACSystem:
     def check_permission(self, user, action, resource):
         return True
 
-class MockAWSWAFManager:
+class MockLocalWAFManager:
     def check_request(self, request):
         return True
 
@@ -101,13 +101,13 @@ sys.path.insert(0, '/workspaces/NeuroNews')
 # Import core API modules for testing
 try:
     from src.api import app as main_app
-    from src.api.aws_rate_limiting import APIGatewayManager, CloudWatchMetrics
+    from src.api.aws_rate_limiting import LocalUsagePlanManager, LocalMetricsRecorder
     from src.api.middleware.rate_limit_middleware import RateLimitMiddleware
     from src.api.auth.jwt_auth import JWTAuth
     from src.api.auth.api_key_manager import APIKeyManager
     from src.api.rbac.rbac_system import RBACSystem
     from src.api.error_handlers import ErrorHandlers
-    from src.api.security.aws_waf_manager import AWSWAFManager
+    from src.api.security.local_waf_manager import LocalWAFManager
 except ImportError as e:
     print(f"Import warning: {e}")
 
@@ -246,7 +246,7 @@ class TestAWSRateLimitingComprehensive:
 
     @pytest.mark.asyncio
     async def test_api_gateway_manager_complete_workflow(self):
-        """Test complete APIGatewayManager workflow."""
+        """Test complete LocalUsagePlanManager workflow."""
         with patch('src.api.aws_rate_limiting.boto3') as mock_boto3:
             mock_client = Mock()
             mock_boto3.client.return_value = mock_client
@@ -258,7 +258,7 @@ class TestAWSRateLimitingComprehensive:
             mock_client.get_usage_plans.return_value = {'items': []}
             mock_client.get_api_keys.return_value = {'items': []}
             
-            manager = APIGatewayManager()
+            manager = LocalUsagePlanManager()
             
             # Test complete workflow
             plans = await manager.create_usage_plans()
@@ -269,12 +269,12 @@ class TestAWSRateLimitingComprehensive:
 
     @pytest.mark.asyncio
     async def test_cloudwatch_metrics_complete_workflow(self):
-        """Test complete CloudWatchMetrics workflow."""
+        """Test complete LocalMetricsRecorder workflow."""
         with patch('src.api.aws_rate_limiting.boto3') as mock_boto3:
             mock_client = Mock()
             mock_boto3.client.return_value = mock_client
             
-            metrics = CloudWatchMetrics()
+            metrics = LocalMetricsRecorder()
             
             # Test metrics workflow
             await metrics.put_rate_limit_metrics("user", "tier", 100, 5)
@@ -345,13 +345,13 @@ class TestMiddlewareModules:
 class TestSecurityModules:
     """Test security modules for comprehensive coverage."""
 
-    @patch('src.api.security.aws_waf_manager.boto3')
-    def test_aws_waf_manager_coverage(self, mock_boto3):
-        """Test AWSWAFManager comprehensive coverage."""
+    @patch('src.api.security.local_waf_manager.boto3')
+    def test_local_waf_manager_coverage(self, mock_boto3):
+        """Test LocalWAFManager comprehensive coverage."""
         mock_client = Mock()
         mock_boto3.client.return_value = mock_client
         
-        waf_manager = AWSWAFManager()
+        waf_manager = LocalWAFManager()
         
         # Test WAF operations
         assert hasattr(waf_manager, 'region')
@@ -582,7 +582,7 @@ class TestErrorHandlingPaths:
         # Test with boto3 errors
         mock_boto3.client.side_effect = Exception("AWS Error")
         
-        manager = APIGatewayManager()
+        manager = LocalUsagePlanManager()
         assert manager.client is None
 
 

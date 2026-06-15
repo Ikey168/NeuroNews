@@ -15,7 +15,7 @@ from typing import Any, Dict, Optional
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from src.api.security.aws_waf_manager import (
+from src.api.security.local_waf_manager import (
     ActionType,
     SecurityEvent,
     ThreatType,

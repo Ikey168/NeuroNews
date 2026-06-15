@@ -348,8 +348,8 @@ class ProxyRotationManager:
         for proxy in proxies_to_remove:
             self.proxies.remove(proxy)
             key = "{0}:{1}".format(proxy.host, proxy.port)
-            del self.proxy_stats[key]
-            del self.active_connections[key]
+            self.proxy_stats.pop(key, None)
+            self.active_connections.pop(key, None)
 
         if removed_count > 0:
             self.logger.info("Removed {0} unhealthy proxies".format(removed_count))

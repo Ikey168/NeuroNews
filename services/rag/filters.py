@@ -291,11 +291,11 @@ class RAGFiltersService:
         if date_input is None:
             return None
             
-        if isinstance(date_input, date):
-            return date_input
-        
         if isinstance(date_input, datetime):
             return date_input.date()
+
+        if isinstance(date_input, date):
+            return date_input
         
         if isinstance(date_input, str):
             # Try common date formats

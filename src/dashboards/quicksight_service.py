@@ -1,36 +1,69 @@
 """
-AWS QuickSight Dashboard Service for News Insights.
+Local Dashboard Service for News Insights.
 
-#49: Develop AWS QuickSight Dashboard for News Insights.
-This module implements Issue
+This module implements Issue #49 (originally "Develop AWS QuickSight Dashboard
+for News Insights") using a LOCAL, file-based backend instead of AWS QuickSight.
+
+AWS QuickSight is a managed BI service with no free local equivalent, so this
+module persists dashboard / dataset / analysis / data-source definitions as JSON
+files on local disk. No AWS account and no boto3/botocore are required.
 
 Key Features:
-1. Set up AWS QuickSight for interactive visualization
-2. Create dashboard layout for:
+1. Set up a local dashboard backend for interactive visualization metadata
+2. Create dashboard layout definitions for:
    - Trending topics by sentiment
    - Knowledge graph entity relationships
    - Event timeline analysis
 3. Enable filtering by date, entity, and sentiment
-4. Implement real-time updates from Snowflake
+4. Persist definitions so describe/list/delete operate on local files
+
+Local store layout (under NEURONEWS_DASHBOARDS_DIR, default ./data/dashboards):
+    <root>/data_sources/<id>.json
+    <root>/data_sets/<id>.json
+    <root>/analyses/<id>.json
+    <root>/dashboards/<id>.json
 
 Dependencies:
-- boto3 for AWS QuickSight API
+- stdlib only (json, os, uuid, datetime)
 - src.database.snowflake_analytics_connector for data source integration
 """
 
+import json
 import logging
 import os
+import uuid
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-import boto3
-
 logger = logging.getLogger(__name__)
 
+DEFAULT_DASHBOARDS_DIR = "./data/dashboards"
 
-class QuickSightResourceType(Enum):
-    """QuickSight resource types."""
+
+def _now_iso() -> str:
+    """Return the current UTC time as an ISO-8601 string."""
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _get_dashboards_dir() -> str:
+    """Return the local dashboards root directory.
+
+    Controlled by NEURONEWS_DASHBOARDS_DIR (default ./data/dashboards).
+    """
+    return os.environ.get("NEURONEWS_DASHBOARDS_DIR", DEFAULT_DASHBOARDS_DIR)
+
+
+class DashboardResourceNotFoundError(Exception):
+    """Raised when a requested local resource definition does not exist.
+
+    Replaces botocore's ResourceNotFoundException.
+    """
+
+
+class LocalResourceType(Enum):
+    """Local dashboard resource types."""
 
     DATA_SOURCE = "data_source"
     DATA_SET = "data_set"
@@ -49,17 +82,20 @@ class DashboardType(Enum):
 
 
 @dataclass
-class QuickSightConfig:
-    """Configuration for QuickSight service."""
+class LocalDashboardConfig:
+    """Configuration for the local dashboard service."""
 
-    aws_account_id: str
-    region: str = "us-east-1"
+    aws_account_id: str = "local"
+    region: str = "local"
     namespace: str = "default"
     data_source_id: str = "neuronews-snowflake-ds"
     data_source_name: str = "NeuroNews Snowflake Data Source"
     dashboard_prefix: str = "NeuroNews"
 
-    # Snowflake connection details
+    # Local storage root for persisted definitions
+    storage_dir: Optional[str] = None
+
+    # Snowflake connection details (kept for dataset/data-source metadata)
     snowflake_account: Optional[str] = None
     snowflake_warehouse: str = "ANALYTICS_WH"
     snowflake_database: str = "NEURONEWS"
@@ -68,11 +104,12 @@ class QuickSightConfig:
     snowflake_password: Optional[str] = None
 
     @classmethod
-    def from_env(cls) -> "QuickSightConfig":
+    def from_env(cls) -> "LocalDashboardConfig":
         """Create configuration from environment variables."""
         return cls(
-            aws_account_id=os.getenv("AWS_ACCOUNT_ID", ""),
-            region=os.getenv("AWS_REGION", "us-east-1"),
+            aws_account_id=os.getenv("AWS_ACCOUNT_ID", "local"),
+            region=os.getenv("AWS_REGION", "local"),
+            storage_dir=os.getenv("NEURONEWS_DASHBOARDS_DIR"),
             snowflake_account=os.getenv("SNOWFLAKE_ACCOUNT"),
             snowflake_warehouse=os.getenv("SNOWFLAKE_WAREHOUSE", "ANALYTICS_WH"),
             snowflake_database=os.getenv("SNOWFLAKE_DATABASE", "NEURONEWS"),
@@ -94,31 +131,135 @@ class DashboardLayout:
     refresh_schedule: Optional[Dict[str, Any]] = None
 
 
-class QuickSightDashboardService:
-    """Service for managing AWS QuickSight dashboards for news insights."""
+class LocalDashboardService:
+    """Service for managing local, file-based dashboards for news insights.
 
-    def __init__(self, config: Optional[QuickSightConfig] = None):
-        """Initialize QuickSight service."""
-        self.config = config or QuickSightConfig.from_env()
+    This is a local replacement for the former AWS QuickSight-backed service.
+    All create/describe/list/delete operations read and write JSON definition
+    files under the configured storage directory; no network calls are made.
+    """
 
-        # Initialize AWS clients
-        try:
-            self.quicksight_client = boto3.client(
-                "quicksight", region_name=self.config.region
-            )
-            self.sts_client = boto3.client("sts")
-            logger.info("QuickSight service initialized successfully")
-        except Exception as e:
-            logger.error("Failed to initialize AWS clients: {0}".format(e))
-            raise
+    def __init__(self, config: Optional[LocalDashboardConfig] = None):
+        """Initialize the local dashboard service."""
+        self.config = config or LocalDashboardConfig.from_env()
+
+        # Resolve and create the local storage root + subdirectories
+        self.storage_dir = self.config.storage_dir or _get_dashboards_dir()
+        self._subdirs = {
+            LocalResourceType.DATA_SOURCE: os.path.join(
+                self.storage_dir, "data_sources"
+            ),
+            LocalResourceType.DATA_SET: os.path.join(self.storage_dir, "data_sets"),
+            LocalResourceType.ANALYSIS: os.path.join(self.storage_dir, "analyses"),
+            LocalResourceType.DASHBOARD: os.path.join(self.storage_dir, "dashboards"),
+        }
+        for path in self._subdirs.values():
+            os.makedirs(path, exist_ok=True)
+
+        logger.info(
+            "Local dashboard service initialized (storage_dir=%s)", self.storage_dir
+        )
 
         # Validate configuration
         self._validate_config()
 
+    # ------------------------------------------------------------------
+    # Local store helpers (replacements for boto3 quicksight/sts clients)
+    # ------------------------------------------------------------------
+    def _resource_path(self, resource_type: LocalResourceType, resource_id: str) -> str:
+        """Return the JSON file path for a given resource."""
+        return os.path.join(self._subdirs[resource_type], f"{resource_id}.json")
+
+    def _local_arn(self, resource_type: LocalResourceType, resource_id: str) -> str:
+        """Build a synthetic local ARN-like identifier for a resource."""
+        return "local:{0}:{1}:{2}".format(
+            self.config.namespace, resource_type.value, resource_id
+        )
+
+    def _write_resource(
+        self,
+        resource_type: LocalResourceType,
+        resource_id: str,
+        definition: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Persist a resource definition to disk and return its stored record."""
+        path = self._resource_path(resource_type, resource_id)
+        existing_created = None
+        if os.path.exists(path):
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    existing_created = json.load(f).get("created_time")
+            except (OSError, ValueError):
+                existing_created = None
+
+        now = _now_iso()
+        record = {
+            "id": resource_id,
+            "resource_type": resource_type.value,
+            "arn": self._local_arn(resource_type, resource_id),
+            "uuid": str(uuid.uuid4()),
+            "created_time": existing_created or now,
+            "last_updated_time": now,
+            "definition": definition,
+        }
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(record, f, indent=2, default=str)
+        return record
+
+    def _read_resource(
+        self, resource_type: LocalResourceType, resource_id: str
+    ) -> Dict[str, Any]:
+        """Read a resource definition from disk.
+
+        Raises DashboardResourceNotFoundError if it does not exist.
+        """
+        path = self._resource_path(resource_type, resource_id)
+        if not os.path.exists(path):
+            raise DashboardResourceNotFoundError(
+                "{0} '{1}' not found".format(resource_type.value, resource_id)
+            )
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    def _resource_exists(
+        self, resource_type: LocalResourceType, resource_id: str
+    ) -> bool:
+        """Return True if a resource definition file exists."""
+        return os.path.exists(self._resource_path(resource_type, resource_id))
+
+    def _list_resources(
+        self, resource_type: LocalResourceType
+    ) -> List[Dict[str, Any]]:
+        """List all persisted resources of a given type."""
+        directory = self._subdirs[resource_type]
+        records: List[Dict[str, Any]] = []
+        if not os.path.isdir(directory):
+            return records
+        for name in sorted(os.listdir(directory)):
+            if not name.endswith(".json"):
+                continue
+            try:
+                with open(os.path.join(directory, name), "r", encoding="utf-8") as f:
+                    records.append(json.load(f))
+            except (OSError, ValueError):
+                continue
+        return records
+
+    def _delete_resource(
+        self, resource_type: LocalResourceType, resource_id: str
+    ) -> bool:
+        """Delete a persisted resource. Returns True if a file was removed."""
+        path = self._resource_path(resource_type, resource_id)
+        if not os.path.exists(path):
+            raise DashboardResourceNotFoundError(
+                "{0} '{1}' not found".format(resource_type.value, resource_id)
+            )
+        os.remove(path)
+        return True
+
     def _validate_config(self) -> None:
-        """Validate QuickSight configuration."""
-        required_fields = ["aws_account_id",
-            "snowflake_account", "snowflake_username"]
+        """Validate dashboard configuration."""
+        required_fields = ["snowflake_account", "snowflake_username"]
         missing_fields = [
             field for field in required_fields if not getattr(self.config, field)
         ]
@@ -129,13 +270,13 @@ class QuickSightDashboardService:
             logger.info(
                 "Some functionality may be limited without full configuration")
 
-    async def setup_quicksight_resources(self) -> Dict[str, Any]:
+    async def setup_dashboard_resources(self) -> Dict[str, Any]:
         """
-        Set up AWS QuickSight for interactive visualization.
+        Set up the local dashboard backend for interactive visualization.
 
         This implements the first requirement of Issue #49.
         """
-        logger.info("Setting up QuickSight resources...")
+        logger.info("Setting up local dashboard resources...")
 
         setup_results = {
             "data_source_created": False,
@@ -145,7 +286,7 @@ class QuickSightDashboardService:
             "errors": [],
         }
         try:
-            # 1. Create Snowflake data source
+            # 1. Create Snowflake data source definition
             data_source_result = await self._create_snowflake_data_source()
             setup_results["data_source_created"] = data_source_result["success"]
 
@@ -173,21 +314,21 @@ class QuickSightDashboardService:
                 d["name"] for d in dashboards if d["success"]
             ]
 
-            logger.info("QuickSight setup completed successfully")
+            logger.info("Local dashboard setup completed successfully")
             return setup_results
 
         except Exception as e:
             logger.error(
-                "Failed to set up QuickSight resources: {0}".format(e))
+                "Failed to set up local dashboard resources: {0}".format(e))
             setup_results["errors"].append(str(e))
             return setup_results
 
     async def _create_snowflake_data_source(self) -> Dict[str, Any]:
-        """Create Snowflake data source in QuickSight."""
+        """Create (persist) a Snowflake data source definition."""
         try:
-            data_source_params = {
-                "AwsAccountId": self.config.aws_account_id,
-                "DataSourceId": self.config.data_source_id,
+            data_source_id = self.config.data_source_id
+            definition = {
+                "DataSourceId": data_source_id,
                 "Name": self.config.data_source_name,
                 "Type": "SNOWFLAKE",
                 "DataSourceParameters": {
@@ -197,60 +338,29 @@ class QuickSightDashboardService:
                         "Warehouse": self.config.snowflake_warehouse,
                     }
                 },
-                "Credentials": {
-                    "CredentialPair": {
-                        "Username": self.config.snowflake_username,
-                        "Password": self.config.snowflake_password,
-                    }
-                },
-                "Permissions": [
-                    {
-                        "Principal": "arn:aws:quicksight:{0}:{1}:user/{2}/admin".format(
-                            self.config.region,
-                            self.config.aws_account_id,
-                            self.config.namespace,
-                        ),
-                        "Actions": [
-                            "quicksight:DescribeDataSource",
-                            "quicksight:DescribeDataSourcePermissions",
-                            "quicksight:PassDataSource",
-                            "quicksight:UpdateDataSource",
-                            "quicksight:DeleteDataSource",
-                            "quicksight:UpdateDataSourcePermissions",
-                        ],
-                    }
-                ],
                 "SslProperties": {"DisableSsl": False},
             }
 
             # Check if data source already exists
-            try:
-                self.quicksight_client.describe_data_source(
-                    AwsAccountId=self.config.aws_account_id,
-                    DataSourceId=self.config.data_source_id,
-                )
+            if self._resource_exists(LocalResourceType.DATA_SOURCE, data_source_id):
                 logger.info("Snowflake data source already exists")
                 return {
                     "success": True,
                     "action": "already_exists",
-                    "data_source_id": self.config.data_source_id,
+                    "data_source_id": data_source_id,
                 }
-            except self.quicksight_client.exceptions.ResourceNotFoundException:
-                pass
 
-            # Create new data source
-            response = self.quicksight_client.create_data_source(
-                **data_source_params)
-
-            logger.info(
-                "Created Snowflake data source: {0}".format(
-                    self.config.data_source_id)
+            # Create new data source definition
+            record = self._write_resource(
+                LocalResourceType.DATA_SOURCE, data_source_id, definition
             )
+
+            logger.info("Created Snowflake data source: {0}".format(data_source_id))
             return {
                 "success": True,
                 "action": "created",
-                "data_source_id": self.config.data_source_id,
-                "arn": response.get("Arn"),
+                "data_source_id": data_source_id,
+                "arn": record["arn"],
             }
 
         except Exception as e:
@@ -259,7 +369,7 @@ class QuickSightDashboardService:
             return {"success": False, "error": str(e)}
 
     async def _create_datasets(self) -> List[Dict[str, Any]]:
-        """Create datasets for different dashboard views."""
+        """Create (persist) dataset definitions for different dashboard views."""
         datasets_to_create = [
             {
                 "id": "sentiment_trends_dataset",
@@ -288,12 +398,8 @@ class QuickSightDashboardService:
                 dataset_id = dataset_config["id"]
 
                 # Check if dataset already exists
-                try:
-                    self.quicksight_client.describe_data_set(
-                        AwsAccountId=self.config.aws_account_id, DataSetId=dataset_id
-                    )
-                    logger.info(
-                        "Dataset {0} already exists".format(dataset_id))
+                if self._resource_exists(LocalResourceType.DATA_SET, dataset_id):
+                    logger.info("Dataset {0} already exists".format(dataset_id))
                     results.append(
                         {
                             "success": True,
@@ -303,19 +409,16 @@ class QuickSightDashboardService:
                         }
                     )
                     continue
-                except self.quicksight_client.exceptions.ResourceNotFoundException:
-                    pass
 
-                # Create dataset
-                dataset_params = {
-                    "AwsAccountId": self.config.aws_account_id,
+                # Create dataset definition
+                definition = {
                     "DataSetId": dataset_id,
                     "Name": dataset_config["name"],
+                    "Description": dataset_config["description"],
                     "PhysicalTableMap": {
                         "CustomSql": {
-                            "DataSourceArn": "arn:aws:quicksight:{0}:{1}:datasource/{2}".format(
-                                self.config.region,
-                                self.config.aws_account_id,
+                            "DataSourceArn": self._local_arn(
+                                LocalResourceType.DATA_SOURCE,
                                 self.config.data_source_id,
                             ),
                             "Name": dataset_config["name"],
@@ -324,30 +427,10 @@ class QuickSightDashboardService:
                         },
                     },
                     "ImportMode": "DIRECT_QUERY",
-                    "Permissions": [
-                        {
-                            "Principal": "arn:aws:quicksight:{0}:{1}:user/{2}/admin".format(
-                                self.config.region,
-                                self.config.aws_account_id,
-                                self.config.namespace,
-                            ),
-                            "Actions": [
-                                "quicksight:DescribeDataSet",
-                                "quicksight:DescribeDataSetPermissions",
-                                "quicksight:PassDataSet",
-                                "quicksight:DescribeIngestion",
-                                "quicksight:ListIngestions",
-                                "quicksight:UpdateDataSet",
-                                "quicksight:DeleteDataSet",
-                                "quicksight:CreateIngestion",
-                                "quicksight:CancelIngestion",
-                                "quicksight:UpdateDataSetPermissions",
-                            ],
-                        }
-                    ],
                 }
-                response = self.quicksight_client.create_data_set(
-                    **dataset_params)
+                record = self._write_resource(
+                    LocalResourceType.DATA_SET, dataset_id, definition
+                )
 
                 logger.info("Created dataset: {0}".format(dataset_id))
                 results.append(
@@ -356,7 +439,7 @@ class QuickSightDashboardService:
                         "action": "created",
                         "name": dataset_config["name"],
                         "id": dataset_id,
-                        "arn": response.get("Arn"),
+                        "arn": record["arn"],
                     }
                 )
 
@@ -514,7 +597,7 @@ class QuickSightDashboardService:
             return []
 
     async def _create_analyses(self) -> List[Dict[str, Any]]:
-        """Create QuickSight analyses for different dashboard types."""
+        """Create (persist) analysis definitions for different dashboard types."""
         analyses_to_create = [
             {
                 "id": "sentiment_trends_analysis",
@@ -543,12 +626,8 @@ class QuickSightDashboardService:
                 analysis_id = analysis_config["id"]
 
                 # Check if analysis already exists
-                try:
-                    self.quicksight_client.describe_analysis(
-                        AwsAccountId=self.config.aws_account_id, AnalysisId=analysis_id
-                    )
-                    logger.info(
-                        "Analysis {0} already exists".format(analysis_id))
+                if self._resource_exists(LocalResourceType.ANALYSIS, analysis_id):
+                    logger.info("Analysis {0} already exists".format(analysis_id))
                     results.append(
                         {
                             "success": True,
@@ -558,36 +637,17 @@ class QuickSightDashboardService:
                         }
                     )
                     continue
-                except self.quicksight_client.exceptions.ResourceNotFoundException:
-                    pass
 
                 # Create analysis with basic definition
-                analysis_params = {
-                    "AwsAccountId": self.config.aws_account_id,
+                definition = {
                     "AnalysisId": analysis_id,
                     "Name": analysis_config["name"],
+                    "Description": analysis_config["description"],
                     "Definition": self._get_analysis_definition(analysis_config),
-                    "Permissions": [
-                        {
-                            "Principal": "arn:aws:quicksight:{0}:{1}:user/{2}/admin".format(
-                                self.config.region,
-                                self.config.aws_account_id,
-                                self.config.namespace,
-                            ),
-                            "Actions": [
-                                "quicksight:RestoreAnalysis",
-                                "quicksight:UpdateAnalysisPermissions",
-                                "quicksight:DeleteAnalysis",
-                                "quicksight:DescribeAnalysisPermissions",
-                                "quicksight:QueryAnalysis",
-                                "quicksight:DescribeAnalysis",
-                                "quicksight:UpdateAnalysis",
-                            ],
-                        }
-                    ],
                 }
-                response = self.quicksight_client.create_analysis(
-                    **analysis_params)
+                record = self._write_resource(
+                    LocalResourceType.ANALYSIS, analysis_id, definition
+                )
 
                 logger.info("Created analysis: {0}".format(analysis_id))
                 results.append(
@@ -596,7 +656,7 @@ class QuickSightDashboardService:
                         "action": "created",
                         "name": analysis_config["name"],
                         "id": analysis_id,
-                        "arn": response.get("Arn"),
+                        "arn": record["arn"],
                     }
                 )
 
@@ -624,8 +684,8 @@ class QuickSightDashboardService:
         return {
             "DataSetIdentifierDeclarations": [
                 {
-                    "DataSetArn": "arn:aws:quicksight:{0}:{1}:dataset/{2}".format(
-                        self.config.region, self.config.aws_account_id, dataset_id
+                    "DataSetArn": self._local_arn(
+                        LocalResourceType.DATA_SET, dataset_id
                     ),
                     "Identifier": dataset_id,
                 }
@@ -816,7 +876,7 @@ class QuickSightDashboardService:
         ]
 
     async def _create_dashboards(self) -> List[Dict[str, Any]]:
-        """Create QuickSight dashboards from analyses."""
+        """Create (persist) dashboard definitions from analyses."""
         dashboards_to_create = [
             {
                 "id": "neuronews_comprehensive_dashboard",
@@ -837,14 +897,8 @@ class QuickSightDashboardService:
                 dashboard_id = dashboard_config["id"]
 
                 # Check if dashboard already exists
-                try:
-                    # existing = self.quicksight_client.describe_dashboard(  # unused variable
-                    self.quicksight_client.describe_dashboard(
-                        AwsAccountId=self.config.aws_account_id,
-                        DashboardId=dashboard_id,
-                    )
-                    logger.info(
-                        "Dashboard {0} already exists".format(dashboard_id))
+                if self._resource_exists(LocalResourceType.DASHBOARD, dashboard_id):
+                    logger.info("Dashboard {0} already exists".format(dashboard_id))
                     results.append(
                         {
                             "success": True,
@@ -854,37 +908,18 @@ class QuickSightDashboardService:
                         }
                     )
                     continue
-                except self.quicksight_client.exceptions.ResourceNotFoundException:
-                    pass
 
-                # Create dashboard from analyses
-                dashboard_params = {
-                    "AwsAccountId": self.config.aws_account_id,
+                # Create dashboard definition from analyses
+                definition = {
                     "DashboardId": dashboard_id,
                     "Name": dashboard_config["name"],
+                    "Description": dashboard_config["description"],
+                    "AnalysisIds": dashboard_config["analysis_ids"],
                     "Definition": self._get_dashboard_definition(dashboard_config),
-                    "Permissions": [
-                        {
-                            "Principal": "arn:aws:quicksight:{0}:{1}:user/{2}/admin".format(
-                                self.config.region,
-                                self.config.aws_account_id,
-                                self.config.namespace,
-                            ),
-                            "Actions": [
-                                "quicksight:DescribeDashboard",
-                                "quicksight:ListDashboardVersions",
-                                "quicksight:UpdateDashboardPermissions",
-                                "quicksight:QueryDashboard",
-                                "quicksight:UpdateDashboard",
-                                "quicksight:DeleteDashboard",
-                                "quicksight:DescribeDashboardPermissions",
-                                "quicksight:UpdateDashboardPublishedVersion",
-                            ],
-                        }
-                    ],
                 }
-                response = self.quicksight_client.create_dashboard(
-                    **dashboard_params)
+                record = self._write_resource(
+                    LocalResourceType.DASHBOARD, dashboard_id, definition
+                )
 
                 logger.info("Created dashboard: {0}".format(dashboard_id))
                 results.append(
@@ -893,7 +928,7 @@ class QuickSightDashboardService:
                         "action": "created",
                         "name": dashboard_config["name"],
                         "id": dashboard_id,
-                        "arn": response.get("Arn"),
+                        "arn": record["arn"],
                     }
                 )
 
@@ -919,20 +954,20 @@ class QuickSightDashboardService:
         return {
             "DataSetIdentifierDeclarations": [
                 {
-                    "DataSetArn": "arn:aws:quicksight:{0}:{1}:dataset/sentiment_trends_dataset".format(
-                        self.config.region, self.config.aws_account_id
+                    "DataSetArn": self._local_arn(
+                        LocalResourceType.DATA_SET, "sentiment_trends_dataset"
                     ),
                     "Identifier": "sentiment_trends_dataset",
                 },
                 {
-                    "DataSetArn": "arn:aws:quicksight:{0}:{1}:dataset/entity_relationships_dataset".format(
-                        self.config.region, self.config.aws_account_id
+                    "DataSetArn": self._local_arn(
+                        LocalResourceType.DATA_SET, "entity_relationships_dataset"
                     ),
                     "Identifier": "entity_relationships_dataset",
                 },
                 {
-                    "DataSetArn": "arn:aws:quicksight:{0}:{1}:dataset/event_timeline_dataset".format(
-                        self.config.region, self.config.aws_account_id
+                    "DataSetArn": self._local_arn(
+                        LocalResourceType.DATA_SET, "event_timeline_dataset"
                     ),
                     "Identifier": "event_timeline_dataset",
                 },
@@ -1014,16 +1049,14 @@ class QuickSightDashboardService:
             # Create specific dashboard for this layout
             dashboard_id = "neuronews_{0}_dashboard".format(layout_type.value)
 
-            dashboard_params = {
-                "AwsAccountId": self.config.aws_account_id,
+            definition = {
                 "DashboardId": dashboard_id,
                 "Name": layout_config.name,
                 "Definition": {
                     "DataSetIdentifierDeclarations": [
                         {
-                            "DataSetArn": "arn:aws:quicksight:{0}:{1}:dataset/{2}".format(
-                                self.config.region,
-                                self.config.aws_account_id,
+                            "DataSetArn": self._local_arn(
+                                LocalResourceType.DATA_SET,
                                 self._get_dataset_for_layout(layout_type),
                             ),
                             "Identifier": self._get_dataset_for_layout(layout_type),
@@ -1038,26 +1071,10 @@ class QuickSightDashboardService:
                         }
                     ],
                 },
-                "Permissions": [
-                    {
-                        "Principal": "arn:aws:quicksight:{0}:{1}:user/{2}/admin".format(
-                            self.config.region,
-                            self.config.aws_account_id,
-                            self.config.namespace,
-                        ),
-                        "Actions": [
-                            "quicksight:DescribeDashboard",
-                            "quicksight:ListDashboardVersions",
-                            "quicksight:UpdateDashboardPermissions",
-                            "quicksight:QueryDashboard",
-                            "quicksight:UpdateDashboard",
-                            "quicksight:DeleteDashboard",
-                        ],
-                    }
-                ],
             }
-            response = self.quicksight_client.create_dashboard(
-                **dashboard_params)
+            record = self._write_resource(
+                LocalResourceType.DASHBOARD, dashboard_id, definition
+            )
 
             logger.info("Created {0} dashboard successfully".format(
                 layout_type.value))
@@ -1065,7 +1082,7 @@ class QuickSightDashboardService:
                 "success": True,
                 "dashboard_id": dashboard_id,
                 "dashboard_url": self._get_dashboard_url(dashboard_id),
-                "arn": response.get("Arn"),
+                "arn": record["arn"],
             }
 
         except Exception as e:
@@ -1170,14 +1187,15 @@ class QuickSightDashboardService:
 
     async def setup_real_time_updates(self) -> Dict[str, Any]:
         """
-        Implement real-time updates from Snowflake.
+        Configure (local) refresh schedules for datasets.
 
-        This implements the fourth requirement of Issue #49.
+        This implements the fourth requirement of Issue #49. With the local
+        backend there is no managed ingestion, so refresh metadata is simply
+        recorded on each dataset definition.
         """
-        logger.info("Setting up real-time updates from Snowflake...")
+        logger.info("Setting up local refresh schedules...")
 
         try:
-            # Set up refresh schedules for datasets
             refresh_results = []
 
             datasets = [
@@ -1188,26 +1206,22 @@ class QuickSightDashboardService:
 
             for dataset_id in datasets:
                 try:
-                    # Create refresh schedule for dataset
-                    # schedule_id = "{0}_refresh_schedule".format(dataset_id)  # unused variable
-
-                    # Note: refresh_params would be used for actual QuickSight scheduling
-                    # refresh_params = {
-                    #     "DataSetId": dataset_id,
-                    #     "AwsAccountId": self.config.aws_account_id,
-                    #     "Schedule": {
-                    #         "ScheduleId": schedule_id,
-                    #         "ScheduleFrequency": {
-                    #             "Interval": "HOURLY"  # Refresh every hour
-                    #         },
-                    #         "RefreshType": "INCREMENTAL_REFRESH",
-                    #         "StartAfterDateTime": datetime.now(),
-                    #     },
-                    # }
-
-                    # Note: This is a simplified implementation
-                    # In practice, you would use QuickSight's ingestion'
-                    # scheduling
+                    # Record refresh metadata on the dataset definition if present
+                    if self._resource_exists(
+                        LocalResourceType.DATA_SET, dataset_id
+                    ):
+                        record = self._read_resource(
+                            LocalResourceType.DATA_SET, dataset_id
+                        )
+                        definition = record.get("definition", {})
+                        definition["RefreshSchedule"] = {
+                            "Interval": "HOURLY",
+                            "RefreshType": "INCREMENTAL_REFRESH",
+                            "ConfiguredAt": _now_iso(),
+                        }
+                        self._write_resource(
+                            LocalResourceType.DATA_SET, dataset_id, definition
+                        )
 
                     refresh_results.append(
                         {
@@ -1227,7 +1241,7 @@ class QuickSightDashboardService:
                             "status": "failed", "error": str(e)}
                     )
 
-            logger.info("Real-time updates setup completed")
+            logger.info("Local refresh schedule setup completed")
             return {
                 "success": True,
                 "refresh_schedules": refresh_results,
@@ -1239,48 +1253,49 @@ class QuickSightDashboardService:
             return {"success": False, "error": str(e)}
 
     def _get_dashboard_url(self, dashboard_id: str) -> str:
-        """Get QuickSight dashboard URL."""
-        return "https://{0}.quicksight.aws.amazon.com/sn/dashboards/{1}".format(
-            self.config.region, dashboard_id
+        """Get the local dashboard reference (file path URI)."""
+        path = os.path.abspath(
+            self._resource_path(LocalResourceType.DASHBOARD, dashboard_id)
         )
+        return "file://{0}".format(path)
 
     async def get_dashboard_info(
         self, dashboard_id: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Get information about created dashboards."""
+        """Get information about created (local) dashboards."""
         try:
             if dashboard_id:
                 # Get specific dashboard info
-                response = self.quicksight_client.describe_dashboard(
-                    AwsAccountId=self.config.aws_account_id, DashboardId=dashboard_id
+                record = self._read_resource(
+                    LocalResourceType.DASHBOARD, dashboard_id
                 )
+                definition = record.get("definition", {})
                 return {
                     "success": True,
                     "dashboard": {
                         "id": dashboard_id,
-                        "name": response["Dashboard"]["Name"],
-                        "status": response["Dashboard"]["Version"]["Status"],
+                        "name": definition.get("Name", dashboard_id),
+                        "status": "CREATION_SUCCESSFUL",
                         "url": self._get_dashboard_url(dashboard_id),
-                        "last_updated": response["Dashboard"]["LastUpdatedTime"],
-                        "created_time": response["Dashboard"]["CreatedTime"],
+                        "last_updated": record.get("last_updated_time"),
+                        "created_time": record.get("created_time"),
                     },
                 }
             else:
                 # List all NeuroNews dashboards
-                response = self.quicksight_client.list_dashboards(
-                    AwsAccountId=self.config.aws_account_id
-                )
-
+                records = self._list_resources(LocalResourceType.DASHBOARD)
                 neuronews_dashboards = [
                     {
-                        "id": dashboard["DashboardId"],
-                        "name": dashboard["Name"],
-                        "url": self._get_dashboard_url(dashboard["DashboardId"]),
-                        "last_updated": dashboard["LastUpdatedTime"],
-                        "created_time": dashboard["CreatedTime"],
+                        "id": record["id"],
+                        "name": record.get("definition", {}).get(
+                            "Name", record["id"]
+                        ),
+                        "url": self._get_dashboard_url(record["id"]),
+                        "last_updated": record.get("last_updated_time"),
+                        "created_time": record.get("created_time"),
                     }
-                    for dashboard in response["DashboardSummaryList"]
-                    if "neuronews" in dashboard["DashboardId"].lower()
+                    for record in records
+                    if "neuronews" in record["id"].lower()
                 ]
 
                 return {
@@ -1289,13 +1304,29 @@ class QuickSightDashboardService:
                     "total_count": len(neuronews_dashboards),
                 }
 
+        except DashboardResourceNotFoundError as e:
+            logger.error("Failed to get dashboard info: {0}".format(e))
+            return {"success": False, "error": str(e)}
         except Exception as e:
             logger.error("Failed to get dashboard info: {0}".format(e))
             return {"success": False, "error": str(e)}
 
+    async def delete_dashboard(self, dashboard_id: str) -> Dict[str, Any]:
+        """Delete a local dashboard definition by id."""
+        try:
+            self._delete_resource(LocalResourceType.DASHBOARD, dashboard_id)
+            logger.info("Deleted dashboard: {0}".format(dashboard_id))
+            return {"success": True, "dashboard_id": dashboard_id}
+        except DashboardResourceNotFoundError as e:
+            logger.warning("Dashboard not found for deletion: {0}".format(e))
+            return {"success": False, "error": str(e)}
+        except Exception as e:
+            logger.error("Failed to delete dashboard: {0}".format(e))
+            return {"success": False, "error": str(e)}
+
     async def validate_setup(self) -> Dict[str, Any]:
-        """Validate QuickSight setup and resources."""
-        logger.info("Validating QuickSight setup...")
+        """Validate local dashboard setup and resources."""
+        logger.info("Validating local dashboard setup...")
 
         validation_results = {
             "data_source_valid": False,
@@ -1307,15 +1338,15 @@ class QuickSightDashboardService:
 
         try:
             # Validate data source
-            try:
-                self.quicksight_client.describe_data_source(
-                    AwsAccountId=self.config.aws_account_id,
-                    DataSourceId=self.config.data_source_id,
-                )
+            if self._resource_exists(
+                LocalResourceType.DATA_SOURCE, self.config.data_source_id
+            ):
                 validation_results["data_source_valid"] = True
-            except Exception as e:
+            else:
                 validation_results["errors"].append(
-                    "Data source validation failed: {0}".format(e)
+                    "Data source validation failed: {0} not found".format(
+                        self.config.data_source_id
+                    )
                 )
 
             # Validate datasets
@@ -1325,15 +1356,11 @@ class QuickSightDashboardService:
                 "event_timeline_dataset",
             ]
             for dataset_id in datasets:
-                try:
-                    self.quicksight_client.describe_data_set(
-                        AwsAccountId=self.config.aws_account_id, DataSetId=dataset_id
-                    )
+                if self._resource_exists(LocalResourceType.DATA_SET, dataset_id):
                     validation_results["datasets_valid"].append(dataset_id)
-                except Exception as e:
+                else:
                     validation_results["errors"].append(
-                        "Dataset {0} validation failed: {1}".format(
-                            dataset_id, e)
+                        "Dataset {0} validation failed: not found".format(dataset_id)
                     )
 
             # Validate analyses
@@ -1343,30 +1370,23 @@ class QuickSightDashboardService:
                 "event_timeline_analysis",
             ]
             for analysis_id in analyses:
-                try:
-                    self.quicksight_client.describe_analysis(
-                        AwsAccountId=self.config.aws_account_id, AnalysisId=analysis_id
-                    )
+                if self._resource_exists(LocalResourceType.ANALYSIS, analysis_id):
                     validation_results["analyses_valid"].append(analysis_id)
-                except Exception as e:
+                else:
                     validation_results["errors"].append(
-                        "Analysis {0} validation failed: {1}".format(
-                            analysis_id, e)
+                        "Analysis {0} validation failed: not found".format(analysis_id)
                     )
 
             # Validate dashboards
             dashboards = ["neuronews_comprehensive_dashboard"]
             for dashboard_id in dashboards:
-                try:
-                    self.quicksight_client.describe_dashboard(
-                        AwsAccountId=self.config.aws_account_id,
-                        DashboardId=dashboard_id,
-                    )
+                if self._resource_exists(LocalResourceType.DASHBOARD, dashboard_id):
                     validation_results["dashboards_valid"].append(dashboard_id)
-                except Exception as e:
+                else:
                     validation_results["errors"].append(
-                        "Dashboard {0} validation failed: {1}".format(
-                            dashboard_id, e)
+                        "Dashboard {0} validation failed: not found".format(
+                            dashboard_id
+                        )
                     )
 
             validation_results["overall_valid"] = (
@@ -1391,21 +1411,21 @@ class QuickSightDashboardService:
 
 
 # Example usage and testing
-async def demo_quicksight_dashboard_service():
-    """Demonstrate the QuickSight Dashboard Service functionality."""
-    print(" QuickSight Dashboard Service Demo - Issue #49")
+async def demo_local_dashboard_service():
+    """Demonstrate the Local Dashboard Service functionality."""
+    print(" Local Dashboard Service Demo - Issue #49")
     print("=" * 50)
 
     try:
         # Initialize service
-        config = QuickSightConfig.from_env()
-        service = QuickSightDashboardService(config)
+        config = LocalDashboardConfig.from_env()
+        service = LocalDashboardService(config)
 
-        print(" QuickSight service initialized")
+        print(" Local dashboard service initialized")
 
-        # 1. Set up QuickSight resources
-        print("\n Setting up QuickSight resources...")
-        setup_result = await service.setup_quicksight_resources()
+        # 1. Set up local dashboard resources
+        print("\n Setting up local dashboard resources...")
+        setup_result = await service.setup_dashboard_resources()
         print("Data source created: {0}".format(setup_result["data_source_created"]))
         print("Datasets created: {0}".format(len(setup_result["datasets_created"])))
         print("Analyses created: {0}".format(len(setup_result["analyses_created"])))
@@ -1419,16 +1439,16 @@ async def demo_quicksight_dashboard_service():
                 print(
                     "{0}: {1}".format(
                         layout_type.value,
-                        "" if layout_result["success"] else "❌",
+                        "ok" if layout_result["success"] else "failed",
                     )
                 )
 
         # 3. Set up real-time updates
-        print("\n🔄 Setting up real-time updates...")
+        print("\n Setting up refresh schedules...")
         updates_result = await service.setup_real_time_updates()
         print(
-            "Real-time updates: {0}".format(
-                "" if updates_result["success"] else "❌"
+            "Refresh schedules: {0}".format(
+                "ok" if updates_result["success"] else "failed"
             )
         )
 
@@ -1437,17 +1457,17 @@ async def demo_quicksight_dashboard_service():
         validation_result = await service.validate_setup()
         print(
             "Overall validation: {0}".format(
-                "" if validation_result["overall_valid"] else "❌"
+                "ok" if validation_result["overall_valid"] else "failed"
             )
         )
 
-        print("\n QuickSight Dashboard Service demo completed!")
+        print("\n Local Dashboard Service demo completed!")
 
     except Exception as e:
-        print("❌ Demo failed: {0}".format(e))
+        print("Demo failed: {0}".format(e))
 
 
 if __name__ == "__main__":
     import asyncio
 
-    asyncio.run(demo_quicksight_dashboard_service())
+    asyncio.run(demo_local_dashboard_service())

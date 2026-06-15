@@ -329,45 +329,22 @@ class HighThroughputValidationPipeline:
 
         # Content validation
         content = item.get("content", "")
-        try:
-            # Fast duplicate check
-            url = item.get("url", "")
-            if url in self.url_seen:
-                self.items_failed += 1
-                raise DropItem("Duplicate URL: {0}".format(url))
+        if not content:
+            return {"is_valid": False, "reason": "Missing content", "score": 0}
 
-            # Fast validation checks
-            validation_result = self._fast_validate_item(item)
+        if len(content) < self.min_content_length:
+            return {
+                "is_valid": False,
+                "reason": "Content too short: {0}".format(len(content)),
+                "score": 0,
+            }
 
-            if not validation_result["is_valid"]:
-                self.items_failed += 1
-                raise DropItem(
-                    f"Validation failed: {validation_result['reason']}"
-                )
+        # URL validation
+        url = item.get("url", "")
+        if not url:
+            return {"is_valid": False, "reason": "Missing URL", "score": 0}
 
-            # Add to seen URLs
-            self.url_seen.add(url)
-
-            # Limit cache size to prevent memory issues
-            if len(self.url_seen) > self.cache_size_limit:
-                self.url_seen.clear()
-                spider.logger.debug(
-                    "Cleared URL cache to prevent memory overflow")
-
-            # Add validation metadata
-            item["validation_score"] = validation_result["score"]
-            item["validation_time"] = time.time() - start_time
-            item["fast_validation"] = True
-
-            self.items_passed += 1
-            self.items_validated += 1
-
-            return item
-        except Exception as e:
-            self.items_failed += 1
-            self.items_validated += 1
-            spider.logger.error("Fast validation error: {0}".format(e))
-            raise DropItem("Validation error: {0}".format(e))
+        return {"is_valid": True, "reason": "", "score": score}
 
 
 class AdaptiveRateLimitPipeline:

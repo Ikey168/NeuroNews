@@ -101,12 +101,12 @@ class TestModule08AuthModules:
 class TestModule09SecurityModules:
     """Test security modules systematically"""
     
-    def test_aws_waf_manager_coverage(self):
+    def test_local_waf_manager_coverage(self):
         try:
-            from src.api.security import aws_waf_manager
+            from src.api.security import local_waf_manager
             
             # Exercise module attributes
-            for name, obj in inspect.getmembers(aws_waf_manager):
+            for name, obj in inspect.getmembers(local_waf_manager):
                 if not name.startswith('_'):
                     str(obj)
                     type(obj)
@@ -127,7 +127,7 @@ class TestModule09SecurityModules:
             
             assert True
         except Exception as e:
-            print(f"Error in aws_waf_manager test: {e}")
+            print(f"Error in local_waf_manager test: {e}")
             assert True
 
 class TestModule10GraphRoutes:

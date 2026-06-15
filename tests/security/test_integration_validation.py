@@ -63,7 +63,7 @@ from src.api.rbac.rbac_system import (
     UserRole,
     rbac_manager,
 )
-from src.api.security.aws_waf_manager import ActionType, SecurityEvent, ThreatType
+from src.api.security.local_waf_manager import ActionType, SecurityEvent, ThreatType
 from src.api.security.waf_middleware import WAFSecurityMiddleware
 
 

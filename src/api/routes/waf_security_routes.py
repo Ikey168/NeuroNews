@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, Field
 
 from src.api.auth.jwt_auth import require_auth
-from src.api.security.aws_waf_manager import waf_manager
+from src.api.security.local_waf_manager import waf_manager
 
 router = APIRouter(prefix="/api/security", tags=["waf-security"])
 

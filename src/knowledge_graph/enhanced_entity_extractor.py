@@ -210,7 +210,7 @@ class AdvancedEntityExtractor:
             "properties": ["locationName", "type", "country", "region"],
             "patterns": [
                 # City, State
-                r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*,\s*[A-Z}{2}\b",
+                r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*,\s*[A-Z]{2}\b",
                 # Silicon Valley, etc.
                 r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+Valley\b",
             ],
@@ -251,7 +251,7 @@ class AdvancedEntityExtractor:
         "LOCATED_IN": [
             r"(\w+(?:\s+\w+)*)\s+(?:(?:is\s+)?(?:located|based|headquartered)\s+in)\s+(\w+(?:\s+\w+)*)",
             # Company, Location
-            r"(\w+(?:\s+\w+)*),?\s+(\w+(?:\s+\w+)*(?:,\s*[A-Z}{2})?)",
+            r"(\w+(?:\s+\w+)*),?\s+(\w+(?:\s+\w+)*(?:,\s*[A-Z]{2})?)",
         ],
     }
 

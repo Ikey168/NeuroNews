@@ -154,10 +154,10 @@ class TestAPISecurity:
     def test_security_components_coverage(self):
         """Test security components"""
         try:
-            from src.api.security import aws_waf_manager
+            from src.api.security import local_waf_manager
             from src.api.security import waf_middleware
             
-            assert aws_waf_manager is not None
+            assert local_waf_manager is not None
             assert waf_middleware is not None
         except Exception:
             pass

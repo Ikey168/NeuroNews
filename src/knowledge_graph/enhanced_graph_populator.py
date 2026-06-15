@@ -18,6 +18,7 @@ Key Features:
 
 import asyncio
 import json
+import os
 import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -948,8 +949,10 @@ if __name__ == "__main__":
     # Example usage and testing
 
     async def main():
-        # Mock Neptune endpoint for testing
-        neptune_endpoint = "wss://your-cluster.neptune.amazonaws.com:8182/gremlin"
+        # Local Gremlin endpoint (override with NEPTUNE_ENDPOINT for a remote server)
+        neptune_endpoint = os.getenv(
+            "NEPTUNE_ENDPOINT", "ws://localhost:8182/gremlin"
+        )
 
         # Sample articles for testing
         sample_articles = [

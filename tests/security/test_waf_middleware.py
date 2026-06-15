@@ -21,7 +21,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.testclient import TestClient
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from src.api.security.aws_waf_manager import ActionType, ThreatType, SecurityEvent
+from src.api.security.local_waf_manager import ActionType, ThreatType, SecurityEvent
 from src.api.security.waf_middleware import WAFSecurityMiddleware
 
 
@@ -736,7 +736,7 @@ class TestWAFIntegration:
         # Should complete without errors
         assert True  # Test passes if no exceptions
 
-    def test_aws_waf_manager_integration(self):
+    def test_local_waf_manager_integration(self):
         """Test integration with AWS WAF Manager."""
         app = MagicMock()
         middleware = WAFSecurityMiddleware(app)

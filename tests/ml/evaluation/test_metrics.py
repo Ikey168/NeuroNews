@@ -1,4 +1,4 @@
-from neuronews.ml.evaluation.metrics import compute_accuracy, compute_precision
+from src.ml.evaluation.metrics import compute_accuracy, compute_precision
 
 
 def test_metrics_accuracy_precision():
