@@ -180,8 +180,12 @@ What gets logged automatically:
 
 ### 8. Run the scraper
 
+Run it as a module from the repository root (it uses package-relative imports):
+
 ```bash
-python src/scraper/run.py
+python -m src.scraper.run --help          # list all options
+python -m src.scraper.run --spider bbc    # scrape a single source
+python -m src.scraper.run --multi-source  # scrape all sources
 ```
 
 ### 9. Access dashboards and reports
