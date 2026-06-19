@@ -85,13 +85,14 @@ surfaced through `src/components/SourceBadge.tsx`.
 | Watchlists      | client research data (no backend endpoint)           | demo      |
 | Story Timeline  | client research data (no backend endpoint)           | demo      |
 
-> Which endpoints serve real data today: the **articles** endpoint
-> (`/api/v1/news/articles`, powering News Feed + Overview feed) and the
-> **sentiment topics** endpoint (`/news_sentiment/topics`) are backed by the
-> local DuckDB warehouse and return live rows. The **clusters**, **trending**,
-> **breaking news** and **influencers** endpoints belong to separate subsystems
-> (event clustering, keyword DB, graph analyzer) that aren't wired to the local
-> warehouse yet, so those panels still fall back to demo data.
+> Which endpoints serve real data today: **articles** (News Feed + Overview),
+> **sentiment topics** (Sentiment), **trending** (`/topics/trending`),
+> **event clusters** (`/api/v1/events/clusters`) and the **breaking-news**
+> ticker (`/api/v1/breaking_news`) are all backed by the local DuckDB
+> warehouse — trending/clusters/breaking are derived from the seeded
+> `news_articles` table (grouped by topic, with size/recency-based scores).
+> Only the Sentiment topic×time heatmap (no hourly endpoint) and the research
+> views (Workspaces / Watchlists / Timeline) remain on the demo dataset.
 
 > Note: the backend list endpoints expose a subset of the fields the design
 > shows (e.g. `/news/articles` has no per-article summary/entities, and the

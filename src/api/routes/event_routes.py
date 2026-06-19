@@ -144,7 +144,6 @@ async def get_breaking_news(
     limit: int = Query(
         10, ge=1, le=50, description="Maximum number of events to return"
     ),
-    clusterer: EventClusterer = Depends(get_clusterer),
 ):
     """
     Get current breaking news events.
@@ -169,7 +168,11 @@ async def get_breaking_news(
             )
         )
 
-        events = await clusterer.get_breaking_news(
+        from src.database.local_warehouse_views import (
+            get_breaking_news as warehouse_breaking_news,
+        )
+
+        events = await warehouse_breaking_news(
             category=category, hours_back=hours_back, limit=limit
         )
 
@@ -241,66 +244,22 @@ async def get_event_clusters(
             )
         )
 
-        conn_params = get_redshift_connection_params()
+        from src.database.local_warehouse_views import (
+            get_event_clusters as warehouse_clusters,
+        )
 
-        # Build query
-        query = """
-            SELECT
-                cluster_id, cluster_name, event_type, category, cluster_size,
-                silhouette_score, cohesion_score, separation_score,
-                trending_score, impact_score, velocity_score,
-                first_article_date, last_article_date, event_duration_hours,
-                primary_sources, geographic_focus, key_entities,
-                status, created_at
-            FROM event_clusters
-            WHERE created_at >= CURRENT_DATE - INTERVAL '%s days'
-            AND status = 'active'
-        """
-        params = [days_back]
-
-        if category:
-            query += " AND category = %s"
-            params.append(category)
-
-        if event_type:
-            query += " AND event_type = %s"
-            params.append(event_type)
-
-        query += " ORDER BY trending_score DESC, impact_score DESC LIMIT %s"
-        params.append(limit)
-
-        import psycopg2
-        from psycopg2.extras import RealDictCursor
-
-        with psycopg2.connect(**conn_params) as conn:
-            with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                cur.execute(query, params)
-                rows = cur.fetchall()
+        rows = await warehouse_clusters(
+            days_back=days_back,
+            category=category,
+            event_type=event_type,
+            limit=limit,
+        )
 
         # Convert to response model
         clusters = []
         for row in rows:
-            # Calculate significance score
-            significance_score = (
-                float(row["trending_score"]) * 0.3
-                + float(row["impact_score"]) * 0.4
-                + float(row["velocity_score"]) * 0.2
-                + (int(row["cluster_size"]) / 20) * 0.1
-            )
-
-            if significance_score < min_significance:
+            if row["significance_score"] < min_significance:
                 continue
-
-            # Parse JSON fields
-            primary_sources = (
-                json.loads(row["primary_sources"]) if row["primary_sources"] else []
-            )
-            geographic_focus = (
-                json.loads(row["geographic_focus"]) if row["geographic_focus"] else []
-            )
-            key_entities = (
-                json.loads(row["key_entities"]) if row["key_entities"] else []
-            )
 
             clusters.append(
                 EventClusterResponse(
@@ -315,15 +274,15 @@ async def get_event_clusters(
                     trending_score=float(row["trending_score"]),
                     impact_score=float(row["impact_score"]),
                     velocity_score=float(row["velocity_score"]),
-                    significance_score=significance_score,
-                    first_article_date=row["first_article_date"].isoformat(),
-                    last_article_date=row["last_article_date"].isoformat(),
+                    significance_score=row["significance_score"],
+                    first_article_date=row["first_article_date"],
+                    last_article_date=row["last_article_date"],
                     event_duration_hours=float(row["event_duration_hours"]),
-                    primary_sources=primary_sources,
-                    geographic_focus=geographic_focus,
-                    key_entities=key_entities,
+                    primary_sources=row["primary_sources"],
+                    geographic_focus=row["geographic_focus"],
+                    key_entities=row["key_entities"],
                     status=row["status"],
-                    created_at=row["created_at"].isoformat(),
+                    created_at=row["created_at"],
                 )
             )
 
