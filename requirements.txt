@@ -74,3 +74,6 @@ psycopg2-binary>=2.9.9
 
 # UMAP for topic modeling (nlp/kubernetes/ai_processor.py)
 umap-learn>=0.5.0
+
+# Local analytics warehouse (Snowflake alternative for local dev)
+duckdb>=1.0.0,<2.0.0

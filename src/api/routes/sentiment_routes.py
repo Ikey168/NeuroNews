@@ -2,38 +2,24 @@
 FastAPI routes for sentiment analysis and sentiment trends.
 """
 
-import os
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from src.database.snowflake_analytics_connector import SnowflakeAnalyticsConnector
+from src.database.local_analytics_connector import LocalAnalyticsConnector
 
 router = APIRouter(prefix="/news_sentiment", tags=["sentiment"])
 
 
 async def get_db():
-    """Dependency to get database connection."""
-    account = os.getenv("SNOWFLAKE_ACCOUNT")
-    if not account:
-        raise HTTPException(
-            status_code=500, detail="SNOWFLAKE_ACCOUNT environment variable not set"
-        )
-
-    db = SnowflakeAnalyticsConnector(
-        account=account,
-        user=os.getenv("SNOWFLAKE_USER", "admin"),
-        password=os.getenv("SNOWFLAKE_PASSWORD"),
-        warehouse=os.getenv("SNOWFLAKE_WAREHOUSE", "ANALYTICS_WH"),
-        database=os.getenv("SNOWFLAKE_DATABASE", "NEURONEWS"),
-        schema=os.getenv("SNOWFLAKE_SCHEMA", "PUBLIC"),
-    )
+    """Dependency to get an analytics warehouse connection (local DuckDB)."""
+    db = LocalAnalyticsConnector()
     try:
-        await db.connect()
+        db.connect()
         yield db
     finally:
-        await db.close()
+        db.disconnect()
 
 
 @router.get("")
@@ -47,7 +33,7 @@ async def get_sentiment_trends(
     ),
     source: Optional[str] = Query(None, description="News source to filter by"),
     group_by: str = Query("day", description="Group by: day, week, month"),
-    db: SnowflakeAnalyticsConnector = Depends(get_db),
+    db: LocalAnalyticsConnector = Depends(get_db),
 ) -> Dict[str, Any]:
     """
     Get sentiment trends for news articles with optional filtering by topic.
@@ -136,7 +122,9 @@ async def get_sentiment_trends(
             WHERE {where_clause}
             GROUP BY sentiment_label
             ORDER BY count DESC
-        """
+        """.format(
+            where_clause=where_clause
+        )
 
         overall_results = await db.execute_query(overall_query, params)
 
@@ -145,7 +133,9 @@ async def get_sentiment_trends(
             SELECT COUNT(*) as total_articles
             FROM news_articles
             WHERE {where_clause}
-        """
+        """.format(
+            where_clause=where_clause
+        )
 
         count_results = await db.execute_query(count_query, params)
         total_articles = count_results[0][0] if count_results else 0
@@ -200,7 +190,7 @@ async def get_sentiment_trends(
 async def get_sentiment_summary(
     topic: Optional[str] = Query(None, description="Topic to filter articles by"),
     days: int = Query(7, ge=1, le=365, description="Number of days to look back"),
-    db: SnowflakeAnalyticsConnector = Depends(get_db),
+    db: LocalAnalyticsConnector = Depends(get_db),
 ) -> Dict[str, Any]:
     """
     Get a summary of sentiment analysis for recent articles.
@@ -278,7 +268,7 @@ async def get_sentiment_summary(
 async def get_topic_sentiment_analysis(
     days: int = Query(7, ge=1, le=90, description="Number of days to analyze"),
     min_articles: int = Query(5, ge=1, description="Minimum articles per topic"),
-    db: SnowflakeAnalyticsConnector = Depends(get_db),
+    db: LocalAnalyticsConnector = Depends(get_db),
 ) -> List[Dict[str, Any]]:
     """
     Get sentiment analysis broken down by detected topics/keywords.

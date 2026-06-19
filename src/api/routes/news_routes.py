@@ -2,32 +2,19 @@
 FastAPI routes for accessing processed news articles.
 """
 
-import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from src.database.snowflake_analytics_connector import SnowflakeAnalyticsConnector
+from src.database.local_analytics_connector import LocalAnalyticsConnector
 
 router = APIRouter(prefix="/news", tags=["news"])
 
 
 async def get_db():
-    """Dependency to get database connection."""
-    account = os.getenv("SNOWFLAKE_ACCOUNT")
-    if not account:
-        raise HTTPException(
-            status_code=500, detail="SNOWFLAKE_ACCOUNT environment variable not set"
-        )
-
-    db = SnowflakeAnalyticsConnector(
-        account=account,
-        user=os.getenv("SNOWFLAKE_USER"),
-        password=os.getenv("SNOWFLAKE_PASSWORD"),
-        database=os.getenv("SNOWFLAKE_DATABASE", "NEURONEWS"),
-        warehouse=os.getenv("SNOWFLAKE_WAREHOUSE", "ANALYTICS_WH"),
-    )
+    """Dependency to get an analytics warehouse connection (local DuckDB)."""
+    db = LocalAnalyticsConnector()
     try:
         db.connect()
         yield db
@@ -39,7 +26,7 @@ async def get_db():
 async def get_articles_by_topic(
     topic: str,
     limit: int = Query(10, ge=1, le=100),
-    db: SnowflakeAnalyticsConnector = Depends(get_db),
+    db: LocalAnalyticsConnector = Depends(get_db),
 ) -> List[Dict[str, Any]]:
     """
     Retrieve articles related to a specific topic.
@@ -109,7 +96,7 @@ async def get_articles(
     ),
     source: Optional[str] = Query(None, description="Filter by news source"),
     category: Optional[str] = Query(None, description="Filter by article category"),
-    db: SnowflakeAnalyticsConnector = Depends(get_db),
+    db: LocalAnalyticsConnector = Depends(get_db),
 ) -> List[Dict[str, Any]]:
     """
     Retrieve processed news articles with optional filtering.
@@ -177,7 +164,7 @@ async def get_articles(
 
 @router.get("/articles/{article_id}")
 async def get_article(
-    article_id: str, db: SnowflakeAnalyticsConnector = Depends(get_db)
+    article_id: str, db: LocalAnalyticsConnector = Depends(get_db)
 ) -> Dict[str, Any]:
     """
     Retrieve a specific news article by ID.
