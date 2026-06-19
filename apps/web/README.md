@@ -28,8 +28,13 @@ backend separately, e.g.:
 
 ```bash
 pip install -r requirements.txt
-uvicorn src.api.app:app --reload --port 8000
+NEURONEWS_DEV_MODE=true uvicorn src.api.app:app --reload --port 8000
 ```
+
+`NEURONEWS_DEV_MODE=true` disables the WAF, rate limiting, API-key and RBAC
+middlewares for local development. Without it the API protects itself with an
+aggressive WAF and a low anonymous rate limit (10 req/min), which blocks the
+dashboard's burst of requests on load. Leave it unset in production.
 
 The backend serves real data from a **local DuckDB warehouse** (no Snowflake or
 external services needed). On first request it creates and seeds
