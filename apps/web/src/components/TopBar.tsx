@@ -1,5 +1,53 @@
 import { useEffect, useState } from "react";
-import { ACCENT, fonts } from "../theme";
+import { ACCENT, palette, fonts } from "../theme";
+import { useBackendStatus, type BackendStatus } from "../lib/queries";
+
+const STATUS_META: Record<BackendStatus, { color: string; label: string }> = {
+  checking: { color: palette.amber, label: "CONNECTING" },
+  online: { color: palette.pos, label: "BACKEND LIVE" },
+  offline: { color: palette.faint, label: "DEMO MODE" },
+};
+
+function ConnectionPill() {
+  const status = useBackendStatus();
+  const { color, label } = STATUS_META[status];
+  return (
+    <div
+      title={
+        status === "online"
+          ? "Connected to the NeuroNews API"
+          : status === "checking"
+            ? "Probing the backend…"
+            : "Backend unreachable — views fall back to the demo dataset"
+      }
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 7,
+        fontFamily: fonts.mono,
+        fontSize: 10,
+        letterSpacing: "0.1em",
+        color,
+        border: `1px solid ${color}44`,
+        background: `${color}14`,
+        borderRadius: 6,
+        padding: "5px 10px",
+      }}
+    >
+      <span
+        style={{
+          width: 7,
+          height: 7,
+          borderRadius: "50%",
+          background: color,
+          boxShadow: status === "online" ? `0 0 6px ${color}` : "none",
+          animation: status === "checking" ? "pulse 1s ease-in-out infinite" : undefined,
+        }}
+      />
+      {label}
+    </div>
+  );
+}
 
 function useUtcClock() {
   const [now, setNow] = useState(() => new Date());
@@ -72,6 +120,7 @@ export default function TopBar() {
       </div>
       <div style={{ flex: 1 }} />
       <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+        <ConnectionPill />
         <div style={{ textAlign: "right", lineHeight: 1.15 }}>
           <div style={{ fontFamily: fonts.mono, fontSize: 14, fontWeight: 500, color: ACCENT }}>{clock}</div>
           <div style={{ fontFamily: fonts.mono, fontSize: 9, color: "#5b6675", letterSpacing: "0.1em" }}>

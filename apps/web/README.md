@@ -37,24 +37,41 @@ VITE_API_BASE_URL=https://api.neuronews.example npm run build
 npm run preview
 ```
 
+## Live data
+
+The app talks to the FastAPI backend on every view. To make it obvious what
+you're looking at:
+
+- The **top bar** shows a global connection pill driven by a `/health` probe:
+  `CONNECTING` → `BACKEND LIVE` (green) → `DEMO MODE`. The probe re-runs every
+  30s, so it flips automatically when the backend comes up or goes down.
+- Each data-backed view carries a small **`LIVE` / `DEMO` / `SYNC`** badge so
+  you can tell, per panel, whether the rows came from the API or the bundled
+  design dataset.
+
+To see live data: start the backend (below), then run `npm run dev`. With no
+backend reachable every badge reads `DEMO`.
+
 ## Views & backend wiring
 
 Each view fetches from the backend and **falls back to the design dataset** if
 the endpoint is unreachable or returns no rows, so the UI always renders. The
-data source (`live` / `demo`) is tracked per query in `src/lib/queries.ts`.
+data source (`live` / `demo`) is tracked per query in `src/lib/queries.ts` and
+surfaced through `src/components/SourceBadge.tsx`.
 
-| View            | Backend endpoint(s)                                  |
-| --------------- | ---------------------------------------------------- |
-| Overview        | aggregates feed / clusters / trending                |
-| News Feed       | `GET /api/v1/news/articles`                          |
-| Entity Graph    | `GET /api/influence/top-influencers`                 |
-| Sentiment       | static heatmap (no live endpoint yet)                |
-| Event Clusters  | `GET /api/v1/events/clusters`                        |
-| Trending        | `GET /topics/trending`                               |
-| Breaking ticker | `GET /api/v1/breaking_news`                          |
-| Workspaces      | client research data (no backend endpoint)           |
-| Watchlists      | client research data (no backend endpoint)           |
-| Story Timeline  | client research data (no backend endpoint)           |
+| View            | Backend endpoint(s)                                  | Badge     |
+| --------------- | ---------------------------------------------------- | --------- |
+| Overview        | aggregates feed / clusters / trending                | live/demo |
+| News Feed       | `GET /api/v1/news/articles`                          | live/demo |
+| Entity Graph    | `GET /api/influence/top-influencers`                 | live/demo |
+| Sentiment       | `GET /news_sentiment/topics` (stats + breakdown)     | live/demo |
+| Sentiment       | topic×time heatmap — no hourly endpoint yet          | demo      |
+| Event Clusters  | `GET /api/v1/events/clusters`                        | live/demo |
+| Trending        | `GET /topics/trending`                               | live/demo |
+| Breaking ticker | `GET /api/v1/breaking_news`                          | live/demo |
+| Workspaces      | client research data (no backend endpoint)           | demo      |
+| Watchlists      | client research data (no backend endpoint)           | demo      |
+| Story Timeline  | client research data (no backend endpoint)           | demo      |
 
 > Note: the backend list endpoints expose a subset of the fields the design
 > shows (e.g. `/news/articles` has no per-article summary/entities, and the

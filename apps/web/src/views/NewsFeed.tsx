@@ -3,13 +3,14 @@ import { ACCENT, accentSoft, accentBorder, fonts } from "../theme";
 import { sentColor, sentLabel, fmt } from "../lib/sentiment";
 import { useArticles } from "../lib/queries";
 import PageHeader from "../components/PageHeader";
+import SourceBadge from "../components/SourceBadge";
 import Hover from "../components/Hover";
 
 const filters = ["All", "Economy", "Technology", "Policy", "Energy", "Health"];
 
 export default function NewsFeed() {
   const [filter, setFilter] = useState("All");
-  const { data: articles } = useArticles();
+  const { data: articles, source, isLoading } = useArticles();
   const feed = filter === "All" ? articles : articles.filter((a) => a.category === filter);
 
   return (
@@ -17,6 +18,7 @@ export default function NewsFeed() {
       <PageHeader
         title="News Feed"
         subtitle={`${articles.length} articles · 142 sources · auto-classified`}
+        right={<SourceBadge source={source} isLoading={isLoading} />}
       />
       <div style={{ display: "flex", gap: 7, marginBottom: 16, flexWrap: "wrap" }}>
         {filters.map((f) => {

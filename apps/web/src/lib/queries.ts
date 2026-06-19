@@ -9,15 +9,23 @@ import {
   adaptClusters,
   adaptTrending,
   adaptInfluencers,
+  adaptTopicSentiment,
 } from "./adapters";
 import {
   mockArticles,
   mockClusters,
   mockTrending,
   mockTickerText,
+  mockTopicSentiment,
 } from "../data/mock";
 import { palette, ACCENT } from "../theme";
-import type { Article, Cluster, TrendingTopic, TopEntity } from "../types";
+import type {
+  Article,
+  Cluster,
+  TrendingTopic,
+  TopEntity,
+  TopicSentiment,
+} from "../types";
 
 export type Source = "live" | "demo";
 export interface Result<T> {
@@ -26,7 +34,27 @@ export interface Result<T> {
   isLoading: boolean;
 }
 
+export type BackendStatus = "checking" | "online" | "offline";
+
 const STALE = 60_000;
+
+// Lightweight liveness probe against the backend's /health endpoint. Drives
+// the global connection indicator in the top bar and is polled periodically so
+// the UI reflects the backend coming up or going down without a reload.
+export function useBackendStatus(): BackendStatus {
+  const q = useQuery({
+    queryKey: ["health"],
+    queryFn: async () => {
+      const h = await api.health();
+      return h?.status ?? "ok";
+    },
+    staleTime: 15_000,
+    refetchInterval: 30_000,
+    retry: false,
+  });
+  if (q.isLoading) return "checking";
+  return q.isSuccess ? "online" : "offline";
+}
 
 function useWithFallback<T>(key: string, fn: () => Promise<T>, fallback: T): Result<T> {
   const q = useQuery({
@@ -82,6 +110,14 @@ export function useTopEntities(): Result<TopEntity[]> {
     "topEntities",
     async () => adaptInfluencers(await api.topInfluencers({ limit: 5 })),
     mockTopEntities,
+  );
+}
+
+export function useTopicSentiment(): Result<TopicSentiment[]> {
+  return useWithFallback(
+    "topicSentiment",
+    async () => adaptTopicSentiment(await api.sentimentTopics({ days: 7 })),
+    mockTopicSentiment,
   );
 }
 

@@ -2,6 +2,7 @@ import { ACCENT, palette, fonts } from "../theme";
 import { sentColor, fmt } from "../lib/sentiment";
 import { mockWatchlist } from "../data/mock";
 import PageHeader from "../components/PageHeader";
+import SourceBadge from "../components/SourceBadge";
 import Hover from "../components/Hover";
 import Sparkline from "../components/charts/Sparkline";
 
@@ -12,22 +13,25 @@ export default function Watchlists() {
         title="Watchlists"
         subtitle="Entities & topics you track over time · 8h trend"
         right={
-          <Hover
-            as="button"
-            style={{
-              fontFamily: fonts.mono,
-              fontSize: 11,
-              color: "#8a94a6",
-              background: "#11151c",
-              border: "1px solid #232a36",
-              borderRadius: 7,
-              padding: "7px 13px",
-              cursor: "pointer",
-            }}
-            hoverStyle={{ borderColor: "#3a4554", color: "#c7cdd6" }}
-          >
-            + ADD TO WATCHLIST
-          </Hover>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <SourceBadge source="demo" />
+            <Hover
+              as="button"
+              style={{
+                fontFamily: fonts.mono,
+                fontSize: 11,
+                color: "#8a94a6",
+                background: "#11151c",
+                border: "1px solid #232a36",
+                borderRadius: 7,
+                padding: "7px 13px",
+                cursor: "pointer",
+              }}
+              hoverStyle={{ borderColor: "#3a4554", color: "#c7cdd6" }}
+            >
+              + ADD TO WATCHLIST
+            </Hover>
+          </div>
         }
       />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12 }}>

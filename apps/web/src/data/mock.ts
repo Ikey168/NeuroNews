@@ -7,6 +7,7 @@ import type {
   Article,
   Cluster,
   TrendingTopic,
+  TopicSentiment,
   Workspace,
   WorkspaceDetail,
   WatchItem,
@@ -147,6 +148,18 @@ export const mockHeatmap = {
     [0.1, -0.1, 0.0, 0.2, -0.2, 0.1, -0.3, 0.0, 0.2, -0.1, 0.3, 0.1, -0.2, 0.0, 0.1, -0.1],
   ],
 };
+
+// Per-topic average sentiment (mirrors /news_sentiment/topics shape) used as a
+// fallback for the Sentiment view's live topic breakdown.
+export const mockTopicSentiment: TopicSentiment[] = [
+  { topic: "Science", avgScore: 0.58, articles: 412 },
+  { topic: "Technology", avgScore: 0.34, articles: 980 },
+  { topic: "Health", avgScore: 0.27, articles: 356 },
+  { topic: "Markets", avgScore: 0.04, articles: 642 },
+  { topic: "Policy", avgScore: -0.19, articles: 528 },
+  { topic: "Energy", avgScore: -0.31, articles: 274 },
+  { topic: "Finance", avgScore: -0.44, articles: 489 },
+];
 
 export const mockTickerText =
   "  ●  Fed signals rate pause as core PCE eases  ●  Nvidia Blackwell Ultra claims 4x inference gain  ●  EU opens cloud antitrust probe  ●  Fusion experiment sustains net energy gain  ●  Oil slips below $74 on OPEC+ uncertainty  ●  Alzheimer’s drug clears late-stage trial  ";

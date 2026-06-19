@@ -2,9 +2,10 @@ import { palette, fonts } from "../theme";
 import { sentColor, sentLabel } from "../lib/sentiment";
 import { useArticles, useClusters } from "../lib/queries";
 import PageHeader from "../components/PageHeader";
+import SourceBadge from "../components/SourceBadge";
 
 export default function Clusters() {
-  const { data: clustersRaw } = useClusters();
+  const { data: clustersRaw, source, isLoading } = useClusters();
   const { data: articles } = useArticles();
 
   const clusters = clustersRaw.map((c, i) => ({
@@ -19,6 +20,7 @@ export default function Clusters() {
       <PageHeader
         title="Event Clusters"
         subtitle={`${clusters.length} active clusters · grouped by semantic similarity`}
+        right={<SourceBadge source={source} isLoading={isLoading} />}
       />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 12 }}>
         {clusters.map((c, i) => {

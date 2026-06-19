@@ -2,12 +2,13 @@ import { ACCENT, palette, fonts } from "../theme";
 import { sentColor, fmt } from "../lib/sentiment";
 import { useTrending } from "../lib/queries";
 import PageHeader from "../components/PageHeader";
+import SourceBadge from "../components/SourceBadge";
 import Hover from "../components/Hover";
 
 const GRID = "50px 1fr 130px 110px 90px";
 
 export default function Trending() {
-  const { data: trending } = useTrending();
+  const { data: trending, source, isLoading } = useTrending();
   const maxM = Math.max(1, ...trending.map((t) => t.mentions));
 
   const rows = trending.map((t, i) => ({
@@ -24,7 +25,11 @@ export default function Trending() {
 
   return (
     <div>
-      <PageHeader title="Trending Topics" subtitle="Ranked by mention velocity · 24h" />
+      <PageHeader
+        title="Trending Topics"
+        subtitle="Ranked by mention velocity · 24h"
+        right={<SourceBadge source={source} isLoading={isLoading} />}
+      />
       <div style={{ background: "#11151c", border: "1px solid #1c2330", borderRadius: 10, overflow: "hidden" }}>
         <div
           style={{

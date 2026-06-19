@@ -4,6 +4,7 @@ import { sentColor } from "../lib/sentiment";
 import { useArticles, useClusters, useTrending } from "../lib/queries";
 import type { Kpi, ViewKey } from "../types";
 import TrendChart from "../components/charts/TrendChart";
+import SourceBadge from "../components/SourceBadge";
 import Hover from "../components/Hover";
 
 const kpis: Kpi[] = [
@@ -37,7 +38,7 @@ interface Props {
 
 export default function Dashboard({ setView }: Props) {
   const [range, setRange] = useState("24H");
-  const { data: articles } = useArticles();
+  const { data: articles, source, isLoading } = useArticles();
   const { data: clustersRaw } = useClusters();
   const { data: trending } = useTrending();
 
@@ -70,8 +71,10 @@ export default function Dashboard({ setView }: Props) {
             Real-time signal across 142 sources · last 24h
           </p>
         </div>
-        <div style={{ display: "flex", gap: 6 }}>
-          {["1H", "6H", "24H", "7D"].map((r) => {
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <SourceBadge source={source} isLoading={isLoading} />
+          <div style={{ display: "flex", gap: 6 }}>
+            {["1H", "6H", "24H", "7D"].map((r) => {
             const active = r === range;
             return (
               <span
@@ -91,7 +94,8 @@ export default function Dashboard({ setView }: Props) {
                 {r}
               </span>
             );
-          })}
+            })}
+          </div>
         </div>
       </div>
 

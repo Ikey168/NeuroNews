@@ -44,6 +44,12 @@ export interface SentimentStat {
   note: string;
 }
 
+export interface TopicSentiment {
+  topic: string;
+  avgScore: number;
+  articles: number;
+}
+
 export interface LegendItem {
   label: string;
   color: string;
