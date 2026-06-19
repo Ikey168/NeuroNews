@@ -459,8 +459,20 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.store = RateLimitStore()
         self.detector = SuspiciousActivityDetector(self.store, self.config)
 
-        # Excluded paths (no rate limiting)
-        self.excluded_paths = {"/docs", "/redoc", "/openapi.json", "/health"}
+        # Excluded paths (no rate limiting). Includes the public, read-only
+        # dashboard endpoints, which a single client polls in bursts on load.
+        self.excluded_paths = {
+            "/docs",
+            "/redoc",
+            "/openapi.json",
+            "/health",
+            "/api/v1/news/articles",
+            "/api/v1/events/clusters",
+            "/api/v1/breaking_news",
+            "/topics/trending",
+            "/news_sentiment/topics",
+            "/api/influence/top-influencers",
+        }
 
         logger.info("Rate limit middleware initialized")
 

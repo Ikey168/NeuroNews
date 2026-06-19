@@ -279,21 +279,25 @@ async def get_trending_topics(
     min_articles: int = Query(
         5, ge=1, description="Minimum articles for trending topics"
     ),
-    db: KeywordTopicDatabase = Depends(get_keyword_topic_db),
 ) -> Dict[str, Any]:
     """
     Get trending topics based on recent article frequency.
 
+    Derived from the local analytics warehouse (news_articles).
+
     Args:
         days: Number of days to analyze for trends
         min_articles: Minimum number of articles for a topic to be considered trending
-        db: Database connection (injected)
 
     Returns:
         Dict with trending topics and metadata
     """
     try:
-        topics = await db.get_topic_statistics(days=days)
+        from src.database.local_warehouse_views import (
+            get_trending_topics as warehouse_trending,
+        )
+
+        topics = await warehouse_trending(days=days)
 
         # Filter topics by minimum article count and sort by frequency
         trending_topics = [

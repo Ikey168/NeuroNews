@@ -239,12 +239,13 @@ def try_import_core_routes():
     """Try to import core routes that are always needed."""
     global _imported_modules
     try:
-        from src.api.routes import event_routes, graph_routes, news_routes, veracity_routes, knowledge_graph_routes
+        from src.api.routes import event_routes, graph_routes, news_routes, veracity_routes, knowledge_graph_routes, sentiment_routes
         _imported_modules['event_routes'] = event_routes
         _imported_modules['graph_routes'] = graph_routes
         _imported_modules['news_routes'] = news_routes
         _imported_modules['veracity_routes'] = veracity_routes
         _imported_modules['knowledge_graph_routes'] = knowledge_graph_routes
+        _imported_modules['sentiment_routes'] = sentiment_routes
         return True
     except ImportError:
         return False
@@ -372,7 +373,8 @@ def include_core_routers(app):
     news_routes = _imported_modules.get('news_routes')
     event_routes = _imported_modules.get('event_routes')
     veracity_routes = _imported_modules.get('veracity_routes')
-    
+    sentiment_routes = _imported_modules.get('sentiment_routes')
+
     if graph_routes:
         app.include_router(graph_routes.router)
     if knowledge_graph_routes:
@@ -383,6 +385,8 @@ def include_core_routers(app):
         app.include_router(event_routes.router)
     if veracity_routes:
         app.include_router(veracity_routes.router)
+    if sentiment_routes:
+        app.include_router(sentiment_routes.router)
     return True
 
 
