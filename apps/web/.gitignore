@@ -1,5 +1,10 @@
 node_modules
 dist
+# Un-ignore src/lib/ — the root .gitignore has a bare `lib/` rule for Python
+# packaging artifacts that would otherwise exclude this directory.
+!src/lib/
+!src/lib/**
+
 dist-ssr
 *.local
 .env
