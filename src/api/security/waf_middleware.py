@@ -327,15 +327,17 @@ class WAFSecurityMiddleware(BaseHTTPMiddleware):
             return {"detected": False, "error": str(e)}
 
     async def _check_xss_attacks(self, request: Request) -> Dict[str, Any]:
-        """Check for XSS attack attempts."""
+        """Check for XSS attack attempts in user-controllable, reflectable input.
+
+        Only the query string and request body are inspected. Standard request
+        headers (user-agent, sec-ch-ua, accept, …) are not reflected by the API
+        and routinely contain substrings that match XSS heuristics (e.g.
+        ``on\\w+=``), so scanning them produces false positives that block
+        legitimate browser traffic without adding protection.
+        """
         try:
             # Check query parameters
             query_string = str(request.url.query)
-
-            # Check request headers
-            headers_content = " ".join(
-                "{0}:{1}".format(k, v) for k, v in request.headers.items()
-            )
 
             # Check request body if present
             body_content = ""
@@ -346,10 +348,8 @@ class WAFSecurityMiddleware(BaseHTTPMiddleware):
                 except Exception:
                     body_content = ""
 
-            # Combine all content to check
-            content_to_check = "{0} {1} {2}".format(
-                query_string, headers_content, body_content
-            )
+            # Combine user-controllable content to check
+            content_to_check = "{0} {1}".format(query_string, body_content)
 
             # Check against XSS patterns
             for pattern in self.xss_patterns:

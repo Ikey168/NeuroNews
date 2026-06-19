@@ -281,8 +281,27 @@ def configure_error_handlers_if_available(app):
     return False
 
 
+def _dev_mode_enabled() -> bool:
+    """Whether to skip heavy security middleware for local development.
+
+    Set NEURONEWS_DEV_MODE=true to disable the WAF, rate limiting, API-key and
+    RBAC middlewares so the local frontend can talk to the API without
+    authentication or throttling. Defaults to off (production-safe).
+    """
+    import os
+
+    return os.getenv("NEURONEWS_DEV_MODE", "false").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+
+
 def add_waf_middleware_if_available(app):
     """Add WAF security middleware first for maximum protection (Issue #65)."""
+    if _dev_mode_enabled():
+        return False
     if WAF_SECURITY_AVAILABLE:
         waf_security_middleware = _imported_modules.get('WAFSecurityMiddleware')
         waf_metrics_middleware = _imported_modules.get('WAFMetricsMiddleware')
@@ -295,6 +314,8 @@ def add_waf_middleware_if_available(app):
 
 def add_rate_limiting_middleware_if_available(app):
     """Add rate limiting middleware (Issue #59)."""
+    if _dev_mode_enabled():
+        return False
     if RATE_LIMITING_AVAILABLE:
         rate_limit_middleware = _imported_modules.get('RateLimitMiddleware')
         rate_limit_config = _imported_modules.get('RateLimitConfig')
@@ -306,6 +327,8 @@ def add_rate_limiting_middleware_if_available(app):
 
 def add_api_key_middleware_if_available(app):
     """Add API key authentication middleware (Issue #61)."""
+    if _dev_mode_enabled():
+        return False
     if API_KEY_MANAGEMENT_AVAILABLE:
         api_key_auth_middleware = _imported_modules.get('APIKeyAuthMiddleware')
         api_key_metrics_middleware = _imported_modules.get('APIKeyMetricsMiddleware')
@@ -318,6 +341,8 @@ def add_api_key_middleware_if_available(app):
 
 def add_rbac_middleware_if_available(app):
     """Add RBAC middleware (Issue #60)."""
+    if _dev_mode_enabled():
+        return False
     if RBAC_AVAILABLE:
         enhanced_rbac_middleware = _imported_modules.get('EnhancedRBACMiddleware')
         rbac_metrics_middleware = _imported_modules.get('RBACMetricsMiddleware')
