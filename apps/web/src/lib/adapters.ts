@@ -8,12 +8,14 @@ import type {
   Cluster,
   TrendingTopic,
   TopEntity,
+  TopicSentiment,
 } from "../types";
 import type {
   RawArticle,
   RawEventCluster,
   RawTrendingResponse,
   RawInfluencer,
+  RawTopicSentiment,
 } from "./api";
 
 export function relativeTime(iso: string | null | undefined): string {
@@ -65,6 +67,22 @@ export function adaptTrending(raw: RawTrendingResponse): TrendingTopic[] {
     change: Math.round((t.growth_rate ?? t.article_count / max) * 100),
     sent: t.avg_sentiment ?? 0,
   }));
+}
+
+export function adaptTopicSentiment(raw: RawTopicSentiment[]): TopicSentiment[] {
+  return raw
+    .map((t) => {
+      // Collapse the per-label breakdown into one article-weighted average.
+      const entries = Object.values(t.sentiments ?? {});
+      const total = entries.reduce((s, e) => s + (e.count ?? 0), 0);
+      const weighted = entries.reduce((s, e) => s + (e.count ?? 0) * (e.avg_score ?? 0), 0);
+      return {
+        topic: t.topic,
+        articles: t.total_articles ?? total,
+        avgScore: total > 0 ? weighted / total : 0,
+      };
+    })
+    .sort((a, b) => b.articles - a.articles);
 }
 
 const ENTITY_TYPE_COLOR: Record<string, string> = {

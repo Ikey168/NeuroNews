@@ -3,6 +3,7 @@ import { ACCENT, palette, accentSoft, accentBorder, fonts } from "../theme";
 import { sentColor, fmt } from "../lib/sentiment";
 import { mockStories, mockTimeline } from "../data/mock";
 import PageHeader from "../components/PageHeader";
+import SourceBadge from "../components/SourceBadge";
 import Hover from "../components/Hover";
 import type { TimelineEvent } from "../types";
 
@@ -27,6 +28,7 @@ export default function Timeline() {
             How <span style={{ color: "#9aa4b2" }}>{activeLabel}</span> developed over time
           </>
         }
+        right={<SourceBadge source="demo" />}
       />
       <div style={{ display: "flex", gap: 7, marginBottom: 22, flexWrap: "wrap" }}>
         {mockStories.map((s) => {

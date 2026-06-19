@@ -3,6 +3,7 @@ import { ACCENT, palette, fonts } from "../theme";
 import { sentColor, fmt } from "../lib/sentiment";
 import { mockWorkspaces, mockWorkspaceDetail } from "../data/mock";
 import PageHeader from "../components/PageHeader";
+import SourceBadge from "../components/SourceBadge";
 import Hover from "../components/Hover";
 import type { Workspace } from "../types";
 
@@ -43,7 +44,11 @@ export default function Workspaces() {
 
   return (
     <div>
-      <PageHeader title="Research Workspaces" subtitle="Group sources around a question · build toward a thesis" />
+      <PageHeader
+        title="Research Workspaces"
+        subtitle="Group sources around a question · build toward a thesis"
+        right={<SourceBadge source="demo" />}
+      />
       <div style={{ display: "grid", gridTemplateColumns: "316px 1fr", gap: 14, alignItems: "start" }}>
         {/* Project list */}
         <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>

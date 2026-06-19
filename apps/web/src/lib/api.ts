@@ -98,6 +98,17 @@ export interface RawSentimentSummary {
   [key: string]: unknown;
 }
 
+export interface RawHealth {
+  status?: string;
+  [key: string]: unknown;
+}
+
+export interface RawTopicSentiment {
+  topic: string;
+  total_articles: number;
+  sentiments: Record<string, { count: number; avg_score: number; percentage?: number }>;
+}
+
 export interface RawKgStats {
   [key: string]: unknown;
 }
@@ -115,6 +126,8 @@ export interface RawInfluencer {
 // ---------- endpoint calls ----------
 
 export const api = {
+  health: () => request<RawHealth>("/health"),
+
   articles: (params?: { category?: string; source?: string }) =>
     request<RawArticle[]>("/api/v1/news/articles", params),
 
@@ -129,7 +142,8 @@ export const api = {
 
   sentimentSummary: () => request<RawSentimentSummary>("/news_sentiment/summary"),
 
-  sentimentTopics: () => request<RawSentimentSummary>("/news_sentiment/topics"),
+  sentimentTopics: (params?: { days?: number; min_articles?: number }) =>
+    request<RawTopicSentiment[]>("/news_sentiment/topics", params),
 
   knowledgeGraphStats: () => request<RawKgStats>("/api/v1/knowledge_graph_stats"),
 

@@ -1,6 +1,7 @@
 import { ACCENT, palette, fonts } from "../theme";
 import { useTopEntities } from "../lib/queries";
 import PageHeader from "../components/PageHeader";
+import SourceBadge from "../components/SourceBadge";
 import EntityGraph from "../components/charts/EntityGraph";
 import type { LegendItem } from "../types";
 
@@ -27,13 +28,14 @@ const panelLabel = {
 } as const;
 
 export default function EntityGraphView() {
-  const { data: topEntities } = useTopEntities();
+  const { data: topEntities, source, isLoading } = useTopEntities();
 
   return (
     <div>
       <PageHeader
         title="Entity Relationship Graph"
         subtitle="12 entities · 13 co-occurrence links · 24h window"
+        right={<SourceBadge source={source} isLoading={isLoading} />}
       />
       <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: 12 }}>
         <div style={{ background: "#0e131a", border: "1px solid #1c2330", borderRadius: 10, overflow: "hidden" }}>
