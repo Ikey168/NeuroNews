@@ -27,8 +27,15 @@ By default the dev server proxies API requests to the FastAPI backend at
 backend separately, e.g.:
 
 ```bash
+pip install -r requirements.txt
 uvicorn src.api.app:app --reload --port 8000
 ```
+
+The backend serves real data from a **local DuckDB warehouse** (no Snowflake or
+external services needed). On first request it creates and seeds
+`data/neuronews.duckdb` with sample articles, so the News Feed, Overview and
+Sentiment views light up `LIVE` out of the box. Point it elsewhere with
+`NEURONEWS_DB_PATH`.
 
 For production builds, point the app at an absolute backend origin:
 
@@ -64,7 +71,7 @@ surfaced through `src/components/SourceBadge.tsx`.
 | Overview        | aggregates feed / clusters / trending                | live/demo |
 | News Feed       | `GET /api/v1/news/articles`                          | live/demo |
 | Entity Graph    | `GET /api/influence/top-influencers`                 | live/demo |
-| Sentiment       | `GET /news_sentiment/topics` (stats + breakdown)     | live/demo |
+| Sentiment       | `GET /news_sentiment/topics` (stats + breakdown) — **live from local DuckDB** | live/demo |
 | Sentiment       | topic×time heatmap — no hourly endpoint yet          | demo      |
 | Event Clusters  | `GET /api/v1/events/clusters`                        | live/demo |
 | Trending        | `GET /topics/trending`                               | live/demo |
@@ -72,6 +79,14 @@ surfaced through `src/components/SourceBadge.tsx`.
 | Workspaces      | client research data (no backend endpoint)           | demo      |
 | Watchlists      | client research data (no backend endpoint)           | demo      |
 | Story Timeline  | client research data (no backend endpoint)           | demo      |
+
+> Which endpoints serve real data today: the **articles** endpoint
+> (`/api/v1/news/articles`, powering News Feed + Overview feed) and the
+> **sentiment topics** endpoint (`/news_sentiment/topics`) are backed by the
+> local DuckDB warehouse and return live rows. The **clusters**, **trending**,
+> **breaking news** and **influencers** endpoints belong to separate subsystems
+> (event clustering, keyword DB, graph analyzer) that aren't wired to the local
+> warehouse yet, so those panels still fall back to demo data.
 
 > Note: the backend list endpoints expose a subset of the fields the design
 > shows (e.g. `/news/articles` has no per-article summary/entities, and the

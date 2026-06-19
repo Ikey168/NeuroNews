@@ -1,0 +1,133 @@
+"""
+Schema + seed data for the local DuckDB analytics warehouse.
+
+Seeds the ``news_articles`` table with realistic sample articles so the API's
+news, feed and sentiment endpoints return real rows on a fresh local setup
+(no Snowflake, no external ingestion required).
+
+Seeding is idempotent: it only runs when the table is empty.
+"""
+
+from __future__ import annotations
+
+import logging
+from datetime import datetime, timedelta
+from typing import List, Tuple
+
+import duckdb
+
+logger = logging.getLogger(__name__)
+
+
+_SCHEMA = """
+CREATE TABLE IF NOT EXISTS news_articles (
+    id            VARCHAR,
+    title         VARCHAR,
+    url           VARCHAR,
+    content       VARCHAR,
+    publish_date  TIMESTAMP,
+    source        VARCHAR,
+    category      VARCHAR,
+    sentiment_score DOUBLE,
+    sentiment_label VARCHAR
+);
+"""
+
+# Each topic seeds a cluster of articles sharing a leading title word (the
+# sentiment-topics endpoint groups by the first word of the title). The
+# dominant sentiment is repeated enough times to clear the endpoint's
+# "minimum articles per (topic, label)" threshold, giving each topic a clear
+# positive / negative / neutral reading.
+#
+# (lead phrase, category, source, dominant label, dominant base score)
+_TOPICS: List[Tuple[str, str, str, str, float]] = [
+    ("Federal Reserve", "Economy", "Reuters", "neutral", 0.03),
+    ("Markets", "Economy", "Bloomberg", "positive", 0.38),
+    ("Inflation", "Economy", "Financial Times", "negative", -0.34),
+    ("Nvidia", "Technology", "The Verge", "positive", 0.52),
+    ("Quantum", "Technology", "Wired", "positive", 0.44),
+    ("Energy", "Energy", "Reuters", "negative", -0.29),
+    ("Climate", "Policy", "The Guardian", "negative", -0.41),
+    ("Healthcare", "Health", "STAT News", "positive", 0.49),
+]
+
+# Short descriptive fragments appended after the lead phrase to vary titles.
+_FRAGMENTS = [
+    "outlook shifts as new data lands",
+    "draws sharp reaction from analysts",
+    "enters a pivotal week",
+    "signals a turning point",
+    "faces fresh scrutiny",
+    "beats expectations in latest read",
+    "weighs on the broader sector",
+    "sets the tone for the quarter",
+    "prompts a strategic rethink",
+    "gains momentum heading into Q3",
+]
+
+
+def _label_for(index: int, dominant: str, dominant_count: int) -> str:
+    """First `dominant_count` articles carry the dominant label; rest neutral."""
+    return dominant if index < dominant_count else "neutral"
+
+
+def _score_for(label: str, base: float, index: int) -> float:
+    if label == "neutral":
+        return round(-0.04 + (index % 3) * 0.04, 3)
+    # Jitter around the base score so a topic isn't perfectly flat.
+    jitter = ((index % 4) - 1.5) * 0.05
+    return round(base + jitter, 3)
+
+
+def _build_rows(now: datetime) -> List[tuple]:
+    rows: List[tuple] = []
+    per_topic = 8
+    dominant_count = 6  # clears the default min-articles threshold of 5
+    article_no = 0
+
+    for t_idx, (lead, category, source, dominant, base) in enumerate(_TOPICS):
+        for i in range(per_topic):
+            label = _label_for(i, dominant, dominant_count)
+            score = _score_for(label, base, i)
+            fragment = _FRAGMENTS[(t_idx + i) % len(_FRAGMENTS)]
+            title = f"{lead} {fragment}"
+            # Spread timestamps across the last ~5 days (inside the 7-day
+            # sentiment window), newest first.
+            published = now - timedelta(hours=article_no * 2 + 1)
+            slug = title.lower().replace(" ", "-")[:60]
+            rows.append(
+                (
+                    f"art-{article_no:04d}",
+                    title,
+                    f"https://news.example/{slug}",
+                    f"{title}. {fragment.capitalize()}.",
+                    published,
+                    source,
+                    category,
+                    score,
+                    label,
+                )
+            )
+            article_no += 1
+
+    return rows
+
+
+def ensure_schema_and_seed(conn: duckdb.DuckDBPyConnection) -> None:
+    """Create the news_articles table and seed it if empty."""
+    conn.execute(_SCHEMA)
+    count = conn.execute("SELECT COUNT(*) FROM news_articles").fetchone()[0]
+    if count and count > 0:
+        return
+
+    rows = _build_rows(datetime.now())
+    conn.executemany(
+        """
+        INSERT INTO news_articles
+            (id, title, url, content, publish_date, source, category,
+             sentiment_score, sentiment_label)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        rows,
+    )
+    logger.info("Seeded local warehouse with %d sample articles", len(rows))

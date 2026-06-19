@@ -1,30 +1,13 @@
 import os
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from src.api.routes.news_routes import router as news_api_router
-from src.database.snowflake_analytics_connector import SnowflakeAnalyticsConnector
-
-
-@pytest.fixture(autouse=True)
-def mock_env_vars():
-    """Set required environment variables for tests."""
-    with patch.dict(
-        os.environ,
-        {
-            "SNOWFLAKE_ACCOUNT": "test-account",
-            "SNOWFLAKE_USER": "test-user",
-            "SNOWFLAKE_PASSWORD": "test-pass",
-            "SNOWFLAKE_WAREHOUSE": "TEST_WH",
-            "SNOWFLAKE_DATABASE": "TEST_DB",
-            "SNOWFLAKE_SCHEMA": "PUBLIC",
-        },
-    ):
-        yield
+from src.database.local_analytics_connector import LocalAnalyticsConnector
 
 
 @pytest.fixture
@@ -43,18 +26,11 @@ def client(app):
 
 @pytest.fixture
 def mock_db():
-    """Create mock SnowflakeAnalyticsConnector."""
-    mock = AsyncMock(spec=SnowflakeAnalyticsConnector)
-    mock.connect = AsyncMock()
-    mock.close = AsyncMock()
+    """Create a mock local analytics connector."""
+    mock = MagicMock(spec=LocalAnalyticsConnector)
+    mock.connect = MagicMock(return_value=True)
+    mock.disconnect = MagicMock()
     mock.execute_query = AsyncMock()
-
-    # Mock constructor args
-    mock._host = "test-host"
-    mock._database = "test-db"
-    mock._user = "test-user"
-    mock._password = "test-pass"
-
     return mock
 
 
@@ -75,7 +51,7 @@ def test_get_articles_by_topic(client, mock_db):
     ]
     mock_db.execute_query.return_value = mock_articles
 
-    with patch("src.api.routes.news_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
+    with patch("src.api.routes.news_routes.LocalAnalyticsConnector", return_value=mock_db):
         response = client.get("/news/articles/topic/AI", params={"limit": 10})
 
     assert response.status_code == 200
@@ -99,7 +75,7 @@ def test_get_articles_by_topic(client, mock_db):
 
 def test_get_articles_by_topic_validation(client, mock_db):
     """Test input validation for topic search."""
-    with patch("src.api.routes.news_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
+    with patch("src.api.routes.news_routes.LocalAnalyticsConnector", return_value=mock_db):
         # Test invalid limit
         response = client.get("/news/articles/topic/AI", params={"limit": 0})
         assert response.status_code == 422
@@ -124,7 +100,7 @@ def test_get_articles(client, mock_db):
     ]
     mock_db.execute_query.return_value = mock_articles
 
-    with patch("src.api.routes.news_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
+    with patch("src.api.routes.news_routes.LocalAnalyticsConnector", return_value=mock_db):
         response = client.get("/news/articles")
 
     assert response.status_code == 200
@@ -146,7 +122,7 @@ def test_get_articles_with_filters(client, mock_db):
     """Test retrieving articles with query filters."""
     mock_db.execute_query.return_value = []
 
-    with patch("src.api.routes.news_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
+    with patch("src.api.routes.news_routes.LocalAnalyticsConnector", return_value=mock_db):
         response = client.get(
             "/news/articles",
             params={
@@ -192,7 +168,7 @@ def test_get_article_by_id(client, mock_db):
     ]
     mock_db.execute_query.return_value = mock_article
 
-    with patch("src.api.routes.news_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
+    with patch("src.api.routes.news_routes.LocalAnalyticsConnector", return_value=mock_db):
         response = client.get("/news/articles/article1")
 
     assert response.status_code == 200
@@ -208,7 +184,7 @@ def test_get_article_not_found(client, mock_db):
     """Test 404 response for non-existent article."""
     mock_db.execute_query.return_value = []
 
-    with patch("src.api.routes.news_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
+    with patch("src.api.routes.news_routes.LocalAnalyticsConnector", return_value=mock_db):
         response = client.get("/news/articles/nonexistent")
 
     assert response.status_code == 404
@@ -219,21 +195,20 @@ def test_database_error_handling(client, mock_db):
     """Test error handling for database failures."""
     mock_db.execute_query.side_effect = Exception("Database error")
 
-    with patch("src.api.routes.news_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
+    with patch("src.api.routes.news_routes.LocalAnalyticsConnector", return_value=mock_db):
         response = client.get("/news/articles")
 
     assert response.status_code == 500
     assert "Database error" in response.json()["detail"]
 
 
-def test_missing_snowflake_account():
-    """Test error when SNOWFLAKE_ACCOUNT env var is missing."""
-    app = FastAPI()
-    app.include_router(news_api_router)
-    client = TestClient(app)
+def test_articles_require_no_snowflake_env(client, mock_db):
+    """The local warehouse needs no Snowflake credentials to serve articles."""
+    mock_db.execute_query.return_value = []
 
-    with patch.dict(os.environ, {}, clear=True):
+    with patch("src.api.routes.news_routes.LocalAnalyticsConnector", return_value=mock_db), patch.dict(
+        os.environ, {}, clear=True
+    ):
         response = client.get("/news/articles")
 
-    assert response.status_code == 500
-    assert "SNOWFLAKE_ACCOUNT environment variable not set" in response.json()["detail"]
+    assert response.status_code == 200
