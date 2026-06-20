@@ -11,6 +11,7 @@ import {
   adaptInfluencers,
   adaptTopicSentiment,
   adaptEntityGraph,
+  adaptHeatmap,
 } from "./adapters";
 import {
   mockArticles,
@@ -18,6 +19,7 @@ import {
   mockTrending,
   mockTickerText,
   mockTopicSentiment,
+  mockHeatmap,
 } from "../data/mock";
 import { palette, ACCENT } from "../theme";
 import type {
@@ -27,6 +29,7 @@ import type {
   TopEntity,
   TopicSentiment,
   LiveGraph,
+  Heatmap,
 } from "../types";
 
 export type Source = "live" | "demo";
@@ -154,6 +157,27 @@ export function useTopicSentiment(): Result<TopicSentiment[]> {
     "topicSentiment",
     async () => adaptTopicSentiment(await api.sentimentTopics({ days: 7 })),
     mockTopicSentiment,
+  );
+}
+
+const mockSentimentHeatmap: Heatmap = {
+  topics: ["Economy", "Technology", "Energy", "Policy", "Health", "Markets"],
+  cols: mockHeatmap.cols,
+  labels: Array.from({ length: mockHeatmap.cols }, (_, i) =>
+    i % 2 === 0 ? String(i) : "",
+  ),
+  seed: mockHeatmap.seed,
+};
+
+export function useSentimentHeatmap(): Result<Heatmap> {
+  return useWithFallback(
+    "sentimentHeatmap",
+    async () => {
+      const hm = adaptHeatmap(await api.sentimentHeatmap({ days: 14 }));
+      if (!hm.topics.length) throw new Error("empty");
+      return hm;
+    },
+    mockSentimentHeatmap,
   );
 }
 

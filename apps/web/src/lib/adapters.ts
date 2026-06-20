@@ -10,6 +10,7 @@ import type {
   TopEntity,
   TopicSentiment,
   LiveGraph,
+  Heatmap,
 } from "../types";
 import type {
   RawArticle,
@@ -18,7 +19,17 @@ import type {
   RawInfluencer,
   RawTopicSentiment,
   RawEntityGraph,
+  RawHeatmap,
 } from "./api";
+
+export function adaptHeatmap(raw: RawHeatmap): Heatmap {
+  return {
+    topics: raw.topics ?? [],
+    cols: raw.cols ?? 0,
+    labels: raw.labels ?? [],
+    seed: raw.seed ?? [],
+  };
+}
 
 export function adaptEntityGraph(raw: RawEntityGraph): LiveGraph {
   const nodes = (raw.nodes ?? []).map((n) => ({

@@ -139,6 +139,13 @@ export interface RawEntityGraph {
   edge_count: number;
 }
 
+export interface RawHeatmap {
+  topics: string[];
+  cols: number;
+  labels: string[];
+  seed: number[][];
+}
+
 // ---------- endpoint calls ----------
 
 export const api = {
@@ -168,4 +175,7 @@ export const api = {
 
   entityGraph: (params?: { days?: number; max_nodes?: number }) =>
     request<RawEntityGraph>("/api/v1/entity_graph", params),
+
+  sentimentHeatmap: (params?: { days?: number; max_topics?: number }) =>
+    request<RawHeatmap>("/news_sentiment/heatmap", params),
 };

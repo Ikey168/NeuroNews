@@ -22,6 +22,25 @@ async def get_db():
         db.disconnect()
 
 
+@router.get("/heatmap")
+async def get_sentiment_heatmap(
+    days: int = Query(14, ge=1, le=60, description="Number of days to cover"),
+    max_topics: int = Query(6, ge=1, le=12, description="Maximum category rows"),
+) -> Dict[str, Any]:
+    """Category x day average-sentiment heatmap derived from the warehouse."""
+    try:
+        from src.database.local_warehouse_views import (
+            get_sentiment_heatmap as warehouse_heatmap,
+        )
+
+        return await warehouse_heatmap(days=days, max_topics=max_topics)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail="Error building sentiment heatmap: {0}".format(str(e)),
+        )
+
+
 @router.get("")
 async def get_sentiment_trends(
     topic: Optional[str] = Query(None, description="Topic to filter articles by"),

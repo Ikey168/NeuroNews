@@ -50,6 +50,13 @@ export interface TopicSentiment {
   articles: number;
 }
 
+export interface Heatmap {
+  topics: string[];
+  cols: number;
+  labels: string[];
+  seed: number[][];
+}
+
 export interface LegendItem {
   label: string;
   color: string;

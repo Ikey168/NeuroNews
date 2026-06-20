@@ -596,3 +596,52 @@ async def get_entity_graph(days: int = 7, max_nodes: int = 14) -> Dict[str, Any]
         "node_count": len(nodes),
         "edge_count": len(edges),
     }
+
+
+# --------------------------------------------------------------------------- #
+# Sentiment heatmap
+# --------------------------------------------------------------------------- #
+
+
+async def get_sentiment_heatmap(days: int = 14, max_topics: int = 6) -> Dict[str, Any]:
+    """Category x day average-sentiment heatmap from real article sentiment."""
+    db = LocalAnalyticsConnector()
+    db.connect()
+    cutoff = datetime.now() - timedelta(days=days)
+    rows = await db.execute_query(
+        """
+        SELECT category,
+               CAST(publish_date AS DATE) AS day,
+               AVG(sentiment_score) AS avg_sent,
+               COUNT(*) AS cnt
+        FROM news_articles
+        WHERE publish_date >= %s AND sentiment_label IS NOT NULL
+        GROUP BY category, CAST(publish_date AS DATE)
+        """,
+        [cutoff],
+    )
+    db.disconnect()
+
+    if not rows:
+        return {"topics": [], "cols": 0, "labels": [], "seed": []}
+
+    # Top categories by article volume.
+    cat_total: Counter = Counter()
+    cell: Dict[tuple, float] = {}
+    for (category, day, avg_sent, cnt) in rows:
+        cat = category or "General"
+        cat_total[cat] += int(cnt)
+        cell[(cat, day)] = float(avg_sent or 0.0)
+    topics = [c for c, _ in cat_total.most_common(max_topics)]
+
+    # Day columns: oldest -> newest across the window.
+    today = datetime.now().date()
+    day_cols = [today - timedelta(days=(days - 1 - i)) for i in range(days)]
+    labels = ["{0}/{1}".format(d.month, d.day) for d in day_cols]
+
+    seed = [
+        [round(cell.get((topic, day), 0.0), 3) for day in day_cols]
+        for topic in topics
+    ]
+
+    return {"topics": topics, "cols": len(day_cols), "labels": labels, "seed": seed}

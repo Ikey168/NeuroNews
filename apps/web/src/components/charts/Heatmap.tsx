@@ -1,7 +1,7 @@
 import { fonts } from "../../theme";
-import { mockHeatmap } from "../../data/mock";
+import type { Heatmap as HeatmapData } from "../../types";
 
-// Sentiment heatmap (topics × 16 hourly columns). Ported from `buildHeatmap`.
+// Sentiment heatmap (categories × day columns).
 function cellColor(v: number): string {
   if (v > 0.05) {
     const t = Math.min(v / 0.7, 1);
@@ -14,10 +14,21 @@ function cellColor(v: number): string {
   return "rgba(139,149,165,0.16)";
 }
 
-export default function Heatmap() {
-  const { topics, cols, seed } = mockHeatmap;
-  const nowHour = new Date().getUTCHours();
-  const hours = Array.from({ length: cols }, (_, i) => ((nowHour - (cols - 1 - i)) % 24 + 24) % 24);
+interface Props {
+  data: HeatmapData;
+}
+
+export default function Heatmap({ data }: Props) {
+  const { topics, cols, seed, labels } = data;
+  const labelEvery = cols > 10 ? 2 : 1;
+
+  if (!topics.length) {
+    return (
+      <div style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center", color: "#5b6675", fontFamily: fonts.mono, fontSize: 12 }}>
+        No sentiment data in the selected window
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
@@ -30,7 +41,7 @@ export default function Heatmap() {
             {seed[ri].map((v, ci) => (
               <div
                 key={ci}
-                title={`${t} · ${v.toFixed(2)}`}
+                title={`${t} · ${labels[ci] ?? ""} · ${v.toFixed(2)}`}
                 style={{ height: 26, borderRadius: 3, background: cellColor(v) }}
               />
             ))}
@@ -40,9 +51,9 @@ export default function Heatmap() {
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 2 }}>
         <div style={{ width: 78, flex: "none" }} />
         <div style={{ flex: 1, display: "grid", gridTemplateColumns: `repeat(${cols},1fr)`, gap: 4 }}>
-          {hours.map((h, i) => (
+          {labels.map((h, i) => (
             <div key={i} style={{ textAlign: "center", fontFamily: fonts.mono, fontSize: 9, color: "#4b5563" }}>
-              {i % 2 === 0 ? String(h).padStart(2, "0") : ""}
+              {i % labelEvery === 0 ? h : ""}
             </div>
           ))}
         </div>

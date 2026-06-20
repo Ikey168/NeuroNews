@@ -1,6 +1,6 @@
 import { palette, fonts } from "../theme";
 import { sentColor, fmt } from "../lib/sentiment";
-import { useTopicSentiment } from "../lib/queries";
+import { useTopicSentiment, useSentimentHeatmap } from "../lib/queries";
 import PageHeader from "../components/PageHeader";
 import SourceBadge from "../components/SourceBadge";
 import Heatmap from "../components/charts/Heatmap";
@@ -28,6 +28,7 @@ const card = {
 
 export default function Sentiment() {
   const { data: topics, source, isLoading } = useTopicSentiment();
+  const { data: heatmap, source: heatmapSource, isLoading: heatmapLoading } = useSentimentHeatmap();
   const stats = deriveStats(topics);
   const maxA = Math.max(1, ...topics.map((t) => t.articles));
 
@@ -97,13 +98,12 @@ export default function Sentiment() {
         </div>
       </div>
 
-      {/* Topic × time heatmap — no hourly backend endpoint yet, so this stays
-          on the design dataset and is labelled accordingly. */}
+      {/* Category × day sentiment heatmap — live average sentiment per bucket */}
       <div style={{ ...card, padding: "18px 20px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ fontFamily: fonts.grotesk, fontWeight: 600, fontSize: 14 }}>Sentiment Heatmap</div>
-            <SourceBadge source="demo" />
+            <SourceBadge source={heatmapSource} isLoading={heatmapLoading} />
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, fontFamily: fonts.mono, fontSize: 10, color: "#8a94a6" }}>
             <span style={{ color: "#FF5C5C" }}>■</span> negative
@@ -111,7 +111,7 @@ export default function Sentiment() {
             <span style={{ color: "#3DD68C" }}>■</span> positive
           </div>
         </div>
-        <Heatmap />
+        <Heatmap data={heatmap} />
       </div>
     </div>
   );
