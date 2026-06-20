@@ -554,22 +554,25 @@ def _extract_entities(text: str) -> List[str]:
 
 
 def _resolve_aliases(doc_count: "Counter", label_form: Dict[str, "Counter"]) -> Dict[str, str]:
-    """Map a person's surname to their fuller 'First Last' form, when present.
+    """Map a single-token name mention to its fuller 'First Last' form.
 
-    e.g. "powell" -> "jerome powell". Only applies to 2-word Title-case names so
-    organisations/topics aren't accidentally merged.
+    e.g. both "jerome" and "powell" -> "jerome powell". Only applies to 2-word
+    Title-case names so organisations/topics aren't merged, and only when the
+    single token maps to exactly one full name (ambiguous first names shared by
+    several people, e.g. two different "Andy"s, are left alone).
     """
-    alias: Dict[str, str] = {}
-    multiword = [k for k in doc_count if " " in k]
-    for key in multiword:
+    candidates: Dict[str, set] = defaultdict(set)
+    for key in doc_count:
+        if " " not in key:
+            continue
         label = label_form[key].most_common(1)[0][0] if label_form[key] else key
         words = label.split()
         if len(words) == 2 and all(w[:1].isupper() and w[1:].islower() for w in words):
-            surname = words[1].lower()
-            if surname in doc_count and surname != key:
-                # Map the surname-only mention to the fuller name.
-                alias[surname] = key
-    return alias
+            for part in (words[0].lower(), words[1].lower()):
+                if part in doc_count and part != key:
+                    candidates[part].add(key)
+    # Only alias tokens that resolve unambiguously to a single full name.
+    return {tok: next(iter(keys)) for tok, keys in candidates.items() if len(keys) == 1}
 
 
 def _entity_type(label: str) -> str:
