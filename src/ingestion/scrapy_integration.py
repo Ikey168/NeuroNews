@@ -1,568 +1,350 @@
 """
-This module provides optimized Scrapy pipelines and components that integrate
-with th             # G         #            stats = self.ingestion_pipeline.get_performance_stats()
-            spider.logger.info(
-                f"Optimized pipeline stats: {stats['metrics']['summary']}"
-            )
+News ingestion into the local analytics warehouse.
 
-            # Save performance report
-            report_path = "data/optimization_report_{0}_{1}.json".format(nal stats
-        if self.ingestion_pipeline:
-            stats = self.ingestion_pipeline.get_performance_stats()
-            spider.logger.info(
-                f"Optimized pipeline stats: {stats['metrics']['summary']}"
-            )
+Fetches real articles from public RSS/Atom news feeds, scores their sentiment,
+and writes them into the DuckDB ``news_articles`` table that the API serves.
+This replaces the seeded sample data with live headlines.
 
-            # Save performance report   spider.logger.info(
-                f"Optimized pipeline stats: {stats['metrics']['summary']}"
-            )
+Usage:
 
-            # Save performance reportnal stats
-        if self.ingestion_pipeline:
-            stats = self.ingestion_pipeline.get_performance_stats()
-            spider.logger.info(
-                f"Optimized pipeline stats: {stats['metrics']['summary']}"
-            )
+    # stop the API server first (DuckDB allows a single writer), then:
+    python -m src.ingestion.scrapy_integration            # append latest news
+    python -m src.ingestion.scrapy_integration --replace  # wipe + reload
+    python -m src.ingestion.scrapy_integration --limit 40 # per-feed cap
 
-            # Save performance report
-            report_path = "data/optimization_report_{0}_{1}.json".format(  spider.logger.info(
-                f"Optimized pipeline stats: {stats['metrics']['summary']}"
-            )
-
-            # Save performance report   spider.logger.info(
-                f"Optimized pipeline stats: {stats['metrics']['summary']}"
-            )
-
-            # Save performance reporth-performance ingestion pipeline to improve overall throughput
-and efficiency of the news scraping workflow.
+The module has no Scrapy/AWS dependencies; it uses the standard library for
+HTTP + XML parsing and NLTK's VADER for sentiment (with a built-in fallback so
+it still works offline-of-NLTK).
 """
 
-from scraper.items import NewsItem
-from ingestion.optimized_pipeline import OptimizationConfig, OptimizedIngestionPipeline
-import asyncio
-import json
+from __future__ import annotations
+
+import argparse
+import hashlib
 import logging
-import queue
+import re
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
+from typing import List, Optional, Sequence, Tuple
+from urllib.request import Request, urlopen
+import xml.etree.ElementTree as ET
 
-# Internal imports
-import sys
-import time
-from collections import deque
-from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
-from typing import Any, Dict, List
-
-from scrapy import Spider
-from scrapy.exceptions import DropItem
-from scrapy.utils.project import get_project_settings
-
-sys.path.append(str(Path(__file__).parent.parent))
-
+from src.database.local_analytics_connector import get_shared_connection
+from src.database.local_warehouse_seed import ensure_schema
 
 logger = logging.getLogger(__name__)
 
+USER_AGENT = "NeuroNewsBot/1.0 (+https://github.com/Ikey168/NeuroNews)"
+HTTP_TIMEOUT = 15
+_ATOM = "{http://www.w3.org/2005/Atom}"
 
-class OptimizedScrapyPipeline:
-    """
-    Optimized Scrapy pipeline that uses the high-performance ingestion engine
-    for processing scraped items with improved throughput and efficiency.
-    """
 
-    def __init__(self):
-        self.ingestion_pipeline = None
-        self.article_buffer = []
-        self.buffer_size = 50
-        self.buffer_timeout = 10.0
-        self.last_flush_time = time.time()
+@dataclass(frozen=True)
+class Feed:
+    """A news source RSS/Atom feed and the category to file its articles under."""
 
-        # Threading for async processing
-        self.thread_pool = ThreadPoolExecutor(max_workers=4)
-        self.processing_queue = queue.Queue()
-        self.result_queue = queue.Queue()
+    name: str
+    url: str
+    category: str
 
-        # Metrics
-        self.items_processed = 0
-        self.items_buffered = 0
-        self.flush_count = 0
 
-        # Configuration from Scrapy settings
-        settings = get_project_settings()
-        self.config = OptimizationConfig(
-            max_concurrent_tasks=settings.getint(
-                "OPTIMIZED_MAX_CONCURRENT_TASKS", 30),
-            batch_size=settings.getint("OPTIMIZED_BATCH_SIZE", 50),
-            max_memory_usage_mb=settings.getfloat(
-                "OPTIMIZED_MAX_MEMORY_MB", 512.0),
-            adaptive_batching=settings.getbool(
-                "OPTIMIZED_ADAPTIVE_BATCHING", True),
-            enable_fast_validation=settings.getbool(
-                "OPTIMIZED_FAST_VALIDATION", True),
+# Reliable, public feeds covering the dashboard's categories.
+DEFAULT_FEEDS: List[Feed] = [
+    Feed("BBC Business", "https://feeds.bbci.co.uk/news/business/rss.xml", "Economy"),
+    Feed("BBC Technology", "https://feeds.bbci.co.uk/news/technology/rss.xml", "Technology"),
+    Feed("BBC Politics", "https://feeds.bbci.co.uk/news/politics/rss.xml", "Policy"),
+    Feed("BBC Health", "https://feeds.bbci.co.uk/news/health/rss.xml", "Health"),
+    Feed("BBC Science", "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml", "Science"),
+    Feed("Ars Technica", "https://feeds.arstechnica.com/arstechnica/index", "Technology"),
+    Feed("NPR News", "https://feeds.npr.org/1001/rss.xml", "Policy"),
+    Feed("EIA Today in Energy", "https://www.eia.gov/rss/todayinenergy.xml", "Energy"),
+]
+
+
+@dataclass
+class Article:
+    """A normalized article ready to be stored in the warehouse."""
+
+    id: str
+    title: str
+    url: str
+    content: str
+    publish_date: datetime
+    source: str
+    category: str
+    sentiment_score: float
+    sentiment_label: str
+
+    def as_row(self) -> tuple:
+        return (
+            self.id,
+            self.title,
+            self.url,
+            self.content,
+            self.publish_date,
+            self.source,
+            self.category,
+            self.sentiment_score,
+            self.sentiment_label,
         )
 
-        logger.info(
-            "OptimizedScrapyPipeline initialized with config: {0}".format(
-                self.config)
-        )
 
-    def open_spider(self, spider: Spider):
-        """Initialize the pipeline when spider opens."""
-        self.ingestion_pipeline = OptimizedIngestionPipeline(self.config)
-        self.last_flush_time = time.time()
-        logger.info(
-            "Optimized pipeline opened for spider: {0}".format(spider.name))
+# --------------------------------------------------------------------------- #
+# Sentiment
+# --------------------------------------------------------------------------- #
 
-    def close_spider(self, spider: Spider):
-        """Clean up when spider closes."""
-        # Flush any remaining items
-        if self.article_buffer:
-            self._flush_buffer_sync(spider)
+_VADER = None
+_VADER_TRIED = False
 
-        # Get final stats
-        if self.ingestion_pipeline:
-            stats = self.ingestion_pipeline.get_performance_stats()
-            spider.logger.info(
-                f"Optimized pipeline stats: {stats['metrics']['summary']}"
-            )
+# Tiny fallback lexicon used only when NLTK/VADER is unavailable.
+_POS_WORDS = {
+    "gain", "gains", "grow", "growth", "surge", "boost", "win", "wins", "record",
+    "breakthrough", "soar", "soars", "rally", "rallies", "up", "rise", "rises",
+    "strong", "success", "approve", "approved", "recovery", "optimistic", "beat",
+}
+_NEG_WORDS = {
+    "loss", "losses", "fall", "falls", "drop", "drops", "plunge", "crash", "slump",
+    "down", "decline", "declines", "weak", "fear", "fears", "crisis", "cut", "cuts",
+    "warn", "warns", "risk", "risks", "fail", "fails", "recession", "ban", "probe",
+}
 
-            # Save performance report
-            report_path = "data/optimization_report_{0}_{1}.json".format(
-                # ...existing code...
-            )
-            spider.logger.error("Error in optimized pipeline: {0}".format(e))
-            raise DropItem("Optimization processing failed: {0}".format(e))
 
-    def _item_to_dict(self, item: NewsItem) -> Dict[str, Any]:
-        """Convert Scrapy item to dictionary."""
-        return {
-            "title": item.get("title", ""),
-            "url": item.get("url", ""),
-            "content": item.get("content", ""),
-            "source": item.get("source", ""),
-            "published_date": item.get("published_date", ""),
-            "author": item.get("author", ""),
-            "category": item.get("category", ""),
-            "scraped_date": item.get("scraped_date", ""),
-            "content_length": item.get("content_length", 0),
-            "word_count": item.get("word_count", 0),
-            "validation_score": item.get("validation_score", 0),
-            "content_quality": item.get("content_quality", ""),
-            "duplicate_check": item.get("duplicate_check", ""),
-        }
-
-    def _flush_buffer_async(self, spider: Spider):
-        """Flush buffer asynchronously without blocking the spider."""
-        if not self.article_buffer:
-            return
-
-        # Copy buffer and clear it
-        articles_to_process = self.article_buffer.copy()
-        self.article_buffer.clear()
-        self.last_flush_time = time.time()
-        self.flush_count += 1
-
-        # Submit to thread pool for async processing
-        self.thread_pool.submit(
-            self._process_articles_batch, articles_to_process, spider
-        )
-
-        spider.logger.debug(
-            "Flushed buffer with {0} articles (flush #{1})".format(
-                len(articles_to_process), self.flush_count
-            )
-        )
-
-    def _flush_buffer_sync(self, spider: Spider):
-        """Flush buffer synchronously (used during spider close)."""
-        if not self.article_buffer:
-            return
-
-        articles_to_process = self.article_buffer.copy()
-        self.article_buffer.clear()
+def _get_vader():
+    global _VADER, _VADER_TRIED
+    if _VADER is not None or _VADER_TRIED:
+        return _VADER
+    _VADER_TRIED = True
+    try:
+        import nltk
+        from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
         try:
-            self._process_articles_batch(articles_to_process, spider)
-        except Exception as e:
-            spider.logger.error(
-                "Error in synchronous buffer flush: {0}".format(e))
+            _VADER = SentimentIntensityAnalyzer()
+        except LookupError:
+            nltk.download("vader_lexicon", quiet=True)
+            _VADER = SentimentIntensityAnalyzer()
+    except Exception as exc:  # nltk missing or download failed
+        logger.warning("VADER unavailable (%s); using fallback sentiment", exc)
+        _VADER = None
+    return _VADER
 
-    def _process_articles_batch(self, articles: List[Dict[str, Any]], spider: Spider):
-        """Process a batch of articles through the ingestion pipeline."""
+
+def score_sentiment(text: str) -> Tuple[float, str]:
+    """Return (compound_score in [-1, 1], label) for the given text."""
+    text = (text or "").strip()
+    if not text:
+        return 0.0, "neutral"
+
+    analyzer = _get_vader()
+    if analyzer is not None:
+        score = float(analyzer.polarity_scores(text)["compound"])
+    else:
+        words = re.findall(r"[a-z']+", text.lower())
+        pos = sum(w in _POS_WORDS for w in words)
+        neg = sum(w in _NEG_WORDS for w in words)
+        score = (pos - neg) / (pos + neg + 2.0)
+
+    score = round(max(-1.0, min(1.0, score)), 4)
+    label = "positive" if score > 0.05 else "negative" if score < -0.05 else "neutral"
+    return score, label
+
+
+# --------------------------------------------------------------------------- #
+# Fetching + parsing
+# --------------------------------------------------------------------------- #
+
+
+def _http_get(url: str) -> bytes:
+    req = Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/rss+xml, application/xml, text/xml, */*"})
+    with urlopen(req, timeout=HTTP_TIMEOUT) as resp:
+        return resp.read()
+
+
+def _strip_html(text: Optional[str]) -> str:
+    if not text:
+        return ""
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
+def _parse_date(raw: Optional[str]) -> datetime:
+    if raw:
+        raw = raw.strip()
+        # RFC-822 (RSS)
         try:
-            # Create new event loop for this thread
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        except Exception:
+            dt = parsedate_to_datetime(raw)
+            if dt is not None:
+                return dt.astimezone(timezone.utc).replace(tzinfo=None)
+        except (TypeError, ValueError):
             pass
-
-            try:
-                # Process articles through optimized pipeline
-                results = loop.run_until_complete(
-                    self.ingestion_pipeline.process_articles_async(articles)
-                )
-
-                # Log results
-                processed_count = len(results["processed_articles"])
-                processing_time = results["processing_time"]
-            except Exception:
-                pass
-                throughput = processed_count / max(processing_time, 0.1)
-
-                spider.logger.info(
-                    "Batch processed: {0}/{1} articles in {2:.2f}s ({3:.1f} articles/sec)".format(
-                        processed_count, len(
-                            articles), processing_time, throughput
-                    )
-                )
-
-                # Update spider stats if available
-                if hasattr(spider, "crawler") and spider.crawler.stats:
-                    stats = spider.crawler.stats
-                    stats.inc_value("optimization/batches_processed", 1)
-                    stats.inc_value(
-                        "optimization/articles_processed", processed_count)
-                    stats.set_value("optimization/last_throughput", throughput)
-                    stats.set_value(
-                        "optimization/average_processing_time",
-                        results["metrics"]["performance"]["average_time_per_article"],
-                    )
-
-            finally:
-                loop.close()
-
-        except Exception as e:
-            spider.logger.error(
-                "Error processing article batch: {0}".format(e))
-
-
-class HighThroughputValidationPipeline:
-    """
-    High-throughput validation pipeline optimized for speed and efficiency.
-    Uses fast validation techniques and caching to improve performance.
-    """
-
-    def __init__(self):
-        self.validation_cache = {}
-        self.url_seen = set()
-        self.cache_size_limit = 10000
-
-        # Fast validation settings
-        self.min_title_length = 10
-        self.min_content_length = 100
-        self.max_title_length = 300
-
-        # Stats
-        self.items_validated = 0
-        self.items_passed = 0
-        self.items_failed = 0
-        self.cache_hits = 0
-
-        logger.info("HighThroughputValidationPipeline initialized")
-
-    def process_item(self, item: NewsItem, spider: Spider) -> NewsItem:
-        """Fast validation of scraped items."""
-        start_time = time.time()
+        # ISO-8601 (Atom)
         try:
-            # Fast duplicate check
-            url = item.get("url", "")
-            if url in self.url_seen:
-                self.items_failed += 1
-                raise DropItem("Duplicate URL: {0}".format(url))
-
-            # Fast validation checks
-            validation_result = self._fast_validate_item(item)
-
-            if not validation_result["is_valid"]:
-                self.items_failed += 1
-                raise DropItem(
-                    f"Validation failed: {validation_result['reason']}"
-                )
-
-            # Add to seen URLs
-            self.url_seen.add(url)
-
-            # Limit cache size to prevent memory issues
-            if len(self.url_seen) > self.cache_size_limit:
-                self.url_seen.clear()
-                spider.logger.debug(
-                    "Cleared URL cache to prevent memory overflow")
-
-            # Add validation metadata
-            item["validation_score"] = validation_result["score"]
-            item["validation_time"] = time.time() - start_time
-            item["fast_validation"] = True
-
-            self.items_passed += 1
-            self.items_validated += 1
-
-            return item
-        except Exception as e:
-            self.items_failed += 1
-            self.items_validated += 1
-            spider.logger.error("Fast validation error: {0}".format(e))
-            raise DropItem("Validation error: {0}".format(e))
-            return item
-
-        except Exception as e:
-            self.items_failed += 1
-            self.items_validated += 1
-            spider.logger.error("Fast validation error: {0}".format(e))
-            raise DropItem("Validation error: {0}".format(e))
-
-    def _fast_validate_item(self, item: NewsItem) -> Dict[str, Any]:
-        """Perform fast validation checks on item."""
-        score = 100.0
-
-        # Title validation
-        title = item.get("title", "")
-        if not title:
-            return {"is_valid": False, "reason": "Missing title", "score": 0}
-
-        if len(title) < self.min_title_length:
-            return {
-                "is_valid": False,
-                "reason": "Title too short: {0}".format(len(title)),
-                "score": 0,
-            }
-
-        if len(title) > self.max_title_length:
-            score -= 10
-
-        # Content validation
-        content = item.get("content", "")
-        if not content:
-            return {"is_valid": False, "reason": "Missing content", "score": 0}
-
-        if len(content) < self.min_content_length:
-            return {
-                "is_valid": False,
-                "reason": "Content too short: {0}".format(len(content)),
-                "score": 0,
-            }
-
-        # URL validation
-        url = item.get("url", "")
-        if not url:
-            return {"is_valid": False, "reason": "Missing URL", "score": 0}
-
-        return {"is_valid": True, "reason": "", "score": score}
+            dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            return dt.astimezone(timezone.utc).replace(tzinfo=None)
+        except ValueError:
+            pass
+    return datetime.now()
 
 
-class AdaptiveRateLimitPipeline:
+def _make_id(url: str) -> str:
+    return "rss-" + hashlib.sha1(url.encode("utf-8")).hexdigest()[:16]
+
+
+def parse_feed(xml_bytes: bytes, feed: Feed, limit: int = 25) -> List[Article]:
+    """Parse RSS 2.0 or Atom bytes into Article objects."""
+    try:
+        root = ET.fromstring(xml_bytes)
+    except ET.ParseError as exc:
+        logger.warning("Could not parse feed %s: %s", feed.name, exc)
+        return []
+
+    articles: List[Article] = []
+
+    # RSS 2.0: <rss><channel><item>...   Atom: <feed><entry>...
+    channel = root.find("channel")
+    if channel is not None:
+        items = channel.findall("item")
+        for item in items[:limit]:
+            title = (item.findtext("title") or "").strip()
+            link = (item.findtext("link") or "").strip()
+            desc = item.findtext("description") or item.findtext("{http://purl.org/rss/1.0/modules/content/}encoded")
+            pub = item.findtext("pubDate") or item.findtext("{http://purl.org/dc/elements/1.1/}date")
+            article = _build_article(title, link, desc, pub, feed)
+            if article:
+                articles.append(article)
+    else:
+        # Atom
+        entries = root.findall("{0}entry".format(_ATOM))
+        for entry in entries[:limit]:
+            title = (entry.findtext("{0}title".format(_ATOM)) or "").strip()
+            link = ""
+            link_el = entry.find("{0}link".format(_ATOM))
+            if link_el is not None:
+                link = (link_el.get("href") or link_el.text or "").strip()
+            desc = entry.findtext("{0}summary".format(_ATOM)) or entry.findtext("{0}content".format(_ATOM))
+            pub = entry.findtext("{0}published".format(_ATOM)) or entry.findtext("{0}updated".format(_ATOM))
+            article = _build_article(title, link, desc, pub, feed)
+            if article:
+                articles.append(article)
+
+    return articles
+
+
+def _build_article(
+    title: str, link: str, desc: Optional[str], pub: Optional[str], feed: Feed
+) -> Optional[Article]:
+    if not title or not link:
+        return None
+    content = _strip_html(desc)
+    score, label = score_sentiment("{0}. {1}".format(title, content))
+    return Article(
+        id=_make_id(link),
+        title=title,
+        url=link,
+        content=content,
+        publish_date=_parse_date(pub),
+        source=feed.name,
+        category=feed.category,
+        sentiment_score=score,
+        sentiment_label=label,
+    )
+
+
+def fetch_articles(
+    feeds: Optional[Sequence[Feed]] = None, limit_per_feed: int = 25
+) -> List[Article]:
+    """Fetch and parse all feeds, skipping any that fail."""
+    feeds = list(feeds) if feeds is not None else DEFAULT_FEEDS
+    articles: List[Article] = []
+    for feed in feeds:
+        try:
+            logger.info("Fetching %s (%s)", feed.name, feed.url)
+            raw = _http_get(feed.url)
+            parsed = parse_feed(raw, feed, limit=limit_per_feed)
+            logger.info("  %d articles from %s", len(parsed), feed.name)
+            articles.extend(parsed)
+        except Exception as exc:
+            logger.warning("Failed to fetch %s: %s", feed.name, exc)
+    return articles
+
+
+# --------------------------------------------------------------------------- #
+# Storage
+# --------------------------------------------------------------------------- #
+
+
+def store_articles(articles: Sequence[Article], replace: bool = False) -> int:
+    """Write articles into the warehouse, returning the number of new rows.
+
+    With ``replace`` the whole table is cleared first; otherwise the synthetic
+    sample seed (ids ``art-*``) is dropped and only previously unseen URLs are
+    inserted, so re-running is idempotent.
     """
-    Adaptive rate limiting pipeline that adjusts crawling speed based on
-    system performance and target site responsiveness.
-    """
+    conn = get_shared_connection()
+    ensure_schema(conn)
 
-    def __init__(self):
-        self.response_times = deque(maxlen=50)
-        self.error_rates = deque(maxlen=20)
-        self.current_delay = 1.0
-        self.min_delay = 0.1
-        self.max_delay = 10.0
-        self.adjustment_factor = 1.2
+    if replace:
+        conn.execute("DELETE FROM news_articles")
+    else:
+        # Remove the synthetic sample seed so real news isn't mixed with it.
+        conn.execute("DELETE FROM news_articles WHERE id LIKE 'art-%'")
 
-        self.items_processed = 0
-        self.last_adjustment_time = time.time()
-        self.adjustment_interval = 30.0  # Adjust every 30 seconds
-
-        logger.info("AdaptiveRateLimitPipeline initialized")
-
-    def process_item(self, item: NewsItem, spider: Spider) -> NewsItem:
-        """Process item and adapt rate limiting based on performance."""
-        self.items_processed += 1
-
-        # Record response time if available
-        if hasattr(item, "response_time"):
-            self.response_times.append(item.response_time)
-
-        # Check if it's time to adjust rate limiting'
-        current_time = time.time()
-        if current_time - self.last_adjustment_time >= self.adjustment_interval:
-            self._adjust_rate_limit(spider)
-            self.last_adjustment_time = current_time
-
-        # Add rate limiting metadata
-        item["current_delay"] = self.current_delay
-        item["adaptive_rate_limit"] = True
-
-        return item
-
-    def _adjust_rate_limit(self, spider: Spider):
-        """Adjust rate limiting based on performance metrics."""
-        if not self.response_times:
-            return
-
-        # Calculate average response time
-        avg_response_time = sum(self.response_times) / len(self.response_times)
-
-        # Calculate current error rate
-        current_error_rate = 0.0
-        if hasattr(spider, "crawler") and spider.crawler.stats:
-            stats = spider.crawler.stats
-            total_requests = stats.get_value("downloader/request_count", 0)
-            failed_requests = stats.get_value("downloader/exception_count", 0)
-
-            if total_requests > 0:
-                current_error_rate = failed_requests / total_requests
-
-        self.error_rates.append(current_error_rate)
-
-        # Determine if we should increase or decrease delay
-        old_delay = self.current_delay
-
-        if avg_response_time > 2.0 or current_error_rate > 0.1:
-            # Slow down - increase delay
-            self.current_delay = min(
-                self.max_delay, self.current_delay * self.adjustment_factor
-            )
-        elif avg_response_time < 0.5 and current_error_rate < 0.2:
-            # Speed up - decrease delay
-            self.current_delay = max(
-                self.min_delay, self.current_delay / self.adjustment_factor
-            )
-
-        # Update spider settings if changed
-        if abs(self.current_delay - old_delay) > 0.1:
-            if hasattr(spider, "download_delay"):
-                spider.download_delay = self.current_delay
-
-            spider.logger.info(
-                "Adaptive rate limit adjusted: {0:.2f}s -> {1:.2f}s (avg response: {2:.2f}s, error rate: {3:.1%})".format(
-                    old_delay, self.current_delay, avg_response_time, current_error_rate
-                )
-            )
-
-
-class OptimizedStoragePipeline:
-    """
-    Optimized storage pipeline that batches writes and uses async I/O
-    for improved storage performance.
-    """
-
-    def __init__(self):
-        self.storage_buffer = []
-        self.buffer_size = 100
-        self.buffer_timeout = 15.0
-        self.last_flush_time = time.time()
-
-        # Storage backends
-        self.storage_backends = []
-        self._init_storage_backends()
-
-        # Stats
-        self.items_stored = 0
-        self.batches_written = 0
-        self.storage_errors = 0
-
-        logger.info("OptimizedStoragePipeline initialized")
-
-    def _init_storage_backends(self):
-        """Initialize storage backends based on configuration."""
-        # This would be configured based on settings
-        # For now, we'll use a simple file backend'
-        self.storage_backends.append(self._write_to_file)
-
-    def process_item(self, item: NewsItem, spider: Spider) -> NewsItem:
-        """Buffer items for optimized batch storage."""
-        # Convert item to storage format
-        storage_item = self._prepare_for_storage(item)
-
-        # Add to buffer
-        self.storage_buffer.append(storage_item)
-
-        # Check if buffer should be flushed
-        current_time = time.time()
-        should_flush = (
-            len(self.storage_buffer) >= self.buffer_size
-            or current_time - self.last_flush_time >= self.buffer_timeout
+    existing = {row[0] for row in conn.execute("SELECT id FROM news_articles").fetchall()}
+    new_rows = [a.as_row() for a in articles if a.id not in existing]
+    if new_rows:
+        conn.executemany(
+            """
+            INSERT INTO news_articles
+                (id, title, url, content, publish_date, source, category,
+                 sentiment_score, sentiment_label)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            new_rows,
         )
-
-        if should_flush:
-            self._flush_storage_buffer(spider)
-
-        # Add storage metadata
-        item["storage_buffered"] = True
-        item["buffer_size"] = len(self.storage_buffer)
-
-        return item
-
-    def _prepare_for_storage(self, item: NewsItem) -> Dict[str, Any]:
-        """Prepare item for storage."""
-        return {
-            "id": item.get("url", ""),  # Use URL as ID
-            "title": item.get("title", ""),
-            "url": item.get("url", ""),
-            "content": item.get("content", ""),
-            "source": item.get("source", ""),
-            "published_date": item.get("published_date", ""),
-            "scraped_date": item.get("scraped_date", ""),
-            "author": item.get("author", ""),
-            "category": item.get("category", ""),
-            "validation_score": item.get("validation_score", 0),
-            "word_count": item.get("word_count", 0),
-            "content_length": item.get("content_length", 0),
-            "processing_metadata": {
-                "optimized_pipeline": True
-            }
-        }
+    return len(new_rows)
 
 
-    def close_spider(self, spider: Spider):
-        """Flush remaining items when spider closes."""
-        if self.storage_buffer:
-            self._flush_storage_buffer(spider)
+def ingest(
+    feeds: Optional[Sequence[Feed]] = None,
+    limit_per_feed: int = 25,
+    replace: bool = False,
+) -> dict:
+    """Fetch real news and store it. Returns summary stats."""
+    articles = fetch_articles(feeds, limit_per_feed=limit_per_feed)
+    inserted = store_articles(articles, replace=replace)
+    total = get_shared_connection().execute(
+        "SELECT COUNT(*) FROM news_articles"
+    ).fetchone()[0]
+    return {"fetched": len(articles), "inserted": inserted, "total_in_warehouse": total}
 
-        spider.logger.info(
-            "Optimized storage stats: {0} items stored "
-            "in {1} batches, {2} errors".format(
-                self.items_stored, self.batches_written, self.storage_errors
-            )
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    parser = argparse.ArgumentParser(description="Ingest real news into the local warehouse")
+    parser.add_argument("--limit", type=int, default=25, help="Max articles per feed")
+    parser.add_argument(
+        "--replace", action="store_true", help="Wipe the table before inserting"
+    )
+    args = parser.parse_args(argv)
+
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    try:
+        stats = ingest(limit_per_feed=args.limit, replace=args.replace)
+    except Exception as exc:  # most commonly the DuckDB single-writer lock
+        logger.error("Ingestion failed: %s", exc)
+        logger.error(
+            "If the API server is running, stop it first — DuckDB allows a "
+            "single writer process."
         )
+        return 1
 
-
-# Settings integration for Scrapy
-
-def configure_optimized_settings(settings: Dict[str, Any]) -> Dict[str, Any]:
-    optimized_settings = settings.copy()
-
-    # Pipeline configuration
-    optimized_settings["ITEM_PIPELINES"] = {
-        "src.ingestion.scrapy_integration.HighThroughputValidationPipeline": 100,
-        "src.ingestion.scrapy_integration.OptimizedScrapyPipeline": 200,
-        "src.ingestion.scrapy_integration.AdaptiveRateLimitPipeline": 300,
-        "src.ingestion.scrapy_integration.OptimizedStoragePipeline": 900,
-    }
-
-    # Concurrency optimization
-    optimized_settings["CONCURRENT_REQUESTS"] = 32
-    optimized_settings["CONCURRENT_REQUESTS_PER_DOMAIN"] = 8
-    optimized_settings["DOWNLOAD_DELAY"] = 0.5
-    optimized_settings["RANDOMIZE_DOWNLOAD_DELAY"] = True
-
-    # Memory optimization
-    optimized_settings["REACTOR_THREADPOOL_MAXSIZE"] = 20
-
-    # Optimized pipeline settings
-    optimized_settings["OPTIMIZED_MAX_CONCURRENT_TASKS"] = 30
-    optimized_settings["OPTIMIZED_BATCH_SIZE"] = 50
-    optimized_settings["OPTIMIZED_MAX_MEMORY_MB"] = 512.0
-    optimized_settings["OPTIMIZED_ADAPTIVE_BATCHING"] = True
-    optimized_settings["OPTIMIZED_FAST_VALIDATION"] = True
-
-    # AutoThrottle optimization
-    optimized_settings["AUTOTHROTTLE_ENABLED"] = True
-    optimized_settings["AUTOTHROTTLE_START_DELAY"] = 0.1
-    optimized_settings["AUTOTHROTTLE_MAX_DELAY"] = 3.0
-    optimized_settings["AUTOTHROTTLE_TARGET_CONCURRENCY"] = 2.0
-
-    return optimized_settings
+    logger.info(
+        "Ingest complete: fetched=%(fetched)d inserted=%(inserted)d total=%(total_in_warehouse)d",
+        stats,
+    )
+    return 0
 
 
 if __name__ == "__main__":
-    # Example configuration
-    print("Optimized Scrapy Integration Configuration:")
-    example_settings=configure_optimized_settings({})
-
-    for key, value in example_settings.items():
-        if "OPTIMIZED" in key or "PIPELINE" in key:
-            print("{0}: {1}".format(key, value))
+    raise SystemExit(main())
