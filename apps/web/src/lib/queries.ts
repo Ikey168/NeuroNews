@@ -90,7 +90,7 @@ export function useArticles(): Result<Article[]> {
   return useWithFallback("articles", async () => adaptArticles(await api.articles()), mockArticles);
 }
 
-export function useClusters(): Result<Omit<Cluster, "headlines">[]> {
+export function useClusters(): Result<Cluster[]> {
   return useWithFallback("clusters", async () => adaptClusters(await api.eventClusters()), mockClusters);
 }
 

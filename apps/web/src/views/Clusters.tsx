@@ -1,19 +1,11 @@
 import { palette, fonts } from "../theme";
 import { sentColor, sentLabel } from "../lib/sentiment";
-import { useArticles, useClusters } from "../lib/queries";
+import { useClusters } from "../lib/queries";
 import PageHeader from "../components/PageHeader";
 import SourceBadge from "../components/SourceBadge";
 
 export default function Clusters() {
-  const { data: clustersRaw, source, isLoading } = useClusters();
-  const { data: articles } = useArticles();
-
-  const clusters = clustersRaw.map((c, i) => ({
-    ...c,
-    headlines: articles.length
-      ? [articles[i % articles.length].title, articles[(i + 3) % articles.length].title]
-      : [],
-  }));
+  const { data: clusters, source, isLoading } = useClusters();
 
   return (
     <div>

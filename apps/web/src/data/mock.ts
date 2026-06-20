@@ -26,13 +26,13 @@ export const mockArticles: Article[] = [
   { title: "Pharma giant’s Alzheimer’s drug clears late-stage trial endpoint", source: "STAT", time: "1h", category: "Health", sent: 0.49, summary: "The therapy slowed cognitive decline by 27% versus placebo, sending shares sharply higher in pre-market.", entities: ["Eli Lilly", "FDA", "Alzheimer’s"] },
 ];
 
-export const mockClusters: Omit<Cluster, "headlines">[] = [
-  { title: "Global central banks converge on rate-pause signaling", count: 47, sources: 23, time: "12m", sent: 0.31, vel: "▲ 340%/h" },
-  { title: "AI chip supply chain tightens ahead of Q3 demand surge", count: 38, sources: 19, time: "24m", sent: 0.18, vel: "▲ 210%/h" },
-  { title: "Cloud antitrust scrutiny widens across EU and US", count: 31, sources: 17, time: "38m", sent: -0.39, vel: "▲ 155%/h" },
-  { title: "Energy markets react to OPEC+ output uncertainty", count: 29, sources: 21, time: "51m", sent: -0.22, vel: "▼ 40%/h" },
-  { title: "Fusion milestone reignites clean-energy investment thesis", count: 22, sources: 14, time: "1h", sent: 0.66, vel: "▲ 480%/h" },
-  { title: "Commercial real-estate stress spreads to regional lenders", count: 26, sources: 16, time: "1h", sent: -0.51, vel: "▲ 90%/h" },
+export const mockClusters: Cluster[] = [
+  { title: "Global central banks converge on rate-pause signaling", count: 47, sources: 23, time: "12m", sent: 0.31, vel: "▲ 340%/h", headlines: ["Fed officials hint at extended pause", "ECB holds as inflation cools"] },
+  { title: "AI chip supply chain tightens ahead of Q3 demand surge", count: 38, sources: 19, time: "24m", sent: 0.18, vel: "▲ 210%/h", headlines: ["Foundry capacity booked through Q4", "Memory prices climb on AI demand"] },
+  { title: "Cloud antitrust scrutiny widens across EU and US", count: 31, sources: 17, time: "38m", sent: -0.39, vel: "▲ 155%/h", headlines: ["Regulators open new cloud probe", "Lawmakers press on lock-in practices"] },
+  { title: "Energy markets react to OPEC+ output uncertainty", count: 29, sources: 21, time: "51m", sent: -0.22, vel: "▼ 40%/h", headlines: ["Crude swings on supply doubts", "Traders weigh demand outlook"] },
+  { title: "Fusion milestone reignites clean-energy investment thesis", count: 22, sources: 14, time: "1h", sent: 0.66, vel: "▲ 480%/h", headlines: ["Net-energy result drives funding", "Startups race to commercialize"] },
+  { title: "Commercial real-estate stress spreads to regional lenders", count: 26, sources: 16, time: "1h", sent: -0.51, vel: "▲ 90%/h", headlines: ["Office vacancies pressure balance sheets", "Refinancing wall looms in 2025"] },
 ];
 
 export const mockTrending: TrendingTopic[] = [

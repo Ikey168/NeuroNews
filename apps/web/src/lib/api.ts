@@ -70,6 +70,8 @@ export interface RawEventCluster {
   primary_sources: string[];
   key_entities: string[];
   status: string;
+  avg_sentiment?: number | null;
+  sample_headlines?: string[];
 }
 
 export interface RawBreakingNews {

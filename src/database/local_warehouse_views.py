@@ -287,9 +287,16 @@ def _build_clusters(articles: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 "trending_score": trending_score,
                 "impact_score": impact_score,
                 "velocity_score": round(recent_fraction, 3),
-                "sample_titles": [m["title"] for m in sorted(
-                    members, key=lambda m: m["publish_date"] or datetime.min, reverse=True
-                )][:3],
+                # Other member headlines (excluding the representative), newest first.
+                "sample_titles": [
+                    m["title"]
+                    for m in sorted(
+                        members,
+                        key=lambda m: m["publish_date"] or datetime.min,
+                        reverse=True,
+                    )
+                    if m["title"] != rep["title"]
+                ][:3],
             }
         )
 
@@ -389,6 +396,8 @@ async def get_event_clusters(
                 "key_entities": c["key_entities"],
                 "status": "active",
                 "created_at": now_iso,
+                "avg_sentiment": c["avg_sentiment"],
+                "sample_headlines": c["sample_titles"],
             }
         )
     return out[:limit]
