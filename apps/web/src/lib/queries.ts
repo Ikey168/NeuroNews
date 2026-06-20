@@ -10,6 +10,7 @@ import {
   adaptTrending,
   adaptInfluencers,
   adaptTopicSentiment,
+  adaptEntityGraph,
 } from "./adapters";
 import {
   mockArticles,
@@ -25,6 +26,7 @@ import type {
   TrendingTopic,
   TopEntity,
   TopicSentiment,
+  LiveGraph,
 } from "../types";
 
 export type Source = "live" | "demo";
@@ -110,6 +112,40 @@ export function useTopEntities(): Result<TopEntity[]> {
     "topEntities",
     async () => adaptInfluencers(await api.topInfluencers({ limit: 5 })),
     mockTopEntities,
+  );
+}
+
+const mockEntityGraph: LiveGraph = {
+  nodes: [
+    { id: "fed", label: "Federal Reserve", type: "org", color: ACCENT, count: 9, degree: 4 },
+    { id: "powell", label: "Jerome Powell", type: "person", color: palette.blue, count: 5, degree: 2 },
+    { id: "nvda", label: "Nvidia", type: "org", color: ACCENT, count: 8, degree: 3 },
+    { id: "huang", label: "Jensen Huang", type: "person", color: palette.blue, count: 4, degree: 1 },
+    { id: "ai", label: "AI", type: "topic", color: palette.amber, count: 11, degree: 4 },
+    { id: "eu", label: "European Union", type: "org", color: ACCENT, count: 7, degree: 3 },
+    { id: "msft", label: "Microsoft", type: "org", color: ACCENT, count: 6, degree: 2 },
+    { id: "opec", label: "OPEC", type: "org", color: ACCENT, count: 5, degree: 1 },
+    { id: "oil", label: "Crude Oil", type: "topic", color: palette.amber, count: 5, degree: 1 },
+    { id: "ukraine", label: "Ukraine", type: "place", color: palette.violet, count: 6, degree: 2 },
+  ],
+  edges: [
+    ["fed", "powell", 5], ["fed", "ai", 3], ["nvda", "huang", 4], ["nvda", "ai", 6],
+    ["ai", "msft", 3], ["eu", "msft", 2], ["eu", "ukraine", 4], ["opec", "oil", 5],
+    ["nvda", "fed", 2], ["ai", "eu", 2],
+  ],
+  nodeCount: 10,
+  edgeCount: 10,
+};
+
+export function useEntityGraph(): Result<LiveGraph> {
+  return useWithFallback(
+    "entityGraph",
+    async () => {
+      const g = adaptEntityGraph(await api.entityGraph({ days: 7, max_nodes: 16 }));
+      if (!g.nodes.length) throw new Error("empty");
+      return g;
+    },
+    mockEntityGraph,
   );
 }
 

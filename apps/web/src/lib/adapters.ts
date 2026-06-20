@@ -9,6 +9,7 @@ import type {
   TrendingTopic,
   TopEntity,
   TopicSentiment,
+  LiveGraph,
 } from "../types";
 import type {
   RawArticle,
@@ -16,7 +17,24 @@ import type {
   RawTrendingResponse,
   RawInfluencer,
   RawTopicSentiment,
+  RawEntityGraph,
 } from "./api";
+
+export function adaptEntityGraph(raw: RawEntityGraph): LiveGraph {
+  const nodes = (raw.nodes ?? []).map((n) => ({
+    id: n.id,
+    label: n.label,
+    type: n.type,
+    color: n.color,
+    count: n.count ?? 0,
+    degree: n.degree ?? 0,
+  }));
+  const ids = new Set(nodes.map((n) => n.id));
+  const edges = (raw.edges ?? [])
+    .filter((e) => ids.has(e.source) && ids.has(e.target))
+    .map((e) => [e.source, e.target, e.weight ?? 1] as [string, string, number]);
+  return { nodes, edges, nodeCount: nodes.length, edgeCount: edges.length };
+}
 
 export function relativeTime(iso: string | null | undefined): string {
   if (!iso) return "—";

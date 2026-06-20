@@ -123,6 +123,22 @@ export interface RawInfluencer {
   degree?: number;
 }
 
+export interface RawGraphNode {
+  id: string;
+  label: string;
+  type: string;
+  color: string;
+  count: number;
+  degree: number;
+}
+
+export interface RawEntityGraph {
+  nodes: RawGraphNode[];
+  edges: { source: string; target: string; weight: number }[];
+  node_count: number;
+  edge_count: number;
+}
+
 // ---------- endpoint calls ----------
 
 export const api = {
@@ -149,4 +165,7 @@ export const api = {
 
   topInfluencers: (params?: { limit?: number }) =>
     request<RawInfluencer[]>("/api/influence/top-influencers", params),
+
+  entityGraph: (params?: { days?: number; max_nodes?: number }) =>
+    request<RawEntityGraph>("/api/v1/entity_graph", params),
 };

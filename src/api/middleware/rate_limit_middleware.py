@@ -469,6 +469,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             "/api/v1/news/articles",
             "/api/v1/events/clusters",
             "/api/v1/breaking_news",
+            "/api/v1/entity_graph",
             "/topics/trending",
             "/news_sentiment/topics",
             "/api/influence/top-influencers",

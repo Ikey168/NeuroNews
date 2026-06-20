@@ -79,6 +79,23 @@ export interface GraphData {
   edgeCount: number;
 }
 
+// Entity graph fetched live from the API (positions computed client-side).
+export interface LiveGraphNode {
+  id: string;
+  label: string;
+  type: string;
+  color: string;
+  count: number;
+  degree: number;
+}
+
+export interface LiveGraph {
+  nodes: LiveGraphNode[];
+  edges: [string, string, number][];
+  nodeCount: number;
+  edgeCount: number;
+}
+
 export interface Workspace {
   id: string;
   q: string;
