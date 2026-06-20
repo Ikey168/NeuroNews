@@ -4,129 +4,289 @@ Derived analytics views over the local DuckDB warehouse.
 The event-clustering, trending-topics and breaking-news subsystems are normally
 backed by separate stores (an ML clusterer over Redshift/Postgres, a keyword
 topic database, …). For a local, zero-service setup those aren't available, so
-this module synthesizes equivalent, data-driven results directly from the
-seeded ``news_articles`` table: articles are grouped by their leading title word
-into "topics"/"clusters" and simple trending / impact / velocity scores are
-derived from group size and recency.
+this module derives equivalent, data-driven results directly from the
+``news_articles`` table.
+
+Articles are grouped into **event clusters** by content similarity — TF-IDF +
+cosine when scikit-learn is available, otherwise a dependency-free
+shared-keyword union-find. **Trending topics** come from keyword
+document-frequency across the corpus, and **breaking news** is the most recent /
+active clusters. (The previous implementation grouped by the first word of each
+title, which produced meaningless clusters on real headlines.)
 
 The returned dict shapes match what the API route response models expect.
 """
 
 from __future__ import annotations
 
+import math
+import re
+from collections import Counter, defaultdict
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from src.database.local_analytics_connector import LocalAnalyticsConnector
 
+# Common English + news-filler words that should never anchor a cluster/topic.
+_STOPWORDS = {
+    "the", "a", "an", "and", "or", "but", "of", "to", "in", "on", "for", "with",
+    "at", "by", "from", "as", "is", "are", "was", "were", "be", "been", "being",
+    "it", "its", "this", "that", "these", "those", "their", "they", "them", "he",
+    "she", "his", "her", "you", "your", "we", "our", "us", "i", "my",
+    "will", "would", "could", "should", "can", "may", "might", "must", "has",
+    "have", "had", "do", "does", "did", "not", "no", "new", "says", "say", "said",
+    "after", "over", "amid", "into", "out", "up", "down", "off", "more", "most",
+    "than", "then", "now", "how", "why", "what", "who", "when", "where", "which",
+    "about", "against", "before", "between", "during", "without", "under", "first",
+    "two", "three", "year", "years", "day", "days", "week", "month", "set", "get",
+    "make", "made", "back", "calls", "call", "warns", "warn", "amphtml", "live",
+}
 
-async def _grouped_topics(
+_TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z'&-]+")
+
+
+def _terms(text: str) -> List[str]:
+    """Lowercased significant terms (length > 2, not stopwords)."""
+    out = []
+    for tok in _TOKEN_RE.findall(text or ""):
+        t = tok.lower().strip("'-&")
+        if len(t) > 2 and t not in _STOPWORDS:
+            out.append(t)
+    return out
+
+
+# --------------------------------------------------------------------------- #
+# Data access
+# --------------------------------------------------------------------------- #
+
+
+async def _fetch_recent(
     days: int, category: Optional[str] = None
 ) -> List[Dict[str, Any]]:
-    """Group recent articles by leading title word into topic aggregates."""
     db = LocalAnalyticsConnector()
     db.connect()
-
     cutoff = datetime.now() - timedelta(days=days)
-    recent_cutoff = datetime.now() - timedelta(hours=24)
-
-    conditions = ["publish_date >= %s", "LENGTH(SPLIT_PART(title, ' ', 1)) > 3"]
+    conditions = ["publish_date >= %s"]
     params: List[Any] = [cutoff]
     if category:
         conditions.append("category = %s")
         params.append(category)
-    where_clause = " AND ".join(conditions)
-
-    # recent_cutoff is the first bound parameter (used inside the SUM CASE).
-    query = """
-        SELECT
-            UPPER(SPLIT_PART(title, ' ', 1)) AS topic,
-            COUNT(*) AS cnt,
-            AVG(sentiment_score) AS avg_sent,
-            MIN(publish_date) AS first_date,
-            MAX(publish_date) AS last_date,
-            COUNT(DISTINCT source) AS source_count,
-            STRING_AGG(DISTINCT source, '||') AS sources,
-            arg_max(category, publish_date) AS category,
-            arg_max(title, publish_date) AS headline,
-            STRING_AGG(title, ' | ') AS sample_titles,
-            SUM(CASE WHEN publish_date >= %s THEN 1 ELSE 0 END) AS recent_cnt
+    where = " AND ".join(conditions)
+    rows = await db.execute_query(
+        """
+        SELECT id, title, content, publish_date, source, category, sentiment_score
         FROM news_articles
-        WHERE {where_clause}
-        GROUP BY UPPER(SPLIT_PART(title, ' ', 1))
-        ORDER BY cnt DESC
-    """.format(
-        where_clause=where_clause
+        WHERE {where}
+        ORDER BY publish_date DESC
+        """.format(where=where),
+        params,
     )
-
-    rows = await db.execute_query(query, [recent_cutoff, *params])
     db.disconnect()
 
-    topics: List[Dict[str, Any]] = []
-    for r in rows:
-        (
-            topic,
-            cnt,
-            avg_sent,
-            first_date,
-            last_date,
-            source_count,
-            sources,
-            cat,
-            headline,
-            sample_titles,
-            recent_cnt,
-        ) = r
-        cnt = int(cnt)
-        recent_cnt = int(recent_cnt or 0)
-        recent_fraction = recent_cnt / cnt if cnt else 0.0
-        duration_hours = (
-            (last_date - first_date).total_seconds() / 3600.0
-            if first_date and last_date
-            else 0.0
-        )
-        topics.append(
+    recent_cut = datetime.now() - timedelta(hours=24)
+    articles = []
+    for (aid, title, content, pub, source, cat, sent) in rows:
+        articles.append(
             {
-                "topic": topic,
-                "cnt": cnt,
-                "avg_sent": float(avg_sent or 0.0),
-                "first_date": first_date,
-                "last_date": last_date,
-                "source_count": int(source_count or 0),
-                "sources": (sources or "").split("||") if sources else [],
+                "id": aid,
+                "title": title or "",
+                "content": content or "",
+                "publish_date": pub,
+                "source": source or "Unknown",
                 "category": cat or "General",
-                "headline": headline or topic,
-                "sample_titles": (sample_titles or "").split(" | ")[:3],
-                "recent_fraction": recent_fraction,
-                "duration_hours": round(duration_hours, 1),
-                "trending_score": round(min(100.0, cnt * 5 + recent_fraction * 20), 2),
-                "impact_score": round(min(100.0, cnt * 6.0), 2),
-                "velocity_score": round(recent_fraction, 3),
+                "sentiment": float(sent or 0.0),
+                "terms": set(_terms(title or "")) | set(_terms(content or "")[:20]),
+                "is_recent": bool(pub and pub >= recent_cut),
             }
         )
-    return topics
+    return articles
 
 
-def _event_type(t: Dict[str, Any]) -> str:
-    if t["recent_fraction"] >= 0.5:
+# --------------------------------------------------------------------------- #
+# Clustering
+# --------------------------------------------------------------------------- #
+
+
+class _UnionFind:
+    def __init__(self, n: int):
+        self.parent = list(range(n))
+
+    def find(self, x: int) -> int:
+        while self.parent[x] != x:
+            self.parent[x] = self.parent[self.parent[x]]
+            x = self.parent[x]
+        return x
+
+    def union(self, a: int, b: int) -> None:
+        ra, rb = self.find(a), self.find(b)
+        if ra != rb:
+            self.parent[rb] = ra
+
+
+def _cluster_sklearn(articles: Sequence[Dict[str, Any]], threshold: float) -> Optional[List[int]]:
+    """TF-IDF + cosine clustering. Returns label per article, or None if unavailable."""
+    try:
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        from sklearn.metrics.pairwise import cosine_similarity
+    except Exception:
+        return None
+
+    docs = [a["title"] + ". " + a["content"][:200] for a in articles]
+    try:
+        vec = TfidfVectorizer(stop_words="english", ngram_range=(1, 2), max_features=4000)
+        matrix = vec.fit_transform(docs)
+        sims = cosine_similarity(matrix)
+    except Exception:
+        return None
+
+    uf = _UnionFind(len(articles))
+    n = len(articles)
+    for i in range(n):
+        for j in range(i + 1, n):
+            if sims[i][j] >= threshold:
+                uf.union(i, j)
+    return [uf.find(i) for i in range(n)]
+
+
+def _cluster_keyword_overlap(
+    articles: Sequence[Dict[str, Any]], min_shared: int = 2
+) -> List[int]:
+    """Union-find on shared significant terms (dependency-free fallback)."""
+    n = len(articles)
+    uf = _UnionFind(n)
+    # Index articles by term so we only compare candidates that share a term.
+    term_to_idx: Dict[str, List[int]] = defaultdict(list)
+    for i, a in enumerate(articles):
+        for t in a["terms"]:
+            term_to_idx[t].append(i)
+
+    checked: set = set()
+    for idxs in term_to_idx.values():
+        for x in range(len(idxs)):
+            for y in range(x + 1, len(idxs)):
+                i, j = idxs[x], idxs[y]
+                key = (i, j)
+                if key in checked:
+                    continue
+                checked.add(key)
+                if len(articles[i]["terms"] & articles[j]["terms"]) >= min_shared:
+                    uf.union(i, j)
+    return [uf.find(i) for i in range(n)]
+
+
+def _build_clusters(articles: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    if not articles:
+        return []
+
+    labels = _cluster_sklearn(articles, threshold=0.22)
+    if labels is None:
+        labels = _cluster_keyword_overlap(articles, min_shared=2)
+
+    groups: Dict[int, List[Dict[str, Any]]] = defaultdict(list)
+    for label, art in zip(labels, articles):
+        groups[label].append(art)
+
+    clusters: List[Dict[str, Any]] = []
+    for members in groups.values():
+        size = len(members)
+        dates = [m["publish_date"] for m in members if m["publish_date"]]
+        first_date = min(dates) if dates else datetime.now()
+        last_date = max(dates) if dates else datetime.now()
+        recent = sum(1 for m in members if m["is_recent"])
+        recent_fraction = recent / size if size else 0.0
+
+        # Representative headline: the member sharing the most terms with the
+        # cluster's vocabulary (falls back to the longest title).
+        vocab = Counter()
+        for m in members:
+            vocab.update(m["terms"])
+        def _centrality(m):
+            return (sum(vocab[t] for t in m["terms"]), len(m["title"]))
+        rep = max(members, key=_centrality)
+
+        top_terms = [t.title() for t, _ in vocab.most_common(4)]
+        sources = sorted({m["source"] for m in members})
+        category = Counter(m["category"] for m in members).most_common(1)[0][0]
+        avg_sent = sum(m["sentiment"] for m in members) / size
+
+        duration_hours = round((last_date - first_date).total_seconds() / 3600.0, 1)
+        trending_score = round(min(100.0, size * 8 + recent_fraction * 25), 2)
+        impact_score = round(min(100.0, size * 9 + len(sources) * 4), 2)
+
+        clusters.append(
+            {
+                "size": size,
+                "headline": rep["title"],
+                "category": category,
+                "sources": sources,
+                "source_count": len(sources),
+                "key_entities": top_terms,
+                "avg_sentiment": round(avg_sent, 3),
+                "first_date": first_date,
+                "last_date": last_date,
+                "recent_fraction": round(recent_fraction, 3),
+                "duration_hours": duration_hours,
+                "trending_score": trending_score,
+                "impact_score": impact_score,
+                "velocity_score": round(recent_fraction, 3),
+                "sample_titles": [m["title"] for m in sorted(
+                    members, key=lambda m: m["publish_date"] or datetime.min, reverse=True
+                )][:3],
+            }
+        )
+
+    # Most significant first.
+    clusters.sort(key=lambda c: (c["size"], c["trending_score"]), reverse=True)
+    return clusters
+
+
+def _event_type(c: Dict[str, Any]) -> str:
+    if c["recent_fraction"] >= 0.5:
         return "breaking"
-    if t["recent_fraction"] > 0.0:
+    if c["recent_fraction"] > 0.0:
         return "developing"
     return "trending"
 
 
+# --------------------------------------------------------------------------- #
+# Public views
+# --------------------------------------------------------------------------- #
+
+
 async def get_trending_topics(days: int = 7) -> List[Dict[str, Any]]:
-    """Trending topics in the shape expected by /topics/trending."""
-    topics = await _grouped_topics(days)
-    max_cnt = max((t["cnt"] for t in topics), default=1)
+    """Trending topics from keyword document-frequency across recent articles."""
+    articles = await _fetch_recent(days)
+    if not articles:
+        return []
+
+    term_docs: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    for a in articles:
+        for t in set(a["terms"]):
+            term_docs[t].append(a)
+
+    topics = []
+    for term, docs in term_docs.items():
+        count = len(docs)
+        recent = sum(1 for d in docs if d["is_recent"])
+        topics.append(
+            {
+                "term": term,
+                "article_count": count,
+                "avg_sentiment": round(sum(d["sentiment"] for d in docs) / count, 3),
+                "growth_rate": round(recent / count, 3),
+            }
+        )
+    topics.sort(key=lambda t: t["article_count"], reverse=True)
+    max_count = topics[0]["article_count"] if topics else 1
+
     return [
         {
-            "topic": t["topic"],
-            "topic_name": t["topic"],
-            "article_count": t["cnt"],
-            "avg_probability": round(t["cnt"] / max_cnt, 3),
-            "avg_sentiment": round(t["avg_sent"], 3),
-            "growth_rate": round(t["recent_fraction"], 3),
+            "topic": t["term"].title(),
+            "topic_name": t["term"].title(),
+            "article_count": t["article_count"],
+            "avg_probability": round(t["article_count"] / max_count, 3),
+            "avg_sentiment": t["avg_sentiment"],
+            "growth_rate": t["growth_rate"],
         }
         for t in topics
     ]
@@ -139,40 +299,41 @@ async def get_event_clusters(
     limit: int = 20,
 ) -> List[Dict[str, Any]]:
     """Event clusters in the shape expected by /api/v1/events/clusters."""
-    topics = await _grouped_topics(days_back, category=category)
-    clusters: List[Dict[str, Any]] = []
+    articles = await _fetch_recent(days_back, category=category)
+    clusters = _build_clusters(articles)
     now_iso = datetime.now().isoformat()
-    for t in topics:
-        etype = _event_type(t)
+    out: List[Dict[str, Any]] = []
+    for i, c in enumerate(clusters):
+        etype = _event_type(c)
         if event_type and etype != event_type:
             continue
-        clusters.append(
+        out.append(
             {
-                "cluster_id": "cl-{0}".format(t["topic"].lower()),
-                "cluster_name": t["headline"],
+                "cluster_id": "cl-{0:04d}".format(i),
+                "cluster_name": c["headline"],
                 "event_type": etype,
-                "category": t["category"],
-                "cluster_size": t["cnt"],
+                "category": c["category"],
+                "cluster_size": c["size"],
                 "silhouette_score": 0.5,
                 "cohesion_score": 0.6,
                 "separation_score": 0.5,
-                "trending_score": t["trending_score"],
-                "impact_score": t["impact_score"],
-                "velocity_score": t["velocity_score"],
+                "trending_score": c["trending_score"],
+                "impact_score": c["impact_score"],
+                "velocity_score": c["velocity_score"],
                 "significance_score": round(
-                    t["trending_score"] * 0.3 + t["impact_score"] * 0.4, 2
+                    c["trending_score"] * 0.3 + c["impact_score"] * 0.4, 2
                 ),
-                "first_article_date": t["first_date"].isoformat(),
-                "last_article_date": t["last_date"].isoformat(),
-                "event_duration_hours": t["duration_hours"],
-                "primary_sources": t["sources"],
+                "first_article_date": c["first_date"].isoformat(),
+                "last_article_date": c["last_date"].isoformat(),
+                "event_duration_hours": c["duration_hours"],
+                "primary_sources": c["sources"],
                 "geographic_focus": [],
-                "key_entities": [t["topic"].title()],
+                "key_entities": c["key_entities"],
                 "status": "active",
                 "created_at": now_iso,
             }
         )
-    return clusters[:limit]
+    return out[:limit]
 
 
 async def get_breaking_news(
@@ -182,27 +343,28 @@ async def get_breaking_news(
 ) -> List[Dict[str, Any]]:
     """Breaking news in the shape expected by /api/v1/breaking_news."""
     days = max(1, (hours_back + 23) // 24)
-    topics = await _grouped_topics(days, category=category)
-    # Most active topics first.
-    topics.sort(key=lambda t: t["trending_score"], reverse=True)
+    articles = await _fetch_recent(days, category=category)
+    clusters = _build_clusters(articles)
+    # Prefer clusters with recent activity, then size.
+    clusters.sort(key=lambda c: (c["recent_fraction"], c["size"]), reverse=True)
     events: List[Dict[str, Any]] = []
-    for t in topics[:limit]:
+    for i, c in enumerate(clusters[:limit]):
         events.append(
             {
-                "cluster_id": "bn-{0}".format(t["topic"].lower()),
-                "cluster_name": t["headline"],
-                "event_type": _event_type(t),
-                "category": t["category"],
-                "trending_score": t["trending_score"],
-                "impact_score": t["impact_score"],
-                "velocity_score": t["velocity_score"],
-                "cluster_size": t["cnt"],
-                "first_article_date": t["first_date"].isoformat(),
-                "last_article_date": t["last_date"].isoformat(),
-                "peak_activity_date": t["last_date"].isoformat(),
-                "event_duration_hours": t["duration_hours"],
-                "sample_headlines": " | ".join(t["sample_titles"]),
-                "source_count": t["source_count"],
+                "cluster_id": "bn-{0:04d}".format(i),
+                "cluster_name": c["headline"],
+                "event_type": _event_type(c),
+                "category": c["category"],
+                "trending_score": c["trending_score"],
+                "impact_score": c["impact_score"],
+                "velocity_score": c["velocity_score"],
+                "cluster_size": c["size"],
+                "first_article_date": c["first_date"].isoformat(),
+                "last_article_date": c["last_date"].isoformat(),
+                "peak_activity_date": c["last_date"].isoformat(),
+                "event_duration_hours": c["duration_hours"],
+                "sample_headlines": " | ".join(c["sample_titles"]),
+                "source_count": c["source_count"],
                 "avg_confidence": 0.8,
             }
         )
