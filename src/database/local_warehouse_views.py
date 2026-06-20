@@ -7,25 +7,37 @@ topic database, …). For a local, zero-service setup those aren't available, so
 this module derives equivalent, data-driven results directly from the
 ``news_articles`` table.
 
-Articles are grouped into **event clusters** by content similarity — TF-IDF +
-cosine when scikit-learn is available, otherwise a dependency-free
-shared-keyword union-find. **Trending topics** come from keyword
-document-frequency across the corpus, and **breaking news** is the most recent /
-active clusters. (The previous implementation grouped by the first word of each
-title, which produced meaningless clusters on real headlines.)
+Articles are grouped into **event clusters** by content similarity: a TF-IDF
+cosine similarity matrix (scikit-learn) when available, otherwise an O(n)
+signature-term fallback. Only the most-recent slice of the corpus is clustered
+per request (see ``NEURONEWS_CLUSTER_MAX_ARTICLES``) so the matrix stays bounded.
+**Trending topics** come from keyword document-frequency across that slice, and
+**breaking news** is the most recent / active clusters. (The previous
+implementation grouped by the first word of each title, which produced
+meaningless clusters on real headlines.)
 
 The returned dict shapes match what the API route response models expect.
 """
 
 from __future__ import annotations
 
-import math
+import os
 import re
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence
 
 from src.database.local_analytics_connector import LocalAnalyticsConnector
+
+# Cap how many of the most-recent articles we cluster in one request, so cost
+# stays bounded no matter how large the corpus grows. Override with
+# NEURONEWS_CLUSTER_MAX_ARTICLES.
+def _max_cluster_articles() -> int:
+    try:
+        return max(100, int(os.getenv("NEURONEWS_CLUSTER_MAX_ARTICLES", "3000")))
+    except ValueError:
+        return 3000
+
 
 # Common English + news-filler words that should never anchor a cluster/topic.
 _STOPWORDS = {
@@ -72,14 +84,16 @@ async def _fetch_recent(
         conditions.append("category = %s")
         params.append(category)
     where = " AND ".join(conditions)
+    # Only cluster the most-recent slice so cost is bounded on large corpora.
     rows = await db.execute_query(
         """
         SELECT id, title, content, publish_date, source, category, sentiment_score
         FROM news_articles
         WHERE {where}
         ORDER BY publish_date DESC
+        LIMIT %s
         """.format(where=where),
-        params,
+        params + [_max_cluster_articles()],
     )
     db.disconnect()
 
@@ -124,63 +138,77 @@ class _UnionFind:
 
 
 def _cluster_sklearn(articles: Sequence[Dict[str, Any]], threshold: float) -> Optional[List[int]]:
-    """TF-IDF + cosine clustering. Returns label per article, or None if unavailable."""
+    """Cluster via a TF-IDF cosine similarity matrix + union-find.
+
+    Builds the dense pairwise cosine similarity matrix (O(n^2) memory) and
+    connects every pair above ``threshold`` into the same component. The recent
+    window is capped (see ``NEURONEWS_CLUSTER_MAX_ARTICLES``) so the matrix stays
+    bounded. Returns a label per article, or None if scikit-learn is missing.
+    """
     try:
         from sklearn.feature_extraction.text import TfidfVectorizer
         from sklearn.metrics.pairwise import cosine_similarity
     except Exception:
         return None
 
+    n = len(articles)
     docs = [a["title"] + ". " + a["content"][:200] for a in articles]
     try:
-        vec = TfidfVectorizer(stop_words="english", ngram_range=(1, 2), max_features=4000)
+        vec = TfidfVectorizer(
+            stop_words="english", ngram_range=(1, 2), max_features=8000, min_df=1
+        )
         matrix = vec.fit_transform(docs)
         sims = cosine_similarity(matrix)
     except Exception:
         return None
 
-    uf = _UnionFind(len(articles))
-    n = len(articles)
+    uf = _UnionFind(n)
     for i in range(n):
+        row = sims[i]
         for j in range(i + 1, n):
-            if sims[i][j] >= threshold:
+            if row[j] >= threshold:
                 uf.union(i, j)
     return [uf.find(i) for i in range(n)]
 
 
-def _cluster_keyword_overlap(
-    articles: Sequence[Dict[str, Any]], min_shared: int = 2
-) -> List[int]:
-    """Union-find on shared significant terms (dependency-free fallback)."""
-    n = len(articles)
-    uf = _UnionFind(n)
-    # Index articles by term so we only compare candidates that share a term.
-    term_to_idx: Dict[str, List[int]] = defaultdict(list)
-    for i, a in enumerate(articles):
-        for t in a["terms"]:
-            term_to_idx[t].append(i)
+def _cluster_signature_term(articles: Sequence[Dict[str, Any]]) -> List[int]:
+    """O(n) fallback: group by each article's most distinctive (rarest) term.
 
-    checked: set = set()
-    for idxs in term_to_idx.values():
-        for x in range(len(idxs)):
-            for y in range(x + 1, len(idxs)):
-                i, j = idxs[x], idxs[y]
-                key = (i, j)
-                if key in checked:
-                    continue
-                checked.add(key)
-                if len(articles[i]["terms"] & articles[j]["terms"]) >= min_shared:
-                    uf.union(i, j)
-    return [uf.find(i) for i in range(n)]
+    Document frequency is computed once; each article is keyed by the
+    lowest-frequency significant term it contains, so articles about the same
+    specific entity/keyword land together. Articles whose signature term is
+    unique stay as singletons.
+    """
+    n = len(articles)
+    df: Counter = Counter()
+    for a in articles:
+        for t in a["terms"]:
+            df[t] += 1
+
+    signature_to_label: Dict[str, int] = {}
+    labels: List[int] = []
+    next_label = 0
+    for i, a in enumerate(articles):
+        terms = a["terms"]
+        if terms:
+            # Rarest term wins; ties broken alphabetically for determinism.
+            signature = min(terms, key=lambda t: (df[t], t))
+        else:
+            signature = "__empty_{0}__".format(i)
+        if signature not in signature_to_label:
+            signature_to_label[signature] = next_label
+            next_label += 1
+        labels.append(signature_to_label[signature])
+    return labels
 
 
 def _build_clusters(articles: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
     if not articles:
         return []
 
-    labels = _cluster_sklearn(articles, threshold=0.22)
+    labels = _cluster_sklearn(articles, threshold=0.18)
     if labels is None:
-        labels = _cluster_keyword_overlap(articles, min_shared=2)
+        labels = _cluster_signature_term(articles)
 
     groups: Dict[int, List[Dict[str, Any]]] = defaultdict(list)
     for label, art in zip(labels, articles):
