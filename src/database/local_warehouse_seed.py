@@ -113,9 +113,13 @@ def _build_rows(now: datetime) -> List[tuple]:
     return rows
 
 
-def ensure_schema_and_seed(conn: duckdb.DuckDBPyConnection) -> None:
-    """Create the news_articles table and seed it if empty."""
+def ensure_schema(conn: duckdb.DuckDBPyConnection) -> None:
+    """Create the news_articles table if it does not exist."""
     conn.execute(_SCHEMA)
+
+
+def seed_if_empty(conn: duckdb.DuckDBPyConnection) -> None:
+    """Seed sample articles only when the table has no rows."""
     count = conn.execute("SELECT COUNT(*) FROM news_articles").fetchone()[0]
     if count and count > 0:
         return
@@ -131,3 +135,9 @@ def ensure_schema_and_seed(conn: duckdb.DuckDBPyConnection) -> None:
         rows,
     )
     logger.info("Seeded local warehouse with %d sample articles", len(rows))
+
+
+def ensure_schema_and_seed(conn: duckdb.DuckDBPyConnection) -> None:
+    """Create the news_articles table and seed it if empty."""
+    ensure_schema(conn)
+    seed_if_empty(conn)

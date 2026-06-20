@@ -42,6 +42,23 @@ external services needed). On first request it creates and seeds
 Sentiment views light up `LIVE` out of the box. Point it elsewhere with
 `NEURONEWS_DB_PATH`.
 
+### Loading actual news (replace the sample seed)
+
+To fill the warehouse with **real, current headlines** from public RSS feeds
+(BBC, Ars Technica, NPR, EIA, …) instead of the sample seed, run the ingester:
+
+```bash
+# stop the API server first — DuckDB allows a single writer process
+python -m src.ingestion.scrapy_integration --replace   # wipe + load live news
+python -m src.ingestion.scrapy_integration             # append latest news
+python -m src.ingestion.scrapy_integration --limit 40  # cap articles per feed
+```
+
+It fetches and parses each feed, scores sentiment (NLTK VADER, with a built-in
+fallback), and writes into the same `news_articles` table the API reads. Restart
+the server and every view reflects the live articles. Edit `DEFAULT_FEEDS` in
+`src/ingestion/scrapy_integration.py` to change the sources.
+
 For production builds, point the app at an absolute backend origin:
 
 ```bash
