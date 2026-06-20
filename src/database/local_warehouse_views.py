@@ -755,22 +755,31 @@ def _label_for(score: float) -> str:
 async def get_topic_sentiment(
     days: int = 7, min_articles: int = 5, max_topics: int = 12
 ) -> List[Dict[str, Any]]:
-    """Per-keyword sentiment breakdown (shape matches /news_sentiment/topics)."""
+    """Per-entity sentiment breakdown (shape matches /news_sentiment/topics).
+
+    Topics are the named entities surfaced by the shared extraction (proper-noun
+    phrases / acronyms with surname->full-name aliasing), so "Elon Musk" stays
+    whole and generic filler ("World", "War", "Health") is filtered out, matching
+    the trending-topics behaviour.
+    """
     articles = await _fetch_recent(days)
     if not articles:
         return []
 
-    term_docs: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
-    for a in articles:
-        for t in set(a["terms"]):
-            term_docs[t].append(a)
+    doc_count, label_form, _, entity_docs = _aggregate_entities(articles)
+    categories = {(a["category"] or "").lower() for a in articles}
 
     topics: List[Dict[str, Any]] = []
-    for term, docs in term_docs.items():
-        if len(docs) < min_articles:
+    for key, count in doc_count.items():
+        if count < min_articles:
             continue
+        label = label_form[key].most_common(1)[0][0] if label_form[key] else key
+        low = label.lower()
+        if " " not in label and not label.isupper():
+            if low in _GENERIC_TOPIC_TERMS or low in categories:
+                continue
         buckets: Dict[str, List[float]] = defaultdict(list)
-        for d in docs:
+        for d in entity_docs[key]:
             buckets[_label_for(d["sentiment"])].append(d["sentiment"])
         sentiments = {
             lbl: {"count": len(vals), "avg_score": round(sum(vals) / len(vals), 3)}
@@ -778,8 +787,8 @@ async def get_topic_sentiment(
         }
         topics.append(
             {
-                "topic": term.title(),
-                "total_articles": len(docs),
+                "topic": label,
+                "total_articles": count,
                 "sentiments": sentiments,
             }
         )
