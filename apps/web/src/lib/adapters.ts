@@ -70,7 +70,7 @@ export function adaptArticles(raw: RawArticle[]): Article[] {
   }));
 }
 
-export function adaptClusters(raw: RawEventCluster[]): Omit<Cluster, "headlines">[] {
+export function adaptClusters(raw: RawEventCluster[]): Cluster[] {
   return raw.map((c) => {
     const dir = c.velocity_score >= 0 ? "▲" : "▼";
     return {
@@ -78,10 +78,9 @@ export function adaptClusters(raw: RawEventCluster[]): Omit<Cluster, "headlines"
       count: c.cluster_size,
       sources: c.primary_sources?.length ?? 0,
       time: relativeTime(c.last_article_date),
-      // The cluster endpoint has no aggregate sentiment; approximate from
-      // impact direction so the accent bar still reads meaningfully.
-      sent: 0,
+      sent: c.avg_sentiment ?? 0,
       vel: `${dir} ${Math.abs(Math.round(c.velocity_score * 100))}%/h`,
+      headlines: c.sample_headlines ?? [],
     };
   });
 }

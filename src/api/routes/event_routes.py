@@ -85,6 +85,8 @@ class EventClusterResponse(BaseModel):
     key_entities: List[str]
     status: str
     created_at: str
+    avg_sentiment: Optional[float] = None
+    sample_headlines: List[str] = []
 
 
 class ArticleInClusterResponse(BaseModel):
@@ -302,6 +304,8 @@ async def get_event_clusters(
                     key_entities=row["key_entities"],
                     status=row["status"],
                     created_at=row["created_at"],
+                    avg_sentiment=row.get("avg_sentiment"),
+                    sample_headlines=row.get("sample_headlines", []),
                 )
             )
 

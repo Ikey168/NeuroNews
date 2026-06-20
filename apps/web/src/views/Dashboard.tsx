@@ -39,15 +39,10 @@ interface Props {
 export default function Dashboard({ setView }: Props) {
   const [range, setRange] = useState("24H");
   const { data: articles, source, isLoading } = useArticles();
-  const { data: clustersRaw } = useClusters();
+  const { data: clusters } = useClusters();
   const { data: trending } = useTrending();
 
-  const clusters = clustersRaw.slice(0, 3).map((c, i) => ({
-    ...c,
-    headlines: articles.length
-      ? [articles[i % articles.length].title, articles[(i + 3) % articles.length].title]
-      : [],
-  }));
+  const topClusters = clusters.slice(0, 3);
 
   const maxM = Math.max(1, ...trending.map((t) => t.mentions));
   const trendingTop = trending.slice(0, 5).map((t, i) => ({
@@ -160,7 +155,7 @@ export default function Dashboard({ setView }: Props) {
             </Hover>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {clusters.map((c, i) => {
+            {topClusters.map((c, i) => {
               const sc = sentColor(c.sent);
               return (
                 <div key={i} style={{ border: "1px solid #1c2330", borderRadius: 8, padding: "11px 13px", background: "#0e131a" }}>
