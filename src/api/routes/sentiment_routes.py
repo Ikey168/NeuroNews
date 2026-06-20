@@ -301,56 +301,21 @@ async def get_topic_sentiment_analysis(
         List of topics with their sentiment statistics
     """
     try:
-        start_date = datetime.now() - timedelta(days=days)
+        # Keyword-based topic sentiment from the local warehouse (significant
+        # terms, not the first word of each title).
+        from src.database.local_warehouse_views import get_topic_sentiment
 
-        # This is a simplified topic extraction - in production you might want
-        # to use more sophisticated NLP techniques or pre-computed topic tags
-        query = """
-            SELECT
-                UPPER(SPLIT_PART(title, ' ', 1)) as topic_word,
-                sentiment_label,
-                COUNT(*) as article_count,
-                AVG(sentiment_score) as avg_sentiment
-            FROM news_articles
-            WHERE publish_date >= %s
-                AND sentiment_label IS NOT NULL
-                AND LENGTH(SPLIT_PART(title, ' ', 1)) > 3
-            GROUP BY UPPER(SPLIT_PART(title, ' ', 1)), sentiment_label
-            HAVING COUNT(*) >= %s
-            ORDER BY article_count DESC
-        """
+        topic_list = await get_topic_sentiment(
+            days=days, min_articles=min_articles, max_topics=12
+        )
 
-        results = await db.execute_query(query, [start_date, min_articles])
-
-        # Group results by topic
-        topics = {}
-        for row in results:
-            topic = row[0]
-            sentiment = row[1].lower()
-            count = int(row[2])
-            avg_score = float(row[3]) if row[3] else 0.0
-
-            if topic not in topics:
-                topics[topic] = {"topic": topic, "total_articles": 0, "sentiments": {}}
-
-            topics[topic]["total_articles"] += count
-            topics[topic]["sentiments"][sentiment] = {
-                "count": count,
-                "avg_score": round(avg_score, 3),
-            }
-
-        # Convert to list and calculate percentages
-        topic_list = []
-        for topic_data in topics.values():
-            total = topic_data["total_articles"]
+        # Add percentage breakdown per sentiment label.
+        for topic_data in topic_list:
+            total = topic_data["total_articles"] or 1
             for sentiment_data in topic_data["sentiments"].values():
                 sentiment_data["percentage"] = round(
                     sentiment_data["count"] / total * 100, 2
                 )
-            topic_list.append(topic_data)
-
-        # Sort by total articles descending
-        topic_list.sort(key=lambda x: x["total_articles"], reverse=True)
 
         return topic_list
 

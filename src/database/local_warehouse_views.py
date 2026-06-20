@@ -41,30 +41,60 @@ def _max_cluster_articles() -> int:
 
 # Common English + news-filler words that should never anchor a cluster/topic.
 _STOPWORDS = {
-    "the", "a", "an", "and", "or", "but", "of", "to", "in", "on", "for", "with",
-    "at", "by", "from", "as", "is", "are", "was", "were", "be", "been", "being",
-    "it", "its", "this", "that", "these", "those", "their", "they", "them", "he",
-    "she", "his", "her", "you", "your", "we", "our", "us", "i", "my",
-    "will", "would", "could", "should", "can", "may", "might", "must", "has",
-    "have", "had", "do", "does", "did", "not", "no", "new", "says", "say", "said",
-    "after", "over", "amid", "into", "out", "up", "down", "off", "more", "most",
-    "than", "then", "now", "how", "why", "what", "who", "when", "where", "which",
-    "about", "against", "before", "between", "during", "without", "under", "first",
-    "two", "three", "year", "years", "day", "days", "week", "month", "set", "get",
-    "make", "made", "back", "calls", "call", "warns", "warn", "amphtml", "live",
+    # articles / conjunctions / prepositions
+    "the", "a", "an", "and", "or", "but", "nor", "of", "to", "in", "on", "for",
+    "with", "at", "by", "from", "as", "into", "onto", "upon", "about", "against",
+    "before", "after", "between", "during", "without", "within", "under", "over",
+    "above", "below", "amid", "amongst", "among", "across", "behind", "beyond",
+    "near", "off", "out", "up", "down", "through", "per", "via", "than", "then",
+    # pronouns / determiners
+    "it", "its", "this", "that", "these", "those", "there", "here", "their",
+    "they", "them", "he", "she", "him", "his", "her", "you", "your", "yours",
+    "we", "our", "ours", "us", "i", "my", "mine", "me", "who", "whom", "whose",
+    "which", "what", "whatever", "some", "any", "all", "both", "each", "few",
+    "more", "most", "other", "others", "such", "no", "nor", "not", "only", "own",
+    "same", "so", "too", "very", "one", "ones", "two", "three", "four", "five",
+    # verbs / auxiliaries
+    "is", "are", "was", "were", "be", "been", "being", "am", "will", "would",
+    "could", "should", "shall", "can", "may", "might", "must", "has", "have",
+    "had", "having", "do", "does", "did", "done", "doing", "get", "gets", "got",
+    "make", "makes", "made", "say", "says", "said", "tell", "told", "see", "seen",
+    "go", "goes", "went", "set", "put", "take", "took", "give", "gave", "use",
+    "used", "call", "calls", "called", "warn", "warns", "warned", "join", "joins",
+    "show", "shows", "showed", "face", "faces", "faced", "back", "backs",
+    # adverbs / time
+    "now", "when", "where", "while", "why", "how", "again", "ever", "never",
+    "once", "always", "often", "still", "just", "also", "even", "yet", "soon",
+    "today", "year", "years", "day", "days", "week", "weeks", "month", "months",
+    "time", "times", "ago", "first", "last", "next", "new", "old", "end", "live",
+    # generic news nouns (not useful as standalone topics)
+    "news", "report", "reports", "update", "updates", "people", "man", "woman",
+    "men", "women", "way", "ways", "thing", "things", "part", "case", "cases",
+    "plan", "plans", "deal", "deals", "data", "media", "company", "companies",
+    "group", "groups", "department", "official", "officials", "leader", "leaders",
+    "minister", "government", "president", "according", "amphtml", "video", "watch",
 }
 
 _TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z'&-]+")
+
+
+def _normalize_token(tok: str) -> str:
+    """Lowercase, strip surrounding punctuation and a trailing possessive."""
+    t = tok.lower().strip("'-&")
+    if t.endswith("'s"):
+        t = t[:-2]
+    return t
 
 
 def _terms(text: str) -> List[str]:
     """Lowercased significant terms (length > 2, not stopwords)."""
     out = []
     for tok in _TOKEN_RE.findall(text or ""):
-        t = tok.lower().strip("'-&")
+        t = _normalize_token(tok)
         if len(t) > 2 and t not in _STOPWORDS:
             out.append(t)
     return out
+
 
 
 # --------------------------------------------------------------------------- #
@@ -437,11 +467,13 @@ _ENTITY_RE = re.compile(
 )
 
 
-# Leading words to strip from a captured phrase (articles + honorifics/titles).
+# Leading/trailing words to strip from a captured phrase (articles, honorifics,
+# titles, and any generic stopword that leaked into a Title-case run).
 _LEADING_DROP = {
     "the", "a", "an", "ceo", "president", "chair", "chairman", "chief", "mr",
     "ms", "mrs", "dr", "sir", "senator", "sen", "rep", "governor", "gov", "minister",
 }
+_LEAD_TRAIL_STOP = _STOPWORDS | _LEADING_DROP
 
 
 def _extract_entities(text: str) -> List[str]:
@@ -452,22 +484,25 @@ def _extract_entities(text: str) -> List[str]:
         if not ent:
             continue
         words = ent.split()
-        # Strip leading articles / honorifics ("The Federal Reserve", "CEO Jane Doe").
-        while len(words) > 1 and words[0].lower() in _LEADING_DROP:
+        # Strip leading/trailing filler ("As Israel", "Join Trump", "But Burnham",
+        # "The Federal Reserve", "CEO Jane Doe", "Trump Says").
+        while len(words) > 1 and words[0].lower() in _LEAD_TRAIL_STOP:
             words = words[1:]
-        ent = " ".join(words)
+        while len(words) > 1 and words[-1].lower() in _LEAD_TRAIL_STOP:
+            words = words[:-1]
         if not words:
             continue
+        ent = " ".join(words)
         is_acronym = ent.isupper()
         if len(words) == 1:
-            # Single token: keep acronyms (AI, EU, US); else require length >= 3.
-            if ent in _ENTITY_STOP:
+            low = ent.lower()
+            if low in _STOPWORDS or ent in _ENTITY_STOP:
                 continue
             if not is_acronym and len(ent) < 3:
                 continue
             if is_acronym and len(ent) < 2:
                 continue
-        if all(w in _ENTITY_STOP for w in words):
+        if all(w.lower() in _LEAD_TRAIL_STOP or w in _ENTITY_STOP for w in words):
             continue
         out.append(ent)
     return out
@@ -645,3 +680,48 @@ async def get_sentiment_heatmap(days: int = 14, max_topics: int = 6) -> Dict[str
     ]
 
     return {"topics": topics, "cols": len(day_cols), "labels": labels, "seed": seed}
+
+
+# --------------------------------------------------------------------------- #
+# Topic sentiment (keyword-based, replaces first-word grouping)
+# --------------------------------------------------------------------------- #
+
+
+def _label_for(score: float) -> str:
+    return "positive" if score > 0.05 else "negative" if score < -0.05 else "neutral"
+
+
+async def get_topic_sentiment(
+    days: int = 7, min_articles: int = 5, max_topics: int = 12
+) -> List[Dict[str, Any]]:
+    """Per-keyword sentiment breakdown (shape matches /news_sentiment/topics)."""
+    articles = await _fetch_recent(days)
+    if not articles:
+        return []
+
+    term_docs: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    for a in articles:
+        for t in set(a["terms"]):
+            term_docs[t].append(a)
+
+    topics: List[Dict[str, Any]] = []
+    for term, docs in term_docs.items():
+        if len(docs) < min_articles:
+            continue
+        buckets: Dict[str, List[float]] = defaultdict(list)
+        for d in docs:
+            buckets[_label_for(d["sentiment"])].append(d["sentiment"])
+        sentiments = {
+            lbl: {"count": len(vals), "avg_score": round(sum(vals) / len(vals), 3)}
+            for lbl, vals in buckets.items()
+        }
+        topics.append(
+            {
+                "topic": term.title(),
+                "total_articles": len(docs),
+                "sentiments": sentiments,
+            }
+        )
+
+    topics.sort(key=lambda x: x["total_articles"], reverse=True)
+    return topics[:max_topics]
