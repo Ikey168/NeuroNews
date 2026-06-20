@@ -319,23 +319,37 @@ def _event_type(c: Dict[str, Any]) -> str:
 
 
 async def get_trending_topics(days: int = 7) -> List[Dict[str, Any]]:
-    """Trending topics from keyword document-frequency across recent articles."""
+    """Trending topics from named-entity document-frequency across recent articles.
+
+    Topics are the proper-noun phrases / acronyms surfaced by the same entity
+    extraction that drives the entity graph (so "Elon Musk" and "Andy Burnham"
+    stay whole and surname mentions fold into the full name), rather than a
+    single-word bag-of-words that surfaces generic filler ("war", "study", …).
+    """
     articles = await _fetch_recent(days)
     if not articles:
         return []
 
-    term_docs: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
-    for a in articles:
-        for t in set(a["terms"]):
-            term_docs[t].append(a)
+    doc_count, label_form, _, entity_docs = _aggregate_entities(articles)
+    # Category names are not interesting as topics ("World", "Health", "Tech").
+    categories = {(a["category"] or "").lower() for a in articles}
 
     topics = []
-    for term, docs in term_docs.items():
-        count = len(docs)
+    for key, count in doc_count.items():
+        if count < 2:  # require corroboration across at least two articles
+            continue
+        label = label_form[key].most_common(1)[0][0] if label_form[key] else key
+        low = label.lower()
+        # Drop vague single-word topics and category names; keep multi-word
+        # phrases ("World Cup") and acronyms ("EU", "OPEC", "AI").
+        if " " not in label and not label.isupper():
+            if low in _GENERIC_TOPIC_TERMS or low in categories:
+                continue
+        docs = entity_docs[key]
         recent = sum(1 for d in docs if d["is_recent"])
         topics.append(
             {
-                "term": term,
+                "term": label,
                 "article_count": count,
                 "avg_sentiment": round(sum(d["sentiment"] for d in docs) / count, 3),
                 "growth_rate": round(recent / count, 3),
@@ -346,8 +360,8 @@ async def get_trending_topics(days: int = 7) -> List[Dict[str, Any]]:
 
     return [
         {
-            "topic": t["term"].title(),
-            "topic_name": t["term"].title(),
+            "topic": t["term"],
+            "topic_name": t["term"],
             "article_count": t["article_count"],
             "avg_probability": round(t["article_count"] / max_count, 3),
             "avg_sentiment": t["avg_sentiment"],
@@ -484,6 +498,28 @@ _LEADING_DROP = {
 }
 _LEAD_TRAIL_STOP = _STOPWORDS | _LEADING_DROP
 
+# Vague single-word nouns that read as proper nouns (capitalised at the start of
+# a headline) but are useless as standalone trending topics. Multi-word phrases
+# and acronyms are never filtered by this set.
+_GENERIC_TOPIC_TERMS = {
+    # vague nouns
+    "war", "tech", "cup", "study", "experts", "expert", "win", "wins", "rate",
+    "rates", "since", "much", "more", "talks", "deal", "vote", "poll", "growth",
+    "jobs", "home", "life", "team", "game", "match", "season", "police", "court",
+    "boss", "star", "stars", "world", "health", "news", "report", "watch",
+    "video", "update", "warning", "fears", "crisis", "row", "bid", "ban", "cut",
+    "cuts", "hit", "set", "sets", "top", "big", "key", "best", "worst", "outlook",
+    "signal", "signals", "gain", "gains", "loss", "losses",
+    # third-person headline verbs that Title-Case headlines surface as "nouns"
+    "weighs", "prompts", "draws", "enters", "beats", "sees", "eyes", "looks",
+    "seeks", "aims", "vows", "slams", "urges", "sparks", "fuels", "marks",
+    "opens", "closes", "leads", "names", "picks", "reveals", "unveils",
+    "launches", "halts", "blocks", "bans", "mulls", "raises", "drops", "holds",
+    "keeps", "adds", "loses", "wins", "warns", "calls", "backs", "faces",
+    "boosts", "cuts", "hits", "plans", "moves", "pushes", "pulls", "rejects",
+    "approves", "delays", "ends", "begins", "starts", "expands", "tops",
+}
+
 
 def _extract_entities(text: str) -> List[str]:
     """Best-effort named-entity surface forms from sentence-case text."""
@@ -564,13 +600,17 @@ _TYPE_COLOR = {
 }
 
 
-async def get_entity_graph(days: int = 7, max_nodes: int = 14) -> Dict[str, Any]:
-    """Entity co-occurrence graph derived from recent articles."""
-    articles = await _fetch_recent(days)
-    if not articles:
-        return {"nodes": [], "edges": [], "node_count": 0, "edge_count": 0}
+def _aggregate_entities(
+    articles: Sequence[Dict[str, Any]],
+) -> tuple:
+    """Extract named entities from articles and aggregate by canonical key.
 
-    # First pass: collect raw surface forms per article.
+    Returns ``(doc_count, label_form, per_article, entity_docs)`` where keys are
+    lowercased canonical entity surface forms (surnames resolved to their fuller
+    "First Last" form). ``per_article`` is the list of canonical-key sets aligned
+    with ``articles``; ``entity_docs`` maps each key to the articles mentioning it.
+    Shared by the entity graph and trending-topics views.
+    """
     raw_doc_count: Counter = Counter()
     label_form: Dict[str, Counter] = defaultdict(Counter)
     raw_per_article: List[set] = []
@@ -589,11 +629,23 @@ async def get_entity_graph(days: int = 7, max_nodes: int = 14) -> Dict[str, Any]
     alias = _resolve_aliases(raw_doc_count, label_form)
     doc_count: Counter = Counter()
     per_article: List[set] = []
-    for keys in raw_per_article:
+    entity_docs: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    for a, keys in zip(articles, raw_per_article):
         canon = {alias.get(k, k) for k in keys}
         for k in canon:
             doc_count[k] += 1
+            entity_docs[k].append(a)
         per_article.append(canon)
+    return doc_count, label_form, per_article, entity_docs
+
+
+async def get_entity_graph(days: int = 7, max_nodes: int = 14) -> Dict[str, Any]:
+    """Entity co-occurrence graph derived from recent articles."""
+    articles = await _fetch_recent(days)
+    if not articles:
+        return {"nodes": [], "edges": [], "node_count": 0, "edge_count": 0}
+
+    doc_count, label_form, per_article, _ = _aggregate_entities(articles)
 
     # Keep entities mentioned in at least 2 articles, top by frequency.
     ranked = [k for k, c in doc_count.most_common() if c >= 2][:max_nodes]
