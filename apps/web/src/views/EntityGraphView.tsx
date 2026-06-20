@@ -1,16 +1,10 @@
+import { useMemo } from "react";
 import { ACCENT, palette, fonts } from "../theme";
-import { useTopEntities } from "../lib/queries";
+import { useEntityGraph } from "../lib/queries";
 import PageHeader from "../components/PageHeader";
 import SourceBadge from "../components/SourceBadge";
 import EntityGraph from "../components/charts/EntityGraph";
 import type { LegendItem } from "../types";
-
-const legend: LegendItem[] = [
-  { label: "Organizations", color: ACCENT, count: "5,210" },
-  { label: "People", color: palette.blue, count: "3,840" },
-  { label: "Topics", color: palette.amber, count: "2,610" },
-  { label: "Places", color: palette.violet, count: "749" },
-];
 
 const panel = {
   background: "#11151c",
@@ -27,19 +21,49 @@ const panelLabel = {
   marginBottom: 11,
 } as const;
 
+const TYPE_LABEL: Record<string, string> = {
+  org: "Organizations",
+  person: "People",
+  topic: "Topics",
+  place: "Places",
+};
+const TYPE_COLOR: Record<string, string> = {
+  org: ACCENT,
+  person: palette.blue,
+  topic: palette.amber,
+  place: palette.violet,
+};
+
 export default function EntityGraphView() {
-  const { data: topEntities, source, isLoading } = useTopEntities();
+  const { data: graph, source, isLoading } = useEntityGraph();
+
+  const legend: LegendItem[] = useMemo(() => {
+    const counts: Record<string, number> = { org: 0, person: 0, topic: 0, place: 0 };
+    graph.nodes.forEach((n) => {
+      counts[n.type] = (counts[n.type] ?? 0) + 1;
+    });
+    return (["org", "person", "topic", "place"] as const).map((t) => ({
+      label: TYPE_LABEL[t],
+      color: TYPE_COLOR[t],
+      count: String(counts[t] ?? 0),
+    }));
+  }, [graph]);
+
+  const topConnected = useMemo(
+    () => [...graph.nodes].sort((a, b) => b.degree - a.degree).slice(0, 6),
+    [graph],
+  );
 
   return (
     <div>
       <PageHeader
         title="Entity Relationship Graph"
-        subtitle="12 entities · 13 co-occurrence links · 24h window"
+        subtitle={`${graph.nodeCount} entities · ${graph.edgeCount} co-occurrence links · 7d window`}
         right={<SourceBadge source={source} isLoading={isLoading} />}
       />
       <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: 12 }}>
         <div style={{ background: "#0e131a", border: "1px solid #1c2330", borderRadius: 10, overflow: "hidden" }}>
-          <EntityGraph />
+          <EntityGraph data={graph} />
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={panel}>
@@ -57,8 +81,8 @@ export default function EntityGraphView() {
           <div style={panel}>
             <div style={panelLabel}>TOP CONNECTED</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {topEntities.map((e) => (
-                <div key={e.name} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {topConnected.map((e) => (
+                <div key={e.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <span style={{ width: 8, height: 8, flex: "none", borderRadius: "50%", background: e.color }} />
                   <span
                     style={{
@@ -70,9 +94,9 @@ export default function EntityGraphView() {
                       textOverflow: "ellipsis",
                     }}
                   >
-                    {e.name}
+                    {e.label}
                   </span>
-                  <span style={{ fontFamily: fonts.mono, fontSize: 11, color: "#8a94a6" }}>{e.links}</span>
+                  <span style={{ fontFamily: fonts.mono, fontSize: 11, color: "#8a94a6" }}>{e.degree}</span>
                 </div>
               ))}
             </div>

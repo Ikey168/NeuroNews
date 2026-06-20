@@ -50,6 +50,13 @@ export interface TopicSentiment {
   articles: number;
 }
 
+export interface Heatmap {
+  topics: string[];
+  cols: number;
+  labels: string[];
+  seed: number[][];
+}
+
 export interface LegendItem {
   label: string;
   color: string;
@@ -75,6 +82,23 @@ export interface GraphNode {
 export interface GraphData {
   nodes: GraphNode[];
   edges: [string, string][];
+  nodeCount: number;
+  edgeCount: number;
+}
+
+// Entity graph fetched live from the API (positions computed client-side).
+export interface LiveGraphNode {
+  id: string;
+  label: string;
+  type: string;
+  color: string;
+  count: number;
+  degree: number;
+}
+
+export interface LiveGraph {
+  nodes: LiveGraphNode[];
+  edges: [string, string, number][];
   nodeCount: number;
   edgeCount: number;
 }

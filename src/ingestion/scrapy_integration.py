@@ -49,16 +49,41 @@ class Feed:
     category: str
 
 
-# Reliable, public feeds covering the dashboard's categories.
+# Reliable, public feeds. Several outlets are included per category so the same
+# real-world story is covered by multiple sources, which lets the clusterer
+# group cross-outlet coverage into multi-source event clusters.
 DEFAULT_FEEDS: List[Feed] = [
+    # --- World / top news (big stories show up across all of these) ---
+    Feed("BBC World", "https://feeds.bbci.co.uk/news/world/rss.xml", "World"),
+    Feed("Guardian World", "https://www.theguardian.com/world/rss", "World"),
+    Feed("NYT World", "https://rss.nytimes.com/services/xml/rss/nyt/World.xml", "World"),
+    Feed("Al Jazeera", "https://www.aljazeera.com/xml/rss/all.xml", "World"),
+    Feed("NPR News", "https://feeds.npr.org/1001/rss.xml", "World"),
+    # --- Economy / business ---
     Feed("BBC Business", "https://feeds.bbci.co.uk/news/business/rss.xml", "Economy"),
+    Feed("Guardian Business", "https://www.theguardian.com/business/rss", "Economy"),
+    Feed("NYT Business", "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml", "Economy"),
+    # --- Technology ---
     Feed("BBC Technology", "https://feeds.bbci.co.uk/news/technology/rss.xml", "Technology"),
-    Feed("BBC Politics", "https://feeds.bbci.co.uk/news/politics/rss.xml", "Policy"),
-    Feed("BBC Health", "https://feeds.bbci.co.uk/news/health/rss.xml", "Health"),
-    Feed("BBC Science", "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml", "Science"),
+    Feed("Guardian Technology", "https://www.theguardian.com/technology/rss", "Technology"),
+    Feed("NYT Technology", "https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml", "Technology"),
     Feed("Ars Technica", "https://feeds.arstechnica.com/arstechnica/index", "Technology"),
-    Feed("NPR News", "https://feeds.npr.org/1001/rss.xml", "Policy"),
+    # --- Policy / politics ---
+    Feed("BBC Politics", "https://feeds.bbci.co.uk/news/politics/rss.xml", "Policy"),
+    Feed("Guardian Politics", "https://www.theguardian.com/politics/rss", "Policy"),
+    Feed("NYT Politics", "https://rss.nytimes.com/services/xml/rss/nyt/Politics.xml", "Policy"),
+    # --- Health ---
+    Feed("BBC Health", "https://feeds.bbci.co.uk/news/health/rss.xml", "Health"),
+    Feed("Guardian Society", "https://www.theguardian.com/society/rss", "Health"),
+    Feed("NYT Health", "https://rss.nytimes.com/services/xml/rss/nyt/Health.xml", "Health"),
+    # --- Energy / environment ---
+    Feed("Guardian Environment", "https://www.theguardian.com/environment/rss", "Energy"),
+    Feed("NYT Climate", "https://rss.nytimes.com/services/xml/rss/nyt/Climate.xml", "Energy"),
     Feed("EIA Today in Energy", "https://www.eia.gov/rss/todayinenergy.xml", "Energy"),
+    # --- Science ---
+    Feed("BBC Science", "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml", "Science"),
+    Feed("Guardian Science", "https://www.theguardian.com/science/rss", "Science"),
+    Feed("NYT Science", "https://rss.nytimes.com/services/xml/rss/nyt/Science.xml", "Science"),
 ]
 
 

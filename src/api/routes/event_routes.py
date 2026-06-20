@@ -212,6 +212,25 @@ async def get_breaking_news(
         )
 
 
+@router.get("/entity_graph")
+async def get_entity_graph(
+    days: int = Query(7, ge=1, le=30, description="Days of articles to analyze"),
+    max_nodes: int = Query(14, ge=4, le=60, description="Maximum entities to return"),
+):
+    """Entity co-occurrence graph derived from recent articles in the warehouse."""
+    try:
+        from src.database.local_warehouse_views import (
+            get_entity_graph as warehouse_entity_graph,
+        )
+
+        return await warehouse_entity_graph(days=days, max_nodes=max_nodes)
+    except Exception as e:
+        logger.error("Error building entity graph: {0}".format(e))
+        raise HTTPException(
+            status_code=500, detail="Error building entity graph: {0}".format(str(e))
+        )
+
+
 @router.get("/events/clusters", response_model=List[EventClusterResponse])
 async def get_event_clusters(
     category: Optional[str] = Query(None, description="Filter by category"),
