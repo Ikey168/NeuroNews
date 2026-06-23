@@ -220,19 +220,96 @@ This satisfies "keep news as an optional pack" with minimal disruption.
 
 ---
 
-## 11. Phased rollout
+## 11. Milestones
 
-| Phase | Scope | Exit criteria |
-| --- | --- | --- |
-| **0. Foundations** | `document-ingest-v1` contract + Avro; `Document` model; Article→Document adapter; `documents` table + legacy `articles` view | Existing news pipeline green via adapter; contract tests pass |
-| **1. Connector framework** | `connectors/base.py` + `registry.py`; refactor existing HTML ingest behind it | News ingest runs through the new framework unchanged |
-| **2. Papers E2E** | arXiv/PubMed connector, PDF parsing, citation graph, structured chunking, RAG over papers | Ingest a paper by id → ask a question → get cited answer; citation graph queryable |
-| **3. Knowledge layer** | claim extractor + cross-document claim graph | Claims with provenance queryable in KG |
-| **4. Domain packs** | extract news modules into `src/domains/news/`; feature flags; `document_routes` | News features run only when pack enabled; generic API works pack-off |
-| **5. Web reframing** | Library view, document reader, citation graph UI, gate news views | Papers usable end-to-end in the UI |
-| **6. Rebrand** | naming, docs, README | Identity reflects general knowledge engine |
+The current `src/knowledge_graph/` is an **entity-relationship (ER) graph**, not a knowledge
+graph: nodes are `Article` vertices, relations are inferred by co-occurrence/patterns, and there
+is no ontology, no provenance, no entity resolution, and no claim representation. The pivot
+therefore promotes the **knowledge-graph redesign to a foundational milestone (M2)**, not a
+late-stage add-on.
 
-Phases 0–2 deliver a working general engine with papers; 3–6 deepen and polish.
+Milestones are ordered by dependency. M0–M6 deliver a working general knowledge engine with
+papers end-to-end; M7–M12 broaden coverage and polish.
+
+### M0 — Document data model (keystone)
+- New core contract `document-ingest-v1` (JSON Schema + Avro) alongside `article-ingest-v1`.
+- `Document` model with `source_type`, optional `url`/`created_at`/`country`, flexible `metadata`.
+- `Article → Document` adapter (`source_type = news`, news fields → `metadata`).
+- DB: `documents` table (or `source_type` + JSON `metadata` column) + legacy `articles` view.
+- Move `sentiment_score`/`topics` out of the core record into an enrichment layer.
+- **Exit:** existing news pipeline green via adapter; contract tests pass.
+
+### M1 — Connector framework
+- `src/ingestion/connectors/{base.py,registry.py}` with `discover→fetch→parse→Document`.
+- Refactor existing Scrapy/Playwright HTML ingest behind the framework as the `news`/`web` connector.
+- **Exit:** current news ingest runs unchanged through the new framework.
+
+### M2 — Knowledge graph foundation (was "ER graph")
+- **Ontology**: typed entity classes (`Entity`, `Person`, `Organization`, `Concept`, `Document`,
+  `Claim`, `Method`, `Dataset`) and relation types (`AUTHORED_BY`, `CITES`, `INSTANCE_OF`,
+  `PART_OF`, `DEFINES`, `SUPPORTS`, `CONTRADICTS`, `MENTIONS`) with constraints.
+- **Node re-centering**: graph center of gravity moves from `Article` vertices to
+  `Concept`/`Claim` nodes; documents become anchors, not the primary node.
+- **Provenance on every triple**: `(subject, predicate, object, source_doc, chunk_id, confidence)`.
+- **Reified relations**: edges carry properties (e.g., `CITES.year`, `CITES.context`).
+- **Exit:** facts are stored as cited triples; ontology validates entity/relation types.
+
+### M3 — Entity resolution
+- Canonicalization stage before graph insertion: dedup the same person/org/concept across
+  documents into one canonical node (alias table, embedding + string similarity).
+- Backfill existing nodes to canonical IDs.
+- **Exit:** "Geoffrey Hinton" / "Hinton" / "G. Hinton" resolve to one node across the corpus.
+
+### M4 — Papers connector + citation graph
+- arXiv/PubMed/Crossref/Semantic Scholar discovery; PDF fetch to object storage (`content_ref`).
+- PDF parsing (GROBID preferred, `pymupdf`/`pdfplumber` fallback): sections, figures/captions,
+  reference list.
+- References become first-class `CITES` edges → queryable citation graph.
+- **Exit:** ingest a paper by id → its references appear as `CITES` edges in the KG.
+
+### M5 — Structure-aware chunking
+- `SplitStrategy.STRUCTURED` in `services/rag/chunking.py` consuming the section/chapter tree.
+- Each chunk carries a `path` (e.g., `["§4","4.2 Methods"]`) for location-cited retrieval.
+- **Exit:** RAG over a paper returns answers cited to specific sections.
+
+### M6 — Claim extraction + knowledge layer
+- `src/knowledge_graph/claim_extractor.py`: atomic subject–predicate–object claims with provenance.
+- Claims stored as KG nodes/edges; `SUPPORTS`/`CONTRADICTS` links across documents.
+- RAG surfaces corroborating/contradicting evidence per claim.
+- **Exit:** "what does the literature say about X" returns synthesized, cited claims; papers E2E done.
+
+### M7 — Domain packs (news kept, optional)
+- `src/domains/{base.py,news/}`; move `fake_news_detector`, news sentiment, `event_clusterer`,
+  `influence_network_analyzer`, news timeline UI into the `news` pack.
+- Feature-flag pack registration; add generic `document_routes.py`; gate news-only routes.
+- **Exit:** news features run only when pack enabled; generic API/KG works with pack off.
+
+### M8 — Books connector
+- EPUB/PDF ingestion with hierarchical structure (parts → chapters → sections); OCR fallback.
+- Reuses M5 structured chunking and M2 KG.
+- **Exit:** "chat with this book" answers cited to chapter/section.
+
+### M9 — Blogs / RSS / Atom connector
+- Feed subscription + readability extraction (reuses existing scraper).
+- Generic watchlists/digests over feeds.
+- **Exit:** subscribe to a feed → new posts auto-ingested, entities/claims extracted.
+
+### M10 — Media (audio/video) connector
+- Whisper transcription → `Document` with `source_type = transcript`, timestamped chunks.
+- **Exit:** semantic search over a podcast returns timestamp-linked answers.
+
+### M11 — Generic upload connector
+- PDF/Markdown/docx/text/email upload + paste path → personal/team knowledge base.
+- **Exit:** drop in mixed docs → cross-corpus, cross-source-type cited Q&A.
+
+### M12 — Web reframing & rebrand
+- `NewsFeed` → generic **Library / Sources**; `EntityGraphView` → knowledge/citation graph UI;
+  new **Document reader** view; gate news views behind the pack.
+- Rename/rebrand from "NeuroNews" last, after the engine is generalized.
+- **Exit:** all source types usable in the UI under a non-news identity.
+
+**Critical path to a working general engine with papers:** M0 → M1 → M2 → M3 → M4 → M5 → M6.
+M7 unlocks the optional-news architecture; M8–M11 add coverage; M12 finishes the product identity.
 
 ---
 
@@ -251,13 +328,13 @@ Phases 0–2 deliver a working general engine with papers; 3–6 deepen and poli
   (`pymupdf`/`pdfplumber`, simpler deploy). Recommend GROBID with a Python fallback.
 - **Storage of large docs:** books/PDFs use `content_ref` to S3-compatible storage rather than
   inlining `content` — keep the metadata store lean.
-- **Entity resolution at scale:** cross-source dedup of the same person/concept becomes more
-  important than in news-only; may warrant a dedicated entity-resolution pass in Phase 3.
-- **Naming:** "NeuroNews" implies news; rebrand deferred to Phase 6 to avoid churn mid-pivot.
+- **Entity resolution at scale:** cross-source dedup of the same person/concept is foundational,
+  not optional — promoted to its own milestone (M3).
+- **Naming:** "NeuroNews" implies news; rebrand deferred to M12 to avoid churn mid-pivot.
 
 ---
 
 ## 14. Recommended immediate next step
 
-Begin **Phase 0** (the `Document` contract + Article adapter). It is purely additive, unblocks
-every later phase, and carries zero risk to the existing news pipeline.
+Begin **M0** (the `Document` contract + Article adapter). It is purely additive, unblocks every
+later milestone, and carries zero risk to the existing news pipeline.
