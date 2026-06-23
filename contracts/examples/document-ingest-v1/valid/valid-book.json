@@ -1,0 +1,19 @@
+{
+  "document_id": "isbn:9780262033848",
+  "source_type": "book",
+  "source_id": null,
+  "url": null,
+  "title": "Introduction to Algorithms",
+  "content": null,
+  "content_ref": "s3://neuronews-docs/books/9780262033848.epub",
+  "language": "en",
+  "authors": ["Thomas H. Cormen", "Charles E. Leiserson", "Ronald L. Rivest", "Clifford Stein"],
+  "created_at": 1247529600000,
+  "ingested_at": 1735371342000,
+  "metadata": {
+    "isbn": "9780262033848",
+    "publisher": "MIT Press",
+    "edition": "3rd",
+    "chapter_count": 35
+  }
+}

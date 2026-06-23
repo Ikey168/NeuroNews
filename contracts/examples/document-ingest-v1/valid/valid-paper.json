@@ -1,0 +1,19 @@
+{
+  "document_id": "arxiv:2303.08774",
+  "source_type": "paper",
+  "source_id": "arxiv",
+  "url": "https://arxiv.org/abs/2303.08774",
+  "title": "GPT-4 Technical Report",
+  "content": null,
+  "content_ref": "s3://neuronews-docs/papers/arxiv/2303.08774.pdf",
+  "language": "en",
+  "authors": ["OpenAI"],
+  "created_at": 1678838400000,
+  "ingested_at": 1735371342000,
+  "metadata": {
+    "arxiv_id": "2303.08774",
+    "doi": "10.48550/arXiv.2303.08774",
+    "primary_category": "cs.CL",
+    "reference_dois": ["10.5555/3295222.3295349", "10.18653/v1/N19-1423"]
+  }
+}

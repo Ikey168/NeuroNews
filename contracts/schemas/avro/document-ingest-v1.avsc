@@ -1,0 +1,95 @@
+{
+  "type": "record",
+  "name": "DocumentIngest",
+  "namespace": "neuronews.events",
+  "doc": "Generalized raw document as captured from any source. Supersedes ArticleIngest (the news specialization). Enrichments (sentiment, topics) are produced downstream and are not part of this core record.",
+  "fields": [
+    {
+      "name": "document_id",
+      "type": "string",
+      "doc": "Unique identifier for the document"
+    },
+    {
+      "name": "source_type",
+      "type": {
+        "type": "enum",
+        "name": "SourceType",
+        "symbols": ["news", "blog", "book", "paper", "transcript", "web", "note"]
+      },
+      "doc": "Kind of source the document came from"
+    },
+    {
+      "name": "source_id",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Identifier of the originating source (publisher, repository, feed, channel)"
+    },
+    {
+      "name": "url",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Origin URL, if the document was published on the web"
+    },
+    {
+      "name": "title",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Document title/headline"
+    },
+    {
+      "name": "content",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Inline document body text"
+    },
+    {
+      "name": "content_ref",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Pointer to the document body in object storage, used for large documents"
+    },
+    {
+      "name": "language",
+      "type": "string",
+      "doc": "Document language using ISO 639-1 code (e.g., 'en', 'es', 'fr')"
+    },
+    {
+      "name": "authors",
+      "type": {
+        "type": "array",
+        "items": "string"
+      },
+      "default": [],
+      "doc": "Authors/creators of the document"
+    },
+    {
+      "name": "created_at",
+      "type": ["null", {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      }],
+      "default": null,
+      "doc": "When the document was originally created/published (milliseconds since epoch). Generalizes ArticleIngest.published_at."
+    },
+    {
+      "name": "ingested_at",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      },
+      "doc": "When the document was ingested by our system (milliseconds since epoch)"
+    },
+    {
+      "name": "metadata",
+      "type": {
+        "type": "map",
+        "values": ["null", "boolean", "long", "double", "string", {
+          "type": "array",
+          "items": "string"
+        }]
+      },
+      "default": {},
+      "doc": "Flexible bag of source-type-specific fields (scalars and string arrays). Deeper nested structures arrive with their connectors."
+    }
+  ]
+}
