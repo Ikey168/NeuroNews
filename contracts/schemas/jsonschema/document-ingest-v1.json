@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "https://contracts.neuronews.com/schemas/document-ingest-v1.json",
+  "title": "DocumentIngest v1",
+  "description": "Generalized raw document as captured from any source (news, blog, book, paper, transcript, web, note). Supersedes ArticleIngest v1, which is the news specialization of this contract. Enrichments such as sentiment and topics are intentionally not part of this core record; they are produced downstream and stored separately.",
+  "type": "object",
+  "properties": {
+    "document_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique identifier for the document"
+    },
+    "source_type": {
+      "type": "string",
+      "enum": ["news", "blog", "book", "paper", "transcript", "web", "note"],
+      "description": "Kind of source the document came from"
+    },
+    "source_id": {
+      "type": ["string", "null"],
+      "description": "Identifier of the originating source (publisher, repository, feed, channel). Optional: books and uploads may have none."
+    },
+    "url": {
+      "type": ["string", "null"],
+      "format": "uri",
+      "description": "Origin URL, if the document was published on the web. Optional: books, papers, and uploads may have none."
+    },
+    "title": {
+      "type": ["string", "null"],
+      "description": "Document title/headline"
+    },
+    "content": {
+      "type": ["string", "null"],
+      "description": "Inline document body text. Use content_ref instead for large documents (books, PDFs)."
+    },
+    "content_ref": {
+      "type": ["string", "null"],
+      "description": "Pointer to the document body in object storage (e.g. s3://...), used when content is too large to inline"
+    },
+    "language": {
+      "type": "string",
+      "pattern": "^[a-z]{2}$",
+      "description": "Document language using ISO 639-1 code (e.g., 'en', 'es', 'fr')",
+      "examples": ["en", "es", "fr", "de", "it", "pt", "ru", "zh", "ja", "ar"]
+    },
+    "authors": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "default": [],
+      "description": "Authors/creators of the document (article byline, paper authors, book authors, speakers)"
+    },
+    "created_at": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "When the document was originally created/published (ISO 8601). Generalizes ArticleIngest.published_at. Optional: some documents have no known date."
+    },
+    "ingested_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the document was ingested by our system (ISO 8601)"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Flexible bag of source-type-specific fields, e.g. paper: doi/arxiv_id/journal/references; book: isbn/publisher/chapter/page_range; transcript: media_url/duration_s/speakers; news: country/section/byline.",
+      "additionalProperties": true,
+      "default": {}
+    }
+  },
+  "required": [
+    "document_id",
+    "source_type",
+    "language",
+    "ingested_at"
+  ],
+  "additionalProperties": false,
+  "examples": [
+    {
+      "document_id": "arxiv:2303.08774",
+      "source_type": "paper",
+      "source_id": "arxiv",
+      "url": "https://arxiv.org/abs/2303.08774",
+      "title": "GPT-4 Technical Report",
+      "content": null,
+      "content_ref": "s3://neuronews-docs/papers/arxiv/2303.08774.pdf",
+      "language": "en",
+      "authors": ["OpenAI"],
+      "created_at": "2023-03-15T00:00:00Z",
+      "ingested_at": "2026-06-21T10:35:42Z",
+      "metadata": {
+        "arxiv_id": "2303.08774",
+        "doi": "10.48550/arXiv.2303.08774",
+        "primary_category": "cs.CL"
+      }
+    },
+    {
+      "document_id": "550e8400-e29b-41d4-a716-446655440000",
+      "source_type": "news",
+      "source_id": "bbc-news",
+      "url": "https://www.bbc.com/news/technology-12345678",
+      "title": "Breakthrough in AI Technology Announced",
+      "content": "Scientists have announced a major breakthrough...",
+      "content_ref": null,
+      "language": "en",
+      "authors": [],
+      "created_at": "2025-08-28T10:30:00Z",
+      "ingested_at": "2025-08-28T10:35:42Z",
+      "metadata": {
+        "country": "UK",
+        "section": "technology"
+      }
+    }
+  ]
+}

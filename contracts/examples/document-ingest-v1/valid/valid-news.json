@@ -1,0 +1,17 @@
+{
+  "document_id": "550e8400-e29b-41d4-a716-446655440000",
+  "source_type": "news",
+  "source_id": "bbc-news",
+  "url": "https://www.bbc.com/news/technology-12345678",
+  "title": "Breakthrough in AI Technology Announced",
+  "content": "Scientists have announced a major breakthrough in artificial intelligence technology that could revolutionize how we interact with computers.",
+  "content_ref": null,
+  "language": "en",
+  "authors": [],
+  "created_at": 1735371000000,
+  "ingested_at": 1735371342000,
+  "metadata": {
+    "country": "UK",
+    "section": "technology"
+  }
+}

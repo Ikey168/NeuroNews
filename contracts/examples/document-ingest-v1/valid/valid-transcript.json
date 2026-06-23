@@ -1,0 +1,18 @@
+{
+  "document_id": "podcast:lexfridman:ep420",
+  "source_type": "transcript",
+  "source_id": "lex-fridman-podcast",
+  "url": "https://www.youtube.com/watch?v=example",
+  "title": "Episode 420: On Knowledge Graphs",
+  "content": "[00:00:00] Welcome to the podcast. Today we discuss knowledge graphs...",
+  "content_ref": null,
+  "language": "en",
+  "authors": ["Lex Fridman", "Guest Speaker"],
+  "created_at": 1735300000000,
+  "ingested_at": 1735371342000,
+  "metadata": {
+    "media_url": "https://example.com/audio.mp3",
+    "duration_s": 7200,
+    "speakers": ["host", "guest"]
+  }
+}
