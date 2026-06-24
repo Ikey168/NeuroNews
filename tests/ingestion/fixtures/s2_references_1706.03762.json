@@ -1,0 +1,26 @@
+{
+  "offset": 0,
+  "data": [
+    {
+      "citedPaper": {
+        "title": "Neural Machine Translation by Jointly Learning to Align and Translate",
+        "year": 2014,
+        "externalIds": { "ArXiv": "1409.0473", "DOI": "10.48550/arXiv.1409.0473" }
+      }
+    },
+    {
+      "citedPaper": {
+        "title": "Sequence to Sequence Learning with Neural Networks",
+        "year": 2014,
+        "externalIds": { "DOI": "10.5555/2969033.2969173" }
+      }
+    },
+    {
+      "citedPaper": {
+        "title": "Long Short-Term Memory",
+        "year": 1997,
+        "externalIds": {}
+      }
+    }
+  ]
+}

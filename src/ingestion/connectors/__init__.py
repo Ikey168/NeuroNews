@@ -15,8 +15,9 @@ from src.ingestion.connectors.registry import (
     register_connector,
 )
 
-# Importing the module triggers @register_connector for the built-in connectors.
+# Importing the modules triggers @register_connector for the built-in connectors.
 from src.ingestion.connectors import news  # noqa: E402,F401
+from src.ingestion.connectors import paper  # noqa: E402,F401
 
 __all__ = [
     "Connector",
