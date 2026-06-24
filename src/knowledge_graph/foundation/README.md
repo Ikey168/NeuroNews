@@ -28,6 +28,34 @@ Part of the knowledge-engine pivot; see
   ontology, requires both endpoints to exist, and accumulates provenance when a
   fact is re-asserted. The interface is backend-agnostic so a Gremlin/Neptune
   implementation can follow without changing callers.
+- `resolution.py`: `EntityResolver` assigns canonical entity ids so different
+  surface forms of one entity collapse into a single node, and
+  `canonicalize_store` backfills an existing store (merging duplicate nodes and
+  rewriting triples to canonical ids).
+
+## Entity resolution
+
+`EntityResolver` matches a candidate against existing canonical entities of the
+same type, in order:
+
+1. **Alias index** exact match on the normalized surface form.
+2. **Name-aware matching** for people: same surname with compatible given names,
+   so "Hinton", "Geoffrey Hinton", and "G. Hinton" resolve together while
+   "John Smith" and "Jane Smith" stay apart.
+3. **Generic fuzzy/containment** matching (token containment or
+   `SequenceMatcher` ratio above a threshold), handling organization suffixes
+   ("OpenAI" / "OpenAI Inc." / "Open AI") and plurals ("Transformer" /
+   "Transformers").
+4. **Embedding similarity** fallback when an `embedder` is supplied, catching
+   lexically distant aliases ("NYC" / "New York City").
+
+```python
+from src.knowledge_graph.foundation import EntityResolver, EntityType
+
+r = EntityResolver()
+r.resolve(EntityType.PERSON, "Hinton")
+r.resolve(EntityType.PERSON, "Geoffrey Hinton")  # same canonical node
+```
 
 ## Ontology
 
