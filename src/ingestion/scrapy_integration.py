@@ -30,8 +30,9 @@ from typing import List, Optional, Sequence, Tuple
 from urllib.request import Request, urlopen
 import xml.etree.ElementTree as ET
 
-from src.database.local_analytics_connector import get_shared_connection
-from src.database.local_warehouse_seed import ensure_schema
+# NOTE: warehouse imports (DuckDB) are intentionally lazy, done inside the
+# storage functions below, so the pure fetch/parse helpers in this module can be
+# reused by the ingestion connector framework without pulling in DuckDB.
 
 logger = logging.getLogger(__name__)
 
@@ -307,6 +308,9 @@ def store_articles(articles: Sequence[Article], replace: bool = False) -> int:
     sample seed (ids ``art-*``) is dropped and only previously unseen URLs are
     inserted, so re-running is idempotent.
     """
+    from src.database.local_analytics_connector import get_shared_connection
+    from src.database.local_warehouse_seed import ensure_schema
+
     conn = get_shared_connection()
     ensure_schema(conn)
 
@@ -337,6 +341,8 @@ def ingest(
     replace: bool = False,
 ) -> dict:
     """Fetch real news and store it. Returns summary stats."""
+    from src.database.local_analytics_connector import get_shared_connection
+
     articles = fetch_articles(feeds, limit_per_feed=limit_per_feed)
     inserted = store_articles(articles, replace=replace)
     total = get_shared_connection().execute(
