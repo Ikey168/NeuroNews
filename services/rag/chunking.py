@@ -9,7 +9,7 @@ with configurable parameters like max_chars, overlap, and language-aware splitti
 import logging
 import re
 from typing import List, Dict, Any, Optional, Tuple
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 
 try:
@@ -28,6 +28,10 @@ class SplitStrategy(Enum):
     PARAGRAPH = "paragraph"
     WORD = "word"
     CHARACTER = "character"
+    # Hierarchical, structure-aware splitting over a section/chapter tree. Each
+    # resulting chunk carries its section path so retrieval can cite a location
+    # (e.g. a paper section or a book chapter). Used via chunk_document().
+    STRUCTURED = "structured"
 
 
 @dataclass
@@ -39,6 +43,27 @@ class ChunkConfig:
     min_chunk_chars: int = 50
     preserve_sentences: bool = True
     language: str = "en"
+    # When split_on == STRUCTURED, each section's body is chunked with this flat
+    # leaf strategy. Lets long documents (papers, books) stay section-aware while
+    # reusing the existing sentence/paragraph/word/character splitters.
+    leaf_split_on: SplitStrategy = SplitStrategy.SENTENCE
+
+
+@dataclass
+class DocumentSection:
+    """A node in a document's section/chapter tree for structured chunking.
+
+    ``title`` is the section/chapter heading, ``text`` its body (may be empty
+    for container nodes like a book Part), and ``children`` its subsections.
+    """
+    title: str = ""
+    text: str = ""
+    children: List["DocumentSection"] = field(default_factory=list)
+
+    @classmethod
+    def from_pairs(cls, pairs: List[Tuple[str, str]]) -> List["DocumentSection"]:
+        """Build a flat list of sections from (title, text) pairs."""
+        return [cls(title=title, text=text) for title, text in pairs]
 
 
 @dataclass
@@ -51,7 +76,10 @@ class TextChunk:
     word_count: int
     char_count: int
     metadata: Dict[str, Any]
-    
+    # Section breadcrumb for structure-aware chunks, e.g. ["4", "4.2 Methods"]
+    # or ["Part II", "Chapter 5"]. Empty for flat (non-structured) chunks.
+    path: List[str] = field(default_factory=list)
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert chunk to dictionary representation."""
         return {
@@ -62,6 +90,7 @@ class TextChunk:
             'word_count': self.word_count,
             'char_count': self.char_count,
             'metadata': self.metadata,
+            'path': list(self.path),
         }
 
 
@@ -130,8 +159,62 @@ class TextChunker:
             return self._chunk_by_paragraphs(text, metadata)
         elif self.config.split_on == SplitStrategy.WORD:
             return self._chunk_by_words(text, metadata)
+        elif self.config.split_on == SplitStrategy.STRUCTURED:
+            # No section tree available for a plain string: treat the whole text
+            # as a single untitled section so callers still get chunks.
+            return self.chunk_document([DocumentSection(text=text)], metadata)
         else:  # CHARACTER
             return self._chunk_by_characters(text, metadata)
+
+    def chunk_document(
+        self,
+        sections: List[DocumentSection],
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> List[TextChunk]:
+        """Chunk a section/chapter tree, tagging each chunk with its path.
+
+        Each section's body is split with the configured leaf strategy; every
+        resulting chunk carries the breadcrumb of titles from the root to that
+        section (e.g. ["4", "4.2 Methods"]) so retrieval can cite the location.
+        Container sections with no body still contribute their title to the path
+        of their descendants.
+        """
+        metadata = metadata or {}
+        chunks: List[TextChunk] = []
+        counter = 0
+
+        def walk(node: DocumentSection, ancestors: List[str]) -> None:
+            nonlocal counter
+            path = ancestors + [node.title] if node.title else list(ancestors)
+            if node.text and node.text.strip():
+                for chunk in self._chunk_leaf(node.text, metadata):
+                    chunk.chunk_id = counter
+                    counter += 1
+                    chunk.path = list(path)
+                    chunk.metadata = {
+                        **chunk.metadata,
+                        'chunk_strategy': SplitStrategy.STRUCTURED.value,
+                        'section_path': list(path),
+                    }
+                    chunks.append(chunk)
+            for child in node.children:
+                walk(child, path)
+
+        for section in sections:
+            walk(section, [])
+        return chunks
+
+    def _chunk_leaf(self, text: str, metadata: Dict[str, Any]) -> List[TextChunk]:
+        """Chunk a single section body using the configured flat leaf strategy."""
+        strategy = self.config.leaf_split_on
+        if strategy == SplitStrategy.PARAGRAPH:
+            return self._chunk_by_paragraphs(text, metadata)
+        elif strategy == SplitStrategy.WORD:
+            return self._chunk_by_words(text, metadata)
+        elif strategy == SplitStrategy.CHARACTER:
+            return self._chunk_by_characters(text, metadata)
+        else:  # SENTENCE (default leaf strategy)
+            return self._chunk_by_sentences(text, metadata)
     
     def _chunk_by_sentences(self, text: str, metadata: Dict[str, Any]) -> List[TextChunk]:
         """Chunk text by sentences, respecting max_chars and overlap."""
@@ -380,5 +463,55 @@ def chunk_text(
     
     chunker = TextChunker(config)
     chunks = chunker.chunk_text(text, metadata)
-    
+
+    return [chunk.to_dict() for chunk in chunks]
+
+
+def chunk_document(
+    sections,
+    max_chars: int = 1000,
+    overlap_chars: int = 100,
+    leaf_split_on: str = "sentence",
+    metadata: Optional[Dict[str, Any]] = None,
+    **kwargs
+) -> List[Dict[str, Any]]:
+    """
+    Convenience function for structure-aware chunking.
+
+    Args:
+        sections: A list of DocumentSection nodes, or a list of (title, text)
+            pairs (which are treated as a flat list of sections).
+        max_chars: Maximum characters per chunk.
+        overlap_chars: Overlap between chunks.
+        leaf_split_on: Flat strategy used within each section
+            ("sentence", "paragraph", "word", "character").
+        metadata: Optional metadata to include.
+        **kwargs: Additional ChunkConfig options.
+
+    Returns:
+        List of chunk dictionaries, each including a ``path`` breadcrumb.
+    """
+    normalized: List[DocumentSection] = []
+    for section in sections:
+        if isinstance(section, DocumentSection):
+            normalized.append(section)
+        else:  # (title, text) pair
+            title, text = section
+            normalized.append(DocumentSection(title=title, text=text))
+
+    config_kwargs = {
+        'min_chunk_chars': kwargs.pop('min_chunk_chars', 10),
+        **kwargs
+    }
+    config = ChunkConfig(
+        max_chars=max_chars,
+        overlap_chars=overlap_chars,
+        split_on=SplitStrategy.STRUCTURED,
+        leaf_split_on=SplitStrategy(leaf_split_on),
+        **config_kwargs
+    )
+
+    chunker = TextChunker(config)
+    chunks = chunker.chunk_document(normalized, metadata)
+
     return [chunk.to_dict() for chunk in chunks]
