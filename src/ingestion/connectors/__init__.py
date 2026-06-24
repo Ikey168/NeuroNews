@@ -1,0 +1,29 @@
+"""
+Ingestion connector framework.
+
+Connectors normalize arbitrary sources into document-ingest-v1 ``Document``
+records behind a common ``discover -> fetch -> parse`` interface. Importing this
+package registers the built-in connectors so they are resolvable by source type
+via :func:`get_connector`.
+"""
+
+from src.ingestion.connectors.base import Connector, RawDocument, SourceRef
+from src.ingestion.connectors.registry import (
+    available_source_types,
+    get_connector,
+    is_registered,
+    register_connector,
+)
+
+# Importing the module triggers @register_connector for the built-in connectors.
+from src.ingestion.connectors import news  # noqa: E402,F401
+
+__all__ = [
+    "Connector",
+    "RawDocument",
+    "SourceRef",
+    "available_source_types",
+    "get_connector",
+    "is_registered",
+    "register_connector",
+]
