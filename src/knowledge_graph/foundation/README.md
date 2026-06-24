@@ -1,0 +1,76 @@
+# Knowledge graph foundation
+
+Turns the implicit, untyped entity-relationship graph (nodes were news `Article`
+vertices, edges were inferred by co-occurrence) into a real knowledge graph:
+typed entities, typed relations, reified provenance-bearing triples, and a
+backend-agnostic store that enforces an ontology on every write.
+
+Part of the knowledge-engine pivot; see
+`docs/architecture/KNOWLEDGE_ENGINE_PIVOT_PLAN.md`.
+
+## What changed conceptually
+
+| Old (ER graph) | New (knowledge graph) |
+| --- | --- |
+| Nodes are documents (`Article`) | Nodes are typed; documents are anchors, `Concept`/`Claim` are the knowledge |
+| Edges inferred by co-occurrence | Typed relations validated against an ontology |
+| No provenance | Every triple carries `(source_doc, chunk_id, confidence, extractor)` |
+| Flat edges | Reified edges carry properties (e.g. `CITES.year`) |
+
+## Modules
+
+- `ontology.py`: `EntityType` (with an is-a hierarchy rooted at `Entity`),
+  `RelationType`, and subtype-aware domain/range constraints
+  (`is_valid_relation`, `validate_relation`).
+- `model.py`: `Node`, `Provenance` (required on every fact), and `Triple`
+  (reified, provenance-bearing edge with arbitrary properties).
+- `store.py`: `KnowledgeGraphStore`, an in-memory store that enforces the
+  ontology, requires both endpoints to exist, and accumulates provenance when a
+  fact is re-asserted. The interface is backend-agnostic so a Gremlin/Neptune
+  implementation can follow without changing callers.
+
+## Ontology
+
+Entity types: `Entity` (root), `Person`, `Organization`, `Concept`, `Document`,
+`Claim`, `Method` (a kind of `Concept`), `Dataset`.
+
+Relation types and where they are allowed:
+
+| Relation | Permitted (subject -> object) |
+| --- | --- |
+| `AUTHORED_BY` | Document -> Person, Document -> Organization |
+| `CITES` | Document -> Document |
+| `INSTANCE_OF` | Entity -> Concept |
+| `PART_OF` | Concept -> Concept, Document -> Document |
+| `DEFINES` | Document -> Concept |
+| `SUPPORTS` | Document -> Claim, Claim -> Claim |
+| `CONTRADICTS` | Document -> Claim, Claim -> Claim |
+| `MENTIONS` | Document -> Entity (any subtype) |
+
+Matching is subtype-aware: where a relation permits `Entity`, any subtype
+(`Person`, `Concept`, ...) satisfies it.
+
+## Usage
+
+```python
+from src.knowledge_graph.foundation import (
+    KnowledgeGraphStore, Node, Triple, Provenance, EntityType, RelationType,
+)
+
+kg = KnowledgeGraphStore()
+paper = kg.add_node(Node(EntityType.DOCUMENT, "Attention Is All You Need"))
+concept = kg.add_node(Node(EntityType.CONCEPT, "Transformer"))
+
+kg.add_triple(Triple(
+    paper.node_id, RelationType.DEFINES, concept.node_id,
+    provenance=Provenance(source_doc=paper.node_id, confidence=0.9, chunk_id="abstract"),
+))
+```
+
+## Not in scope here
+
+- Entity resolution (canonicalizing `Hinton` / `G. Hinton` across documents) is
+  tracked separately (#516); `make_node_id` here is a stable surrogate key, not
+  resolution.
+- Claim extraction that populates `Claim` nodes is tracked in #519.
+- A persistent Gremlin/Neptune-backed store implementation.
