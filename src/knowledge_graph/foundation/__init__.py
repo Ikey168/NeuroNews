@@ -23,9 +23,15 @@ from src.knowledge_graph.foundation.ontology import (
     is_valid_relation,
     validate_relation,
 )
+from src.knowledge_graph.foundation.resolution import (
+    EntityResolver,
+    canonicalize_store,
+)
 from src.knowledge_graph.foundation.store import KnowledgeGraphStore
 
 __all__ = [
+    "EntityResolver",
+    "canonicalize_store",
     "EntityType",
     "RelationType",
     "OntologyViolation",
