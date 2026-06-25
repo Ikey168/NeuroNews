@@ -1,0 +1,23 @@
+# Local override to bring Marquez up for the lineage MCP on this host.
+# Use with the repo's base compose, from the repo root:
+#
+#   docker network create neuronews-network 2>/dev/null || true
+#   docker compose -f docker-compose.lineage.yml \
+#       -f tools/lineage_mcp/marquez-local.compose.yml up -d marquez marquez-db
+#
+# Fixes three host-specific snags hit on a Fedora/SELinux box:
+#   1. marquez-db's host port 5432 collides with other local containers
+#      -> !override the ports to drop the host binding (marquez reaches the DB
+#         over the internal docker network).
+#   2. SELinux blocks the default bind mounts -> mount the config with :z.
+#   3. The repo's marquez/config/marquez.yml is incompatible with
+#      marquez:latest -> mount tools/lineage_mcp/marquez.local.yml instead.
+services:
+  marquez:
+    volumes: !override
+      - ./tools/lineage_mcp/marquez.local.yml:/usr/src/app/config/marquez.yml:z
+      - marquez_data:/opt/marquez
+  marquez-db:
+    ports: !override []
+    volumes: !override
+      - marquez_db_data:/var/lib/postgresql/data

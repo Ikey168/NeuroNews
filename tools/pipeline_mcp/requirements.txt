@@ -1,0 +1,6 @@
+# MCP server framework for the pipeline-stage runner
+fastmcp>=3.0
+
+# Optional, for trace_article backend checks (already in the main requirements):
+# psycopg2-binary
+# boto3

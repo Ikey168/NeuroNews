@@ -1,0 +1,25 @@
+# Minimal Marquez config compatible with marquezproject/marquez:latest.
+# The repo's contracts-era marquez/config/marquez.yml uses the old `database:`
+# key (and cors/openlineage blocks) that :latest rejects with
+# "Unrecognized field at: database" — it expects `db:`. This is the trimmed,
+# current-schema version used by the lineage MCP's local bring-up.
+server:
+  applicationConnectors:
+    - type: http
+      port: 5000
+  adminConnectors:
+    - type: http
+      port: 5001
+
+db:
+  driverClass: org.postgresql.Driver
+  url: jdbc:postgresql://marquez-db:5432/marquez
+  user: marquez
+  password: marquez
+
+migrateOnStartup: true
+
+logging:
+  level: INFO
+  appenders:
+    - type: console
