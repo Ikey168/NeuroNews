@@ -252,3 +252,112 @@ def load_stance_dataset(
             ))
 
     return list(_STANCE_EXAMPLES)
+
+
+# ---------------------------------------------------------------------------
+# Frame label constants (multi-label; a document can carry multiple frames)
+# ---------------------------------------------------------------------------
+
+FRAME_LABELS = ["economic", "security", "humanitarian", "legal", "political", "scientific", "other"]
+FRAME2ID = {f: i for i, f in enumerate(FRAME_LABELS)}
+ID2FRAME = {i: f for f, i in FRAME2ID.items()}
+
+
+# ---------------------------------------------------------------------------
+# Frame classification bootstrap data
+# (text, source_type, active_frames)
+# ---------------------------------------------------------------------------
+
+_FRAME_EXAMPLES: List[Tuple[str, str, List[str]]] = [
+    # --- economic ---
+    ("Markets fell sharply as inflation data showed consumer prices rose 4.1% last month.", "news", ["economic"]),
+    ("The central bank raised rates by 50bp, its largest single hike in two decades, to combat inflation.", "news", ["economic"]),
+    ("GDP contracted 0.3% in Q2 as higher borrowing costs weighed on consumer spending and investment.", "news", ["economic"]),
+    ("The trade deficit widened to a record $98bn as import costs outpaced export revenues.", "news", ["economic"]),
+    ("After breaking down the company's Q3 earnings, margin compression is brutal — down to 8% from 14%.", "blog", ["economic"]),
+    ("Our economic model forecasts a 2.3% contraction under the proposed tariff regime.", "paper", ["economic", "scientific"]),
+    ("The CFO confirmed revenue came in at $4.2 billion, up 12% year-on-year, beating analyst consensus.", "transcript", ["economic"]),
+    ("By 1932, the unemployment rate had reached 25%, devastating household incomes across the industrial north.", "book", ["economic", "humanitarian"]),
+    ("Budget approved at $2.4M — finance team to liaise with legal on procurement compliance.", "note", ["economic", "legal"]),
+    # --- security ---
+    ("Military forces launched a coordinated strike against extremist infrastructure in the region.", "news", ["security"]),
+    ("The government confirmed a sophisticated cyberattack breached critical infrastructure networks.", "news", ["security"]),
+    ("Pentagon officials briefed Congress on escalating nuclear weapons development programmes in the region.", "news", ["security", "political"]),
+    ("My analysis of the leaked documents suggests coordinated disinformation targeting swing districts.", "blog", ["security", "political"]),
+    ("The general briefed lawmakers on escalating threats along the northern border and troop deployments.", "transcript", ["security", "political"]),
+    ("The battle of November 1943 cost the division more than half its combat strength in three days.", "book", ["security"]),
+    ("Security audit confirmed: 3 critical vulnerabilities found in the authentication module.", "note", ["security"]),
+    # --- humanitarian ---
+    ("Aid agencies warned that 2.4 million civilians face acute food insecurity following the harvest failure.", "news", ["humanitarian"]),
+    ("The UN reported a record 110 million people are now forcibly displaced worldwide.", "news", ["humanitarian"]),
+    ("Rights groups documented systematic abuse of asylum seekers held in overcrowded detention facilities.", "news", ["humanitarian", "legal"]),
+    ("The earthquake left 80,000 people without shelter as temperatures dropped below freezing overnight.", "news", ["humanitarian"]),
+    ("The intervention group showed a 41% reduction in child malnutrition indicators over 18 months.", "paper", ["humanitarian", "scientific"]),
+    ("The famine of 1932–33 killed an estimated 3.5 to 7 million people across the affected regions.", "book", ["humanitarian"]),
+    # --- legal ---
+    ("The Supreme Court ruled 5-4 that the regulation was unconstitutional, blocking its implementation.", "news", ["legal", "political"]),
+    ("A federal judge issued an injunction blocking the new immigration rules pending a full hearing.", "news", ["legal"]),
+    ("The company agreed to a $4.5bn settlement to resolve antitrust litigation brought by the regulator.", "news", ["legal", "economic"]),
+    ("Compliance with the new GDPR amendment requires firms to appoint a data-protection officer by March.", "blog", ["legal"]),
+    ("The court held that the defendant's liability was limited by the force-majeure clause in the contract.", "paper", ["legal"]),
+    ("The senator confirmed that the bill would be brought to the floor for a vote after the recess.", "transcript", ["legal", "political"]),
+    ("The landmark ruling in 1954 reshaped the legal landscape for civil rights for the next half-century.", "book", ["legal", "political", "humanitarian"]),
+    ("Legal confirmed the NDA has been signed; escalate to compliance team for onboarding clearance.", "note", ["legal"]),
+    # --- political ---
+    ("The governing coalition collapsed after junior partners withdrew following the budget vote.", "news", ["political", "economic"]),
+    ("Election officials projected the incumbent would win with 54% of the popular vote.", "news", ["political"]),
+    ("The foreign minister's visit is seen as a diplomatic overture ahead of bilateral trade negotiations.", "news", ["political", "economic"]),
+    ("The administration's immigration reform stalled in the Senate after three moderate Democrats defected.", "news", ["political"]),
+    ("I tracked every parliamentary vote on this bill — party discipline held in 94% of cases.", "blog", ["political"]),
+    ("The prime minister's party lost its majority at the election, forcing an immediate confidence vote.", "transcript", ["political"]),
+    ("The congress of 1848 redistributed power between the federal government and the newly formed states.", "book", ["political"]),
+    # --- scientific ---
+    ("Researchers published findings showing a novel compound reduced tumour size by 47% in clinical trials.", "news", ["scientific"]),
+    ("The peer-reviewed study, published in Nature, identified a genetic marker linked to early-onset dementia.", "news", ["scientific"]),
+    ("Our randomised controlled trial (n = 4,200) demonstrates statistically significant efficacy (p < 0.001).", "paper", ["scientific"]),
+    ("The cohort study found a strong correlation (r = 0.82) between sleep duration and cognitive performance.", "paper", ["scientific"]),
+    ("Gene expression analysis across 142 differentially expressed genes confirmed the hypothesised pathway.", "paper", ["scientific"]),
+    ("The model correctly classified 91% of samples in the held-out test set using a random-forest ensemble.", "paper", ["scientific"]),
+    ("Our simulation results replicate the observed temperature anomaly with an RMSE of 0.14°C.", "paper", ["scientific"]),
+    ("The algorithm processes 50,000 tokens per second on a single A100 GPU with 4-bit quantisation.", "blog", ["scientific"]),
+    # --- multi-frame ---
+    ("The Pentagon's $850bn budget request faces opposition from fiscal hawks in Congress.", "news", ["economic", "security", "political"]),
+    ("Sanctions imposed on the central bank triggered a currency collapse, pushing millions into poverty.", "news", ["economic", "political", "humanitarian"]),
+    ("The regulation forces pharmaceutical firms to publish clinical-trial data within 12 months of completion.", "news", ["legal", "scientific"]),
+    ("Aid spending rose 18% to $212bn globally, driven by conflicts in three regions.", "news", ["humanitarian", "economic"]),
+    ("The court upheld the deportation order despite medical evidence of the applicant's deteriorating condition.", "news", ["legal", "humanitarian"]),
+    # --- other ---
+    ("The festival drew an estimated 85,000 visitors over the three-day weekend.", "news", ["other"]),
+    ("My personal rule: never deploy on a Friday unless you enjoy weekend on-call shifts.", "blog", ["other"]),
+    ("The tournament concluded with the home side winning 3–1 in front of a sell-out crowd.", "transcript", ["other"]),
+    ("Chapter four describes the protagonist's childhood in a small farming community.", "book", ["other"]),
+]
+
+
+def load_frame_dataset(
+    data_dir: Optional[Path] = None,
+) -> List[Tuple[str, str, List[str]]]:
+    """Load frame classification examples as (text, source_type, frames) triples.
+
+    Reads from ``data_dir/frames.parquet`` when available (produced by #109),
+    otherwise returns the synthetic bootstrap set.
+    """
+    if data_dir:
+        parquet_path = Path(data_dir) / "frames.parquet"
+        if parquet_path.exists():
+            import json
+            import pandas as pd
+            df = pd.read_parquet(parquet_path)
+            source_types = (
+                df["source_type"].tolist()
+                if "source_type" in df.columns
+                else ["news"] * len(df)
+            )
+            frames_col = (
+                [json.loads(f) if isinstance(f, str) else list(f) for f in df["frames"].tolist()]
+                if "frames" in df.columns
+                else [["other"]] * len(df)
+            )
+            return list(zip(df["text"].tolist(), source_types, frames_col))
+
+    return list(_FRAME_EXAMPLES)

@@ -31,6 +31,15 @@ CREATE TABLE IF NOT EXISTS news_articles (
     sentiment_score DOUBLE,
     sentiment_label VARCHAR
 );
+
+CREATE TABLE IF NOT EXISTS document_frames (
+    document_id   VARCHAR,
+    source_type   VARCHAR,
+    frame         VARCHAR,
+    score         DOUBLE,
+    classified_at VARCHAR,
+    PRIMARY KEY (document_id, frame)
+);
 """
 
 # Each topic seeds a cluster of articles sharing a leading title word (the
