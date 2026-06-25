@@ -16,6 +16,8 @@ from typing import Any, Dict, List, Optional
 
 from src.database.local_analytics_connector import get_shared_connection, _LOCK
 
+import json
+
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS report_subscriptions (
     id          VARCHAR PRIMARY KEY,
@@ -182,6 +184,125 @@ def _row_to_dict(id, email, topic, frequency, fmt, created_at, last_sent) -> Dic
         "topic": topic,
         "frequency": frequency,
         "format": fmt,
+        "created_at": str(created_at),
+        "last_sent": str(last_sent) if last_sent else None,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Custom report schedules (issue #54)
+# ---------------------------------------------------------------------------
+
+_CUSTOM_SCHEMA = """
+CREATE TABLE IF NOT EXISTS custom_report_schedules (
+    id           VARCHAR PRIMARY KEY,
+    name         VARCHAR NOT NULL,
+    email        VARCHAR NOT NULL,
+    frequency    VARCHAR NOT NULL,
+    format       VARCHAR NOT NULL,
+    filters_json VARCHAR NOT NULL,
+    created_at   TIMESTAMP NOT NULL,
+    last_sent    TIMESTAMP
+);
+"""
+
+_custom_schema_done = False
+_custom_schema_lock = threading.Lock()
+
+
+def _init_custom() -> None:
+    global _custom_schema_done
+    if _custom_schema_done:
+        return
+    with _custom_schema_lock:
+        if not _custom_schema_done:
+            conn = get_shared_connection()
+            with _LOCK:
+                conn.execute(_CUSTOM_SCHEMA)
+            _custom_schema_done = True
+
+
+def create_custom_schedule(
+    name: str,
+    email: str,
+    frequency: str,
+    fmt: str,
+    filters: Dict[str, Any],
+) -> Dict[str, Any]:
+    _init_custom()
+    sched_id = secrets.token_hex(8)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    filters_json = json.dumps(filters)
+    conn = get_shared_connection()
+    with _LOCK:
+        conn.execute(
+            """INSERT INTO custom_report_schedules
+               (id, name, email, frequency, format, filters_json, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            [sched_id, name, email, frequency, fmt, filters_json, now],
+        )
+    return _custom_row(sched_id, name, email, frequency, fmt, filters_json, now, None)
+
+
+def list_custom_schedules(email: Optional[str] = None) -> List[Dict[str, Any]]:
+    _init_custom()
+    conn = get_shared_connection()
+    if email:
+        with _LOCK:
+            rows = conn.execute(
+                "SELECT id,name,email,frequency,format,filters_json,created_at,last_sent"
+                " FROM custom_report_schedules WHERE email=? ORDER BY created_at DESC",
+                [email],
+            ).fetchall()
+    else:
+        with _LOCK:
+            rows = conn.execute(
+                "SELECT id,name,email,frequency,format,filters_json,created_at,last_sent"
+                " FROM custom_report_schedules ORDER BY created_at DESC"
+            ).fetchall()
+    return [_custom_row(*r) for r in rows]
+
+
+def get_custom_schedule(sched_id: str) -> Optional[Dict[str, Any]]:
+    _init_custom()
+    conn = get_shared_connection()
+    with _LOCK:
+        row = conn.execute(
+            "SELECT id,name,email,frequency,format,filters_json,created_at,last_sent"
+            " FROM custom_report_schedules WHERE id=?",
+            [sched_id],
+        ).fetchone()
+    if not row:
+        return None
+    return _custom_row(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7])
+
+
+def delete_custom_schedule(sched_id: str) -> None:
+    _init_custom()
+    conn = get_shared_connection()
+    with _LOCK:
+        conn.execute("DELETE FROM custom_report_schedules WHERE id=?", [sched_id])
+
+
+def mark_custom_sent(sched_id: str) -> None:
+    _init_custom()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    conn = get_shared_connection()
+    with _LOCK:
+        conn.execute(
+            "UPDATE custom_report_schedules SET last_sent=? WHERE id=?",
+            [now, sched_id],
+        )
+
+
+def _custom_row(id, name, email, frequency, fmt, filters_json, created_at, last_sent) -> Dict[str, Any]:
+    return {
+        "id": id,
+        "name": name,
+        "email": email,
+        "frequency": frequency,
+        "format": fmt,
+        "filters": json.loads(filters_json) if filters_json else {},
         "created_at": str(created_at),
         "last_sent": str(last_sent) if last_sent else None,
     }
