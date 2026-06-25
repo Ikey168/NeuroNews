@@ -1,0 +1,2 @@
+# MCP server framework for the domain-packs manager
+fastmcp>=3.0
