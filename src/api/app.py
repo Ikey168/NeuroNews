@@ -22,6 +22,7 @@ SEARCH_AVAILABLE = False
 DOCUMENT_ROUTES_AVAILABLE = False
 REPORT_ROUTES_AVAILABLE = False
 ALERT_ROUTES_AVAILABLE = False
+ARGUMENT_ROUTES_AVAILABLE = False
 
 # Store imported modules globally
 _imported_modules = {}
@@ -253,6 +254,19 @@ def try_import_alert_routes():
         return False
 
 
+def try_import_argument_routes():
+    """Try to import argument mining routes (issue #90, #95)."""
+    global ARGUMENT_ROUTES_AVAILABLE
+    try:
+        from src.api.routes import argument_routes
+        _imported_modules['argument_routes'] = argument_routes
+        ARGUMENT_ROUTES_AVAILABLE = True
+        return True
+    except ImportError:
+        ARGUMENT_ROUTES_AVAILABLE = False
+        return False
+
+
 def try_import_report_routes():
     """Try to import report generation routes (issues #51, #52)."""
     global REPORT_ROUTES_AVAILABLE
@@ -302,6 +316,7 @@ def check_all_imports():
     try_import_document_routes()
     try_import_report_routes()
     try_import_alert_routes()
+    try_import_argument_routes()
     _load_domain_packs()
 
 
@@ -572,6 +587,13 @@ def include_optional_routers(app):
         report_routes = _imported_modules.get('report_routes')
         if report_routes:
             app.include_router(report_routes.router)
+            routers_included += 1
+
+    # Include argument mining routes (issue #90, #95)
+    if ARGUMENT_ROUTES_AVAILABLE:
+        argument_routes = _imported_modules.get('argument_routes')
+        if argument_routes:
+            app.include_router(argument_routes.router)
             routers_included += 1
 
     return routers_included

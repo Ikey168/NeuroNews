@@ -99,19 +99,24 @@ def main(topic_override: str | None = None) -> int:
 
     from services.ingest.common.document_model import Document
     from src.argument_mining.models import ClaimDetector, StanceClassifier
+    from src.argument_mining.frames import FrameClassifier
 
     claim_model_dir = REPO_ROOT / "models" / "claim_detector"
     stance_model_dir = REPO_ROOT / "models" / "stance_classifier"
+    frame_model_dir  = REPO_ROOT / "models" / "frame_classifier"
 
     cd = ClaimDetector()
     sc = StanceClassifier()
+    fc = FrameClassifier()
 
     claim_mode = "trained model" if (claim_model_dir / "config.json").exists() else "heuristic fallback"
     stance_mode = "trained model" if (stance_model_dir / "config.json").exists() else "heuristic fallback"
+    frame_mode  = "trained model" if (frame_model_dir / "config.json").exists()  else "heuristic fallback"
 
-    _banner(f"Argument Mining — inference smoke-test")
+    _banner("Argument Mining — inference smoke-test")
     print(f"  ClaimDetector:    {claim_mode}")
     print(f"  StanceClassifier: {stance_mode}")
+    print(f"  FrameClassifier:  {frame_mode}")
     print(f"  Repo root:        {REPO_ROOT}")
 
     errors: list[str] = []
@@ -129,21 +134,27 @@ def main(topic_override: str | None = None) -> int:
         try:
             claim_preds = cd.predict(doc)
             stance_preds = sc.predict(doc, topic)
+            frame_pred = fc.predict(doc)
         except Exception as exc:
             errors.append(f"{source_type}: {exc}")
             print(f"\n  [{source_type}]  ERROR: {exc}")
             continue
 
+        # Sentence-level table (claim + stance)
         print(f"\n  [{source_type}]  topic={topic!r}  ({len(claim_preds)} sentences)")
         print(f"  {'Sentence':<56} {'Claim':<8} {'Conf':>5}  {'Stance':<10} {'Conf':>5}")
         print(f"  {'─'*56} {'─'*8} {'─'*5}  {'─'*10} {'─'*5}")
-
         for cp, sp in zip(claim_preds, stance_preds):
             label = "CLAIM" if cp.is_claim else "—"
             print(
                 f"  {_truncate(cp.text):<56} {label:<8} {cp.confidence:>5.2f}"
                 f"  {sp.stance:<10} {sp.confidence:>5.2f}"
             )
+
+        # Document-level frame summary
+        top_frames = sorted(frame_pred.frames.items(), key=lambda x: -x[1])[:3]
+        frames_str = "  ".join(f"{f}={s:.2f}" for f, s in top_frames)
+        print(f"  frames → dominant={frame_pred.dominant}  [{frames_str}]")
 
     print(f"\n{_SEP}")
     if errors:
@@ -157,10 +168,10 @@ def main(topic_override: str | None = None) -> int:
     print(f"  RESULT: PASS — all {len(all_types)} source types produced predictions")
     if claim_mode == "heuristic fallback":
         print()
-        print("  NOTE: heuristic mode — run training scripts once #109 data lands")
-        print("  to get F1-scored models:")
+        print("  NOTE: heuristic mode — run training scripts once #109 data lands:")
         print("    python -m src.argument_mining.train_claim --data data/argument_mining")
         print("    python -m src.argument_mining.train_stance --data data/argument_mining")
+        print("    python -m src.argument_mining.train_frames --data data/argument_mining")
     print(_SEP)
     return 0
 
