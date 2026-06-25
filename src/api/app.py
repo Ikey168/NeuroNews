@@ -20,6 +20,7 @@ WAF_SECURITY_AVAILABLE = False
 AUTH_AVAILABLE = False
 SEARCH_AVAILABLE = False
 DOCUMENT_ROUTES_AVAILABLE = False
+REPORT_ROUTES_AVAILABLE = False
 
 # Store imported modules globally
 _imported_modules = {}
@@ -232,6 +233,19 @@ def try_import_document_routes():
         return False
 
 
+def try_import_report_routes():
+    """Try to import report generation routes (issue #51)."""
+    global REPORT_ROUTES_AVAILABLE
+    try:
+        from src.api.routes import report_routes
+        _imported_modules['report_routes'] = report_routes
+        REPORT_ROUTES_AVAILABLE = True
+        return True
+    except ImportError:
+        REPORT_ROUTES_AVAILABLE = False
+        return False
+
+
 def _load_domain_packs():
     """Load domain-pack config and register built-in packs."""
     try:
@@ -259,6 +273,7 @@ def check_all_imports():
     try_import_auth_routes()
     try_import_search_routes()
     try_import_document_routes()
+    try_import_report_routes()
     _load_domain_packs()
 
 
@@ -515,6 +530,13 @@ def include_optional_routers(app):
         search_routes = _imported_modules.get('search_routes')
         if search_routes:
             app.include_router(search_routes.router, prefix="/api/v1/search", tags=["Search"])
+            routers_included += 1
+
+    # Include report generation routes (issue #51)
+    if REPORT_ROUTES_AVAILABLE:
+        report_routes = _imported_modules.get('report_routes')
+        if report_routes:
+            app.include_router(report_routes.router)
             routers_included += 1
 
     return routers_included

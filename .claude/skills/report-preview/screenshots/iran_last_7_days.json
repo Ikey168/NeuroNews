@@ -1,0 +1,175 @@
+{
+  "topic": "Iran",
+  "period": "last_7_days",
+  "generated_at": "2026-06-25 16:57 UTC",
+  "stats": {
+    "total_articles": 22,
+    "avg_sentiment": -0.1563,
+    "positive_pct": 27.3,
+    "negative_pct": 68.2,
+    "neutral_pct": 4.5,
+    "top_sources": [
+      "NYT World",
+      "NYT Business",
+      "NPR News",
+      "BBC World",
+      "Al Jazeera"
+    ]
+  },
+  "articles": [
+    {
+      "title": "Mideast Live Updates: U.S. and Iran Offer Conflicting Accounts of Nuclear Discussions",
+      "source": "NYT World",
+      "publish_date": "2026-06-23 18:04",
+      "sentiment_label": "negative",
+      "sentiment_score": -0.1531
+    },
+    {
+      "title": "The Iran War\u2019s Persistent Threat to Farmers in Poor Countries",
+      "source": "NYT Business",
+      "publish_date": "2026-06-23 17:59",
+      "sentiment_label": "negative",
+      "sentiment_score": -0.7678
+    },
+    {
+      "title": "The Iran War\u2019s Persistent Threat to Farmers in Poor Countries",
+      "source": "NYT World",
+      "publish_date": "2026-06-23 17:59",
+      "sentiment_label": "negative",
+      "sentiment_score": -0.7678
+    },
+    {
+      "title": "Iranian Singer Sentenced to 74 Lashes for Performing Without Hijab",
+      "source": "NYT World",
+      "publish_date": "2026-06-23 17:09",
+      "sentiment_label": "negative",
+      "sentiment_score": -0.8591
+    },
+    {
+      "title": "Strait Reopens and Iranian Oil Flows, But the Path Through Is Complicated",
+      "source": "NYT Business",
+      "publish_date": "2026-06-23 15:29",
+      "sentiment_label": "negative",
+      "sentiment_score": -0.3919
+    },
+    {
+      "title": "Dozens of ships head through Strait of Hormuz after US-Iran deal",
+      "source": "BBC World",
+      "publish_date": "2026-06-23 14:55",
+      "sentiment_label": "negative",
+      "sentiment_score": -0.7096
+    },
+    {
+      "title": "U.S. and Iran\u2019s Conflicting Claims on Nuclear Inspection Show Challenge Ahead",
+      "source": "NYT World",
+      "publish_date": "2026-06-23 14:33",
+      "sentiment_label": "positive",
+      "sentiment_score": 0.4939
+    },
+    {
+      "title": "After Wars and False Starts, Cautious Optimism for U.S.-Iran Talks",
+      "source": "NYT World",
+      "publish_date": "2026-06-23 14:02",
+      "sentiment_label": "negative",
+      "sentiment_score": -0.5423
+    },
+    {
+      "title": "What the US and Iran agreed \u2013 and disagreed \u2013 on first day of talks",
+      "source": "Al Jazeera",
+      "publish_date": "2026-06-23 13:12",
+      "sentiment_label": "negative",
+      "sentiment_score": -0.3818
+    },
+    {
+      "title": "Former PM says Israel smuggled Starlink internet systems into Iran",
+      "source": "Al Jazeera",
+      "publish_date": "2026-06-23 12:37",
+      "sentiment_label": "negative",
+      "sentiment_score": -0.5574
+    },
+    {
+      "title": "Iran says no new commitments on nuclear sites after Vance says inspectors to be invited back",
+      "source": "BBC Business",
+      "publish_date": "2026-06-23 12:14",
+      "sentiment_label": "negative",
+      "sentiment_score": -0.34
+    },
+    {
+      "title": "Iran says no new commitments on nuclear sites after Vance says inspectors to be invited back",
+      "source": "BBC World",
+      "publish_date": "2026-06-23 12:14",
+      "sentiment_label": "negative",
+      "sentiment_score": -0.34
+    },
+    {
+      "title": "U.S. lifts Iran oil sanctions. And, federal judge rules SAVE voter tool unlawful",
+      "source": "NPR News",
+      "publish_date": "2026-06-23 11:17",
+      "sentiment_label": "positive",
+      "sentiment_score": 0.9075
+    },
+    {
+      "title": "Who would pay for Trump's proposed $300 billion Iran reconstruction fund?",
+      "source": "NPR News",
+      "publish_date": "2026-06-23 10:51",
+      "sentiment_label": "neutral",
+      "sentiment_score": -0.0
+    },
+    {
+      "title": "As Vance Leads Iran Negotiations, Trump Creates Disruptions in His Path",
+      "source": "NYT Politics",
+      "publish_date": "2026-06-23 09:46",
+      "sentiment_label": "negative",
+      "sentiment_score": -0.0772
+    },
+    {
+      "title": "A U.S.-Iran dispute over nuclear inspections clouds work to finalize a war-ending deal",
+      "source": "NPR News",
+      "publish_date": "2026-06-23 09:29",
+      "sentiment_label": "negative",
+      "sentiment_score": -0.4019
+    },
+    {
+      "title": "America\u2019s Thirst for Gasoline May Not Recover After Iran War",
+      "source": "NYT Business",
+      "publish_date": "2026-06-23 09:01",
+      "sentiment_label": "negative",
+      "sentiment_score": -0.5994
+    },
+    {
+      "title": "Iran Makes Moves to Assert Control Over the Strait of Hormuz",
+      "source": "NYT World",
+      "publish_date": "2026-06-23 09:01",
+      "sentiment_label": "negative",
+      "sentiment_score": -0.2263
+    },
+    {
+      "title": "Iran Team Leaves Locker Room Note: The \u2018Spirit of Iran Remains Alive and Steadfast\u2019",
+      "source": "NYT World",
+      "publish_date": "2026-06-22 22:47",
+      "sentiment_label": "positive",
+      "sentiment_score": 0.6486
+    },
+    {
+      "title": "U.S. Temporarily Lifts Oil Sanctions Against Iran, Citing \u2018Productive\u2019 Talks",
+      "source": "NYT World",
+      "publish_date": "2026-06-22 21:00",
+      "sentiment_label": "positive",
+      "sentiment_score": 0.2263
+    },
+    {
+      "title": "Vance Says Iran Will Allow Nuclear Watchdog to Restart Inspections",
+      "source": "NYT Politics",
+      "publish_date": "2026-06-22 16:29",
+      "sentiment_label": "positive",
+      "sentiment_score": 0.5574
+    },
+    {
+      "title": "What could US-Iran peace deal mean for UK household costs?",
+      "source": "Guardian Business",
+      "publish_date": "2026-06-19 13:35",
+      "sentiment_label": "positive",
+      "sentiment_score": 0.8442
+    }
+  ]
+}
