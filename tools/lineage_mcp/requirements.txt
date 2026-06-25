@@ -1,0 +1,3 @@
+# MCP server framework for the lineage explorer.
+# The server uses only stdlib (urllib) to talk to Marquez — no other deps.
+fastmcp>=3.0
