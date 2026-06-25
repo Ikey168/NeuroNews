@@ -60,6 +60,14 @@
         "tools/lineage_mcp/server.py"
       ],
       "env": {}
+    },
+    "neuronews-domain-packs": {
+      "type": "stdio",
+      "command": "python3",
+      "args": [
+        "tools/domain_packs_mcp/server.py"
+      ],
+      "env": {}
     }
   }
 }
