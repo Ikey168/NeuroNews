@@ -381,39 +381,50 @@ def _parse_hooks() -> list[dict]:
         next_export = src.find("\nexport function use", body_start)
         body = src[body_start: next_export if next_export != -1 else len(src)]
 
+        # --- cache key: try literal first, then variable-assignment fallback ---
         cache_key: str | None = None
         wf = _WITH_FALLBACK_RE.search(body)
         if wf:
             cache_key = wf.group(1) or wf.group(2)  # group 1 = backtick, group 2 = quote
+        else:
+            # Key passed as a variable — resolve its template-literal definition.
+            # Handles: const key = `foo-${x}`; return useWithFallback(key, ...)
+            wf_var_m = re.search(r"useWithFallback\(\s*(\w+)", body)
+            if wf_var_m:
+                var_name = re.escape(wf_var_m.group(1))
+                var_m = re.search(
+                    rf"(?:const|let)\s+{var_name}\s*=\s*`([^`]+)`",
+                    body,
+                )
+                if var_m:
+                    cache_key = var_m.group(1)
 
-        # Find mock fallback — last bare identifier argument on the useWithFallback line
+        # --- mock fallback: third positional arg to useWithFallback(...) ---
+        # Decoupled from cache-key extraction so it works even for variable keys.
         mock_name: str | None = None
-        if wf:
-            # The fallback is the third positional arg to useWithFallback(key, fn, fallback)
-            # Find the opening paren of the useWithFallback call and extract top-level args
-            call_start = body.find("useWithFallback(", wf.start())
-            if call_start != -1:
-                paren_open = body.index("(", call_start)
-                depth = 0
-                i = paren_open
-                call_chars: list[str] = []
-                while i < len(body):
-                    ch = body[i]
-                    if ch == "(":
-                        depth += 1
-                    elif ch == ")":
-                        depth -= 1
-                        if depth == 0:
-                            break
-                    call_chars.append(ch)
-                    i += 1
-                call_inner = "".join(call_chars[1:])  # strip leading (
-                top_args = _top_level_split(call_inner)
-                if len(top_args) >= 3:
-                    fallback_expr = top_args[2].strip()
-                    # If it's a simple identifier (not an object/array literal), use it
-                    if re.match(r"^[A-Za-z_]\w*$", fallback_expr):
-                        mock_name = fallback_expr
+        uf_pos = body.find("useWithFallback(")
+        if uf_pos != -1:
+            paren_open = body.index("(", uf_pos)
+            depth = 0
+            i = paren_open
+            call_chars: list[str] = []
+            while i < len(body):
+                ch = body[i]
+                if ch == "(":
+                    depth += 1
+                elif ch == ")":
+                    depth -= 1
+                    if depth == 0:
+                        break
+                call_chars.append(ch)
+                i += 1
+            call_inner = "".join(call_chars[1:])  # strip leading (
+            top_args = _top_level_split(call_inner)
+            if len(top_args) >= 3:
+                fallback_expr = top_args[2].strip()
+                # Accept simple identifier only (not object/array literals)
+                if re.match(r"^[A-Za-z_]\w*$", fallback_expr):
+                    mock_name = fallback_expr
 
         hooks.append({
             "name": name,
