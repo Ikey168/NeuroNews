@@ -15,7 +15,7 @@ function ConnectionPill() {
     <div
       title={
         status === "online"
-          ? "Connected to the NeuroNews API"
+          ? "Connected to the Noesis API"
           : status === "checking"
             ? "Probing the backend…"
             : "Backend unreachable — views fall back to the demo dataset"

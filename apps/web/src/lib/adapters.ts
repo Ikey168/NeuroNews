@@ -14,6 +14,7 @@ import type {
 } from "../types";
 import type {
   RawArticle,
+  RawDocument,
   RawEventCluster,
   RawTrendingResponse,
   RawInfluencer,
@@ -21,6 +22,7 @@ import type {
   RawEntityGraph,
   RawHeatmap,
 } from "./api";
+import type { KnowledgeDocument, SourceType } from "../types";
 
 export function adaptHeatmap(raw: RawHeatmap): Heatmap {
   return {
@@ -122,6 +124,23 @@ const ENTITY_TYPE_COLOR: Record<string, string> = {
   place: palette.violet,
   location: palette.violet,
 };
+
+const VALID_SOURCE_TYPES = new Set(["news", "blog", "paper", "book", "transcript", "web", "note"]);
+
+export function adaptDocuments(raw: RawDocument[]): KnowledgeDocument[] {
+  return raw.map((d) => ({
+    document_id: d.document_id,
+    source_type: (VALID_SOURCE_TYPES.has(d.source_type) ? d.source_type : "web") as SourceType,
+    title: d.title ?? null,
+    source_id: d.source_id ?? null,
+    url: d.url ?? null,
+    content: d.content ?? null,
+    created_at: d.created_at ?? null,
+    ingested_at: d.ingested_at,
+    authors: d.authors ?? [],
+    metadata: d.metadata ?? {},
+  }));
+}
 
 export function adaptInfluencers(raw: RawInfluencer[]): TopEntity[] {
   return raw.map((i) => {

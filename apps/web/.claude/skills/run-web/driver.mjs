@@ -80,8 +80,9 @@ function findChromium() {
 // the text rendered in src/components/Sidebar.tsx.
 const VIEWS = [
   ["Overview", "dashboard"],
-  ["News Feed", "feed"],
-  ["Entity Graph", "graph"],
+  ["Library", "library"],
+  ["Knowledge Graph", "knowledge"],
+  ["Document Reader", "reader"],
   ["Sentiment", "sentiment"],
   ["Event Clusters", "clusters"],
   ["Trending", "trending"],
@@ -178,7 +179,8 @@ async function main() {
   });
   page.on("pageerror", (err) => consoleErrors.push(String(err)));
 
-  await page.goto(baseUrl, { waitUntil: "networkidle" });
+  await page.goto(baseUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
+  await page.waitForTimeout(1500);
 
   const wanted = args.views
     ? VIEWS.filter(([, slug]) => args.views.includes(slug))

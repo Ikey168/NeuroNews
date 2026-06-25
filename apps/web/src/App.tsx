@@ -6,8 +6,9 @@ import Sidebar from "./components/Sidebar";
 import TopBar from "./components/TopBar";
 import BreakingTicker from "./components/BreakingTicker";
 import Dashboard from "./views/Dashboard";
-import NewsFeed from "./views/NewsFeed";
+import Library from "./views/Library";
 import EntityGraphView from "./views/EntityGraphView";
+import DocumentReader from "./views/DocumentReader";
 import Sentiment from "./views/Sentiment";
 import Clusters from "./views/Clusters";
 import Trending from "./views/Trending";
@@ -38,8 +39,9 @@ export default function App() {
         <BreakingTicker text={ticker} />
         <main style={{ flex: 1, overflowY: "auto", padding: "22px 24px 40px" }}>
           {view === "dashboard" && <Dashboard setView={setView} />}
-          {view === "feed" && <NewsFeed />}
-          {view === "graph" && <EntityGraphView />}
+          {view === "library" && <Library />}
+          {view === "knowledge" && <EntityGraphView />}
+          {view === "reader" && <DocumentReader />}
           {view === "sentiment" && <Sentiment />}
           {view === "clusters" && <Clusters />}
           {view === "trending" && <Trending />}
