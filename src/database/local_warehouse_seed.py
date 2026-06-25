@@ -40,6 +40,26 @@ CREATE TABLE IF NOT EXISTS document_frames (
     classified_at VARCHAR,
     PRIMARY KEY (document_id, frame)
 );
+
+CREATE TABLE IF NOT EXISTS argument_claims (
+    claim_id      VARCHAR PRIMARY KEY,
+    claim_text    VARCHAR NOT NULL,
+    document_id   VARCHAR NOT NULL,
+    source_type   VARCHAR NOT NULL,
+    confidence    DOUBLE,
+    extracted_at  VARCHAR
+);
+
+CREATE TABLE IF NOT EXISTS claim_evidence (
+    evidence_id          VARCHAR PRIMARY KEY,
+    claim_id             VARCHAR NOT NULL,
+    evidence_text        VARCHAR,
+    evidence_document_id VARCHAR NOT NULL,
+    evidence_source_type VARCHAR NOT NULL,
+    relation             VARCHAR NOT NULL,
+    similarity_score     DOUBLE,
+    found_at             VARCHAR
+);
 """
 
 # Each topic seeds a cluster of articles sharing a leading title word (the

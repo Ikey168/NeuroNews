@@ -170,6 +170,15 @@ export interface RawFrameDistribution {
   source: string;
 }
 
+export interface RawClaim {
+  claim_id: string;
+  claim_text: string;
+  document_id: string;
+  source_type: string;
+  confidence: number | null;
+  extracted_at: string | null;
+}
+
 // ---------- endpoint calls ----------
 
 export const api = {
@@ -210,4 +219,7 @@ export const api = {
 
   argumentFrames: (params?: { source_type?: string; document_id?: string; limit?: number }) =>
     request<RawFrameDistribution>("/api/v1/arguments/frames", params),
+
+  argumentClaims: (params?: { document_id?: string; source_type?: string; topic?: string; limit?: number }) =>
+    request<{ claims: RawClaim[]; count: number }>("/api/v1/arguments/claims", params),
 };
