@@ -25,9 +25,11 @@ import {
   mockHeatmap,
   mockClaims,
   mockStance,
+  mockPositions,
+  mockConflicts,
   mockFrameDistribution,
 } from "../data/mock";
-import type { RawClaim } from "./api";
+import type { RawClaim, RawStanceSummary, RawActorPosition } from "./api";
 import { palette, ACCENT } from "../theme";
 import type {
   Article,
@@ -40,6 +42,8 @@ import type {
   Heatmap,
   ClaimResult,
   StanceSummary,
+  ActorPosition,
+  ConflictPair,
   FrameDistribution,
   SourceType,
 } from "../types";
@@ -260,13 +264,56 @@ export function useArgumentClaims(params?: { source_type?: string; topic?: strin
   );
 }
 
-export function useArgumentStance(): Result<StanceSummary[]> {
+export function useArgumentStance(params?: { source_type?: string; topic?: string }): Result<StanceSummary[]> {
+  const key = `argumentStance-${params?.source_type ?? "all"}-${params?.topic ?? ""}`;
   return useWithFallback(
-    "argumentStance",
+    key,
     async (): Promise<StanceSummary[]> => {
-      throw new Error("endpoint pending #95");
+      const res = await api.argumentStance(params);
+      return res.stances.map((r: RawStanceSummary) => ({
+        topic: r.topic,
+        supportive: r.supportive,
+        critical: r.critical,
+        neutral: r.neutral,
+        ambiguous: r.ambiguous,
+        total: r.total,
+        drift: r.drift,
+        by_source: r.by_source as StanceSummary["by_source"],
+      }));
     },
     mockStance,
+  );
+}
+
+export function useArgumentPositions(params?: { actor?: string; topic?: string; source_type?: string }): Result<ActorPosition[]> {
+  const key = `argumentPositions-${params?.source_type ?? "all"}-${params?.topic ?? ""}`;
+  return useWithFallback(
+    key,
+    async (): Promise<ActorPosition[]> => {
+      const res = await api.argumentPositions(params);
+      return res.positions.map((r: RawActorPosition) => ({
+        actor: r.actor,
+        position: r.position,
+        stance: r.stance as ActorPosition["stance"],
+        date: r.date ?? "",
+        source_type: r.source_type as SourceType,
+        document_id: r.document_id,
+        topic: r.topic,
+      }));
+    },
+    mockPositions,
+  );
+}
+
+export function useArgumentControversy(params?: { topic?: string; source_type?: string }): Result<ConflictPair[]> {
+  const key = `argumentControversy-${params?.source_type ?? "all"}-${params?.topic ?? ""}`;
+  return useWithFallback(
+    key,
+    async (): Promise<ConflictPair[]> => {
+      const res = await api.argumentControversy(params);
+      return res.conflicts;
+    },
+    mockConflicts,
   );
 }
 

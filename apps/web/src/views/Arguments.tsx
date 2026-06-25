@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { fonts, palette, colors, ACCENT, accentSoft, accentBorder } from "../theme";
-import { useArgumentClaims, useArgumentStance, useArgumentFrames } from "../lib/queries";
-import { mockFramesBySourceType, mockPositions, mockConflicts } from "../data/mock";
+import { useArgumentClaims, useArgumentStance, useArgumentFrames, useArgumentPositions, useArgumentControversy } from "../lib/queries";
+import { mockFramesBySourceType } from "../data/mock";
 import PageHeader from "../components/PageHeader";
 import SourceBadge from "../components/SourceBadge";
 import Sparkline from "../components/charts/Sparkline";
@@ -378,9 +378,15 @@ function FramesPanel({ sourceType }: { sourceType: string }) {
 // ─── Positions panel ─────────────────────────────────────────────────────────
 
 function PositionsPanel({ sourceType }: { sourceType: string }) {
-  const [topic, setTopic] = useState("Interest Rate Policy");
-  const allTopics = Array.from(new Set(mockPositions.map((p) => p.topic)));
-  const filtered = mockPositions.filter(
+  const { data: positions, source, isLoading } = useArgumentPositions(
+    sourceType !== "all" ? { source_type: sourceType } : undefined,
+  );
+  const allTopics = Array.from(new Set(positions.map((p) => p.topic)));
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const topic = selectedTopic !== null && allTopics.includes(selectedTopic)
+    ? selectedTopic
+    : (allTopics[0] ?? "");
+  const filtered = positions.filter(
     (p) => p.topic === topic && (sourceType === "all" || p.source_type === sourceType),
   );
 
@@ -388,9 +394,7 @@ function PositionsPanel({ sourceType }: { sourceType: string }) {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
         <span style={{ fontFamily: fonts.grotesk, fontWeight: 600, fontSize: 14 }}>Actor Policy Positions</span>
-        <span style={{ fontFamily: fonts.mono, fontSize: 9.5, color: palette.amber, background: `${palette.amber}14`, border: `1px solid ${palette.amber}40`, borderRadius: 5, padding: "3px 8px", letterSpacing: "0.1em" }}>
-          DEMO
-        </span>
+        <SourceBadge source={source} isLoading={isLoading} />
       </div>
 
       {/* Topic selector */}
@@ -398,7 +402,7 @@ function PositionsPanel({ sourceType }: { sourceType: string }) {
         {allTopics.map((t) => (
           <button
             key={t}
-            onClick={() => setTopic(t)}
+            onClick={() => setSelectedTopic(t)}
             style={{
               fontFamily: fonts.mono, fontSize: 10.5, padding: "4px 11px", borderRadius: 6,
               border: t === topic ? `1px solid ${accentBorder(ACCENT)}` : `1px solid ${colors.border2}`,
@@ -457,20 +461,21 @@ function PositionsPanel({ sourceType }: { sourceType: string }) {
 
 // ─── Controversy panel ────────────────────────────────────────────────────────
 
-function ControversyPanel({ sourceType: _sourceType }: { sourceType: string }) {
-  const sorted = [...mockConflicts].sort((a, b) => b.intensity - a.intensity);
+function ControversyPanel({ sourceType }: { sourceType: string }) {
+  const { data: conflicts, source, isLoading } = useArgumentControversy(
+    sourceType !== "all" ? { source_type: sourceType } : undefined,
+  );
+  const sorted = [...conflicts].sort((a, b) => b.intensity - a.intensity);
 
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
         <span style={{ fontFamily: fonts.grotesk, fontWeight: 600, fontSize: 14 }}>Conflict Map</span>
-        <div style={{ display: "flex", gap: 8 }}>
-          <span style={{ fontFamily: fonts.mono, fontSize: 9.5, color: palette.amber, background: `${palette.amber}14`, border: `1px solid ${palette.amber}40`, borderRadius: 5, padding: "3px 8px", letterSpacing: "0.1em" }}>
-            DEMO
-          </span>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <span style={{ fontFamily: fonts.mono, fontSize: 9.5, color: palette.blue, background: `${palette.blue}14`, border: `1px solid ${palette.blue}40`, borderRadius: 5, padding: "3px 8px", letterSpacing: "0.1em" }}>
             GRAPH IN #96
           </span>
+          <SourceBadge source={source} isLoading={isLoading} />
         </div>
       </div>
 

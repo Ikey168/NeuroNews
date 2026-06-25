@@ -179,6 +179,43 @@ export interface RawClaim {
   extracted_at: string | null;
 }
 
+export interface RawStanceSummary {
+  topic: string;
+  supportive: number;
+  critical: number;
+  neutral: number;
+  ambiguous: number;
+  total: number;
+  drift: number[];
+  by_source: Record<string, { supportive: number; critical: number; neutral: number; ambiguous: number }>;
+}
+
+export interface RawActorPosition {
+  actor: string;
+  position: string;
+  stance: string;
+  date: string | null;
+  source_type: string;
+  document_id: string;
+  topic: string;
+}
+
+export interface RawConflictPair {
+  actor_a: string;
+  actor_b: string;
+  topic: string;
+  intensity: number;
+  source_count: number;
+}
+
+export interface RawSourceRanking {
+  source: string;
+  source_type: string;
+  claim_count: number;
+  avg_confidence: number;
+  evidence_citations: number;
+}
+
 // ---------- endpoint calls ----------
 
 export const api = {
@@ -222,4 +259,16 @@ export const api = {
 
   argumentClaims: (params?: { document_id?: string; source_type?: string; topic?: string; limit?: number }) =>
     request<{ claims: RawClaim[]; count: number }>("/api/v1/arguments/claims", params),
+
+  argumentStance: (params?: { topic?: string; source?: string; source_type?: string; date_range?: string }) =>
+    request<{ stances: RawStanceSummary[]; count: number }>("/api/v1/arguments/stance", params),
+
+  argumentPositions: (params?: { actor?: string; topic?: string; source_type?: string; limit?: number }) =>
+    request<{ positions: RawActorPosition[]; count: number }>("/api/v1/arguments/positions", params),
+
+  argumentControversy: (params?: { topic?: string; source_type?: string; date_range?: string; limit?: number }) =>
+    request<{ conflicts: RawConflictPair[]; count: number }>("/api/v1/arguments/controversy", params),
+
+  argumentSourcesRanking: (params?: { source_type?: string; limit?: number }) =>
+    request<{ sources: RawSourceRanking[]; count: number }>("/api/v1/arguments/sources/ranking", params),
 };
