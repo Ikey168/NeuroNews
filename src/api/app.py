@@ -21,6 +21,7 @@ AUTH_AVAILABLE = False
 SEARCH_AVAILABLE = False
 DOCUMENT_ROUTES_AVAILABLE = False
 REPORT_ROUTES_AVAILABLE = False
+ALERT_ROUTES_AVAILABLE = False
 
 # Store imported modules globally
 _imported_modules = {}
@@ -233,6 +234,25 @@ def try_import_document_routes():
         return False
 
 
+def try_import_alert_routes():
+    """Try to import real-time alert routes (issue #53)."""
+    global ALERT_ROUTES_AVAILABLE
+    try:
+        from src.api.routes import alert_routes
+        _imported_modules['alert_routes'] = alert_routes
+        ALERT_ROUTES_AVAILABLE = True
+        try:
+            from src.alerts.dispatcher import start_alert_scheduler
+            start_alert_scheduler()
+        except Exception:
+            import logging
+            logging.getLogger(__name__).warning("Alert scheduler could not be started", exc_info=True)
+        return True
+    except ImportError:
+        ALERT_ROUTES_AVAILABLE = False
+        return False
+
+
 def try_import_report_routes():
     """Try to import report generation routes (issues #51, #52)."""
     global REPORT_ROUTES_AVAILABLE
@@ -281,6 +301,7 @@ def check_all_imports():
     try_import_search_routes()
     try_import_document_routes()
     try_import_report_routes()
+    try_import_alert_routes()
     _load_domain_packs()
 
 
@@ -537,6 +558,13 @@ def include_optional_routers(app):
         search_routes = _imported_modules.get('search_routes')
         if search_routes:
             app.include_router(search_routes.router, prefix="/api/v1/search", tags=["Search"])
+            routers_included += 1
+
+    # Include real-time alert routes (issue #53)
+    if ALERT_ROUTES_AVAILABLE:
+        alert_routes = _imported_modules.get('alert_routes')
+        if alert_routes:
+            app.include_router(alert_routes.router)
             routers_included += 1
 
     # Include report generation routes (issue #51)
