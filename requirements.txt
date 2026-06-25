@@ -83,3 +83,9 @@ openai-whisper>=20231117   # local Whisper model inference (pip install openai-w
 faster-whisper>=1.0.0      # faster CTranslate2-based Whisper (GPU/CPU)
 pyannote.audio>=3.1.0      # speaker diarization (requires HF_TOKEN + accept model terms)
 # ffmpeg is used via subprocess — install the system package (ffmpeg / ffmpeg-bin)
+# Books connector (#521) — all optional; connector degrades gracefully without them
+ebooklib>=0.18       # EPUB: richer ToC/structure extraction
+PyMuPDF>=1.24.0      # PDF: text + bookmark outline (install as fitz)
+pdfminer.six>=20221105  # PDF: pure-Python fallback text extraction
+pytesseract>=0.3.10  # OCR: Python wrapper for Tesseract (requires system tesseract)
+pdf2image>=1.17.0    # OCR: PDF->PIL images for pytesseract (requires system poppler)
