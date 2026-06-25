@@ -19,7 +19,8 @@ const coreNav: NavDef[] = [
 ];
 
 const researchNav: NavDef[] = [
-  { key: "workspaces", label: "Workspaces", glyph: "◳", badge: "4" },
+  { key: "workspaces",  label: "Workspaces",       glyph: "◳", badge: "4" },
+  { key: "arguments",   label: "Arguments",         glyph: "◫" },
 ];
 
 const newsOnlyNav: NavDef[] = [

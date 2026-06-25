@@ -161,7 +161,57 @@ export type ViewKey =
   | "trending"
   | "workspaces"
   | "watchlists"
-  | "timeline";
+  | "timeline"
+  | "arguments";
+
+export type ArgumentTab = "claims" | "stance" | "frames" | "positions" | "controversy";
+
+export interface ClaimResult {
+  document_id: string;
+  source_type: SourceType;
+  text: string;
+  is_claim: boolean;
+  confidence: number;
+  factcheck_verdict: "verified" | "disputed" | "unverified" | null;
+  title: string;
+}
+
+export interface StanceSummary {
+  topic: string;
+  supportive: number;
+  critical: number;
+  neutral: number;
+  ambiguous: number;
+  total: number;
+  by_source: Partial<Record<SourceType, { supportive: number; critical: number; neutral: number; ambiguous: number }>>;
+  drift: number[];
+}
+
+export interface FrameDistribution {
+  distribution: Record<string, number>;
+  dominant: string;
+  total_documents: number;
+  source_type_filter: string | null;
+  source: string;
+}
+
+export interface ActorPosition {
+  actor: string;
+  position: string;
+  stance: "for" | "against" | "neutral";
+  date: string;
+  source_type: SourceType;
+  document_id: string;
+  topic: string;
+}
+
+export interface ConflictPair {
+  actor_a: string;
+  actor_b: string;
+  topic: string;
+  intensity: number;
+  source_count: number;
+}
 
 export type SourceType = "news" | "blog" | "paper" | "book" | "transcript" | "web" | "note";
 

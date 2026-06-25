@@ -13,6 +13,7 @@ import {
   adaptEntityGraph,
   adaptHeatmap,
   adaptDocuments,
+  adaptFrameDistribution,
 } from "./adapters";
 import {
   mockArticles,
@@ -22,6 +23,9 @@ import {
   mockTickerText,
   mockTopicSentiment,
   mockHeatmap,
+  mockClaims,
+  mockStance,
+  mockFrameDistribution,
 } from "../data/mock";
 import { palette, ACCENT } from "../theme";
 import type {
@@ -33,6 +37,9 @@ import type {
   TopicSentiment,
   LiveGraph,
   Heatmap,
+  ClaimResult,
+  StanceSummary,
+  FrameDistribution,
 } from "../types";
 
 export type Source = "live" | "demo";
@@ -226,5 +233,41 @@ export function useTicker(): Result<string> {
       return `  ●${text}  `;
     },
     mockTickerText,
+  );
+}
+
+// ─── Argument Mining ─────────────────────────────────────────────────────────
+
+export function useArgumentClaims(): Result<ClaimResult[]> {
+  return useWithFallback(
+    "argumentClaims",
+    async (): Promise<ClaimResult[]> => {
+      throw new Error("endpoint pending #95");
+    },
+    mockClaims,
+  );
+}
+
+export function useArgumentStance(): Result<StanceSummary[]> {
+  return useWithFallback(
+    "argumentStance",
+    async (): Promise<StanceSummary[]> => {
+      throw new Error("endpoint pending #95");
+    },
+    mockStance,
+  );
+}
+
+export function useArgumentFrames(sourceType?: string): Result<FrameDistribution> {
+  return useWithFallback(
+    `argumentFrames-${sourceType ?? "all"}`,
+    async () => {
+      const raw = await api.argumentFrames(sourceType ? { source_type: sourceType } : undefined);
+      if (!raw.distribution || Object.keys(raw.distribution).length === 0) throw new Error("empty");
+      return adaptFrameDistribution(raw);
+    },
+    sourceType && sourceType !== "all"
+      ? { ...mockFrameDistribution, distribution: mockFrameDistribution.distribution, source_type_filter: sourceType }
+      : mockFrameDistribution,
   );
 }
