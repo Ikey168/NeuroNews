@@ -9,7 +9,11 @@ DIFF — never the full payload. It drives the project's own pipeline code
 
 Tools:
   list_sources(category?)              -> the configured RSS connectors (DEFAULT_FEEDS)
-  run_connector(source, sample=5)      -> fetch+parse one source, summary only (no write)
+  list_connector_types()               -> all registered document connector source types
+  run_connector(source, sample=5,      -> fetch+parse one source, summary only (no write).
+                query?)                   source = RSS feed name OR a source_type from
+                                          list_connector_types(); query = JSON list of paths/
+                                          IDs passed to that connector's discover().
   run_stage(stage, input_ref?, ...)    -> run one named stage: fetch | sentiment | store | ingest
   trace_article(id)                    -> where an article exists across warehouse / vector / s3
 
@@ -134,24 +138,79 @@ def list_sources(category: Optional[str] = None) -> dict:
 
 
 @mcp.tool
-def run_connector(source: str, sample: int = 5) -> dict:
-    """Run a single connector: fetch + parse up to `sample` articles from one
-    source's live feed and return a SUMMARY only (no warehouse write).
+def list_connector_types() -> dict:
+    """List all registered document connector source types.
+
+    Returns the source types that have a connector registered in the connector
+    registry (e.g. "news", "paper", "book", "transcript"). Each type can be
+    passed as the ``source`` argument to ``run_connector``.
+    """
+    import src.ingestion.connectors  # noqa: F401 — triggers @register_connector for all built-ins
+    from src.ingestion.connectors.registry import available_source_types
+    types = available_source_types()
+    return {
+        "count": len(types),
+        "source_types": types,
+        "usage": (
+            "Pass a source_type as `source` to run_connector(), "
+            "and supply `query` as a JSON list of paths/IDs for that connector "
+            "(e.g. query='[\"/books/foo.epub\"]' for book, "
+            "query='[\"2312.00752\"]' for paper arXiv IDs, "
+            "query='[\"/podcasts/ep.mp3\"]' for transcript). "
+            "For `news`, omit query to use the default RSS feeds."
+        ),
+    }
+
+
+@mcp.tool
+def run_connector(source: str, sample: int = 5, query: Optional[str] = None) -> dict:
+    """Run a single connector: fetch + parse up to `sample` records from one
+    source and return a SUMMARY only (no warehouse write).
+
+    Two dispatch modes, selected automatically:
+
+    1. **RSS feed** (legacy): ``source`` is a feed name from ``list_sources``
+       (e.g. ``"BBC Technology"``). ``query`` is ignored.
+
+    2. **Document connector**: ``source`` is a source type from
+       ``list_connector_types`` (e.g. ``"book"``, ``"paper"``, ``"transcript"``).
+       ``query`` is a JSON list of paths or IDs to pass to ``discover()``.
+       Examples::
+
+         run_connector("book",       query='["/books/foo.epub"]')
+         run_connector("paper",      query='["2312.00752", "1706.03762"]')
+         run_connector("transcript", query='["/pods/ep42.mp3"]')
+         run_connector("news")       # uses DEFAULT_FEEDS, no query needed
 
     Args:
-        source: a source name from list_sources (e.g. "BBC Technology").
-        sample: max articles to parse (1-25).
+        source: RSS feed name OR a source_type from list_connector_types.
+        sample: max records to harvest (1-25).
+        query:  JSON list of paths/IDs for document connectors (ignored for RSS).
 
-    Returns counts, category, date range, sentiment distribution and a few
-    sample titles. Network-dependent — reports a clear error if the feed can't
-    be fetched.
+    Returns a summary: source type, record count, and sample titles/snippets.
     """
+    sample = max(1, min(int(sample), 25))
+
+    # --- Try document connector registry first ----------------------------- #
+    import src.ingestion.connectors as _conn_pkg  # noqa: F401 — trigger registrations
+    from src.ingestion.connectors.registry import available_source_types, get_connector, is_registered
+
+    if is_registered(source):
+        return _run_document_connector(source, sample, query, get_connector)
+
+    # --- Fall back to legacy RSS path -------------------------------------- #
     si = _pipeline()
     feed = _find_feed(si, source)
     if feed is None:
-        return {"error": f"unknown source {source!r}", "hint": "call list_sources()"}
+        types = available_source_types()
+        return {
+            "error": f"unknown source {source!r}",
+            "hint": (
+                f"For RSS feeds call list_sources(). "
+                f"For document connectors use one of: {types}"
+            ),
+        }
 
-    sample = max(1, min(int(sample), 25))
     try:
         raw = si._http_get(feed.url)
         articles = si.parse_feed(raw, feed, limit=sample)
@@ -171,6 +230,67 @@ def run_connector(source: str, sample: int = 5) -> dict:
         "sentiment": _sentiment_distribution(articles),
         "sample_titles": [a.title for a in articles[:MAX_LIST]],
     }
+
+
+def _run_document_connector(
+    source_type: str,
+    sample: int,
+    query_json: Optional[str],
+    get_connector,
+) -> dict:
+    """Harvest up to ``sample`` Documents from a registry connector and return a summary."""
+    import json as _json
+
+    query = None
+    if query_json:
+        try:
+            query = _json.loads(query_json)
+        except _json.JSONDecodeError as exc:
+            return {"error": f"query must be a JSON list: {exc}", "example": '["path/to/file"]'}
+
+    try:
+        connector = get_connector(source_type)
+    except KeyError as exc:
+        return {"error": str(exc)}
+
+    docs = []
+    errors = []
+    for ref in list(connector.discover(query))[:sample]:
+        try:
+            raw = connector.fetch(ref)
+            parsed = connector.parse(raw)
+            docs.extend(parsed)
+        except Exception as exc:
+            errors.append({"locator": ref.locator, "error": str(exc)})
+        if len(docs) >= sample:
+            break
+
+    docs = docs[:sample]
+    sample_snippets = []
+    for d in docs[:MAX_LIST]:
+        snippet = {
+            "document_id": d.document_id,
+            "title": d.title,
+            "language": d.language,
+        }
+        # Include a few type-specific metadata highlights.
+        for key in ("section_path", "start_s", "end_s", "speaker", "arxiv_id", "doi"):
+            if key in (d.metadata or {}):
+                snippet[key] = d.metadata[key]
+        if d.content:
+            snippet["content_preview"] = d.content[:CONTENT_PREVIEW]
+        sample_snippets.append(snippet)
+
+    result: dict = {
+        "source_type": source_type,
+        "connector": type(connector).__name__,
+        "query": query,
+        "harvested": len(docs),
+        "documents": sample_snippets,
+    }
+    if errors:
+        result["errors"] = errors
+    return result
 
 
 @mcp.tool
