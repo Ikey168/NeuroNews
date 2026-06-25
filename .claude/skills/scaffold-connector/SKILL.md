@@ -1,9 +1,15 @@
 ---
 name: scaffold-connector
-description: Scaffold a new data connector / news source for the NeuroNews ingestion pipeline. Use when adding an RSS feed or a new source that produces article-ingest-v1 records. Covers the connector module, the contract it must satisfy, and the verify loop using the pipeline + contracts + lineage MCP servers.
+description: Scaffold a new data connector / news source for the NeuroNews ingestion pipeline. Use when adding an RSS feed or a new source that produces article-ingest-v1 records. Covers the connector module, the contract it must satisfy, and the verify loop using the pipeline + contracts + lineage MCP servers. For non-RSS media types (books, audio, papers, web pages) use scaffold-document-connector instead.
 ---
 
 # Scaffold a NeuroNews connector
+
+> **Choosing the right skill:** Use this skill for RSS/Atom feeds and sources
+> that emit `article-ingest-v1` records. For non-RSS media types (EPUB/PDF
+> books, audio/video, academic papers, web pages, database dumps) use the
+> **`scaffold-document-connector`** skill instead — it targets the newer
+> `document-ingest-v1` / `Connector` base class.
 
 A connector fetches from a source and emits **article-ingest-v1** records — the
 governed boundary the rest of the pipeline consumes. The cleanest shape emits
