@@ -16,6 +16,7 @@ Covers:
 from __future__ import annotations
 
 import os
+from urllib.parse import urlparse
 from unittest.mock import patch
 
 import pytest
@@ -283,7 +284,9 @@ class TestSegmentToDocument:
             model="base",
         )
         doc = segment_to_document(seg, meta, ingested_at=1000, index=0)
-        assert "example.com" in (doc.content_ref or "")
+        assert doc.content_ref is not None
+        parsed = urlparse(doc.content_ref)
+        assert parsed.hostname == "example.com"
 
     def test_language_propagated(self):
         seg = TranscriptSegment(start_s=0.0, end_s=5.0, text="Bonjour.")
