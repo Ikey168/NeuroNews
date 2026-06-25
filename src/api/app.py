@@ -234,12 +234,19 @@ def try_import_document_routes():
 
 
 def try_import_report_routes():
-    """Try to import report generation routes (issue #51)."""
+    """Try to import report generation routes (issues #51, #52)."""
     global REPORT_ROUTES_AVAILABLE
     try:
         from src.api.routes import report_routes
         _imported_modules['report_routes'] = report_routes
         REPORT_ROUTES_AVAILABLE = True
+        # Start the background scheduler for scheduled email delivery (#52)
+        try:
+            from src.reports.scheduler import start_scheduler
+            start_scheduler()
+        except Exception:
+            import logging
+            logging.getLogger(__name__).warning("Report scheduler could not be started", exc_info=True)
         return True
     except ImportError:
         REPORT_ROUTES_AVAILABLE = False
