@@ -19,6 +19,7 @@ API_KEY_MANAGEMENT_AVAILABLE = False
 WAF_SECURITY_AVAILABLE = False
 AUTH_AVAILABLE = False
 SEARCH_AVAILABLE = False
+DOCUMENT_ROUTES_AVAILABLE = False
 
 # Store imported modules globally
 _imported_modules = {}
@@ -218,6 +219,30 @@ def try_import_search_routes():
         return False
 
 
+def try_import_document_routes():
+    """Try to import generic document routes (issue #520)."""
+    global DOCUMENT_ROUTES_AVAILABLE
+    try:
+        from src.api.routes import document_routes
+        _imported_modules['document_routes'] = document_routes
+        DOCUMENT_ROUTES_AVAILABLE = True
+        return True
+    except ImportError:
+        DOCUMENT_ROUTES_AVAILABLE = False
+        return False
+
+
+def _load_domain_packs():
+    """Load domain-pack config and register built-in packs."""
+    try:
+        from src.domains.registry import load_config
+        import src.domains.news  # noqa: F401 — triggers register_pack(NewsDomainPack)
+        load_config()
+    except Exception:
+        import logging
+        logging.getLogger(__name__).warning("Domain-pack config could not be loaded", exc_info=True)
+
+
 def check_all_imports():
     """Check all optional imports and set feature flags."""
     try_import_error_handlers()
@@ -233,6 +258,8 @@ def check_all_imports():
     try_import_waf_security()
     try_import_auth_routes()
     try_import_search_routes()
+    try_import_document_routes()
+    _load_domain_packs()
 
 
 def try_import_core_routes():
@@ -368,30 +395,40 @@ def add_cors_middleware(app):
 
 def include_core_routers(app):
     """Include core routers that are always available."""
+    from src.domains.registry import is_pack_enabled
+
     graph_routes = _imported_modules.get('graph_routes')
     knowledge_graph_routes = _imported_modules.get('knowledge_graph_routes')
+    document_routes = _imported_modules.get('document_routes')
     news_routes = _imported_modules.get('news_routes')
     event_routes = _imported_modules.get('event_routes')
     veracity_routes = _imported_modules.get('veracity_routes')
     sentiment_routes = _imported_modules.get('sentiment_routes')
 
+    # Generic routes — always on regardless of domain packs.
     if graph_routes:
         app.include_router(graph_routes.router)
     if knowledge_graph_routes:
         app.include_router(knowledge_graph_routes.router)
-    if news_routes:
-        app.include_router(news_routes.router)
-    if event_routes:
-        app.include_router(event_routes.router)
-    if veracity_routes:
-        app.include_router(veracity_routes.router)
-    if sentiment_routes:
-        app.include_router(sentiment_routes.router)
+    if document_routes:
+        app.include_router(document_routes.router)
+
+    # News-domain routes — gated behind the news domain pack flag (#520).
+    if is_pack_enabled("news"):
+        if news_routes:
+            app.include_router(news_routes.router)
+        if event_routes:
+            app.include_router(event_routes.router)
+        if veracity_routes:
+            app.include_router(veracity_routes.router)
+        if sentiment_routes:
+            app.include_router(sentiment_routes.router)
     return True
 
 
 def include_optional_routers(app):
     """Include optional routers based on availability."""
+    from src.domains.registry import is_pack_enabled
     routers_included = 0
     
     # Include authentication routes (Issue #59)
@@ -431,8 +468,8 @@ def include_optional_routers(app):
             app.include_router(enhanced_kg_routes.router)
             routers_included += 1
 
-    # Include event timeline routes if available (Issue #38)
-    if EVENT_TIMELINE_AVAILABLE:
+    # Include event timeline routes if available — news pack only (Issue #38, #520).
+    if EVENT_TIMELINE_AVAILABLE and is_pack_enabled("news"):
         event_timeline_routes = _imported_modules.get('event_timeline_routes')
         if event_timeline_routes:
             app.include_router(event_timeline_routes.router)
@@ -459,8 +496,8 @@ def include_optional_routers(app):
             app.include_router(graph_search_routes.router)
             routers_included += 1
 
-    # Include influence analysis routes if available (Issue #40)
-    if INFLUENCE_ANALYSIS_AVAILABLE:
+    # Include influence analysis routes if available — news pack only (Issue #40, #520).
+    if INFLUENCE_ANALYSIS_AVAILABLE and is_pack_enabled("news"):
         influence_routes = _imported_modules.get('influence_routes')
         if influence_routes:
             app.include_router(influence_routes.router)
@@ -485,23 +522,31 @@ def include_optional_routers(app):
 
 def include_versioned_routers(app):
     """Include versioned routers."""
-    # Include core routers with versioning
+    from src.domains.registry import is_pack_enabled
+
     graph_routes = _imported_modules.get('graph_routes')
     knowledge_graph_routes = _imported_modules.get('knowledge_graph_routes')
+    document_routes = _imported_modules.get('document_routes')
     news_routes = _imported_modules.get('news_routes')
     event_routes = _imported_modules.get('event_routes')
     veracity_routes = _imported_modules.get('veracity_routes')
-    
+
+    # Generic — always on.
     if graph_routes:
         app.include_router(graph_routes.router, prefix="/api/v1")
     if knowledge_graph_routes:
         app.include_router(knowledge_graph_routes.router, prefix="/api/v1")
-    if news_routes:
-        app.include_router(news_routes.router, prefix="/api/v1")
-    if event_routes:
-        app.include_router(event_routes.router, prefix="/api/v1")
-    if veracity_routes:
-        app.include_router(veracity_routes.router, prefix="/api/v1")
+    if document_routes:
+        app.include_router(document_routes.router, prefix="/api/v1")
+
+    # News pack only (#520).
+    if is_pack_enabled("news"):
+        if news_routes:
+            app.include_router(news_routes.router, prefix="/api/v1")
+        if event_routes:
+            app.include_router(event_routes.router, prefix="/api/v1")
+        if veracity_routes:
+            app.include_router(veracity_routes.router, prefix="/api/v1")
     return True
 
 
@@ -539,9 +584,13 @@ else:
 
 async def root():
     """Root endpoint."""
+    from src.domains.registry import is_pack_enabled
     return {
         "status": "ok",
         "message": "NeuroNews API is running",
+        "domain_packs": {
+            "news": is_pack_enabled("news"),
+        },
         "features": {
             "rate_limiting": RATE_LIMITING_AVAILABLE,
             "rbac": RBAC_AVAILABLE,
@@ -553,6 +602,7 @@ async def root():
             "topic_routes": TOPIC_ROUTES_AVAILABLE,
             "graph_search": GRAPH_SEARCH_AVAILABLE,
             "influence_analysis": INFLUENCE_ANALYSIS_AVAILABLE,
+            "document_routes": DOCUMENT_ROUTES_AVAILABLE,
         },
     }
 
