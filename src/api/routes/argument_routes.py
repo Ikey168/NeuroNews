@@ -1,9 +1,12 @@
 """
-Argument Mining API routes (Issue #90, #95).
+Argument Mining API routes (Issues #90, #93, #95).
 
 GET  /api/v1/arguments/frames              — aggregate frame distribution
 GET  /api/v1/arguments/frames?document_id= — frames for a specific document
 GET  /api/v1/arguments/frames?source_type= — aggregate filtered by source type
+GET  /api/v1/arguments/claims              — query stored claims
+POST /api/v1/arguments/claims/extract      — run pipeline on a stored document
+GET  /api/v1/arguments/claims/{claim_id}/evidence — evidence for a claim
 """
 from __future__ import annotations
 
@@ -210,3 +213,184 @@ async def _aggregate_live(conn, source_type: Optional[str]) -> Dict[str, Any]:
         }
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Live frame classification failed: {exc}")
+
+
+# ---------------------------------------------------------------------------
+# Claims endpoints (#93)
+# ---------------------------------------------------------------------------
+
+@router.get("/claims")
+async def get_claims(
+    document_id: Optional[str] = Query(None, description="Filter by document ID"),
+    source_type: Optional[str] = Query(None, description="Filter by source type"),
+    topic: Optional[str] = Query(None, description="Full-text filter on claim text"),
+    limit: int = Query(100, ge=1, le=1000, description="Max results"),
+) -> Dict[str, Any]:
+    """Query stored argument claims, filterable by document, source type, or keyword topic."""
+    import threading
+
+    from src.database.local_analytics_connector import get_shared_connection
+
+    conn = get_shared_connection()
+    lock = getattr(conn, "_lock", None) or threading.Lock()
+
+    conditions: list[str] = []
+    params: list[Any] = []
+
+    if document_id:
+        conditions.append("document_id = ?")
+        params.append(document_id)
+    if source_type:
+        conditions.append("source_type = ?")
+        params.append(source_type)
+    if topic:
+        conditions.append("claim_text ILIKE ?")
+        params.append(f"%{topic}%")
+
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    params.append(limit)
+
+    with lock:
+        rows = conn.execute(
+            f"""
+            SELECT claim_id, claim_text, document_id, source_type, confidence, extracted_at
+            FROM argument_claims
+            {where}
+            ORDER BY confidence DESC
+            LIMIT ?
+            """,
+            params,
+        ).fetchall()
+
+    claims = [
+        {
+            "claim_id": r[0],
+            "claim_text": r[1],
+            "document_id": r[2],
+            "source_type": r[3],
+            "confidence": round(r[4], 4) if r[4] is not None else None,
+            "extracted_at": r[5],
+        }
+        for r in rows
+    ]
+    return {"claims": claims, "count": len(claims)}
+
+
+@router.post("/claims/extract")
+async def extract_claims_for_document(
+    document_id: str = Query(..., description="ID of a document already in news_articles"),
+    source_type: str = Query("news", description="Source type label"),
+) -> Dict[str, Any]:
+    """Run the claim+evidence pipeline on a stored document and persist results."""
+    import threading
+
+    from src.database.local_analytics_connector import get_shared_connection
+
+    conn = get_shared_connection()
+    lock = getattr(conn, "_lock", None) or threading.Lock()
+
+    with lock:
+        row = conn.execute(
+            "SELECT id, title, content FROM news_articles WHERE id = ? LIMIT 1",
+            [document_id],
+        ).fetchone()
+
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Document '{document_id}' not found")
+
+    doc_id, title, content = row[0], row[1], row[2]
+    if not content:
+        raise HTTPException(status_code=422, detail="Document has no content to process")
+
+    try:
+        import time
+        from services.ingest.common.document_model import Document
+        from src.argument_mining.evidence import run_pipeline
+
+        doc = Document(
+            document_id=doc_id,
+            source_type=source_type,
+            language="en",
+            ingested_at=int(time.time() * 1000),
+            title=title,
+            content=content,
+        )
+        claims, evidence = run_pipeline(doc, conn)
+        return {
+            "document_id": doc_id,
+            "source_type": source_type,
+            "claims_extracted": len(claims),
+            "evidence_found": len(evidence),
+            "claims": [
+                {
+                    "claim_id": c.claim_id,
+                    "claim_text": c.claim_text,
+                    "confidence": round(c.confidence, 4),
+                }
+                for c in claims
+            ],
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Pipeline failed: {exc}")
+
+
+@router.get("/claims/{claim_id}/evidence")
+async def get_evidence(
+    claim_id: str,
+    relation: Optional[str] = Query(None, description="Filter by 'supports' or 'contradicts'"),
+    limit: int = Query(20, ge=1, le=200),
+) -> Dict[str, Any]:
+    """Return stored evidence records for a given claim."""
+    import threading
+
+    from src.database.local_analytics_connector import get_shared_connection
+
+    conn = get_shared_connection()
+    lock = getattr(conn, "_lock", None) or threading.Lock()
+
+    conditions = ["claim_id = ?"]
+    params: list[Any] = [claim_id]
+
+    if relation:
+        if relation not in ("supports", "contradicts"):
+            raise HTTPException(status_code=422, detail="relation must be 'supports' or 'contradicts'")
+        conditions.append("relation = ?")
+        params.append(relation)
+
+    params.append(limit)
+    with lock:
+        rows = conn.execute(
+            f"""
+            SELECT evidence_id, evidence_text, evidence_document_id,
+                   evidence_source_type, relation, similarity_score, found_at
+            FROM claim_evidence
+            WHERE {' AND '.join(conditions)}
+            ORDER BY similarity_score DESC
+            LIMIT ?
+            """,
+            params,
+        ).fetchall()
+
+    # Verify the claim exists (return 404 rather than empty list for unknown IDs)
+    if not rows:
+        with lock:
+            exists = conn.execute(
+                "SELECT 1 FROM argument_claims WHERE claim_id = ? LIMIT 1",
+                [claim_id],
+            ).fetchone()
+        if not exists:
+            raise HTTPException(status_code=404, detail=f"Claim '{claim_id}' not found")
+
+    evidence = [
+        {
+            "evidence_id": r[0],
+            "evidence_text": r[1],
+            "evidence_document_id": r[2],
+            "evidence_source_type": r[3],
+            "relation": r[4],
+            "similarity_score": round(r[5], 6) if r[5] is not None else None,
+            "found_at": r[6],
+        }
+        for r in rows
+    ]
+    return {"claim_id": claim_id, "evidence": evidence, "count": len(evidence)}

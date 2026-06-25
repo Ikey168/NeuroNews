@@ -27,6 +27,7 @@ import {
   mockStance,
   mockFrameDistribution,
 } from "../data/mock";
+import type { RawClaim } from "./api";
 import { palette, ACCENT } from "../theme";
 import type {
   Article,
@@ -40,6 +41,7 @@ import type {
   ClaimResult,
   StanceSummary,
   FrameDistribution,
+  SourceType,
 } from "../types";
 
 export type Source = "live" | "demo";
@@ -238,11 +240,21 @@ export function useTicker(): Result<string> {
 
 // ─── Argument Mining ─────────────────────────────────────────────────────────
 
-export function useArgumentClaims(): Result<ClaimResult[]> {
+export function useArgumentClaims(params?: { source_type?: string; topic?: string }): Result<ClaimResult[]> {
+  const key = `argumentClaims-${params?.source_type ?? "all"}-${params?.topic ?? ""}`;
   return useWithFallback(
-    "argumentClaims",
+    key,
     async (): Promise<ClaimResult[]> => {
-      throw new Error("endpoint pending #95");
+      const res = await api.argumentClaims(params);
+      return res.claims.map((r: RawClaim) => ({
+        document_id: r.document_id,
+        source_type: r.source_type as SourceType,
+        text: r.claim_text,
+        is_claim: true,
+        confidence: r.confidence ?? 0,
+        factcheck_verdict: null,
+        title: "",
+      }));
     },
     mockClaims,
   );
