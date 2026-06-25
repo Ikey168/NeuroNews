@@ -11,6 +11,7 @@ import type {
   TopicSentiment,
   LiveGraph,
   Heatmap,
+  FrameDistribution,
 } from "../types";
 import type {
   RawArticle,
@@ -21,6 +22,7 @@ import type {
   RawTopicSentiment,
   RawEntityGraph,
   RawHeatmap,
+  RawFrameDistribution,
 } from "./api";
 import type { KnowledgeDocument, SourceType } from "../types";
 
@@ -140,6 +142,16 @@ export function adaptDocuments(raw: RawDocument[]): KnowledgeDocument[] {
     authors: d.authors ?? [],
     metadata: d.metadata ?? {},
   }));
+}
+
+export function adaptFrameDistribution(raw: RawFrameDistribution): FrameDistribution {
+  return {
+    distribution: raw.distribution ?? {},
+    dominant: raw.dominant ?? "other",
+    total_documents: raw.total_documents ?? 0,
+    source_type_filter: raw.source_type_filter ?? null,
+    source: raw.source ?? "live",
+  };
 }
 
 export function adaptInfluencers(raw: RawInfluencer[]): TopEntity[] {

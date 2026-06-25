@@ -14,6 +14,11 @@ import type {
   Story,
   TimelineEvent,
   KnowledgeDocument,
+  ClaimResult,
+  StanceSummary,
+  FrameDistribution,
+  ActorPosition,
+  ConflictPair,
 } from "../types";
 
 const NOW = Date.now();
@@ -242,3 +247,69 @@ export const mockTopicSentiment: TopicSentiment[] = [
 
 export const mockTickerText =
   "  ●  Fed signals rate pause as core PCE eases  ●  Nvidia Blackwell Ultra claims 4x inference gain  ●  EU opens cloud antitrust probe  ●  Fusion experiment sustains net energy gain  ●  Oil slips below $74 on OPEC+ uncertainty  ●  Alzheimer’s drug clears late-stage trial  ";
+
+// ─── Argument Mining ─────────────────────────────────────────────────────────
+
+export const mockClaims: ClaimResult[] = [
+  { document_id: "doc-news-001", source_type: "news", title: "Federal Reserve signals pause on rate hikes", text: "The unemployment rate fell to 3.8% in March, the lowest level in two decades.", is_claim: true, confidence: 0.85, factcheck_verdict: "verified" },
+  { document_id: "doc-news-001", source_type: "news", title: "Federal Reserve signals pause on rate hikes", text: "Critics argue the government has not done enough to address the cost-of-living crisis.", is_claim: false, confidence: 0.72, factcheck_verdict: null },
+  { document_id: "doc-news-002", source_type: "news", title: "Nvidia Blackwell Ultra claims 4× inference gain", text: "Blackwell Ultra delivers 4× the inference throughput of its predecessor at equal power.", is_claim: true, confidence: 0.91, factcheck_verdict: "disputed" },
+  { document_id: "doc-blog-001", source_type: "blog", title: "Platform Changes Impact Analysis", text: "Engagement dropped 37% after the platform update.", is_claim: true, confidence: 0.78, factcheck_verdict: "disputed" },
+  { document_id: "doc-blog-001", source_type: "blog", title: "Platform Changes Impact Analysis", text: "The library added async support in version 3.2, released on 4 April 2024.", is_claim: true, confidence: 0.91, factcheck_verdict: "verified" },
+  { document_id: "doc-paper-001", source_type: "paper", title: "Sleep Duration and Cognitive Performance", text: "A statistically significant correlation between sleep duration and cognitive performance (r = 0.74, p < 0.001).", is_claim: true, confidence: 0.94, factcheck_verdict: "verified" },
+  { document_id: "doc-paper-001", source_type: "paper", title: "Sleep Duration and Cognitive Performance", text: "The cohort comprised 3,247 participants aged 18–65 recruited across six clinical sites.", is_claim: true, confidence: 0.88, factcheck_verdict: "unverified" },
+  { document_id: "doc-transcript-001", source_type: "transcript", title: "Q3 2026 Earnings Call", text: "We reported a 30% reduction in operating costs across all four divisions.", is_claim: true, confidence: 0.82, factcheck_verdict: "disputed" },
+  { document_id: "doc-transcript-001", source_type: "transcript", title: "Q3 2026 Earnings Call", text: "The committee chair confirmed the vote passed by nine votes to three.", is_claim: true, confidence: 0.89, factcheck_verdict: "verified" },
+  { document_id: "doc-book-001", source_type: "book", title: "The Long Siege: A History", text: "By 1943 the city had lost more than a third of its pre-war population to evacuation.", is_claim: true, confidence: 0.77, factcheck_verdict: "unverified" },
+  { document_id: "doc-book-001", source_type: "book", title: "The Long Siege: A History", text: "The treaty signed on 11 June 1919 transferred sovereignty over the territory to the new republic.", is_claim: true, confidence: 0.83, factcheck_verdict: "verified" },
+  { document_id: "doc-note-001", source_type: "note", title: "Project Alpha Status Note", text: "Board approved budget of $2.4M on 14 June; finance confirmed transfer completed same day.", is_claim: true, confidence: 0.76, factcheck_verdict: null },
+  { document_id: "doc-note-001", source_type: "note", title: "Project Alpha Status Note", text: "Security audit completed 10 June — 3 critical findings, all remediated by 12 June.", is_claim: true, confidence: 0.81, factcheck_verdict: null },
+];
+
+export const mockStance: StanceSummary[] = [
+  { topic: "Interest Rate Policy",       supportive: 24, critical: 31, neutral: 18, ambiguous: 7,  total: 80, drift: [0.3, 0.28, 0.35, 0.38, 0.31, 0.29, 0.32], by_source: { news: { supportive: 12, critical: 18, neutral: 8,  ambiguous: 3 }, blog: { supportive: 6, critical: 7, neutral: 5, ambiguous: 2 }, paper: { supportive: 4, critical: 4, neutral: 3, ambiguous: 1 }, transcript: { supportive: 2, critical: 2, neutral: 2, ambiguous: 1 } } },
+  { topic: "AI Regulation",              supportive: 38, critical: 19, neutral: 27, ambiguous: 12, total: 96, drift: [0.4, 0.42, 0.38, 0.44, 0.46, 0.41, 0.43], by_source: { news: { supportive: 18, critical: 9, neutral: 12, ambiguous: 5 }, blog: { supportive: 12, critical: 6, neutral: 8,  ambiguous: 4 }, paper: { supportive: 5, critical: 3, neutral: 5, ambiguous: 2 }, transcript: { supportive: 3, critical: 1, neutral: 2, ambiguous: 1 } } },
+  { topic: "Climate Policy",             supportive: 41, critical: 22, neutral: 14, ambiguous: 8,  total: 85, drift: [0.45, 0.48, 0.5, 0.47, 0.52, 0.49, 0.51], by_source: { news: { supportive: 20, critical: 11, neutral: 7,  ambiguous: 4 }, blog: { supportive: 10, critical: 5, neutral: 4,  ambiguous: 2 }, paper: { supportive: 8, critical: 4, neutral: 2, ambiguous: 1 }, transcript: { supportive: 3, critical: 2, neutral: 1, ambiguous: 1 } } },
+  { topic: "Healthcare Reform",          supportive: 29, critical: 34, neutral: 22, ambiguous: 10, total: 95, drift: [0.31, 0.29, 0.32, 0.27, 0.3, 0.28, 0.29], by_source: { news: { supportive: 14, critical: 17, neutral: 10, ambiguous: 5 }, blog: { supportive: 8, critical: 9, neutral: 6,  ambiguous: 3 }, paper: { supportive: 5, critical: 5, neutral: 4, ambiguous: 1 }, transcript: { supportive: 2, critical: 3, neutral: 2, ambiguous: 1 } } },
+  { topic: "Trade Tariffs",              supportive: 15, critical: 48, neutral: 19, ambiguous: 6,  total: 88, drift: [0.17, 0.19, 0.16, 0.14, 0.18, 0.15, 0.16], by_source: { news: { supportive: 7, critical: 24, neutral: 9,  ambiguous: 3 }, blog: { supportive: 4, critical: 12, neutral: 5,  ambiguous: 2 }, paper: { supportive: 2, critical: 8, neutral: 3, ambiguous: 0 }, transcript: { supportive: 2, critical: 4, neutral: 2, ambiguous: 1 } } },
+  { topic: "Central Bank Independence",  supportive: 33, critical: 12, neutral: 28, ambiguous: 5,  total: 78, drift: [0.42, 0.41, 0.44, 0.43, 0.45, 0.42, 0.44], by_source: { news: { supportive: 16, critical: 6, neutral: 14, ambiguous: 2 }, blog: { supportive: 9, critical: 3, neutral: 8,  ambiguous: 2 }, paper: { supportive: 6, critical: 2, neutral: 4, ambiguous: 1 }, transcript: { supportive: 2, critical: 1, neutral: 2, ambiguous: 0 } } },
+];
+
+export const mockFrameDistribution: FrameDistribution = {
+  distribution: { economic: 0.42, political: 0.35, security: 0.28, scientific: 0.22, humanitarian: 0.18, legal: 0.15, other: 0.08 },
+  dominant: "economic",
+  total_documents: 47,
+  source_type_filter: null,
+  source: "demo",
+};
+
+export const mockFramesBySourceType: Record<string, Record<string, number>> = {
+  news:       { economic: 0.58, political: 0.44, security: 0.32, scientific: 0.18, humanitarian: 0.21, legal: 0.19, other: 0.06 },
+  blog:       { economic: 0.28, political: 0.22, security: 0.14, scientific: 0.34, humanitarian: 0.12, legal: 0.08, other: 0.22 },
+  paper:      { economic: 0.15, political: 0.08, security: 0.10, scientific: 0.72, humanitarian: 0.18, legal: 0.12, other: 0.05 },
+  transcript: { economic: 0.48, political: 0.52, security: 0.24, scientific: 0.16, humanitarian: 0.20, legal: 0.22, other: 0.10 },
+  book:       { economic: 0.32, political: 0.38, security: 0.44, scientific: 0.12, humanitarian: 0.36, legal: 0.28, other: 0.14 },
+  note:       { economic: 0.38, political: 0.18, security: 0.24, scientific: 0.20, humanitarian: 0.10, legal: 0.34, other: 0.16 },
+};
+
+export const mockPositions: ActorPosition[] = [
+  { actor: "Federal Reserve",  topic: "Interest Rate Policy",   position: "Hold at 5.25%; monitor inflation before cutting",  stance: "neutral",  date: "2026-06-20", source_type: "news",       document_id: "doc-news-001" },
+  { actor: "IMF",              topic: "Interest Rate Policy",   position: "Advocates gradual cuts to prevent recession",       stance: "for",      date: "2026-06-18", source_type: "paper",      document_id: "doc-paper-002" },
+  { actor: "Goldman Sachs",    topic: "Interest Rate Policy",   position: "Expects two cuts in H2; overweight equities",       stance: "for",      date: "2026-06-15", source_type: "transcript", document_id: "doc-transcript-001" },
+  { actor: "Senator Warren",   topic: "Interest Rate Policy",   position: "Criticises Fed; calls for political oversight",     stance: "against",  date: "2026-06-12", source_type: "news",       document_id: "doc-news-003" },
+  { actor: "BIS",              topic: "Interest Rate Policy",   position: "Warns premature cuts risk wage-price spiral",       stance: "against",  date: "2026-06-10", source_type: "paper",      document_id: "doc-paper-003" },
+  { actor: "ECB",              topic: "Interest Rate Policy",   position: "Diverging from Fed; began cutting cycle in June",   stance: "for",      date: "2026-06-08", source_type: "news",       document_id: "doc-news-004" },
+  { actor: "EU Commission",    topic: "AI Regulation",          position: "Mandatory risk assessment for frontier models",     stance: "for",      date: "2026-06-19", source_type: "news",       document_id: "doc-news-005" },
+  { actor: "Tech Industry",    topic: "AI Regulation",          position: "Self-regulation preferred; opposes hard limits",    stance: "against",  date: "2026-06-17", source_type: "blog",       document_id: "doc-blog-002" },
+  { actor: "UN AI Advisory",   topic: "AI Regulation",          position: "International treaty with binding safety norms",    stance: "for",      date: "2026-06-14", source_type: "paper",      document_id: "doc-paper-004" },
+];
+
+export const mockConflicts: ConflictPair[] = [
+  { actor_a: "Federal Reserve",  actor_b: "Senator Warren",   topic: "Interest Rate Policy",      intensity: 0.78, source_count: 14 },
+  { actor_a: "Tech Industry",    actor_b: "EU Commission",    topic: "AI Regulation",              intensity: 0.91, source_count: 23 },
+  { actor_a: "OPEC",             actor_b: "US Energy Dept",   topic: "Oil Production",             intensity: 0.64, source_count: 11 },
+  { actor_a: "China",            actor_b: "WTO",              topic: "Trade Tariffs",              intensity: 0.83, source_count: 19 },
+  { actor_a: "US Treasury",      actor_b: "IMF",              topic: "Dollar Strength",            intensity: 0.52, source_count: 8  },
+  { actor_a: "WHO",              actor_b: "Pharma Industry",  topic: "Drug Pricing",               intensity: 0.47, source_count: 7  },
+  { actor_a: "BIS",              actor_b: "Goldman Sachs",    topic: "Central Bank Independence",  intensity: 0.61, source_count: 9  },
+];

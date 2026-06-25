@@ -162,6 +162,14 @@ export interface RawHeatmap {
   seed: number[][];
 }
 
+export interface RawFrameDistribution {
+  distribution: Record<string, number>;
+  dominant: string;
+  total_documents: number;
+  source_type_filter: string | null;
+  source: string;
+}
+
 // ---------- endpoint calls ----------
 
 export const api = {
@@ -199,4 +207,7 @@ export const api = {
     request<RawDocument[]>("/api/v1/documents", params),
 
   packStatus: () => request<RawHealth>("/"),
+
+  argumentFrames: (params?: { source_type?: string; document_id?: string; limit?: number }) =>
+    request<RawFrameDistribution>("/api/v1/arguments/frames", params),
 };

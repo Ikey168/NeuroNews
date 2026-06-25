@@ -15,6 +15,7 @@ import Trending from "./views/Trending";
 import Workspaces from "./views/Workspaces";
 import Watchlists from "./views/Watchlists";
 import Timeline from "./views/Timeline";
+import Arguments from "./views/Arguments";
 
 export default function App() {
   const [view, setView] = useState<ViewKey>("dashboard");
@@ -48,6 +49,7 @@ export default function App() {
           {view === "workspaces" && <Workspaces />}
           {view === "watchlists" && <Watchlists />}
           {view === "timeline" && <Timeline />}
+          {view === "arguments" && <Arguments />}
         </main>
       </div>
     </div>

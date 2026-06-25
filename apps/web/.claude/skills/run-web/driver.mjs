@@ -89,6 +89,7 @@ const VIEWS = [
   ["Workspaces", "workspaces"],
   ["Watchlists", "watchlists"],
   ["Story Timeline", "timeline"],
+  ["Arguments", "arguments"],
 ];
 
 function parseArgs(argv) {
