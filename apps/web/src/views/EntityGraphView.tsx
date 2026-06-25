@@ -57,7 +57,7 @@ export default function EntityGraphView() {
   return (
     <div>
       <PageHeader
-        title="Entity Relationship Graph"
+        title="Knowledge Graph"
         subtitle={`${graph.nodeCount} entities · ${graph.edgeCount} co-occurrence links · 7d window`}
         right={<SourceBadge source={source} isLoading={isLoading} />}
       />

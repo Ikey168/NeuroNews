@@ -102,7 +102,21 @@ export interface RawSentimentSummary {
 
 export interface RawHealth {
   status?: string;
+  domain_packs?: { news?: boolean; [key: string]: boolean | undefined };
   [key: string]: unknown;
+}
+
+export interface RawDocument {
+  document_id: string;
+  source_type: string;
+  title?: string | null;
+  source_id?: string | null;
+  url?: string | null;
+  content?: string | null;
+  created_at?: number | null;
+  ingested_at: number;
+  authors?: string[];
+  metadata?: Record<string, unknown>;
 }
 
 export interface RawTopicSentiment {
@@ -180,4 +194,9 @@ export const api = {
 
   sentimentHeatmap: (params?: { days?: number; max_topics?: number }) =>
     request<RawHeatmap>("/news_sentiment/heatmap", params),
+
+  documents: (params?: { source_type?: string; limit?: number }) =>
+    request<RawDocument[]>("/api/v1/documents", params),
+
+  packStatus: () => request<RawHealth>("/"),
 };

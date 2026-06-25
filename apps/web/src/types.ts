@@ -153,11 +153,27 @@ export interface TimelineEvent {
 
 export type ViewKey =
   | "dashboard"
-  | "feed"
-  | "graph"
+  | "library"
+  | "knowledge"
+  | "reader"
   | "sentiment"
   | "clusters"
   | "trending"
   | "workspaces"
   | "watchlists"
   | "timeline";
+
+export type SourceType = "news" | "blog" | "paper" | "book" | "transcript" | "web" | "note";
+
+export interface KnowledgeDocument {
+  document_id: string;
+  source_type: SourceType;
+  title: string | null;
+  source_id: string | null;
+  url: string | null;
+  content: string | null;
+  created_at: number | null;
+  ingested_at: number;
+  authors: string[];
+  metadata: Record<string, unknown>;
+}

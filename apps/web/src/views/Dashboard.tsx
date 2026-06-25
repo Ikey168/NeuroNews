@@ -60,7 +60,7 @@ export default function Dashboard({ setView }: Props) {
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 16 }}>
         <div>
           <h1 style={{ fontFamily: fonts.grotesk, fontWeight: 600, fontSize: 21, margin: 0, letterSpacing: "-0.01em" }}>
-            Intelligence Overview
+            Knowledge Overview
           </h1>
           <p style={{ fontFamily: fonts.mono, fontSize: 11, color: "#5b6675", margin: "5px 0 0", letterSpacing: "0.04em" }}>
             Real-time signal across 142 sources · last 24h
@@ -186,9 +186,9 @@ export default function Dashboard({ setView }: Props) {
 
         <div style={card}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <div style={sectionTitle}>Latest Feed</div>
-            <Hover as="button" onClick={() => setView("feed")} style={linkBtn}>
-              OPEN FEED →
+            <div style={sectionTitle}>Latest Documents</div>
+            <Hover as="button" onClick={() => setView("library")} style={linkBtn}>
+              OPEN LIBRARY →
             </Hover>
           </div>
           <div style={{ display: "flex", flexDirection: "column" }}>

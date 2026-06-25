@@ -12,10 +12,12 @@ import {
   adaptTopicSentiment,
   adaptEntityGraph,
   adaptHeatmap,
+  adaptDocuments,
 } from "./adapters";
 import {
   mockArticles,
   mockClusters,
+  mockDocuments,
   mockTrending,
   mockTickerText,
   mockTopicSentiment,
@@ -25,6 +27,7 @@ import { palette, ACCENT } from "../theme";
 import type {
   Article,
   Cluster,
+  KnowledgeDocument,
   TrendingTopic,
   TopEntity,
   TopicSentiment,
@@ -179,6 +182,33 @@ export function useSentimentHeatmap(): Result<Heatmap> {
     },
     mockSentimentHeatmap,
   );
+}
+
+export function useDocuments(sourceType?: string): Result<KnowledgeDocument[]> {
+  return useWithFallback(
+    `documents-${sourceType ?? "all"}`,
+    async () => {
+      const raw = await api.documents(sourceType ? { source_type: sourceType } : undefined);
+      return adaptDocuments(raw);
+    },
+    sourceType
+      ? mockDocuments.filter((d) => d.source_type === sourceType)
+      : mockDocuments,
+  );
+}
+
+export function usePackStatus(): { newsPack: boolean; isLoading: boolean } {
+  const q = useQuery({
+    queryKey: ["packStatus"],
+    queryFn: async () => {
+      const root = await api.packStatus();
+      return { newsPack: root.domain_packs?.news ?? true };
+    },
+    staleTime: 60_000,
+    retry: false,
+  });
+  // Default to news-pack enabled so views render while checking or when offline.
+  return { newsPack: q.data?.newsPack ?? true, isLoading: q.isLoading };
 }
 
 export function useTicker(): Result<string> {
