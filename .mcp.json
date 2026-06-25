@@ -66,6 +66,11 @@
       "command": "python3",
       "args": [
         "tools/blog_mcp/server.py"
+    "neuronews-domain-packs": {
+      "type": "stdio",
+      "command": "python3",
+      "args": [
+        "tools/domain_packs_mcp/server.py"
       ],
       "env": {}
     }
