@@ -14,8 +14,9 @@ Tools:
                 query?)                   source = RSS feed name OR a source_type from
                                           list_connector_types(); query = JSON list of paths/
                                           IDs passed to that connector's discover().
-  run_stage(stage, input_ref?, ...)    -> run one named stage: fetch | sentiment | store | ingest
+  run_stage(stage, input_ref?, ...)    -> run one named stage: fetch|sentiment|store|ingest|positions
   trace_article(id)                    -> where an article exists across warehouse / vector / s3
+  query_positions(actor?, topic?, ...) -> query policy_positions table for actor commitments (#110)
 
 Design constraints (learned the hard way in this repo):
   * Lazy imports inside tools. The top of this module imports only stdlib +
@@ -82,6 +83,24 @@ def _warehouse_ro():
         raise RuntimeError(
             f"warehouse at {path} is not readable (likely locked by a running "
             f"API/ingester — DuckDB is single-writer): {exc}"
+        ) from exc
+
+
+def _warehouse_rw():
+    """Open the DuckDB warehouse READ-WRITE. Use only for write-stage tools."""
+    import duckdb
+
+    path = _db_path()
+    if not os.path.exists(path):
+        raise FileNotFoundError(
+            f"warehouse not found at {path} — start the API once to seed it, "
+            f"or set NEURONEWS_DB_PATH"
+        )
+    try:
+        return duckdb.connect(path, read_only=False)
+    except Exception as exc:
+        raise RuntimeError(
+            f"warehouse at {path} is locked (DuckDB single-writer): {exc}"
         ) from exc
 
 
@@ -314,6 +333,9 @@ def run_stage(
                 warehouse to be free — DuckDB single-writer).
       ingest    input_ref = source name (or omit for all sources). Full
                 fetch->store. Read-only diff unless apply=true.
+      positions input_ref = article/document id already in the warehouse.
+                Runs position extraction and writes results to policy_positions.
+                Use query_positions() to read them back.
 
     Args:
         stage: one of fetch | sentiment | store | ingest.
@@ -424,9 +446,76 @@ def run_stage(
                 )
         return result
 
+    if stage == "positions":
+        if not input_ref:
+            return {"error": "positions needs input_ref = an article/document id"}
+        try:
+            con_rw = _warehouse_rw()
+        except Exception as exc:
+            return {"error": f"warehouse unavailable: {exc}"}
+        try:
+            row = con_rw.execute(
+                "SELECT id, title, content, publish_date, source, category "
+                "FROM news_articles WHERE id = ? LIMIT 1",
+                [input_ref],
+            ).fetchone()
+        except Exception as exc:
+            con_rw.close()
+            return {"error": f"document lookup failed: {exc}"}
+        if not row:
+            con_rw.close()
+            return {"error": f"document {input_ref!r} not found in warehouse"}
+        doc_id, title, content, publish_date, source, category = row
+        if not content:
+            con_rw.close()
+            return {"error": "document has no content"}
+        try:
+            import time as _time
+            from services.ingest.common.document_model import Document
+            from src.argument_mining.positions import run_position_pipeline
+            meta: dict[str, Any] = {}
+            if category:
+                meta["category"] = category
+            created_ms: Optional[int] = None
+            if publish_date is not None:
+                try:
+                    created_ms = int(publish_date.timestamp() * 1000)
+                except Exception:
+                    pass
+            doc = Document(
+                document_id=doc_id,
+                source_type="news",
+                language="en",
+                ingested_at=int(_time.time() * 1000),
+                source_id=source,
+                title=title,
+                content=content,
+                created_at=created_ms,
+                metadata=meta,
+            )
+            records = run_position_pipeline(doc, con_rw)
+            con_rw.close()
+        except Exception as exc:
+            con_rw.close()
+            return {"error": f"position extraction failed: {exc}"}
+        return {
+            "stage": "positions",
+            "document_id": doc_id,
+            "positions_extracted": len(records),
+            "positions": [
+                {
+                    "actor": r.actor,
+                    "topic": r.topic,
+                    "confidence": round(r.confidence, 4),
+                    "text_preview": r.position_text[:CONTENT_PREVIEW],
+                }
+                for r in records[:MAX_LIST]
+            ],
+        }
+
     return {
         "error": f"unknown stage {stage!r}",
-        "valid_stages": ["fetch", "sentiment", "store", "ingest"],
+        "valid_stages": ["fetch", "sentiment", "store", "ingest", "positions"],
     }
 
 
@@ -524,6 +613,82 @@ def trace_article(id: str) -> dict:
         trace["object_store"] = {"status": "no S3_ENDPOINT_URL configured"}
 
     return trace
+
+
+@mcp.tool
+def query_positions(
+    actor: Optional[str] = None,
+    topic: Optional[str] = None,
+    source_type: Optional[str] = None,
+    limit: int = 10,
+) -> dict:
+    """Query the ``policy_positions`` table for actor policy commitments (#110).
+
+    Returns compact position summaries — never full content payloads.
+    Use ``run_stage("positions", input_ref=<id>)`` to first populate the table
+    for a specific document.
+
+    Args:
+        actor:       ILIKE filter on the actor name (e.g. "government", "Johnson").
+        topic:       ILIKE filter on topic (e.g. "economy", "healthcare", "law").
+        source_type: Exact filter on source type (news/blog/paper/transcript/book/note).
+        limit:       Max rows to return (capped at 25).
+    """
+    limit = max(1, min(int(limit), MAX_LIST))
+    try:
+        con = _warehouse_ro()
+    except Exception as exc:
+        return {"error": f"warehouse unavailable: {exc}"}
+
+    where_parts: list[str] = []
+    params: list[Any] = []
+    if actor:
+        where_parts.append("actor ILIKE ?")
+        params.append(f"%{actor}%")
+    if topic:
+        where_parts.append("topic ILIKE ?")
+        params.append(f"%{topic}%")
+    if source_type:
+        where_parts.append("source_type = ?")
+        params.append(source_type)
+    where_clause = ("WHERE " + " AND ".join(where_parts)) if where_parts else ""
+    params.append(limit)
+
+    try:
+        rows = con.execute(
+            f"""
+            SELECT position_id, actor, topic, source_type, document_id,
+                   position_date, confidence,
+                   LEFT(position_text, {CONTENT_PREVIEW}) AS preview
+            FROM policy_positions
+            {where_clause}
+            ORDER BY position_date DESC NULLS LAST, confidence DESC
+            LIMIT ?
+            """,
+            params,
+        ).fetchall()
+        con.close()
+    except Exception as exc:
+        con.close()
+        return {"error": f"query failed: {exc}", "hint": "table may not exist yet — run ensure_schema"}
+
+    return {
+        "filters": {k: v for k, v in {"actor": actor, "topic": topic, "source_type": source_type}.items() if v},
+        "count": len(rows),
+        "positions": [
+            {
+                "position_id": r[0],
+                "actor": r[1],
+                "topic": r[2],
+                "source_type": r[3],
+                "document_id": r[4],
+                "date": r[5] or "",
+                "confidence": round(float(r[6] or 0), 4),
+                "text_preview": r[7],
+            }
+            for r in rows
+        ],
+    }
 
 
 if __name__ == "__main__":

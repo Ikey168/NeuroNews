@@ -87,6 +87,18 @@ CREATE TABLE IF NOT EXISTS stance_drift_events (
     detected_at      VARCHAR,
     window_pair      VARCHAR
 );
+
+CREATE TABLE IF NOT EXISTS policy_positions (
+    position_id    VARCHAR PRIMARY KEY,
+    document_id    VARCHAR NOT NULL,
+    source_type    VARCHAR NOT NULL,
+    actor          VARCHAR NOT NULL,
+    topic          VARCHAR NOT NULL,
+    position_text  VARCHAR NOT NULL,
+    position_date  VARCHAR,
+    confidence     DOUBLE,
+    extracted_at   VARCHAR
+);
 """
 
 # Each topic seeds a cluster of articles sharing a leading title word (the
