@@ -213,6 +213,32 @@ export interface ConflictPair {
   source_count: number;
 }
 
+export interface ControversyNode {
+  id: string;
+  label: string;
+  source: string;
+  source_type: string;
+  topic: string;
+  date: string | null;
+  claim_text: string;
+  confidence: number;
+  document_id: string;
+}
+
+export interface ControversyEdge {
+  source: string;
+  target: string;
+  severity: number;
+  relation: string;
+}
+
+export interface ControversyGraph {
+  nodes: ControversyNode[];
+  edges: ControversyEdge[];
+  node_count: number;
+  edge_count: number;
+}
+
 export type SourceType = "news" | "blog" | "paper" | "book" | "transcript" | "web" | "note";
 
 export interface KnowledgeDocument {

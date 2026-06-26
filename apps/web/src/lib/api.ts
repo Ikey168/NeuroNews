@@ -208,6 +208,25 @@ export interface RawConflictPair {
   source_count: number;
 }
 
+export interface RawControversyNode {
+  id: string;
+  label: string;
+  source: string;
+  source_type: string;
+  topic: string;
+  date: string | null;
+  claim_text: string;
+  confidence: number;
+  document_id: string;
+}
+
+export interface RawControversyEdge {
+  source: string;
+  target: string;
+  severity: number;
+  relation: string;
+}
+
 export interface RawSourceRanking {
   source: string;
   source_type: string;
@@ -268,6 +287,9 @@ export const api = {
 
   argumentControversy: (params?: { topic?: string; source_type?: string; date_range?: string; limit?: number }) =>
     request<{ conflicts: RawConflictPair[]; count: number }>("/api/v1/arguments/controversy", params),
+
+  argumentControversyGraph: (params?: { topic?: string; source_type?: string; date_range?: string; limit?: number }) =>
+    request<{ nodes: RawControversyNode[]; edges: RawControversyEdge[]; node_count: number; edge_count: number }>("/api/v1/arguments/controversy/graph", params),
 
   argumentSourcesRanking: (params?: { source_type?: string; limit?: number }) =>
     request<{ sources: RawSourceRanking[]; count: number }>("/api/v1/arguments/sources/ranking", params),

@@ -1,5 +1,5 @@
 """
-Argument Mining API routes (Issues #90, #93, #95).
+Argument Mining API routes (Issues #90, #93, #95, #96).
 
 GET  /api/v1/arguments/frames                    — aggregate frame distribution
 GET  /api/v1/arguments/frames?document_id=       — frames for a specific document
@@ -15,6 +15,7 @@ GET  /api/v1/arguments/stance                    — stance distribution across 
 GET  /api/v1/arguments/stance/drift              — 7-bucket supportive-ratio time series
 GET  /api/v1/arguments/positions                 — actor positions derived from claims
 GET  /api/v1/arguments/controversy               — conflict pairs ranked by contradiction count
+GET  /api/v1/arguments/controversy/graph         — force-directed graph: nodes=claims, edges=contradictions (#96)
 GET  /api/v1/arguments/sources/ranking           — sources ranked by claim quality
 """
 from __future__ import annotations
@@ -927,6 +928,126 @@ async def get_controversy(
     ]
 
     return {"conflicts": conflicts, "count": len(conflicts)}
+
+
+# ---------------------------------------------------------------------------
+# Controversy graph endpoint (#96)
+# ---------------------------------------------------------------------------
+
+@router.get("/controversy/graph")
+async def get_controversy_graph(
+    topic: Optional[str] = Query(None, description="Filter by topic/category keyword"),
+    source_type: Optional[str] = Query(None, description="Filter by source type"),
+    date_range: Optional[str] = Query(None, description="Time window: 7d, 30d, 90d"),
+    limit: int = Query(60, ge=1, le=300),
+) -> Dict[str, Any]:
+    """
+    Return a force-directed graph of contested claims.
+
+    Nodes are individual claims involved in cross-source contradictions.
+    Edges are claim_evidence rows where relation='contradicts' and the two
+    claims come from different source outlets.
+
+    Node fields:  id, label, source, source_type, topic, date, claim_text, confidence
+    Edge fields:  source, target, severity (similarity_score ∈ [0,1]), relation
+    """
+    import threading
+
+    from src.database.local_analytics_connector import get_shared_connection
+
+    conn = get_shared_connection()
+    lock = getattr(conn, "_lock", None) or threading.Lock()
+
+    cutoff = _parse_date_cutoff(date_range)
+    conditions: list[str] = [
+        "e.relation = 'contradicts'",
+        "n1.source IS NOT NULL",
+        "n2.source IS NOT NULL",
+        "n1.source != n2.source",
+    ]
+    params: list[Any] = []
+
+    if source_type:
+        conditions.append("(c1.source_type = ? OR c2.source_type = ?)")
+        params.extend([source_type, source_type])
+    if topic:
+        conditions.append("(n1.category ILIKE ? OR n2.category ILIKE ?)")
+        params.extend([f"%{topic}%", f"%{topic}%"])
+    if cutoff:
+        conditions.append("(n1.publish_date >= ? OR n2.publish_date >= ?)")
+        params.extend([cutoff, cutoff])
+
+    params.append(limit)
+
+    with lock:
+        rows = conn.execute(
+            f"""
+            SELECT
+                c1.claim_id                          AS claim_id_a,
+                c1.claim_text                        AS text_a,
+                c1.source_type                       AS source_type_a,
+                c1.confidence                        AS confidence_a,
+                c1.extracted_at                      AS date_a,
+                COALESCE(n1.source, c1.source_type)  AS source_a,
+                COALESCE(n1.category, 'general')     AS topic_a,
+                c1.document_id                       AS doc_id_a,
+                c2.claim_id                          AS claim_id_b,
+                c2.claim_text                        AS text_b,
+                c2.source_type                       AS source_type_b,
+                c2.confidence                        AS confidence_b,
+                c2.extracted_at                      AS date_b,
+                COALESCE(n2.source, c2.source_type)  AS source_b,
+                COALESCE(n2.category, 'general')     AS topic_b,
+                c2.document_id                       AS doc_id_b,
+                COALESCE(e.similarity_score, 0.5)    AS severity
+            FROM claim_evidence e
+            JOIN argument_claims c1 ON e.claim_id             = c1.claim_id
+            JOIN argument_claims c2 ON e.evidence_document_id = c2.document_id
+            LEFT JOIN news_articles n1 ON c1.document_id       = n1.id
+            LEFT JOIN news_articles n2 ON c2.document_id       = n2.id
+            WHERE {' AND '.join(conditions)}
+            ORDER BY severity DESC
+            LIMIT ?
+            """,
+            params,
+        ).fetchall()
+
+    nodes: dict[str, Any] = {}
+    edges: list[dict[str, Any]] = []
+
+    for r in rows:
+        (
+            cid_a, txt_a, stype_a, conf_a, date_a, src_a, topic_a, doc_a,
+            cid_b, txt_b, stype_b, conf_b, date_b, src_b, topic_b, doc_b,
+            severity,
+        ) = r
+        if cid_a not in nodes:
+            nodes[cid_a] = {
+                "id": cid_a, "label": src_a, "source": src_a,
+                "source_type": stype_a, "topic": topic_a,
+                "date": str(date_a) if date_a else None,
+                "claim_text": txt_a,
+                "confidence": float(conf_a) if conf_a is not None else 0.5,
+                "document_id": doc_a,
+            }
+        if cid_b not in nodes:
+            nodes[cid_b] = {
+                "id": cid_b, "label": src_b, "source": src_b,
+                "source_type": stype_b, "topic": topic_b,
+                "date": str(date_b) if date_b else None,
+                "claim_text": txt_b,
+                "confidence": float(conf_b) if conf_b is not None else 0.5,
+                "document_id": doc_b,
+            }
+        edges.append({
+            "source": cid_a,
+            "target": cid_b,
+            "severity": round(float(severity), 3),
+            "relation": "contradicts",
+        })
+
+    node_list = list(nodes.values())
+    return {"nodes": node_list, "edges": edges, "node_count": len(node_list), "edge_count": len(edges)}
 
 
 # ---------------------------------------------------------------------------
