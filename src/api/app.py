@@ -24,6 +24,7 @@ REPORT_ROUTES_AVAILABLE = False
 ALERT_ROUTES_AVAILABLE = False
 ARGUMENT_ROUTES_AVAILABLE = False
 KG_STREAM_ROUTES_AVAILABLE = False
+ENTITY_CORRECTION_ROUTES_AVAILABLE = False
 
 # Store imported modules globally
 _imported_modules = {}
@@ -294,6 +295,19 @@ def try_import_kg_stream_routes():
         return False
 
 
+def try_import_entity_correction_routes():
+    """Try to import user-driven entity correction routes (issue #44)."""
+    global ENTITY_CORRECTION_ROUTES_AVAILABLE
+    try:
+        from src.api.routes import entity_correction_routes
+        _imported_modules['entity_correction_routes'] = entity_correction_routes
+        ENTITY_CORRECTION_ROUTES_AVAILABLE = True
+        return True
+    except ImportError:
+        ENTITY_CORRECTION_ROUTES_AVAILABLE = False
+        return False
+
+
 def try_import_report_routes():
     """Try to import report generation routes (issues #51, #52)."""
     global REPORT_ROUTES_AVAILABLE
@@ -345,6 +359,7 @@ def check_all_imports():
     try_import_alert_routes()
     try_import_argument_routes()
     try_import_kg_stream_routes()
+    try_import_entity_correction_routes()
     _load_domain_packs()
 
 
@@ -631,6 +646,13 @@ def include_optional_routers(app):
             app.include_router(kg_stream_routes.router)
             routers_included += 1
 
+    # Include entity correction routes (issue #44)
+    if ENTITY_CORRECTION_ROUTES_AVAILABLE:
+        entity_correction_routes = _imported_modules.get('entity_correction_routes')
+        if entity_correction_routes:
+            app.include_router(entity_correction_routes.router)
+            routers_included += 1
+
     return routers_included
 
 
@@ -718,6 +740,7 @@ async def root():
             "influence_analysis": INFLUENCE_ANALYSIS_AVAILABLE,
             "document_routes": DOCUMENT_ROUTES_AVAILABLE,
             "kg_stream": KG_STREAM_ROUTES_AVAILABLE,
+            "entity_corrections": ENTITY_CORRECTION_ROUTES_AVAILABLE,
         },
     }
 
