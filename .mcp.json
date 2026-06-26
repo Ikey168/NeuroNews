@@ -116,6 +116,14 @@
         "tools/sources_mcp/server.py"
       ],
       "env": {}
+    },
+    "neuronews-security": {
+      "type": "stdio",
+      "command": "python3",
+      "args": [
+        "tools/security_mcp/server.py"
+      ],
+      "env": {}
     }
   }
 }

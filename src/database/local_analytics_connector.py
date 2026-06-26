@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import logging
 import os
+import stat
 import threading
 from pathlib import Path
 from typing import Any, List, Optional, Sequence
@@ -51,6 +52,22 @@ def _default_db_path() -> str:
     return str(repo_root / "data" / "neuronews.duckdb")
 
 
+def _enforce_db_permissions(path: str) -> None:
+    """Set 0600 on the DB file and warn if it was wider than that."""
+    try:
+        mode = os.stat(path).st_mode & 0o777
+        if mode & 0o077:  # group or other bits set
+            logger.warning(
+                "Database file %s has permissions %s — expected 0600. "
+                "Tightening to 0600 to prevent unauthorised reads.",
+                path,
+                oct(mode),
+            )
+        os.chmod(path, 0o600)
+    except OSError as exc:
+        logger.debug("Could not check/set DB file permissions: %s", exc)
+
+
 def get_shared_connection() -> duckdb.DuckDBPyConnection:
     """Return the process-wide DuckDB connection, creating + seeding it once."""
     global _CONNECTION
@@ -62,6 +79,7 @@ def get_shared_connection() -> duckdb.DuckDBPyConnection:
                 logger.info("Opening local analytics warehouse at %s", path)
                 conn = duckdb.connect(path)
                 ensure_schema_and_seed(conn)
+                _enforce_db_permissions(path)
                 _CONNECTION = conn
     return _CONNECTION
 
