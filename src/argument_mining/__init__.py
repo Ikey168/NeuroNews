@@ -9,4 +9,5 @@ Entry points:
     from src.argument_mining.position_tracker import check_position_followthrough, run_followthrough_batch
     from src.argument_mining.conflict_graph import compute_claim_conflicts, build_conflict_graph, cosine_similarity
     from src.argument_mining.attribution import classify_attribution, run_attribution_batch
+    from src.argument_mining.metadata import extract_actors, store_actors, run_actor_batch
 """

@@ -289,6 +289,24 @@ export interface RawSourceStance {
   window_end: string | null;
 }
 
+export interface RawActor {
+  document_id: string;
+  source_type: string;
+  actor_name: string;
+  entity_id: string;
+  role: "speaker" | "subject" | "author";
+  confidence: number | null;
+  extracted_at: string | null;
+}
+
+export interface RawActorSummary {
+  actor_name: string;
+  entity_id: string;
+  role: "speaker" | "subject" | "author";
+  doc_count: number;
+  avg_confidence: number;
+}
+
 // ---------- endpoint calls ----------
 
 export const api = {
@@ -356,4 +374,10 @@ export const api = {
 
   argumentFramesBySource: (params?: { source?: string; source_type?: string; topic?: string; date_range?: string; limit?: number }) =>
     request<{ sources: RawFrameSource[]; count: number }>("/api/v1/arguments/frames/source", params),
+
+  argumentActors: (params?: { document_id?: string; source_type?: string; role?: string; actor_name?: string; limit?: number }) =>
+    request<{ actors: RawActor[]; count: number }>("/api/v1/arguments/actors", params),
+
+  argumentActorsSummary: (params?: { source_type?: string; role?: string; limit?: number }) =>
+    request<{ actors: RawActorSummary[]; count: number }>("/api/v1/arguments/actors/summary", params),
 };

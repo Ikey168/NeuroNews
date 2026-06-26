@@ -121,6 +121,17 @@ CREATE TABLE IF NOT EXISTS claim_conflicts (
     computed_at     VARCHAR,
     PRIMARY KEY (claim_id_a, claim_id_b)
 );
+
+CREATE TABLE IF NOT EXISTS document_actors (
+    document_id  VARCHAR NOT NULL,
+    source_type  VARCHAR NOT NULL,
+    actor_name   VARCHAR NOT NULL,
+    entity_id    VARCHAR,
+    role         VARCHAR NOT NULL,
+    confidence   DOUBLE,
+    extracted_at VARCHAR,
+    PRIMARY KEY (document_id, actor_name, role)
+);
 """
 
 # Each topic seeds a cluster of articles sharing a leading title word (the
