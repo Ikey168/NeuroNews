@@ -109,6 +109,18 @@ CREATE TABLE IF NOT EXISTS position_updates (
     confidence     DOUBLE,
     detected_at    VARCHAR
 );
+
+CREATE TABLE IF NOT EXISTS claim_conflicts (
+    claim_id_a      VARCHAR NOT NULL,
+    claim_id_b      VARCHAR NOT NULL,
+    conflict_type   VARCHAR NOT NULL,
+    similarity_score DOUBLE,
+    source_type_a   VARCHAR,
+    source_type_b   VARCHAR,
+    topic           VARCHAR,
+    computed_at     VARCHAR,
+    PRIMARY KEY (claim_id_a, claim_id_b)
+);
 """
 
 # Each topic seeds a cluster of articles sharing a leading title word (the

@@ -66,11 +66,17 @@
       "command": "python3",
       "args": [
         "tools/schema_mcp/server.py"
+      ],
+      "env": {}
+    },
     "neuronews-blog-feeds": {
       "type": "stdio",
       "command": "python3",
       "args": [
         "tools/blog_mcp/server.py"
+      ],
+      "env": {}
+    },
     "neuronews-domain-packs": {
       "type": "stdio",
       "command": "python3",
@@ -84,6 +90,14 @@
       "command": "python3",
       "args": [
         "tools/dataset_mcp/server.py"
+      ],
+      "env": {}
+    },
+    "neuronews-arguments": {
+      "type": "stdio",
+      "command": "python3",
+      "args": [
+        "tools/argument_mcp/server.py"
       ],
       "env": {}
     }

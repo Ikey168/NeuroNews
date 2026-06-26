@@ -19,6 +19,8 @@ Tools:
   query_positions(actor?, topic?, ...)      -> query policy_positions table for actor commitments (#110)
   query_position_updates(position_id?, ...) -> query position_updates follow-through events (#111)
   trigger_followthrough_check(limit?)       -> run nightly follow-through batch on-demand (#111)
+  query_conflicts(topic?, source_type?, ...) -> query claim_conflicts table for conflict pairs (#112)
+  compute_conflicts(limit?, date_range?)    -> run semantic-similarity conflict detection batch (#112)
 
 Design constraints (learned the hard way in this repo):
   * Lazy imports inside tools. The top of this module imports only stdlib +
@@ -800,6 +802,121 @@ def trigger_followthrough_check(limit: int = 50) -> dict:
         con = _warehouse_rw()
         lock = threading.Lock()
         counts = run_followthrough_batch(con, lock, limit=limit)
+        con.close()
+        return {"status": "ok", **counts}
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
+@mcp.tool
+def query_conflicts(
+    topic: Optional[str] = None,
+    source_type: Optional[str] = None,
+    conflict_type: Optional[str] = None,
+    limit: int = 15,
+) -> dict:
+    """Query ``claim_conflicts`` for semantic similarity conflict pairs (#112).
+
+    Returns compact summaries — claim text truncated to 100 chars each.
+    Populate the table first with ``compute_conflicts()``.
+
+    Args:
+        topic:         ILIKE filter on topic label.
+        source_type:   filter where source_type_a OR source_type_b matches.
+        conflict_type: exact filter — direct | implied.
+        limit:         max rows (capped at 25).
+    """
+    limit = max(1, min(int(limit), MAX_LIST))
+    try:
+        con = _warehouse_ro()
+    except Exception as exc:
+        return {"error": f"warehouse unavailable: {exc}"}
+
+    where_parts: list[str] = []
+    params: list[Any] = []
+    if topic:
+        where_parts.append("cf.topic ILIKE ?")
+        params.append(f"%{topic}%")
+    if source_type:
+        where_parts.append("(cf.source_type_a = ? OR cf.source_type_b = ?)")
+        params.extend([source_type, source_type])
+    if conflict_type:
+        where_parts.append("cf.conflict_type = ?")
+        params.append(conflict_type)
+    where_clause = ("WHERE " + " AND ".join(where_parts)) if where_parts else ""
+    params.append(limit)
+
+    try:
+        rows = con.execute(
+            f"""
+            SELECT cf.claim_id_a, cf.claim_id_b, cf.conflict_type,
+                   cf.similarity_score, cf.source_type_a, cf.source_type_b,
+                   cf.topic, cf.computed_at,
+                   LEFT(ca.claim_text, 100) AS text_a,
+                   LEFT(cb.claim_text, 100) AS text_b,
+                   COALESCE(na.source, ca.source_type) AS source_a,
+                   COALESCE(nb.source, cb.source_type) AS source_b
+            FROM claim_conflicts cf
+            JOIN argument_claims ca ON cf.claim_id_a = ca.claim_id
+            JOIN argument_claims cb ON cf.claim_id_b = cb.claim_id
+            LEFT JOIN news_articles na ON ca.document_id = na.id
+            LEFT JOIN news_articles nb ON cb.document_id = nb.id
+            {where_clause}
+            ORDER BY cf.similarity_score DESC
+            LIMIT ?
+            """,
+            params,
+        ).fetchall()
+        con.close()
+    except Exception as exc:
+        con.close()
+        return {"error": f"query failed: {exc}"}
+
+    return {
+        "filters": {k: v for k, v in {
+            "topic": topic, "source_type": source_type, "conflict_type": conflict_type,
+        }.items() if v},
+        "count": len(rows),
+        "conflicts": [
+            {
+                "claim_id_a":      r[0],
+                "claim_id_b":      r[1],
+                "conflict_type":   r[2],
+                "similarity_score": round(float(r[3] or 0), 4),
+                "source_type_a":   r[4],
+                "source_type_b":   r[5],
+                "topic":           r[6],
+                "computed_at":     r[7] or "",
+                "source_a":        r[10],
+                "source_b":        r[11],
+                "text_a_preview":  r[8],
+                "text_b_preview":  r[9],
+            }
+            for r in rows
+        ],
+    }
+
+
+@mcp.tool
+def compute_conflicts(limit: int = 300, date_range: Optional[str] = None) -> dict:
+    """Run semantic-similarity conflict detection on stored claims (#112).
+
+    Pairs claims within the same topic window, computes bag-of-words cosine
+    similarity, and stores conflicts (similarity ≥ 0.65 with opposing stance
+    signals) in ``claim_conflicts``.  Use ``query_conflicts()`` to read results.
+
+    Args:
+        limit:      max claims to scan (capped at 1000).
+        date_range: ISO date (YYYY-MM-DD); skip claims older than this.
+    """
+    limit = max(1, min(int(limit), 1000))
+    try:
+        import threading
+        from src.argument_mining.conflict_graph import compute_claim_conflicts
+
+        con = _warehouse_rw()
+        lock = threading.Lock()
+        counts = compute_claim_conflicts(con, lock, limit=limit, date_range=date_range)
         con.close()
         return {"status": "ok", **counts}
     except Exception as exc:
