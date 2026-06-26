@@ -26,6 +26,7 @@ ARGUMENT_ROUTES_AVAILABLE = False
 KG_STREAM_ROUTES_AVAILABLE = False
 ENTITY_CORRECTION_ROUTES_AVAILABLE = False
 SOURCE_COMPARISON_ROUTES_AVAILABLE = False
+METRICS_ROUTES_AVAILABLE = False
 
 # Store imported modules globally
 _imported_modules = {}
@@ -322,6 +323,19 @@ def try_import_source_comparison_routes():
         return False
 
 
+def try_import_metrics_routes():
+    """Try to import resource metrics routes (issue #334)."""
+    global METRICS_ROUTES_AVAILABLE
+    try:
+        from src.api.routes import metrics_routes
+        _imported_modules['metrics_routes'] = metrics_routes
+        METRICS_ROUTES_AVAILABLE = True
+        return True
+    except ImportError:
+        METRICS_ROUTES_AVAILABLE = False
+        return False
+
+
 def try_import_report_routes():
     """Try to import report generation routes (issues #51, #52)."""
     global REPORT_ROUTES_AVAILABLE
@@ -375,6 +389,7 @@ def check_all_imports():
     try_import_kg_stream_routes()
     try_import_entity_correction_routes()
     try_import_source_comparison_routes()
+    try_import_metrics_routes()
     _load_domain_packs()
 
 
@@ -675,6 +690,13 @@ def include_optional_routers(app):
             app.include_router(source_comparison_routes.router)
             routers_included += 1
 
+    # Include resource metrics routes (issue #334)
+    if METRICS_ROUTES_AVAILABLE:
+        metrics_routes = _imported_modules.get('metrics_routes')
+        if metrics_routes:
+            app.include_router(metrics_routes.router)
+            routers_included += 1
+
     return routers_included
 
 
@@ -727,7 +749,18 @@ def initialize_app():
     include_core_routers(app)
     include_optional_routers(app)
     include_versioned_routers(app)
-    
+
+    # Start background resource collector (best-effort)
+    if METRICS_ROUTES_AVAILABLE:
+        try:
+            from src.monitoring.resource_monitor import start_background_collector
+            start_background_collector()
+        except Exception:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Resource monitor could not be started", exc_info=True
+            )
+
     return app
 
 
@@ -764,6 +797,7 @@ async def root():
             "kg_stream": KG_STREAM_ROUTES_AVAILABLE,
             "entity_corrections": ENTITY_CORRECTION_ROUTES_AVAILABLE,
             "source_comparison": SOURCE_COMPARISON_ROUTES_AVAILABLE,
+            "resource_metrics": METRICS_ROUTES_AVAILABLE,
         },
     }
 

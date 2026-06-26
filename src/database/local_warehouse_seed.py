@@ -159,6 +159,16 @@ CREATE TABLE IF NOT EXISTS outlet_scores (
     computed_at       VARCHAR,
     PRIMARY KEY (source, source_type, score_date)
 );
+
+CREATE TABLE IF NOT EXISTS resource_metrics (
+    id           VARCHAR PRIMARY KEY,
+    sampled_at   TIMESTAMP NOT NULL,
+    metric_name  VARCHAR NOT NULL,
+    value        DOUBLE NOT NULL,
+    unit         VARCHAR NOT NULL,
+    pid          INTEGER,
+    process_name VARCHAR
+);
 """
 
 # Each topic seeds a cluster of articles sharing a leading title word (the

@@ -124,6 +124,14 @@
         "tools/security_mcp/server.py"
       ],
       "env": {}
+    },
+    "neuronews-monitoring": {
+      "type": "stdio",
+      "command": "python3",
+      "args": [
+        "tools/monitoring_mcp/server.py"
+      ],
+      "env": {}
     }
   }
 }
