@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { fonts, palette, colors, ACCENT, accentSoft, accentBorder } from "../theme";
-import { useArgumentClaims, useArgumentStance, useArgumentFrames, useArgumentPositions, useArgumentControversy, useArgumentControversyGraph, useArgumentStanceSources, useArgumentStanceDrift, useArgumentFramesBySource, useOutletClusters } from "../lib/queries";
+import { useArgumentClaims, useArgumentStance, useArgumentFrames, useArgumentPositions, useArgumentControversy, useArgumentControversyGraph, useArgumentStanceSources, useArgumentStanceDrift, useArgumentFramesBySource, useOutletClusters, useOutletRanking } from "../lib/queries";
 import PageHeader from "../components/PageHeader";
 import SourceBadge from "../components/SourceBadge";
 import Sparkline from "../components/charts/Sparkline";
-import type { ArgumentTab, SourceType, StanceSummary, ControversyNode, ControversyEdge, SourceStance, StanceDriftEvent, FrameSource, PositionUpdate, UpdateType, OutletCluster } from "../types";
+import type { ArgumentTab, SourceType, StanceSummary, ControversyNode, ControversyEdge, SourceStance, StanceDriftEvent, FrameSource, PositionUpdate, UpdateType, OutletCluster, OutletScore } from "../types";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -1436,6 +1436,151 @@ function OutletClusterScatter({ outlets }: { outlets: OutletCluster[] }) {
   );
 }
 
+// ─── Outlet ranking table (#116) ─────────────────────────────────────────────
+
+type SortKey = "composite_score" | "frame_diversity" | "attribution_rate" | "stance_neutrality";
+
+function ScoreBar({ value, color }: { value: number | null; color: string }) {
+  const v = value ?? 0;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+      <div style={{ flex: 1, height: 5, borderRadius: 3, background: colors.border, overflow: "hidden" }}>
+        <div style={{ width: `${Math.round(v * 100)}%`, height: "100%", background: color, borderRadius: 3 }} />
+      </div>
+      <span style={{ fontFamily: fonts.mono, fontSize: 10, color, minWidth: 28, textAlign: "right" }}>
+        {value !== null ? `${Math.round(v * 100)}` : "—"}
+      </span>
+    </div>
+  );
+}
+
+function OutletRankingTable({ sourceType }: { sourceType: string }) {
+  const [sortBy, setSortBy] = useState<SortKey>("composite_score");
+  const params = { ...(sourceType !== "all" ? { source_type: sourceType } : {}), sort_by: sortBy };
+  const { data: outlets, source: dataSource, isLoading } = useOutletRanking(params);
+
+  const sorted = [...outlets].sort((a, b) => (b[sortBy] ?? 0) - (a[sortBy] ?? 0));
+
+  const SORT_COLS: Array<{ key: SortKey; label: string; color: string }> = [
+    { key: "composite_score",   label: "Score",       color: ACCENT },
+    { key: "frame_diversity",   label: "Diversity",   color: palette.teal },
+    { key: "attribution_rate",  label: "Attribution", color: palette.blue },
+    { key: "stance_neutrality", label: "Neutrality",  color: palette.violet },
+  ];
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ fontFamily: fonts.grotesk, fontWeight: 600, fontSize: 14 }}>
+          Outlet Transparency Ranking
+        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <SourceBadge source={dataSource} isLoading={isLoading} />
+        </div>
+      </div>
+
+      {/* Sort controls */}
+      <div style={{ display: "flex", gap: 5 }}>
+        {SORT_COLS.map(({ key, label, color }) => {
+          const active = sortBy === key;
+          return (
+            <button key={key} onClick={() => setSortBy(key)} style={{
+              fontFamily: fonts.mono, fontSize: 10, padding: "3px 9px", borderRadius: 5,
+              border: active ? `1px solid ${color}80` : `1px solid ${colors.border2}`,
+              background: active ? `${color}18` : "transparent",
+              color: active ? color : palette.dim, cursor: "pointer", letterSpacing: "0.05em",
+            }}>
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {sorted.length === 0 ? (
+        <div style={{ padding: "18px 0", textAlign: "center", color: palette.dim, fontFamily: fonts.mono, fontSize: 11 }}>
+          No ranking data. Run <code style={{ color: ACCENT }}>POST /api/v1/arguments/outlets/score</code> to compute.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {sorted.map((o: OutletScore, i) => {
+            const stColor = ST_COLORS_SHARED[o.source_type] ?? palette.dim;
+            const score = o.composite_score;
+            const scoreColor = score === null ? palette.dim
+              : score >= 0.7 ? palette.pos
+              : score >= 0.5 ? palette.amber
+              : palette.neg;
+            return (
+              <div key={`${o.source_type}::${o.source}`} style={{
+                ...card, padding: "10px 14px",
+                display: "grid",
+                gridTemplateColumns: "28px 1fr 140px 96px",
+                alignItems: "center", gap: 10,
+              }}>
+                {/* Rank */}
+                <span style={{ fontFamily: fonts.mono, fontSize: 11, color: palette.dim, textAlign: "center" }}>
+                  #{i + 1}
+                </span>
+
+                {/* Name + badges + score bars */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: "50%", background: stColor, flexShrink: 0 }} />
+                    <span style={{ fontFamily: fonts.mono, fontSize: 12, color: colors.text }}>{o.source}</span>
+                    <span style={{
+                      fontFamily: fonts.mono, fontSize: 9, letterSpacing: "0.08em",
+                      color: stColor, background: `${stColor}18`, border: `1px solid ${stColor}40`,
+                      borderRadius: 4, padding: "1px 5px", textTransform: "uppercase",
+                    }}>{o.source_type}</span>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    <ScoreBar value={o.frame_diversity}   color={palette.teal} />
+                    <ScoreBar value={o.attribution_rate}  color={palette.blue} />
+                    <ScoreBar value={o.stance_neutrality} color={palette.violet} />
+                  </div>
+                </div>
+
+                {/* Trend sparkline */}
+                <div>
+                  {o.trend.length > 1
+                    ? <Sparkline values={o.trend} color={scoreColor} />
+                    : <div style={{ height: 30 }} />}
+                  <div style={{ fontFamily: fonts.mono, fontSize: 9, color: palette.dim, textAlign: "center", marginTop: 2 }}>
+                    {o.doc_count} docs · {o.claim_count} claims
+                  </div>
+                </div>
+
+                {/* Composite score */}
+                <div style={{ textAlign: "center" }}>
+                  <div style={{
+                    fontFamily: fonts.mono, fontSize: 20, fontWeight: 700, color: scoreColor, lineHeight: 1,
+                  }}>
+                    {score !== null ? Math.round(score * 100) : "—"}
+                  </div>
+                  <div style={{ fontFamily: fonts.mono, fontSize: 9, color: palette.dim, marginTop: 2 }}>/ 100</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Dimension legend */}
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+        {[
+          { label: "Frame diversity",  color: palette.teal   },
+          { label: "Attribution rate", color: palette.blue   },
+          { label: "Stance neutrality",color: palette.violet },
+        ].map(({ label, color }) => (
+          <div key={label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <div style={{ width: 8, height: 3, borderRadius: 2, background: color }} />
+            <span style={{ fontFamily: fonts.mono, fontSize: 10, color: palette.dim }}>{label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Sources panel ────────────────────────────────────────────────────────────
 
 function SourcesPanel({ sourceType }: { sourceType: string }) {
@@ -1462,8 +1607,13 @@ function SourcesPanel({ sourceType }: { sourceType: string }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* Outlet transparency ranking (#116) */}
+      <OutletRankingTable sourceType={sourceType} />
+
       {/* Editorial framing cluster scatter plot (#115) */}
-      <OutletClusterScatter outlets={clusters} />
+      <div style={{ borderTop: `1px solid ${colors.border}`, paddingTop: 14 }}>
+        <OutletClusterScatter outlets={clusters} />
+      </div>
 
       {/* Separator */}
       <div style={{ borderTop: `1px solid ${colors.border}`, paddingTop: 14 }}>

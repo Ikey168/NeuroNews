@@ -307,6 +307,20 @@ export interface RawActorSummary {
   avg_confidence: number;
 }
 
+export interface RawOutletScore {
+  rank: number;
+  source: string;
+  source_type: string;
+  score_date: string;
+  frame_diversity: number | null;
+  attribution_rate: number | null;
+  stance_neutrality: number | null;
+  composite_score: number | null;
+  doc_count: number;
+  claim_count: number;
+  trend: number[];
+}
+
 export interface RawOutletCluster {
   source: string;
   source_type: string;
@@ -395,4 +409,7 @@ export const api = {
 
   argumentOutletClusters: (params?: { source_type?: string; cluster_id?: number; limit?: number }) =>
     request<{ outlets: RawOutletCluster[]; count: number }>("/api/v1/arguments/outlets/clusters", params),
+
+  argumentOutletRanking: (params?: { source_type?: string; sort_by?: string; limit?: number }) =>
+    request<{ outlets: RawOutletScore[]; count: number }>("/api/v1/arguments/outlets/ranking", params),
 };

@@ -26,6 +26,9 @@ Tools (non-overlapping with pipeline_mcp which owns positions/conflicts):
                        cluster_id?)
   trigger_outlet_clustering(date_range?,  -> embed+cluster outlets, persist (RW)
                             k_min?, k_max?)
+  list_outlet_scores(source_type?,       -> latest transparency scores per outlet
+                     sort_by?, limit?)
+  trigger_outlet_scoring(date_range?)    -> compute+store weekly scores (RW)
 
 Design constraints (same as pipeline_mcp):
   * Lazy imports inside each tool — top-level imports are stdlib + fastmcp only.
@@ -814,6 +817,119 @@ def trigger_outlet_clustering(
         result = run_cluster_pipeline(
             rw_conn, lock, date_range=date_range, k_min=k_min, k_max=k_max
         )
+        rw_conn.close()
+        return result
+    except Exception as e:
+        return {"error": f"write connection failed — warehouse may be locked: {e}"}
+
+
+@mcp.tool
+def list_outlet_scores(
+    source_type: Optional[str] = None,
+    sort_by: str = "composite_score",
+    limit: int = 30,
+) -> dict:
+    """
+    Return latest weekly transparency scores for all outlets.
+
+    Each record includes frame_diversity, attribution_rate, stance_neutrality,
+    composite_score, doc_count, claim_count, and score_date.
+
+    Args:
+        source_type: Filter by content type (news|blog|paper|transcript…).
+        sort_by:     composite_score|frame_diversity|attribution_rate|stance_neutrality.
+        limit:       Max rows (default 30).
+    """
+    conn, err = _warehouse_ro()
+    if err or conn is None:
+        return {"error": err or "no connection"}
+
+    _SORT_COLS = {"composite_score", "frame_diversity", "attribution_rate", "stance_neutrality"}
+    sort_col = sort_by if sort_by in _SORT_COLS else "composite_score"
+
+    conditions: list[str] = []
+    params: list = []
+    if source_type:
+        conditions.append("source_type = ?")
+        params.append(source_type)
+
+    where_extra = f"AND {' AND '.join(conditions)}" if conditions else ""
+    params.append(limit)
+
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT source, source_type, score_date,
+                   frame_diversity, attribution_rate, stance_neutrality,
+                   composite_score, doc_count, claim_count, computed_at
+            FROM outlet_scores os
+            WHERE (source, source_type, score_date) IN (
+                SELECT source, source_type, MAX(score_date)
+                FROM outlet_scores
+                WHERE 1=1 {where_extra}
+                GROUP BY source, source_type
+            )
+            ORDER BY {sort_col} DESC NULLS LAST
+            LIMIT ?
+            """,
+            params,
+        ).fetchall()
+    except Exception as e:
+        return {"error": str(e)}
+
+    return {
+        "count": len(rows),
+        "outlets": [
+            {
+                "source":            r[0],
+                "source_type":       r[1],
+                "score_date":        r[2],
+                "frame_diversity":   round(r[3], 4) if r[3] is not None else None,
+                "attribution_rate":  round(r[4], 4) if r[4] is not None else None,
+                "stance_neutrality": round(r[5], 4) if r[5] is not None else None,
+                "composite_score":   round(r[6], 4) if r[6] is not None else None,
+                "doc_count":         r[7],
+                "claim_count":       r[8],
+                "computed_at":       r[9],
+            }
+            for r in rows
+        ],
+    }
+
+
+@mcp.tool
+def trigger_outlet_scoring(date_range: str = "90d") -> dict:
+    """
+    Compute weekly transparency scores for all outlets and persist to ``outlet_scores``.
+
+    Idempotent — re-running in the same ISO week overwrites that week's row.
+
+    Scores three dimensions per outlet:
+      - frame_diversity:   Shannon entropy of 7-frame distribution / log(7)
+      - attribution_rate:  % claims with attributed=True
+      - stance_neutrality: entropy of stance distribution / log(4)
+      - composite_score:   mean of the three
+
+    Args:
+        date_range: Data window: 7d|14d|30d|90d|180d|365d (default "90d").
+
+    Returns {"outlets_scored", "score_date", "top_outlet", "top_composite"}.
+    """
+    import os, threading, duckdb
+
+    try:
+        from src.argument_mining.outlet_scorer import run_scorer_batch  # type: ignore[import]
+    except ImportError as e:
+        return {"error": f"outlet_scorer module unavailable: {e}"}
+
+    db_path = os.environ.get(
+        "NEURONEWS_DB_PATH",
+        str(REPO_ROOT / "data" / "local_warehouse.duckdb"),
+    )
+    try:
+        rw_conn = duckdb.connect(db_path, read_only=False)
+        lock = threading.Lock()
+        result = run_scorer_batch(rw_conn, lock, date_range=date_range)
         rw_conn.close()
         return result
     except Exception as e:

@@ -145,6 +145,20 @@ CREATE TABLE IF NOT EXISTS outlet_clusters (
     computed_at    VARCHAR,
     PRIMARY KEY (source, source_type)
 );
+
+CREATE TABLE IF NOT EXISTS outlet_scores (
+    source            VARCHAR NOT NULL,
+    source_type       VARCHAR NOT NULL,
+    score_date        VARCHAR NOT NULL,
+    frame_diversity   DOUBLE,
+    attribution_rate  DOUBLE,
+    stance_neutrality DOUBLE,
+    composite_score   DOUBLE,
+    doc_count         INTEGER,
+    claim_count       INTEGER,
+    computed_at       VARCHAR,
+    PRIMARY KEY (source, source_type, score_date)
+);
 """
 
 # Each topic seeds a cluster of articles sharing a leading title word (the
