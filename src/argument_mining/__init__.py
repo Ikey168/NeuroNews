@@ -11,4 +11,5 @@ Entry points:
     from src.argument_mining.attribution import classify_attribution, run_attribution_batch
     from src.argument_mining.metadata import extract_actors, store_actors, run_actor_batch
     from src.argument_mining.outlet_clustering import run_cluster_pipeline, build_outlet_vectors, run_clustering
+    from src.argument_mining.outlet_scorer import compute_outlet_scores, run_scorer_batch
 """

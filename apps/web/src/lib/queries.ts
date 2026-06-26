@@ -32,8 +32,10 @@ import {
   mockSourceStances,
   mockDriftEvents,
   mockFramesBySource,
+  mockOutletRanking,
+  mockOutletClusters,
 } from "../data/mock";
-import type { RawClaim, RawStanceSummary, RawActorPosition, RawPositionUpdate, RawSourceStance, RawDriftEvent, RawFrameSource, RawActor, RawActorSummary, RawOutletCluster } from "./api";
+import type { RawClaim, RawStanceSummary, RawActorPosition, RawPositionUpdate, RawSourceStance, RawDriftEvent, RawFrameSource, RawActor, RawActorSummary, RawOutletCluster, RawOutletScore } from "./api";
 import { palette, ACCENT } from "../theme";
 import type {
   Article,
@@ -58,6 +60,7 @@ import type {
   DocumentActor,
   ActorSummary,
   OutletCluster,
+  OutletScore,
 } from "../types";
 
 export type Source = "live" | "demo";
@@ -445,8 +448,39 @@ export function useArgumentActors(params?: { document_id?: string; source_type?:
   );
 }
 
+export function useOutletRanking(params?: { source_type?: string; sort_by?: string }): Result<OutletScore[]> {
+  const key = `outletRanking-${params?.source_type ?? "all"}-${params?.sort_by ?? "composite_score"}`;
+  const fallback = params?.source_type && params.source_type !== "all"
+    ? mockOutletRanking.filter((o) => o.source_type === params.source_type)
+    : mockOutletRanking;
+  return useWithFallback(
+    key,
+    async (): Promise<OutletScore[]> => {
+      const res = await api.argumentOutletRanking(params);
+      if (!res.outlets.length) throw new Error("empty");
+      return res.outlets.map((r: RawOutletScore) => ({
+        rank:             r.rank,
+        source:           r.source,
+        source_type:      r.source_type as SourceType,
+        score_date:       r.score_date,
+        frame_diversity:  r.frame_diversity,
+        attribution_rate: r.attribution_rate,
+        stance_neutrality: r.stance_neutrality,
+        composite_score:  r.composite_score,
+        doc_count:        r.doc_count,
+        claim_count:      r.claim_count,
+        trend:            r.trend ?? [],
+      }));
+    },
+    fallback,
+  );
+}
+
 export function useOutletClusters(params?: { source_type?: string; cluster_id?: number }): Result<OutletCluster[]> {
   const key = `outletClusters-${params?.source_type ?? "all"}-${params?.cluster_id ?? ""}`;
+  const fallback = params?.source_type && params.source_type !== "all"
+    ? mockOutletClusters.filter((o) => o.source_type === params.source_type)
+    : mockOutletClusters;
   return useWithFallback(
     key,
     async (): Promise<OutletCluster[]> => {
@@ -464,7 +498,7 @@ export function useOutletClusters(params?: { source_type?: string; cluster_id?: 
         computed_at:   r.computed_at,
       }));
     },
-    [],
+    fallback,
   );
 }
 

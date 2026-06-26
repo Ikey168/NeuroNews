@@ -314,6 +314,20 @@ export interface ActorSummary {
   avg_confidence: number;
 }
 
+export interface OutletScore {
+  rank: number;
+  source: string;
+  source_type: SourceType;
+  score_date: string;
+  frame_diversity: number | null;
+  attribution_rate: number | null;
+  stance_neutrality: number | null;
+  composite_score: number | null;
+  doc_count: number;
+  claim_count: number;
+  trend: number[];
+}
+
 export interface OutletCluster {
   source: string;
   source_type: SourceType;

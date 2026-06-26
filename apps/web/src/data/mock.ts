@@ -24,6 +24,7 @@ import type {
   SourceStance,
   StanceDriftEvent,
   OutletCluster,
+  OutletScore,
 } from "../types";
 
 const NOW = Date.now();
@@ -485,5 +486,20 @@ export const mockOutletClusters: OutletCluster[] = [
   { source: "energy-transition.blog", source_type: "blog",       cluster_id: 2, cluster_label: "balanced-political-economic", pca_x:  0.18, pca_y:  1.32, dominant_frame: "political",   doc_count: 32, computed_at: null },
   // Cluster 3 — political-focused (policy commentary)
   { source: "Energy Policy Podcast",  source_type: "transcript", cluster_id: 3, cluster_label: "political-focused",         pca_x: -0.60, pca_y: -1.10, dominant_frame: "political",   doc_count: 18, computed_at: null },
+];
+
+// Outlet transparency rankings (#116) — three-dimension scores + sparkline trends
+// trend arrays simulate 6 weekly snapshots, oldest → newest
+export const mockOutletRanking: OutletScore[] = [
+  { rank: 1, source: "Nature Climate Change",  source_type: "paper",      score_date: "2025-06-23", frame_diversity: 0.74, attribution_rate: 0.88, stance_neutrality: 0.81, composite_score: 0.81, doc_count: 58, claim_count: 42, trend: [0.67, 0.70, 0.72, 0.75, 0.79, 0.81] },
+  { rank: 2, source: "Reuters",                source_type: "news",       score_date: "2025-06-23", frame_diversity: 0.71, attribution_rate: 0.82, stance_neutrality: 0.78, composite_score: 0.77, doc_count: 64, claim_count: 78, trend: [0.60, 0.65, 0.70, 0.73, 0.75, 0.77] },
+  { rank: 3, source: "Financial Times",        source_type: "news",       score_date: "2025-06-23", frame_diversity: 0.68, attribution_rate: 0.79, stance_neutrality: 0.72, composite_score: 0.73, doc_count: 68, claim_count: 83, trend: [0.55, 0.60, 0.65, 0.68, 0.70, 0.73] },
+  { rank: 4, source: "Bloomberg",              source_type: "news",       score_date: "2025-06-23", frame_diversity: 0.55, attribution_rate: 0.84, stance_neutrality: 0.74, composite_score: 0.71, doc_count: 69, claim_count: 91, trend: [0.58, 0.61, 0.64, 0.67, 0.69, 0.71] },
+  { rank: 5, source: "STAT News",              source_type: "news",       score_date: "2025-06-23", frame_diversity: 0.62, attribution_rate: 0.75, stance_neutrality: 0.66, composite_score: 0.68, doc_count: 35, claim_count: 31, trend: [0.56, 0.58, 0.60, 0.63, 0.66, 0.68] },
+  { rank: 6, source: "The Guardian",           source_type: "news",       score_date: "2025-06-23", frame_diversity: 0.70, attribution_rate: 0.58, stance_neutrality: 0.64, composite_score: 0.64, doc_count: 70, claim_count: 55, trend: [0.62, 0.63, 0.63, 0.64, 0.64, 0.64] },
+  { rank: 7, source: "Wired",                  source_type: "news",       score_date: "2025-06-23", frame_diversity: 0.58, attribution_rate: 0.61, stance_neutrality: 0.68, composite_score: 0.62, doc_count: 32, claim_count: 24, trend: [0.50, 0.53, 0.56, 0.58, 0.60, 0.62] },
+  { rank: 8, source: "energy-transition.blog", source_type: "blog",       score_date: "2025-06-23", frame_diversity: 0.64, attribution_rate: 0.42, stance_neutrality: 0.55, composite_score: 0.54, doc_count: 32, claim_count: 18, trend: [0.48, 0.49, 0.51, 0.52, 0.53, 0.54] },
+  { rank: 9, source: "IMF Working Papers",     source_type: "paper",      score_date: "2025-06-23", frame_diversity: 0.38, attribution_rate: 0.91, stance_neutrality: 0.60, composite_score: 0.63, doc_count: 24, claim_count: 44, trend: [0.55, 0.57, 0.59, 0.61, 0.62, 0.63] },
+  { rank:10, source: "Energy Policy Podcast",  source_type: "transcript", score_date: "2025-06-23", frame_diversity: 0.61, attribution_rate: 0.34, stance_neutrality: 0.52, composite_score: 0.49, doc_count: 18, claim_count: 12, trend: [0.44, 0.45, 0.46, 0.47, 0.48, 0.49] },
 ];
 

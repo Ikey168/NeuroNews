@@ -2116,3 +2116,124 @@ async def trigger_outlet_clustering(
     conn = get_shared_connection()
     lock = getattr(conn, "_lock", None) or threading.Lock()
     return run_cluster_pipeline(conn, lock, date_range=date_range, k_min=k_min, k_max=k_max)
+
+
+# ---------------------------------------------------------------------------
+# Outlet transparency scoring endpoints (#116)
+# ---------------------------------------------------------------------------
+
+@router.get("/outlets/ranking")
+async def get_outlets_ranking(
+    source_type: Optional[str] = Query(None, description="Filter by content type"),
+    sort_by: str = Query("composite_score",
+                         description="Sort key: composite_score|frame_diversity|attribution_rate|stance_neutrality"),
+    limit: int = Query(50, ge=1, le=200),
+) -> Dict[str, Any]:
+    """
+    Return outlets ranked by transparency score with weekly sparkline history.
+
+    Each record includes the latest scores for all three dimensions plus a
+    ``trend`` array (up to 8 weekly composite_score snapshots, oldest first)
+    suitable for rendering as a sparkline.
+
+    Run ``POST /outlets/score`` first to populate ``outlet_scores``.
+    """
+    import threading
+
+    from src.database.local_analytics_connector import get_shared_connection
+
+    _SORT_COLS = {"composite_score", "frame_diversity", "attribution_rate", "stance_neutrality"}
+    sort_col = sort_by if sort_by in _SORT_COLS else "composite_score"
+
+    conn = get_shared_connection()
+    lock = getattr(conn, "_lock", None) or threading.Lock()
+
+    conditions: list[str] = []
+    params: list[Any] = []
+    if source_type:
+        conditions.append("source_type = ?")
+        params.append(source_type)
+
+    where = f"AND {' AND '.join(conditions)}" if conditions else ""
+
+    # Latest snapshot per outlet
+    params.append(limit)
+    with lock:
+        latest = conn.execute(f"""
+            SELECT source, source_type, score_date,
+                   frame_diversity, attribution_rate, stance_neutrality,
+                   composite_score, doc_count, claim_count, computed_at
+            FROM outlet_scores os
+            WHERE (source, source_type, score_date) IN (
+                SELECT source, source_type, MAX(score_date)
+                FROM outlet_scores
+                WHERE 1=1 {where}
+                GROUP BY source, source_type
+            )
+            ORDER BY {sort_col} DESC NULLS LAST
+            LIMIT ?
+        """, params).fetchall()
+
+    if not latest:
+        return {"outlets": [], "count": 0}
+
+    # Fetch trend history for all returned outlets
+    outlet_keys = [(r[0], r[1]) for r in latest]
+    # Build a single query for all history rows
+    placeholders = ", ".join(["(?, ?)"] * len(outlet_keys))
+    flat_keys = [v for pair in outlet_keys for v in pair]
+    with lock:
+        history_rows = conn.execute(f"""
+            SELECT source, source_type, score_date, composite_score
+            FROM outlet_scores
+            WHERE (source, source_type) IN ({placeholders})
+            ORDER BY source, source_type, score_date
+        """, flat_keys).fetchall()
+
+    # Group history by (source, source_type)
+    trends: Dict[tuple, list] = {}
+    for r in history_rows:
+        key = (r[0], r[1])
+        trends.setdefault(key, []).append(float(r[3]) if r[3] is not None else 0.0)
+
+    outlets = []
+    for rank, r in enumerate(latest, start=1):
+        key = (r[0], r[1])
+        trend = trends.get(key, [float(r[6]) if r[6] is not None else 0.0])
+        outlets.append({
+            "rank":             rank,
+            "source":           r[0],
+            "source_type":      r[1],
+            "score_date":       r[2],
+            "frame_diversity":  round(r[3], 4) if r[3] is not None else None,
+            "attribution_rate": round(r[4], 4) if r[4] is not None else None,
+            "stance_neutrality": round(r[5], 4) if r[5] is not None else None,
+            "composite_score":  round(r[6], 4) if r[6] is not None else None,
+            "doc_count":        r[7],
+            "claim_count":      r[8],
+            "trend":            trend,
+        })
+
+    return {"outlets": outlets, "count": len(outlets)}
+
+
+@router.post("/outlets/score")
+async def trigger_outlet_scoring(
+    date_range: str = Query("90d",
+                            description="Data window for computing scores: 7d|30d|90d|180d|365d"),
+) -> Dict[str, Any]:
+    """
+    Compute weekly transparency scores for all outlets and persist to ``outlet_scores``.
+
+    Idempotent — re-running in the same ISO week overwrites that week's row.
+
+    Returns: outlets_scored, score_date, top_outlet, top_composite.
+    """
+    import threading
+
+    from src.database.local_analytics_connector import get_shared_connection
+    from src.argument_mining.outlet_scorer import run_scorer_batch
+
+    conn = get_shared_connection()
+    lock = getattr(conn, "_lock", None) or threading.Lock()
+    return run_scorer_batch(conn, lock, date_range=date_range)
