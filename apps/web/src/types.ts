@@ -164,7 +164,7 @@ export type ViewKey =
   | "timeline"
   | "arguments";
 
-export type ArgumentTab = "claims" | "stance" | "frames" | "positions" | "controversy";
+export type ArgumentTab = "claims" | "stance" | "frames" | "positions" | "controversy" | "sources";
 
 export interface ClaimResult {
   document_id: string;
@@ -187,6 +187,21 @@ export interface StanceSummary {
   total: number;
   by_source: Partial<Record<SourceType, { supportive: number; critical: number; neutral: number; ambiguous: number }>>;
   drift: number[];
+}
+
+export interface SourceStance {
+  source: string;
+  source_type: SourceType;
+  topic: string;
+  supportive: number;
+  critical: number;
+  neutral: number;
+  ambiguous: number;
+  total: number;
+  confidence: number | null;
+  document_count: number;
+  window_start: string | null;
+  window_end: string | null;
 }
 
 export interface FrameDistribution {

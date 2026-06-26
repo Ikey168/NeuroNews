@@ -238,6 +238,21 @@ export interface RawSourceRanking {
   evidence_citations: number;
 }
 
+export interface RawSourceStance {
+  source: string;
+  source_type: string;
+  topic: string;
+  supportive: number;
+  critical: number;
+  neutral: number;
+  ambiguous: number;
+  total: number;
+  confidence: number | null;
+  document_count: number;
+  window_start: string | null;
+  window_end: string | null;
+}
+
 // ---------- endpoint calls ----------
 
 export const api = {
@@ -296,4 +311,7 @@ export const api = {
 
   argumentSourcesRanking: (params?: { source_type?: string; limit?: number }) =>
     request<{ sources: RawSourceRanking[]; count: number }>("/api/v1/arguments/sources/ranking", params),
+
+  argumentStanceSources: (params?: { topic?: string; source?: string; source_type?: string; date_range?: string; limit?: number }) =>
+    request<{ sources: RawSourceStance[]; count: number }>("/api/v1/arguments/stance/sources", params),
 };

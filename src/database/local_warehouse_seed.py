@@ -64,6 +64,18 @@ CREATE TABLE IF NOT EXISTS claim_evidence (
     similarity_score     DOUBLE,
     found_at             VARCHAR
 );
+
+CREATE TABLE IF NOT EXISTS source_stances (
+    source         VARCHAR NOT NULL,
+    source_type    VARCHAR NOT NULL,
+    topic          VARCHAR NOT NULL,
+    stance         VARCHAR NOT NULL,
+    confidence     DOUBLE,
+    document_count INTEGER,
+    window_start   VARCHAR,
+    window_end     VARCHAR,
+    computed_at    VARCHAR
+);
 """
 
 # Each topic seeds a cluster of articles sharing a leading title word (the

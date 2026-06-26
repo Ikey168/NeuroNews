@@ -29,8 +29,9 @@ import {
   mockConflicts,
   mockFrameDistribution,
   mockControversyGraph,
+  mockSourceStances,
 } from "../data/mock";
-import type { RawClaim, RawStanceSummary, RawActorPosition } from "./api";
+import type { RawClaim, RawStanceSummary, RawActorPosition, RawSourceStance } from "./api";
 import { palette, ACCENT } from "../theme";
 import type {
   Article,
@@ -48,6 +49,7 @@ import type {
   FrameDistribution,
   SourceType,
   ControversyGraph,
+  SourceStance,
 } from "../types";
 
 export type Source = "live" | "demo";
@@ -331,6 +333,31 @@ export function useArgumentControversyGraph(params?: { topic?: string; source_ty
       return res;
     },
     mockControversyGraph,
+  );
+}
+
+export function useArgumentStanceSources(params?: { topic?: string; source?: string; source_type?: string; date_range?: string }): Result<SourceStance[]> {
+  const key = `argumentStanceSources-${params?.source_type ?? "all"}-${params?.topic ?? ""}`;
+  return useWithFallback(
+    key,
+    async (): Promise<SourceStance[]> => {
+      const res = await api.argumentStanceSources(params);
+      return res.sources.map((r: RawSourceStance) => ({
+        source: r.source,
+        source_type: r.source_type as SourceType,
+        topic: r.topic,
+        supportive: r.supportive,
+        critical: r.critical,
+        neutral: r.neutral,
+        ambiguous: r.ambiguous,
+        total: r.total,
+        confidence: r.confidence,
+        document_count: r.document_count,
+        window_start: r.window_start,
+        window_end: r.window_end,
+      }));
+    },
+    mockSourceStances,
   );
 }
 

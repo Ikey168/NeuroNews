@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { fonts, palette, colors, ACCENT, accentSoft, accentBorder } from "../theme";
-import { useArgumentClaims, useArgumentStance, useArgumentFrames, useArgumentPositions, useArgumentControversy, useArgumentControversyGraph } from "../lib/queries";
+import { useArgumentClaims, useArgumentStance, useArgumentFrames, useArgumentPositions, useArgumentControversy, useArgumentControversyGraph, useArgumentStanceSources } from "../lib/queries";
 import { mockFramesBySourceType } from "../data/mock";
 import PageHeader from "../components/PageHeader";
 import SourceBadge from "../components/SourceBadge";
 import Sparkline from "../components/charts/Sparkline";
-import type { ArgumentTab, SourceType, StanceSummary, ControversyNode, ControversyEdge } from "../types";
+import type { ArgumentTab, SourceType, StanceSummary, ControversyNode, ControversyEdge, SourceStance } from "../types";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -22,6 +22,7 @@ const SOURCE_TYPES: Array<{ key: string; label: string }> = [
 const TABS: Array<{ key: ArgumentTab; label: string; glyph: string }> = [
   { key: "claims",      label: "Claims",      glyph: "◈" },
   { key: "stance",      label: "Stance",      glyph: "◑" },
+  { key: "sources",     label: "Sources",     glyph: "◎" },
   { key: "frames",      label: "Frames",      glyph: "⬡" },
   { key: "positions",   label: "Positions",   glyph: "⤳" },
   { key: "controversy", label: "Controversy", glyph: "⊗" },
@@ -869,6 +870,133 @@ function ControversyPanel({ sourceType }: { sourceType: string }) {
   );
 }
 
+// ─── Sources panel (#99) ──────────────────────────────────────────────────────
+
+const ST_COLORS_SHARED: Record<string, string> = {
+  news: palette.blue, blog: palette.teal, paper: palette.violet,
+  transcript: palette.amber, book: palette.pos, note: palette.dim,
+};
+
+function StanceBar({ s }: { s: SourceStance }) {
+  const { supportive, critical, neutral, ambiguous, total } = s;
+  if (total === 0) return null;
+  const pct = (n: number) => Math.round((n / total) * 100);
+  return (
+    <div>
+      <div style={{ display: "flex", height: 7, borderRadius: 4, overflow: "hidden", gap: 1 }}>
+        {supportive > 0 && <div style={{ flex: supportive, background: STANCE_COLORS.supportive }} title={`Supportive ${pct(supportive)}%`} />}
+        {critical   > 0 && <div style={{ flex: critical,   background: STANCE_COLORS.critical   }} title={`Critical ${pct(critical)}%`} />}
+        {neutral    > 0 && <div style={{ flex: neutral,    background: STANCE_COLORS.neutral    }} title={`Neutral ${pct(neutral)}%`} />}
+        {ambiguous  > 0 && <div style={{ flex: ambiguous,  background: STANCE_COLORS.ambiguous  }} title={`Ambiguous ${pct(ambiguous)}%`} />}
+      </div>
+      <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+        {([["supportive", supportive], ["critical", critical], ["neutral", neutral], ["ambiguous", ambiguous]] as [string, number][])
+          .filter(([, n]) => n > 0)
+          .map(([key, n]) => (
+            <span key={key} style={{ fontFamily: fonts.mono, fontSize: 10, color: STANCE_COLORS[key as keyof typeof STANCE_COLORS] }}>
+              {pct(n)}% {key.slice(0, 3).toUpperCase()}
+            </span>
+          ))}
+      </div>
+    </div>
+  );
+}
+
+function SourcesPanel({ sourceType }: { sourceType: string }) {
+  const [selectedTopic, setSelectedTopic] = useState<string>("all");
+  const params = sourceType !== "all" ? { source_type: sourceType } : undefined;
+  const { data: stances, source, isLoading } = useArgumentStanceSources(params);
+
+  const topics = Array.from(new Set(stances.map((s) => s.topic))).sort();
+  const filtered = selectedTopic === "all" ? stances : stances.filter((s) => s.topic === selectedTopic);
+
+  // Aggregate per source across all selected topics
+  const bySource: Record<string, { source_type: string; rows: SourceStance[]; sup: number; crit: number; neu: number; amb: number; total: number }> = {};
+  for (const s of filtered) {
+    if (!bySource[s.source]) {
+      bySource[s.source] = { source_type: s.source_type, rows: [], sup: 0, crit: 0, neu: 0, amb: 0, total: 0 };
+    }
+    const b = bySource[s.source];
+    b.rows.push(s);
+    b.sup += s.supportive; b.crit += s.critical; b.neu += s.neutral; b.amb += s.ambiguous; b.total += s.total;
+  }
+  const sorted = Object.entries(bySource).sort(([, a], [, b]) => b.total - a.total);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ fontFamily: fonts.grotesk, fontWeight: 600, fontSize: 14 }}>Stance by Source</span>
+        <SourceBadge source={source} isLoading={isLoading} />
+      </div>
+
+      {/* Topic filter pills */}
+      <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+        {["all", ...topics].map((t) => {
+          const active = selectedTopic === t;
+          return (
+            <button key={t} onClick={() => setSelectedTopic(t)} style={{
+              fontFamily: fonts.mono, fontSize: 10, padding: "3px 9px", borderRadius: 5,
+              border: active ? `1px solid ${accentBorder(ACCENT)}` : `1px solid ${colors.border2}`,
+              background: active ? accentSoft(ACCENT) : "transparent",
+              color: active ? ACCENT : palette.dim, cursor: "pointer", letterSpacing: "0.05em",
+            }}>
+              {t === "all" ? "All Topics" : t}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Legend */}
+      <div style={{ display: "flex", gap: 14 }}>
+        {(["supportive", "critical", "neutral", "ambiguous"] as const).map((k) => (
+          <div key={k} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <div style={{ width: 8, height: 8, borderRadius: 2, background: STANCE_COLORS[k] }} />
+            <span style={{ fontFamily: fonts.mono, fontSize: 10, color: palette.dim, textTransform: "uppercase", letterSpacing: "0.07em" }}>{k}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Source cards */}
+      {sorted.length === 0 ? (
+        <div style={{ padding: 28, textAlign: "center", color: palette.dim, fontFamily: fonts.mono, fontSize: 12 }}>
+          No stance data available. Run stance aggregation to populate.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {sorted.map(([src, { source_type, sup, crit, neu, amb, total }]) => {
+            const color = ST_COLORS_SHARED[source_type] ?? palette.dim;
+            const row: SourceStance = {
+              source: src, source_type: source_type as SourceType,
+              topic: selectedTopic === "all" ? "all" : selectedTopic,
+              supportive: sup, critical: crit, neutral: neu, ambiguous: amb,
+              total, confidence: null, document_count: total,
+              window_start: null, window_end: null,
+            };
+            return (
+              <div key={src} style={{ ...card, padding: "10px 14px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                    <span style={{ fontFamily: fonts.mono, fontSize: 12, color: colors.text }}>{src}</span>
+                    <span style={{
+                      fontFamily: fonts.mono, fontSize: 9, letterSpacing: "0.08em",
+                      color, background: `${color}18`, border: `1px solid ${color}40`,
+                      borderRadius: 4, padding: "1px 5px", flexShrink: 0, textTransform: "uppercase",
+                    }}>{source_type}</span>
+                  </div>
+                  <span style={{ fontFamily: fonts.mono, fontSize: 10, color: palette.dim }}>{total} docs</span>
+                </div>
+                <StanceBar s={row} />
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Source type pill ─────────────────────────────────────────────────────────
 
 function SourceTypePill({ type }: { type: string }) {
@@ -920,7 +1048,7 @@ export default function Arguments() {
     <div>
       <PageHeader
         title="Argument Mining"
-        subtitle="Claims · stance · frames · positions · controversy — across all content types"
+        subtitle="Claims · stance · sources · frames · positions · controversy — across all content types"
         right={
           <FilterPills value={sourceType} onChange={setSourceType} />
         }
@@ -930,6 +1058,7 @@ export default function Arguments() {
 
       {tab === "claims"      && <ClaimsPanel      sourceType={sourceType} />}
       {tab === "stance"      && <StancePanel       sourceType={sourceType} />}
+      {tab === "sources"     && <SourcesPanel      sourceType={sourceType} />}
       {tab === "frames"      && <FramesPanel       sourceType={sourceType} />}
       {tab === "positions"   && <PositionsPanel    sourceType={sourceType} />}
       {tab === "controversy" && <ControversyPanel  sourceType={sourceType} />}

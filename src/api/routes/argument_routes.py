@@ -1,5 +1,5 @@
 """
-Argument Mining API routes (Issues #90, #93, #95, #96, #97).
+Argument Mining API routes (Issues #90, #93, #95, #96, #97, #99).
 
 GET  /api/v1/arguments/frames                    — aggregate frame distribution
 GET  /api/v1/arguments/frames?document_id=       — frames for a specific document
@@ -12,8 +12,9 @@ POST /api/v1/arguments/claims/extract            — run pipeline on a stored do
 GET  /api/v1/arguments/claims/{id}               — single claim with evidence links + factcheck verdict
 GET  /api/v1/arguments/claims/{id}/evidence      — evidence for a claim
 POST /api/v1/arguments/claims/{id}/factcheck     — trigger on-demand fact-check (#97)
-GET  /api/v1/arguments/stance                    — stance distribution across topics
+GET  /api/v1/arguments/stance/sources            — stance per (source, topic) from source_stances table (#99)
 GET  /api/v1/arguments/stance/drift              — 7-bucket supportive-ratio time series
+GET  /api/v1/arguments/stance                    — stance distribution across topics
 GET  /api/v1/arguments/positions                 — actor positions derived from claims
 GET  /api/v1/arguments/controversy               — conflict pairs ranked by contradiction count
 GET  /api/v1/arguments/controversy/graph         — force-directed graph: nodes=claims, edges=contradictions (#96)
@@ -568,8 +569,164 @@ async def factcheck_claim(claim_id: str) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Stance endpoints (#95)
+# Stance endpoints (#95, #99)
 # ---------------------------------------------------------------------------
+
+@router.get("/stance/sources")
+async def get_stance_by_source(
+    topic: Optional[str] = Query(None, description="Filter by topic/category keyword"),
+    source: Optional[str] = Query(None, description="Filter by publication source name"),
+    source_type: Optional[str] = Query(None, description="Filter by source type"),
+    date_range: Optional[str] = Query(None, description="Time window: 7d, 30d, 90d"),
+    limit: int = Query(30, ge=1, le=200),
+) -> Dict[str, Any]:
+    """
+    Return stance breakdown (supportive/critical/neutral/ambiguous) per source and topic,
+    aggregated from the `source_stances` table populated by the nightly stance aggregation job.
+
+    Falls back to deriving stances from `argument_claims` when the table is empty.
+    """
+    import threading
+
+    from src.database.local_analytics_connector import get_shared_connection
+
+    conn = get_shared_connection()
+    lock = getattr(conn, "_lock", None) or threading.Lock()
+
+    cutoff = _parse_date_cutoff(date_range)
+    where_parts: list[str] = []
+    params: list[Any] = []
+
+    if topic:
+        where_parts.append("topic ILIKE ?")
+        params.append(f"%{topic}%")
+    if source:
+        where_parts.append("source ILIKE ?")
+        params.append(f"%{source}%")
+    if source_type:
+        where_parts.append("source_type = ?")
+        params.append(source_type)
+    if cutoff:
+        where_parts.append("window_start >= ?")
+        params.append(cutoff)
+
+    where = ("WHERE " + " AND ".join(where_parts)) if where_parts else ""
+    params.append(limit)
+
+    with lock:
+        rows = conn.execute(
+            f"""
+            SELECT
+                source, source_type, topic,
+                SUM(CASE WHEN stance = 'supportive' THEN document_count ELSE 0 END) AS supportive,
+                SUM(CASE WHEN stance = 'critical'   THEN document_count ELSE 0 END) AS critical,
+                SUM(CASE WHEN stance = 'neutral'    THEN document_count ELSE 0 END) AS neutral,
+                SUM(CASE WHEN stance = 'ambiguous'  THEN document_count ELSE 0 END) AS ambiguous,
+                SUM(document_count)                                                  AS total,
+                AVG(confidence)                                                      AS confidence,
+                MAX(window_start)                                                    AS window_start,
+                MAX(window_end)                                                      AS window_end
+            FROM source_stances
+            {where}
+            GROUP BY source, source_type, topic
+            ORDER BY total DESC
+            LIMIT ?
+            """,
+            params,
+        ).fetchall()
+
+    if not rows:
+        return await _stance_sources_from_claims(conn, lock, topic, source_type, limit)
+
+    sources_data = [
+        {
+            "source": r[0],
+            "source_type": r[1],
+            "topic": r[2],
+            "supportive": int(r[3]),
+            "critical": int(r[4]),
+            "neutral": int(r[5]),
+            "ambiguous": int(r[6]),
+            "total": int(r[7]),
+            "confidence": round(float(r[8]), 4) if r[8] is not None else None,
+            "document_count": int(r[7]),
+            "window_start": r[9],
+            "window_end": r[10],
+        }
+        for r in rows
+    ]
+    return {"sources": sources_data, "count": len(sources_data)}
+
+
+async def _stance_sources_from_claims(
+    conn, lock, topic: Optional[str], source_type: Optional[str], limit: int
+) -> Dict[str, Any]:
+    """Fallback: derive per-source stances from argument_claims when source_stances is empty."""
+    where_parts = ["1=1"]
+    params: list[Any] = []
+    if source_type:
+        where_parts.append("c.source_type = ?")
+        params.append(source_type)
+    if topic:
+        where_parts.append("n.category ILIKE ?")
+        params.append(f"%{topic}%")
+    params.append(limit * 4)
+
+    with lock:
+        rows = conn.execute(
+            f"""
+            WITH ev AS (
+                SELECT claim_id,
+                       SUM(CASE WHEN relation = 'supports'    THEN 1 ELSE 0 END) AS sup,
+                       SUM(CASE WHEN relation = 'contradicts' THEN 1 ELSE 0 END) AS con
+                FROM claim_evidence
+                GROUP BY claim_id
+            )
+            SELECT
+                COALESCE(n.source, c.source_type) AS source_name,
+                c.source_type,
+                COALESCE(n.category, 'general')   AS topic,
+                c.confidence,
+                COALESCE(ev.sup, 0)               AS sup,
+                COALESCE(ev.con, 0)               AS con
+            FROM argument_claims c
+            LEFT JOIN news_articles n ON c.document_id = n.id
+            LEFT JOIN ev             ON c.claim_id     = ev.claim_id
+            WHERE {' AND '.join(where_parts)}
+            ORDER BY n.publish_date DESC NULLS LAST
+            LIMIT ?
+            """,
+            params,
+        ).fetchall()
+
+    agg: dict[tuple, dict[str, Any]] = {}
+    for source_name, stype, t, conf, sup, con in rows:
+        key = (source_name, stype, t)
+        if key not in agg:
+            agg[key] = {"supportive": 0, "critical": 0, "neutral": 0, "ambiguous": 0, "total": 0}
+        stance = _classify_stance(int(sup), int(con), float(conf or 0))
+        agg[key][stance] += 1
+        agg[key]["total"] += 1
+
+    result = [
+        {
+            "source": k[0],
+            "source_type": k[1],
+            "topic": k[2],
+            "supportive": v["supportive"],
+            "critical": v["critical"],
+            "neutral": v["neutral"],
+            "ambiguous": v["ambiguous"],
+            "total": v["total"],
+            "confidence": None,
+            "document_count": v["total"],
+            "window_start": None,
+            "window_end": None,
+        }
+        for k, v in sorted(agg.items(), key=lambda x: -x[1]["total"])
+    ]
+    return {"sources": result[:limit], "count": len(result)}
+
 
 def _load_claim_stance_rows(conn, lock, source_type: Optional[str], source: Optional[str],
                              topic: Optional[str], cutoff: Optional[str]) -> list:
