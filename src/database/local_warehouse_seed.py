@@ -99,6 +99,16 @@ CREATE TABLE IF NOT EXISTS policy_positions (
     confidence     DOUBLE,
     extracted_at   VARCHAR
 );
+
+CREATE TABLE IF NOT EXISTS position_updates (
+    update_id      VARCHAR PRIMARY KEY,
+    position_id    VARCHAR NOT NULL,
+    article_id     VARCHAR NOT NULL,
+    update_type    VARCHAR NOT NULL,
+    evidence_text  VARCHAR,
+    confidence     DOUBLE,
+    detected_at    VARCHAR
+);
 """
 
 # Each topic seeds a cluster of articles sharing a leading title word (the

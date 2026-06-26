@@ -297,15 +297,84 @@ export const mockFramesBySourceType: Record<string, Record<string, number>> = {
 };
 
 export const mockPositions: ActorPosition[] = [
-  { actor: "Federal Reserve",  topic: "Interest Rate Policy",   position: "Hold at 5.25%; monitor inflation before cutting",  stance: "neutral",  date: "2026-06-20", source_type: "news",       document_id: "doc-news-001" },
-  { actor: "IMF",              topic: "Interest Rate Policy",   position: "Advocates gradual cuts to prevent recession",       stance: "for",      date: "2026-06-18", source_type: "paper",      document_id: "doc-paper-002" },
-  { actor: "Goldman Sachs",    topic: "Interest Rate Policy",   position: "Expects two cuts in H2; overweight equities",       stance: "for",      date: "2026-06-15", source_type: "transcript", document_id: "doc-transcript-001" },
-  { actor: "Senator Warren",   topic: "Interest Rate Policy",   position: "Criticises Fed; calls for political oversight",     stance: "against",  date: "2026-06-12", source_type: "news",       document_id: "doc-news-003" },
-  { actor: "BIS",              topic: "Interest Rate Policy",   position: "Warns premature cuts risk wage-price spiral",       stance: "against",  date: "2026-06-10", source_type: "paper",      document_id: "doc-paper-003" },
-  { actor: "ECB",              topic: "Interest Rate Policy",   position: "Diverging from Fed; began cutting cycle in June",   stance: "for",      date: "2026-06-08", source_type: "news",       document_id: "doc-news-004" },
-  { actor: "EU Commission",    topic: "AI Regulation",          position: "Mandatory risk assessment for frontier models",     stance: "for",      date: "2026-06-19", source_type: "news",       document_id: "doc-news-005" },
-  { actor: "Tech Industry",    topic: "AI Regulation",          position: "Self-regulation preferred; opposes hard limits",    stance: "against",  date: "2026-06-17", source_type: "blog",       document_id: "doc-blog-002" },
-  { actor: "UN AI Advisory",   topic: "AI Regulation",          position: "International treaty with binding safety norms",    stance: "for",      date: "2026-06-14", source_type: "paper",      document_id: "doc-paper-004" },
+  {
+    actor: "Federal Reserve", topic: "Interest Rate Policy",
+    position: "Hold at 5.25%; monitor inflation before cutting",
+    stance: "neutral", date: "2026-06-20", source_type: "news", document_id: "doc-news-001",
+    position_id: "pos-mock-001",
+    updates: [
+      { update_id: "upd-mock-001a", article_id: "doc-news-101", update_type: "reaffirmed", evidence_text: "The Federal Reserve maintained its position on interest rates, reiterating its intention to hold until inflation data improves.", confidence: 0.82, detected_at: "2026-06-23T08:00:00Z" },
+      { update_id: "upd-mock-001b", article_id: "doc-news-102", update_type: "updated",    evidence_text: "Federal Reserve minutes suggest the timeline for the first cut has been extended into Q4.", confidence: 0.68, detected_at: "2026-06-25T14:30:00Z" },
+    ],
+  },
+  {
+    actor: "IMF", topic: "Interest Rate Policy",
+    position: "Advocates gradual cuts to prevent recession",
+    stance: "for", date: "2026-06-18", source_type: "paper", document_id: "doc-paper-002",
+    position_id: "pos-mock-002",
+    updates: [
+      { update_id: "upd-mock-002a", article_id: "doc-news-103", update_type: "reaffirmed", evidence_text: "IMF reiterated its call for gradual monetary easing at the G7 finance ministers meeting.", confidence: 0.76, detected_at: "2026-06-22T10:00:00Z" },
+    ],
+  },
+  {
+    actor: "Goldman Sachs", topic: "Interest Rate Policy",
+    position: "Expects two cuts in H2; overweight equities",
+    stance: "for", date: "2026-06-15", source_type: "transcript", document_id: "doc-transcript-001",
+    position_id: "pos-mock-003",
+    updates: [
+      { update_id: "upd-mock-003a", article_id: "doc-news-104", update_type: "reversed",   evidence_text: "Goldman Sachs revised its forecast, no longer expecting two cuts; analysts backed away from the overweight equities call amid renewed inflation data.", confidence: 0.83, detected_at: "2026-06-24T09:15:00Z" },
+    ],
+  },
+  {
+    actor: "Senator Warren", topic: "Interest Rate Policy",
+    position: "Criticises Fed; calls for political oversight",
+    stance: "against", date: "2026-06-12", source_type: "news", document_id: "doc-news-003",
+    position_id: "pos-mock-004",
+    updates: [],
+  },
+  {
+    actor: "BIS", topic: "Interest Rate Policy",
+    position: "Warns premature cuts risk wage-price spiral",
+    stance: "against", date: "2026-06-10", source_type: "paper", document_id: "doc-paper-003",
+    position_id: "pos-mock-005",
+    updates: [
+      { update_id: "upd-mock-005a", article_id: "doc-news-105", update_type: "reaffirmed", evidence_text: "BIS general manager doubled down on warnings against premature rate cuts, citing persistent services inflation.", confidence: 0.79, detected_at: "2026-06-21T11:00:00Z" },
+    ],
+  },
+  {
+    actor: "ECB", topic: "Interest Rate Policy",
+    position: "Diverging from Fed; began cutting cycle in June",
+    stance: "for", date: "2026-06-08", source_type: "news", document_id: "doc-news-004",
+    position_id: "pos-mock-006",
+    updates: [
+      { update_id: "upd-mock-006a", article_id: "doc-news-106", update_type: "updated",    evidence_text: "ECB adjusted its forward guidance, narrowing the expected pace of cuts from quarterly to semi-annual.", confidence: 0.65, detected_at: "2026-06-20T15:00:00Z" },
+    ],
+  },
+  {
+    actor: "EU Commission", topic: "AI Regulation",
+    position: "Mandatory risk assessment for frontier models",
+    stance: "for", date: "2026-06-19", source_type: "news", document_id: "doc-news-005",
+    position_id: "pos-mock-007",
+    updates: [
+      { update_id: "upd-mock-007a", article_id: "doc-news-107", update_type: "updated",    evidence_text: "EU Commission expanded the scope of mandatory assessments to include open-weight models above 10B parameters.", confidence: 0.71, detected_at: "2026-06-24T13:00:00Z" },
+    ],
+  },
+  {
+    actor: "Tech Industry", topic: "AI Regulation",
+    position: "Self-regulation preferred; opposes hard limits",
+    stance: "against", date: "2026-06-17", source_type: "blog", document_id: "doc-blog-002",
+    position_id: "pos-mock-008",
+    updates: [],
+  },
+  {
+    actor: "UN AI Advisory", topic: "AI Regulation",
+    position: "International treaty with binding safety norms",
+    stance: "for", date: "2026-06-14", source_type: "paper", document_id: "doc-paper-004",
+    position_id: "pos-mock-009",
+    updates: [
+      { update_id: "upd-mock-009a", article_id: "doc-news-108", update_type: "reaffirmed", evidence_text: "UN AI advisory panel reiterated its stance on binding safety norms at the Vienna AI governance forum.", confidence: 0.74, detected_at: "2026-06-23T16:00:00Z" },
+    ],
+  },
 ];
 
 export const mockConflicts: ConflictPair[] = [

@@ -233,6 +233,17 @@ export interface FrameDistribution {
   source: string;
 }
 
+export type UpdateType = "reaffirmed" | "reversed" | "updated" | "no_signal";
+
+export interface PositionUpdate {
+  update_id: string;
+  article_id: string;
+  update_type: UpdateType;
+  evidence_text: string;
+  confidence: number;
+  detected_at: string;
+}
+
 export interface ActorPosition {
   actor: string;
   position: string;
@@ -241,6 +252,8 @@ export interface ActorPosition {
   source_type: SourceType;
   document_id: string;
   topic: string;
+  position_id?: string;
+  updates?: PositionUpdate[];
 }
 
 export interface ConflictPair {

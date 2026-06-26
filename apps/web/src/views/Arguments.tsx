@@ -4,7 +4,7 @@ import { useArgumentClaims, useArgumentStance, useArgumentFrames, useArgumentPos
 import PageHeader from "../components/PageHeader";
 import SourceBadge from "../components/SourceBadge";
 import Sparkline from "../components/charts/Sparkline";
-import type { ArgumentTab, SourceType, StanceSummary, ControversyNode, ControversyEdge, SourceStance, StanceDriftEvent, FrameSource } from "../types";
+import type { ArgumentTab, SourceType, StanceSummary, ControversyNode, ControversyEdge, SourceStance, StanceDriftEvent, FrameSource, PositionUpdate, UpdateType } from "../types";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -61,6 +61,20 @@ const VERDICT_LABELS: Record<string, string> = {
 };
 
 const POSITION_COLORS: Record<string, string> = { for: palette.pos, against: palette.neg, neutral: palette.neu };
+
+const UPDATE_TYPE_COLORS: Record<UpdateType, string> = {
+  reaffirmed: palette.pos,
+  reversed:   palette.neg,
+  updated:    palette.amber,
+  no_signal:  palette.dim,
+};
+
+const UPDATE_TYPE_LABELS: Record<UpdateType, string> = {
+  reaffirmed: "REAFFIRMED",
+  reversed:   "REVERSED",
+  updated:    "UPDATED",
+  no_signal:  "NO SIGNAL",
+};
 
 // ─── Shared style tokens ─────────────────────────────────────────────────────
 
@@ -505,12 +519,69 @@ function FramesPanel({ sourceType }: { sourceType: string }) {
 
 // ─── Positions panel ─────────────────────────────────────────────────────────
 
+function UpdateBadge({ type }: { type: UpdateType }) {
+  const color = UPDATE_TYPE_COLORS[type];
+  return (
+    <span style={{
+      fontFamily: fonts.mono, fontSize: 9, letterSpacing: "0.08em",
+      color, background: `${color}18`, border: `1px solid ${color}40`,
+      borderRadius: 4, padding: "1px 6px", flexShrink: 0,
+    }}>
+      {UPDATE_TYPE_LABELS[type]}
+    </span>
+  );
+}
+
+function UpdateTimeline({ updates }: { updates: PositionUpdate[] }) {
+  const visible = updates.filter((u) => u.update_type !== "no_signal");
+  if (visible.length === 0) return (
+    <div style={{ marginTop: 8, fontFamily: fonts.mono, fontSize: 11, color: palette.faint }}>
+      No follow-through updates detected yet.
+    </div>
+  );
+
+  return (
+    <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ ...mono10, marginBottom: 4 }}>Follow-through</div>
+      {visible.map((u, i) => {
+        const color = UPDATE_TYPE_COLORS[u.update_type as UpdateType];
+        const isLast = i === visible.length - 1;
+        return (
+          <div key={u.update_id} style={{ display: "flex", gap: 10 }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0, width: 14 }}>
+              <div style={{ width: 7, height: 7, borderRadius: "50%", background: color, flexShrink: 0, marginTop: 4 }} />
+              {!isLast && <div style={{ width: 1, flex: 1, background: colors.border, margin: "2px 0" }} />}
+            </div>
+            <div style={{ flex: 1, paddingBottom: 4 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                <UpdateBadge type={u.update_type as UpdateType} />
+                <span style={{ fontFamily: fonts.mono, fontSize: 9.5, color: palette.faint }}>
+                  {u.detected_at ? u.detected_at.slice(0, 10) : "—"}
+                </span>
+                <span style={{ fontFamily: fonts.mono, fontSize: 9, color: palette.dim }}>
+                  {Math.round(u.confidence * 100)}% conf
+                </span>
+              </div>
+              {u.evidence_text && (
+                <div style={{ fontSize: 11.5, color: colors.textMuted, lineHeight: 1.5, fontStyle: "italic" }}>
+                  "{u.evidence_text.length > 140 ? u.evidence_text.slice(0, 137) + "…" : u.evidence_text}"
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function PositionsPanel({ sourceType }: { sourceType: string }) {
   const { data: positions, source, isLoading } = useArgumentPositions(
     sourceType !== "all" ? { source_type: sourceType } : undefined,
   );
   const allTopics = Array.from(new Set(positions.map((p) => p.topic)));
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const topic = selectedTopic !== null && allTopics.includes(selectedTopic)
     ? selectedTopic
     : (allTopics[0] ?? "");
@@ -518,10 +589,20 @@ function PositionsPanel({ sourceType }: { sourceType: string }) {
     (p) => p.topic === topic && (sourceType === "all" || p.source_type === sourceType),
   );
 
+  const latestUpdateType = (updates: PositionUpdate[] | undefined): UpdateType | null => {
+    if (!updates?.length) return null;
+    const visible = updates.filter((u) => u.update_type !== "no_signal");
+    if (!visible.length) return null;
+    return visible[visible.length - 1].update_type as UpdateType;
+  };
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-        <span style={{ fontFamily: fonts.grotesk, fontWeight: 600, fontSize: 14 }}>Actor Policy Positions</span>
+        <div>
+          <span style={{ fontFamily: fonts.grotesk, fontWeight: 600, fontSize: 14 }}>Actor Policy Positions</span>
+          <span style={{ ...mono10, marginLeft: 10 }}>click a position to see follow-through history</span>
+        </div>
         <SourceBadge source={source} isLoading={isLoading} />
       </div>
 
@@ -543,6 +624,16 @@ function PositionsPanel({ sourceType }: { sourceType: string }) {
         ))}
       </div>
 
+      {/* Legend */}
+      <div style={{ display: "flex", gap: 14, marginBottom: 12, flexWrap: "wrap" }}>
+        {(["reaffirmed", "updated", "reversed"] as UpdateType[]).map((t) => (
+          <span key={t} style={{ display: "flex", alignItems: "center", gap: 4, fontFamily: fonts.mono, fontSize: 9.5, color: UPDATE_TYPE_COLORS[t] }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: UPDATE_TYPE_COLORS[t], display: "inline-block" }} />
+            {UPDATE_TYPE_LABELS[t]}
+          </span>
+        ))}
+      </div>
+
       <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
         {filtered.length === 0 && (
           <div style={{ fontFamily: fonts.mono, fontSize: 12, color: palette.faint, padding: "20px 0", textAlign: "center" }}>
@@ -552,32 +643,62 @@ function PositionsPanel({ sourceType }: { sourceType: string }) {
         {filtered.map((pos, i) => {
           const stanceColor = POSITION_COLORS[pos.stance];
           const isLast = i === filtered.length - 1;
+          const posKey = pos.position_id ?? `${pos.actor}-${pos.date}`;
+          const isExpanded = expandedId === posKey;
+          const latest = latestUpdateType(pos.updates);
+          const latestColor = latest ? UPDATE_TYPE_COLORS[latest] : null;
+
           return (
-            <div key={`${pos.actor}-${pos.date}`} style={{ display: "flex", gap: 16 }}>
+            <div key={posKey} style={{ display: "flex", gap: 16 }}>
               {/* Timeline spine */}
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0, width: 20 }}>
                 <div style={{ width: 10, height: 10, borderRadius: "50%", background: stanceColor, border: `2px solid ${colors.bg}`, flexShrink: 0, marginTop: 12 }} />
                 {!isLast && <div style={{ width: 1, flex: 1, background: colors.border, margin: "2px 0" }} />}
               </div>
               {/* Content */}
-              <div style={{ ...card, padding: "12px 14px", marginBottom: 8, flex: 1 }}>
+              <div
+                style={{ ...card, padding: "12px 14px", marginBottom: 8, flex: 1, cursor: "pointer" }}
+                onClick={() => setExpandedId(isExpanded ? null : posKey)}
+              >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                     <span style={{ fontWeight: 600, fontSize: 13 }}>{pos.actor}</span>
                     <span style={{
-                      marginLeft: 8, fontFamily: fonts.mono, fontSize: 9.5, letterSpacing: "0.08em",
+                      fontFamily: fonts.mono, fontSize: 9.5, letterSpacing: "0.08em",
                       color: stanceColor, background: `${stanceColor}18`, border: `1px solid ${stanceColor}40`,
                       borderRadius: 4, padding: "1px 6px",
                     }}>
                       {pos.stance.toUpperCase()}
                     </span>
+                    {latest && latestColor && (
+                      <UpdateBadge type={latest} />
+                    )}
                   </div>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
                     <SourceTypePill type={pos.source_type} />
                     <span style={{ fontFamily: fonts.mono, fontSize: 10.5, color: palette.faint }}>{pos.date}</span>
+                    <span style={{ fontFamily: fonts.mono, fontSize: 10, color: palette.dim }}>{isExpanded ? "▲" : "▼"}</span>
                   </div>
                 </div>
                 <div style={{ marginTop: 6, fontSize: 12.5, color: colors.textMuted, lineHeight: 1.5 }}>{pos.position}</div>
+
+                {/* Update count pill when collapsed */}
+                {!isExpanded && pos.updates && pos.updates.filter((u) => u.update_type !== "no_signal").length > 0 && (
+                  <div style={{ marginTop: 6 }}>
+                    <span style={{
+                      fontFamily: fonts.mono, fontSize: 9, color: palette.dim,
+                      background: `${palette.dim}18`, border: `1px solid ${palette.dim}30`,
+                      borderRadius: 4, padding: "1px 7px",
+                    }}>
+                      {pos.updates.filter((u) => u.update_type !== "no_signal").length} follow-through update{pos.updates.filter((u) => u.update_type !== "no_signal").length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                )}
+
+                {/* Update timeline — expanded */}
+                {isExpanded && (
+                  <UpdateTimeline updates={pos.updates ?? []} />
+                )}
               </div>
             </div>
           );

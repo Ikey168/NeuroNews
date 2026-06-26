@@ -14,9 +14,11 @@ Tools:
                 query?)                   source = RSS feed name OR a source_type from
                                           list_connector_types(); query = JSON list of paths/
                                           IDs passed to that connector's discover().
-  run_stage(stage, input_ref?, ...)    -> run one named stage: fetch|sentiment|store|ingest|positions
-  trace_article(id)                    -> where an article exists across warehouse / vector / s3
-  query_positions(actor?, topic?, ...) -> query policy_positions table for actor commitments (#110)
+  run_stage(stage, input_ref?, ...)         -> run one named stage: fetch|sentiment|store|ingest|positions
+  trace_article(id)                         -> where an article exists across warehouse / vector / s3
+  query_positions(actor?, topic?, ...)      -> query policy_positions table for actor commitments (#110)
+  query_position_updates(position_id?, ...) -> query position_updates follow-through events (#111)
+  trigger_followthrough_check(limit?)       -> run nightly follow-through batch on-demand (#111)
 
 Design constraints (learned the hard way in this repo):
   * Lazy imports inside tools. The top of this module imports only stdlib +
@@ -689,6 +691,119 @@ def query_positions(
             for r in rows
         ],
     }
+
+
+@mcp.tool
+def query_position_updates(
+    position_id: Optional[str] = None,
+    actor: Optional[str] = None,
+    topic: Optional[str] = None,
+    update_type: Optional[str] = None,
+    limit: int = 15,
+) -> dict:
+    """Query ``position_updates`` for follow-through events (#111).
+
+    Returns compact update summaries (evidence truncated to 120 chars).
+    Filter by position, actor name, topic, or update_type
+    (reaffirmed / reversed / updated / no_signal).
+
+    Args:
+        position_id: exact position ID to look up.
+        actor:       ILIKE filter on the actor name (joined from policy_positions).
+        topic:       ILIKE filter on topic (joined from policy_positions).
+        update_type: exact filter — reaffirmed | reversed | updated | no_signal.
+        limit:       max rows (capped at 25).
+    """
+    limit = max(1, min(int(limit), MAX_LIST))
+    try:
+        con = _warehouse_ro()
+    except Exception as exc:
+        return {"error": f"warehouse unavailable: {exc}"}
+
+    join = "LEFT JOIN policy_positions p ON u.position_id = p.position_id"
+    where_parts: list[str] = []
+    params: list[Any] = []
+
+    if position_id:
+        where_parts.append("u.position_id = ?")
+        params.append(position_id)
+    if actor:
+        where_parts.append("p.actor ILIKE ?")
+        params.append(f"%{actor}%")
+    if topic:
+        where_parts.append("p.topic ILIKE ?")
+        params.append(f"%{topic}%")
+    if update_type:
+        where_parts.append("u.update_type = ?")
+        params.append(update_type)
+    where_clause = ("WHERE " + " AND ".join(where_parts)) if where_parts else ""
+    params.append(limit)
+
+    try:
+        rows = con.execute(
+            f"""
+            SELECT u.update_id, u.position_id, p.actor, p.topic,
+                   u.article_id, u.update_type, u.confidence, u.detected_at,
+                   LEFT(u.evidence_text, 120) AS evidence_preview
+            FROM position_updates u
+            {join}
+            {where_clause}
+            ORDER BY u.detected_at DESC NULLS LAST
+            LIMIT ?
+            """,
+            params,
+        ).fetchall()
+        con.close()
+    except Exception as exc:
+        con.close()
+        return {"error": f"query failed: {exc}"}
+
+    return {
+        "filters": {k: v for k, v in {
+            "position_id": position_id, "actor": actor,
+            "topic": topic, "update_type": update_type,
+        }.items() if v},
+        "count": len(rows),
+        "updates": [
+            {
+                "update_id":       r[0],
+                "position_id":     r[1],
+                "actor":           r[2] or "",
+                "topic":           r[3] or "",
+                "article_id":      r[4],
+                "update_type":     r[5],
+                "confidence":      round(float(r[6] or 0), 4),
+                "detected_at":     r[7] or "",
+                "evidence_preview": r[8] or "",
+            }
+            for r in rows
+        ],
+    }
+
+
+@mcp.tool
+def trigger_followthrough_check(limit: int = 50) -> dict:
+    """Run one pass of the nightly follow-through batch on-demand (#111).
+
+    Checks up to ``limit`` stored positions against recent warehouse articles
+    and stores classified update events (reaffirmed/reversed/updated/no_signal)
+    in ``position_updates``.  Use ``query_position_updates()`` to read results.
+
+    Args:
+        limit: max positions to process (capped at 200).
+    """
+    limit = max(1, min(int(limit), 200))
+    try:
+        import threading
+        from src.argument_mining.position_tracker import run_followthrough_batch
+
+        con = _warehouse_rw()
+        lock = threading.Lock()
+        counts = run_followthrough_batch(con, lock, limit=limit)
+        con.close()
+        return {"status": "ok", **counts}
+    except Exception as exc:
+        return {"error": str(exc)}
 
 
 if __name__ == "__main__":

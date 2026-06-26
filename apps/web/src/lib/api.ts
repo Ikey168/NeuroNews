@@ -214,6 +214,15 @@ export interface RawDriftEvent {
   window_pair: string | null;
 }
 
+export interface RawPositionUpdate {
+  update_id: string;
+  article_id: string;
+  update_type: string;
+  evidence_text: string;
+  confidence: number;
+  detected_at: string;
+}
+
 export interface RawActorPosition {
   actor: string;
   position: string;
@@ -222,6 +231,8 @@ export interface RawActorPosition {
   source_type: string;
   document_id: string;
   topic: string;
+  position_id?: string;
+  updates?: RawPositionUpdate[];
 }
 
 export interface RawConflictPair {

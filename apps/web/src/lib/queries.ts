@@ -33,7 +33,7 @@ import {
   mockDriftEvents,
   mockFramesBySource,
 } from "../data/mock";
-import type { RawClaim, RawStanceSummary, RawActorPosition, RawSourceStance, RawDriftEvent, RawFrameSource } from "./api";
+import type { RawClaim, RawStanceSummary, RawActorPosition, RawPositionUpdate, RawSourceStance, RawDriftEvent, RawFrameSource } from "./api";
 import { palette, ACCENT } from "../theme";
 import type {
   Article,
@@ -47,6 +47,7 @@ import type {
   ClaimResult,
   StanceSummary,
   ActorPosition,
+  PositionUpdate,
   ConflictPair,
   FrameDistribution,
   FrameSource,
@@ -309,6 +310,15 @@ export function useArgumentPositions(params?: { actor?: string; topic?: string; 
         source_type: r.source_type as SourceType,
         document_id: r.document_id,
         topic: r.topic,
+        position_id: r.position_id,
+        updates: (r.updates ?? []).map((u: RawPositionUpdate): PositionUpdate => ({
+          update_id:     u.update_id,
+          article_id:    u.article_id,
+          update_type:   u.update_type as PositionUpdate["update_type"],
+          evidence_text: u.evidence_text,
+          confidence:    u.confidence,
+          detected_at:   u.detected_at,
+        })),
       }));
     },
     mockPositions,

@@ -1,5 +1,5 @@
 """
-Argument Mining API routes (Issues #90, #93, #95, #96, #97, #99, #102, #105).
+Argument Mining API routes (Issues #90, #93, #95, #96, #97, #99, #102, #105, #110, #111).
 
 GET  /api/v1/arguments/frames                    — aggregate frame distribution
 GET  /api/v1/arguments/frames?document_id=       — frames for a specific document
@@ -15,8 +15,9 @@ POST /api/v1/arguments/claims/{id}/factcheck     — trigger on-demand fact-chec
 GET  /api/v1/arguments/stance/sources            — stance per (source, topic) from source_stances table (#99)
 GET  /api/v1/arguments/stance/drift              — structured drift events + 7-bucket time series (#102)
 GET  /api/v1/arguments/stance                    — stance distribution across topics
-GET  /api/v1/arguments/positions                 — actor policy positions from policy_positions table (#110)
+GET  /api/v1/arguments/positions                 — actor policy positions with follow-through history (#110, #111)
 POST /api/v1/arguments/positions/extract         — run position extraction on a stored document (#110)
+POST /api/v1/arguments/positions/{id}/check      — trigger follow-through check for one position (#111)
 GET  /api/v1/arguments/controversy               — conflict pairs ranked by contradiction count
 GET  /api/v1/arguments/controversy/graph         — force-directed graph: nodes=claims, edges=contradictions (#96)
 GET  /api/v1/arguments/sources/ranking           — sources ranked by claim quality
@@ -1219,6 +1220,7 @@ async def get_positions(
                             "document_id": r[5],
                             "date": str(r[6]) if r[6] else "",
                             "confidence": round(float(r[7] or 0), 4),
+                            "updates": [],
                             "_source": "claims_fallback",
                         }
                         for r in fb_rows
@@ -1229,16 +1231,47 @@ async def get_positions(
             except Exception:
                 return {"positions": [], "count": 0}
 
+        # Fetch follow-through updates for all returned positions
+        position_ids = [r[0] for r in rows]
+        placeholders = ", ".join("?" * len(position_ids))
+        try:
+            update_rows = conn.execute(
+                f"""
+                SELECT update_id, position_id, article_id, update_type,
+                       evidence_text, confidence, detected_at
+                FROM position_updates
+                WHERE position_id IN ({placeholders})
+                ORDER BY detected_at ASC
+                """,
+                position_ids,
+            ).fetchall()
+        except Exception:
+            update_rows = []
+
+    # Group updates by position_id
+    updates_by_pos: dict[str, list] = {}
+    for u in update_rows:
+        pid = u[1]
+        updates_by_pos.setdefault(pid, []).append({
+            "update_id":     u[0],
+            "article_id":    u[2],
+            "update_type":   u[3],
+            "evidence_text": u[4] or "",
+            "confidence":    round(float(u[5] or 0), 4),
+            "detected_at":   u[6] or "",
+        })
+
     positions = [
         {
             "position_id": row[0],
-            "actor": row[1],
-            "topic": row[2],
-            "position": row[3],
-            "source_type": row[4],
-            "document_id": row[5],
-            "date": row[6] or "",
-            "confidence": round(float(row[7] or 0), 4),
+            "actor":        row[1],
+            "topic":        row[2],
+            "position":     row[3],
+            "source_type":  row[4],
+            "document_id":  row[5],
+            "date":         row[6] or "",
+            "confidence":   round(float(row[7] or 0), 4),
+            "updates":      updates_by_pos.get(row[0], []),
         }
         for row in rows
     ]
@@ -1328,6 +1361,85 @@ async def extract_positions_for_document(
         }
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Extraction failed: {exc}")
+
+
+# ---------------------------------------------------------------------------
+# Position follow-through check (#111)
+# ---------------------------------------------------------------------------
+
+@router.post("/positions/{position_id}/check")
+async def check_position_followthrough(
+    position_id: str,
+    limit: int = Query(100, ge=1, le=500, description="Max articles to scan"),
+) -> Dict[str, Any]:
+    """
+    Trigger an on-demand follow-through check for a single position (#111).
+
+    Scans recent articles for references to the same (actor, topic) pair and
+    classifies each reference as reaffirmed / reversed / updated / no_signal.
+    Results are stored in ``position_updates`` and returned immediately.
+    """
+    import threading
+
+    from src.database.local_analytics_connector import get_shared_connection
+    from src.argument_mining.position_tracker import (
+        check_position_followthrough as _check,
+        store_followthrough,
+    )
+
+    conn = get_shared_connection()
+    lock = getattr(conn, "_lock", None) or threading.Lock()
+
+    with lock:
+        pos_row = conn.execute(
+            "SELECT actor, topic, extracted_at FROM policy_positions WHERE position_id = ? LIMIT 1",
+            [position_id],
+        ).fetchone()
+
+    if not pos_row:
+        raise HTTPException(status_code=404, detail=f"Position '{position_id}' not found")
+
+    actor, topic, extracted_at = pos_row
+    since = (extracted_at or "1970-01-01")[:10]
+
+    with lock:
+        articles = conn.execute(
+            "SELECT id, content, publish_date FROM news_articles "
+            "WHERE CAST(publish_date AS VARCHAR) > ? LIMIT ?",
+            [since, limit],
+        ).fetchall()
+
+    try:
+        records = _check(position_id, actor, topic, articles)
+        if records:
+            with lock:
+                store_followthrough(records, conn)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Follow-through check failed: {exc}")
+
+    summary: Dict[str, int] = {}
+    for r in records:
+        summary[r.update_type] = summary.get(r.update_type, 0) + 1
+
+    return {
+        "position_id": position_id,
+        "actor": actor,
+        "topic": topic,
+        "articles_scanned": len(articles),
+        "updates_found": len(records),
+        "summary": summary,
+        "updates": [
+            {
+                "update_id":     r.update_id,
+                "article_id":    r.article_id,
+                "update_type":   r.update_type,
+                "evidence_text": r.evidence_text,
+                "confidence":    r.confidence,
+                "detected_at":   r.detected_at,
+            }
+            for r in records
+        ],
+    }
 
 
 # ---------------------------------------------------------------------------
