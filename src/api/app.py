@@ -25,6 +25,7 @@ ALERT_ROUTES_AVAILABLE = False
 ARGUMENT_ROUTES_AVAILABLE = False
 KG_STREAM_ROUTES_AVAILABLE = False
 ENTITY_CORRECTION_ROUTES_AVAILABLE = False
+SOURCE_COMPARISON_ROUTES_AVAILABLE = False
 
 # Store imported modules globally
 _imported_modules = {}
@@ -308,6 +309,19 @@ def try_import_entity_correction_routes():
         return False
 
 
+def try_import_source_comparison_routes():
+    """Try to import multi-source news comparison routes (issue #46)."""
+    global SOURCE_COMPARISON_ROUTES_AVAILABLE
+    try:
+        from src.api.routes import source_comparison_routes
+        _imported_modules['source_comparison_routes'] = source_comparison_routes
+        SOURCE_COMPARISON_ROUTES_AVAILABLE = True
+        return True
+    except ImportError:
+        SOURCE_COMPARISON_ROUTES_AVAILABLE = False
+        return False
+
+
 def try_import_report_routes():
     """Try to import report generation routes (issues #51, #52)."""
     global REPORT_ROUTES_AVAILABLE
@@ -360,6 +374,7 @@ def check_all_imports():
     try_import_argument_routes()
     try_import_kg_stream_routes()
     try_import_entity_correction_routes()
+    try_import_source_comparison_routes()
     _load_domain_packs()
 
 
@@ -653,6 +668,13 @@ def include_optional_routers(app):
             app.include_router(entity_correction_routes.router)
             routers_included += 1
 
+    # Include multi-source comparison routes (issue #46)
+    if SOURCE_COMPARISON_ROUTES_AVAILABLE:
+        source_comparison_routes = _imported_modules.get('source_comparison_routes')
+        if source_comparison_routes:
+            app.include_router(source_comparison_routes.router)
+            routers_included += 1
+
     return routers_included
 
 
@@ -741,6 +763,7 @@ async def root():
             "document_routes": DOCUMENT_ROUTES_AVAILABLE,
             "kg_stream": KG_STREAM_ROUTES_AVAILABLE,
             "entity_corrections": ENTITY_CORRECTION_ROUTES_AVAILABLE,
+            "source_comparison": SOURCE_COMPARISON_ROUTES_AVAILABLE,
         },
     }
 
