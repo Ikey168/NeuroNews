@@ -815,8 +815,11 @@ function ConflictGraph({
       onClick={() => onSelect(null)}
     >
       <defs>
-        <marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+        <marker id="arr-direct"  markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
           <path d="M0,0 L6,3 L0,6 Z" fill={`${palette.neg}88`} />
+        </marker>
+        <marker id="arr-implied" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L6,3 L0,6 Z" fill={`${palette.amber}88`} />
         </marker>
       </defs>
 
@@ -826,16 +829,19 @@ function ConflictGraph({
         const b = posMap.get(e.target);
         if (!a || !b) return null;
         const w = 1 + e.severity * 3.5;
+        const isDirect = !e.conflict_type || e.conflict_type === "direct";
+        const edgeColor = isDirect ? palette.neg : palette.amber;
         const opacity = selectedId
           ? e.source === selectedId || e.target === selectedId ? 0.85 : 0.12
           : 0.45;
         return (
           <line key={i}
             x1={a.x} y1={a.y} x2={b.x} y2={b.y}
-            stroke={palette.neg}
+            stroke={edgeColor}
             strokeWidth={w}
             strokeOpacity={opacity}
-            markerEnd="url(#arr)"
+            strokeDasharray={isDirect ? undefined : "5 3"}
+            markerEnd={isDirect ? "url(#arr-direct)" : "url(#arr-implied)"}
           />
         );
       })}
@@ -932,9 +938,22 @@ function NodeDetail({
                     <span style={{ fontFamily: fonts.mono, fontSize: 10, color: pcolor, marginRight: 6 }}>{peer.source}</span>
                     <span style={{ fontSize: 11.5, color: colors.textMuted }}>"{peer.claim_text.slice(0, 90)}{peer.claim_text.length > 90 ? "…" : ""}"</span>
                   </div>
-                  <span style={{ fontFamily: fonts.mono, fontSize: 9, color: sev >= 75 ? palette.neg : palette.amber, background: `${sev >= 75 ? palette.neg : palette.amber}18`, border: `1px solid ${sev >= 75 ? palette.neg : palette.amber}40`, borderRadius: 4, padding: "2px 6px", flexShrink: 0 }}>
-                    {sev}% sev
-                  </span>
+                  <div style={{ display: "flex", gap: 5, alignItems: "center", flexShrink: 0 }}>
+                    {edge.conflict_type && (
+                      <span style={{
+                        fontFamily: fonts.mono, fontSize: 9,
+                        color: edge.conflict_type === "direct" ? palette.neg : palette.amber,
+                        background: `${edge.conflict_type === "direct" ? palette.neg : palette.amber}18`,
+                        border: `1px solid ${edge.conflict_type === "direct" ? palette.neg : palette.amber}40`,
+                        borderRadius: 4, padding: "2px 6px",
+                      }}>
+                        {edge.conflict_type}
+                      </span>
+                    )}
+                    <span style={{ fontFamily: fonts.mono, fontSize: 9, color: sev >= 75 ? palette.neg : palette.amber, background: `${sev >= 75 ? palette.neg : palette.amber}18`, border: `1px solid ${sev >= 75 ? palette.neg : palette.amber}40`, borderRadius: 4, padding: "2px 6px" }}>
+                      {sev}% sev
+                    </span>
+                  </div>
                 </div>
               );
             })}
@@ -1025,15 +1044,28 @@ function ControversyPanel({ sourceType }: { sourceType: string }) {
       </div>
 
       {/* Legend */}
-      <div style={{ display: "flex", gap: 14, marginBottom: 12, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 14, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
         {Object.entries(ST_COLORS).map(([type, color]) => (
           <span key={type} style={{ display: "flex", alignItems: "center", gap: 4, fontFamily: fonts.mono, fontSize: 9.5, color }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, display: "inline-block" }} />
             {type}
           </span>
         ))}
-        <span style={{ fontFamily: fonts.mono, fontSize: 9.5, color: palette.faint, marginLeft: 8 }}>
-          edge thickness = conflict severity · click node for details
+        <span style={{ width: 1, height: 14, background: colors.border2, flexShrink: 0, margin: "0 2px" }} />
+        <span style={{ display: "flex", alignItems: "center", gap: 4, fontFamily: fonts.mono, fontSize: 9.5, color: palette.neg }}>
+          <svg width="22" height="4" style={{ display: "inline-block", verticalAlign: "middle" }}>
+            <line x1="0" y1="2" x2="22" y2="2" stroke={palette.neg} strokeWidth="2" />
+          </svg>
+          direct
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: 4, fontFamily: fonts.mono, fontSize: 9.5, color: palette.amber }}>
+          <svg width="22" height="4" style={{ display: "inline-block", verticalAlign: "middle" }}>
+            <line x1="0" y1="2" x2="22" y2="2" stroke={palette.amber} strokeWidth="2" strokeDasharray="5 3" />
+          </svg>
+          implied
+        </span>
+        <span style={{ fontFamily: fonts.mono, fontSize: 9.5, color: palette.faint, marginLeft: 4 }}>
+          thickness = severity · click node for details
         </span>
       </div>
 

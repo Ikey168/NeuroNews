@@ -1,0 +1,415 @@
+"""
+NeuroNews Argument-mining inspector — MCP server.
+
+Token-efficient read-only access to every argument-mining table in the local
+DuckDB warehouse.  Designed to replace hand-written SQL in debugging sessions.
+
+Tools (non-overlapping with pipeline_mcp which owns positions/conflicts):
+  am_stats()                              -> row counts for all AM tables
+  list_claims(source_type?, topic?,       -> compact claim list with text preview
+              factchecked?, limit?)
+  list_stances(source?, topic?,           -> per-source stance aggregation rows
+               stance?, limit?)
+  list_drift_events(source?, topic?,      -> stance-drift timeline entries
+                    limit?)
+  claim_evidence_pairs(claim_id?,         -> claim-to-claim evidence pairs
+                       relation?, limit?)
+
+Design constraints (same as pipeline_mcp):
+  * Lazy imports inside each tool — top-level imports are stdlib + fastmcp only.
+  * DuckDB opened READ-ONLY so we never conflict with the API writer lock.
+  * All results are capped summaries, never full payloads.
+"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+from typing import Optional
+
+from fastmcp import FastMCP
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+mcp = FastMCP("neuronews-arguments")
+
+MAX_LIST = 30
+CLAIM_PREVIEW = 120
+
+
+# --------------------------------------------------------------------------- #
+# Helpers                                                                      #
+# --------------------------------------------------------------------------- #
+
+def _warehouse_ro():
+    """Open the DuckDB warehouse read-only, honouring NEURONEWS_DB_PATH."""
+    import os
+    import duckdb
+    import tempfile
+    import shutil
+
+    db_path = os.environ.get(
+        "NEURONEWS_DB_PATH",
+        str(REPO_ROOT / "data" / "local_warehouse.duckdb"),
+    )
+    try:
+        conn = duckdb.connect(db_path, read_only=True)
+        return conn, None
+    except Exception as e:
+        if "read_only" in str(e).lower() or "lock" in str(e).lower():
+            return None, f"warehouse locked by writer: {e}"
+        # Warehouse may not exist yet — seed a temp copy for introspection
+        fd, tmp = tempfile.mkstemp(suffix=".duckdb")
+        os.close(fd)
+        if Path(db_path).exists():
+            shutil.copy2(db_path, tmp)
+        try:
+            from src.database.local_warehouse_seed import seed_warehouse  # type: ignore[import]
+            conn2 = duckdb.connect(tmp, read_only=False)
+            seed_warehouse(conn2)
+            return conn2, None
+        except Exception as e2:
+            return None, f"cannot open warehouse: {e2}"
+
+
+def _clip(text: str, n: int = CLAIM_PREVIEW) -> str:
+    if not text:
+        return ""
+    return text[:n] + ("…" if len(text) > n else "")
+
+
+# --------------------------------------------------------------------------- #
+# Tools                                                                        #
+# --------------------------------------------------------------------------- #
+
+@mcp.tool
+def am_stats() -> dict:
+    """
+    Row counts for every argument-mining table.
+
+    Returns a compact dict: {table_name: row_count, ...} plus a 'total_claims'
+    key so you can quickly gauge whether the pipeline has run.
+    """
+    conn, err = _warehouse_ro()
+    if err or conn is None:
+        return {"error": err or "no connection"}
+
+    tables = [
+        "argument_claims",
+        "claim_evidence",
+        "claim_conflicts",
+        "source_stances",
+        "stance_drift_events",
+        "policy_positions",
+        "position_updates",
+        "document_frames",
+    ]
+    counts: dict = {}
+    for t in tables:
+        try:
+            row = conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()
+            counts[t] = row[0] if row else 0
+        except Exception:
+            counts[t] = "table_missing"
+
+    counts["total_claims"] = counts.get("argument_claims", 0)
+    return counts
+
+
+@mcp.tool
+def list_claims(
+    source_type: Optional[str] = None,
+    topic: Optional[str] = None,
+    factchecked: Optional[bool] = None,
+    limit: int = MAX_LIST,
+) -> dict:
+    """
+    Compact list of extracted claims from ``argument_claims``.
+
+    Args:
+        source_type: Filter by content type (news/blog/paper/transcript/book/note).
+        topic:       Substring match against the article's category (joined via
+                     news_articles).
+        factchecked: True = only claims with a factcheck verdict; False = only
+                     unchecked claims; None = all.
+        limit:       Max rows returned (default 30, max 100).
+
+    Returns a list of dicts: {claim_id, source_type, confidence, factcheck_verdict,
+    claim_preview, document_id}.
+    """
+    conn, err = _warehouse_ro()
+    if err or conn is None:
+        return {"error": err or "no connection"}
+
+    limit = min(limit, 100)
+    where: list[str] = []
+    params: list = []
+
+    if source_type:
+        where.append("c.source_type = ?")
+        params.append(source_type)
+    if factchecked is True:
+        where.append("c.factcheck_verdict IS NOT NULL")
+    elif factchecked is False:
+        where.append("c.factcheck_verdict IS NULL")
+    if topic:
+        where.append("(n.category ILIKE ? OR n.title ILIKE ?)")
+        params.extend([f"%{topic}%", f"%{topic}%"])
+
+    join = "LEFT JOIN news_articles n ON c.document_id = n.article_id" if topic else ""
+    clause = ("WHERE " + " AND ".join(where)) if where else ""
+    params.append(limit)
+
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT c.claim_id, c.source_type, c.confidence,
+                   c.factcheck_verdict, c.claim_text, c.document_id
+            FROM argument_claims c
+            {join}
+            {clause}
+            ORDER BY c.confidence DESC NULLS LAST
+            LIMIT ?
+            """,
+            params,
+        ).fetchall()
+    except Exception as e:
+        return {"error": str(e)}
+
+    return {
+        "count": len(rows),
+        "claims": [
+            {
+                "claim_id":         r[0],
+                "source_type":      r[1],
+                "confidence":       round(r[2], 3) if r[2] is not None else None,
+                "factcheck_verdict": r[3],
+                "claim_preview":    _clip(r[4]),
+                "document_id":      r[5],
+            }
+            for r in rows
+        ],
+    }
+
+
+@mcp.tool
+def list_stances(
+    source: Optional[str] = None,
+    topic: Optional[str] = None,
+    stance: Optional[str] = None,
+    limit: int = MAX_LIST,
+) -> dict:
+    """
+    Compact list of per-source stance aggregation rows from ``source_stances``.
+
+    Args:
+        source: Exact or partial source name match (ILIKE).
+        topic:  Substring match against topic.
+        stance: Filter by dominant stance (supportive/critical/neutral/ambiguous).
+        limit:  Max rows (default 30, max 100).
+
+    Returns a list of dicts: {source, source_type, topic, stance, confidence,
+    document_count, window_start, window_end}.
+    """
+    conn, err = _warehouse_ro()
+    if err or conn is None:
+        return {"error": err or "no connection"}
+
+    limit = min(limit, 100)
+    where: list[str] = []
+    params: list = []
+
+    if source:
+        where.append("source ILIKE ?")
+        params.append(f"%{source}%")
+    if topic:
+        where.append("topic ILIKE ?")
+        params.append(f"%{topic}%")
+    if stance:
+        where.append("stance = ?")
+        params.append(stance)
+
+    clause = ("WHERE " + " AND ".join(where)) if where else ""
+    params.append(limit)
+
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT source, source_type, topic, stance, confidence,
+                   document_count, window_start, window_end
+            FROM source_stances
+            {clause}
+            ORDER BY document_count DESC NULLS LAST
+            LIMIT ?
+            """,
+            params,
+        ).fetchall()
+    except Exception as e:
+        return {"error": str(e)}
+
+    return {
+        "count": len(rows),
+        "stances": [
+            {
+                "source":         r[0],
+                "source_type":    r[1],
+                "topic":          r[2],
+                "stance":         r[3],
+                "confidence":     round(r[4], 3) if r[4] is not None else None,
+                "document_count": r[5],
+                "window_start":   r[6],
+                "window_end":     r[7],
+            }
+            for r in rows
+        ],
+    }
+
+
+@mcp.tool
+def list_drift_events(
+    source: Optional[str] = None,
+    topic: Optional[str] = None,
+    limit: int = MAX_LIST,
+) -> dict:
+    """
+    Stance-drift events from ``stance_drift_events``.
+
+    Each event records a source switching from one dominant stance to another
+    across two adjacent time windows on a given topic.
+
+    Args:
+        source: Exact or partial source name (ILIKE).
+        topic:  Substring match against topic.
+        limit:  Max rows (default 30, max 100).
+
+    Returns a list of dicts: {source, source_type, topic, from_stance,
+    to_stance, confidence_delta, window_pair, detected_at}.
+    """
+    conn, err = _warehouse_ro()
+    if err or conn is None:
+        return {"error": err or "no connection"}
+
+    limit = min(limit, 100)
+    where: list[str] = []
+    params: list = []
+
+    if source:
+        where.append("source ILIKE ?")
+        params.append(f"%{source}%")
+    if topic:
+        where.append("topic ILIKE ?")
+        params.append(f"%{topic}%")
+
+    clause = ("WHERE " + " AND ".join(where)) if where else ""
+    params.append(limit)
+
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT source, source_type, topic, from_stance, to_stance,
+                   confidence_delta, window_pair, detected_at
+            FROM stance_drift_events
+            {clause}
+            ORDER BY detected_at DESC NULLS LAST
+            LIMIT ?
+            """,
+            params,
+        ).fetchall()
+    except Exception as e:
+        return {"error": str(e)}
+
+    return {
+        "count": len(rows),
+        "events": [
+            {
+                "source":           r[0],
+                "source_type":      r[1],
+                "topic":            r[2],
+                "from_stance":      r[3],
+                "to_stance":        r[4],
+                "confidence_delta": round(r[5], 3) if r[5] is not None else None,
+                "window_pair":      r[6],
+                "detected_at":      r[7],
+            }
+            for r in rows
+        ],
+    }
+
+
+@mcp.tool
+def claim_evidence_pairs(
+    claim_id: Optional[str] = None,
+    relation: Optional[str] = None,
+    limit: int = MAX_LIST,
+) -> dict:
+    """
+    Evidence pairs from ``claim_evidence`` — one claim referencing another.
+
+    Unlike ``query_conflicts`` (pipeline_mcp) which reads the *semantic*
+    conflict table, this reads the raw evidence-link table populated by the
+    fact-check and cross-reference pipeline stages.
+
+    Args:
+        claim_id: Filter to pairs where this is the primary claim_id.
+        relation: Filter by relation type (e.g. 'contradicts', 'supports',
+                  'is_cited_by').
+        limit:    Max rows (default 30, max 100).
+
+    Returns a list of dicts: {evidence_id, claim_id, relation,
+    evidence_source_type, similarity_score, evidence_preview, found_at}.
+    """
+    conn, err = _warehouse_ro()
+    if err or conn is None:
+        return {"error": err or "no connection"}
+
+    limit = min(limit, 100)
+    where: list[str] = []
+    params: list = []
+
+    if claim_id:
+        where.append("e.claim_id = ?")
+        params.append(claim_id)
+    if relation:
+        where.append("e.relation = ?")
+        params.append(relation)
+
+    clause = ("WHERE " + " AND ".join(where)) if where else ""
+    params.append(limit)
+
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT e.evidence_id, e.claim_id, e.relation,
+                   e.evidence_source_type, e.similarity_score,
+                   e.evidence_text, e.found_at
+            FROM claim_evidence e
+            {clause}
+            ORDER BY e.similarity_score DESC NULLS LAST
+            LIMIT ?
+            """,
+            params,
+        ).fetchall()
+    except Exception as e:
+        return {"error": str(e)}
+
+    return {
+        "count": len(rows),
+        "pairs": [
+            {
+                "evidence_id":         r[0],
+                "claim_id":            r[1],
+                "relation":            r[2],
+                "evidence_source_type": r[3],
+                "similarity_score":    round(r[4], 3) if r[4] is not None else None,
+                "evidence_preview":    _clip(r[5] or ""),
+                "found_at":            r[6],
+            }
+            for r in rows
+        ],
+    }
+
+
+if __name__ == "__main__":
+    mcp.run()

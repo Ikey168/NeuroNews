@@ -253,6 +253,7 @@ export interface RawControversyNode {
   claim_text: string;
   confidence: number;
   document_id: string;
+  conflict_type?: string;
 }
 
 export interface RawControversyEdge {
@@ -260,6 +261,7 @@ export interface RawControversyEdge {
   target: string;
   severity: number;
   relation: string;
+  conflict_type?: string;
 }
 
 export interface RawSourceRanking {

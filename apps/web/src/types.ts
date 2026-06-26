@@ -274,6 +274,7 @@ export interface ControversyNode {
   claim_text: string;
   confidence: number;
   document_id: string;
+  conflict_type?: string;
 }
 
 export interface ControversyEdge {
@@ -281,6 +282,7 @@ export interface ControversyEdge {
   target: string;
   severity: number;
   relation: string;
+  conflict_type?: string;
 }
 
 export interface ControversyGraph {
