@@ -20,6 +20,7 @@ import type {
   ActorPosition,
   ConflictPair,
   ControversyGraph,
+  SourceStance,
 } from "../types";
 
 const NOW = Date.now();
@@ -313,6 +314,30 @@ export const mockConflicts: ConflictPair[] = [
   { actor_a: "US Treasury",      actor_b: "IMF",              topic: "Dollar Strength",            intensity: 0.52, source_count: 8  },
   { actor_a: "WHO",              actor_b: "Pharma Industry",  topic: "Drug Pricing",               intensity: 0.47, source_count: 7  },
   { actor_a: "BIS",              actor_b: "Goldman Sachs",    topic: "Central Bank Independence",  intensity: 0.61, source_count: 9  },
+];
+
+export const mockSourceStances: SourceStance[] = [
+  // Reuters
+  { source: "Reuters",           source_type: "news",       topic: "Economy",    supportive: 12, critical:  4, neutral: 18, ambiguous: 3, total: 37, confidence: 0.71, document_count: 37, window_start: "2026-06-19", window_end: "2026-06-26" },
+  { source: "Reuters",           source_type: "news",       topic: "Energy",     supportive:  5, critical:  9, neutral: 11, ambiguous: 2, total: 27, confidence: 0.68, document_count: 27, window_start: "2026-06-19", window_end: "2026-06-26" },
+  // Bloomberg
+  { source: "Bloomberg",         source_type: "news",       topic: "Economy",    supportive: 19, critical:  6, neutral:  8, ambiguous: 4, total: 37, confidence: 0.74, document_count: 37, window_start: "2026-06-19", window_end: "2026-06-26" },
+  { source: "Bloomberg",         source_type: "news",       topic: "Technology", supportive: 21, critical:  3, neutral:  6, ambiguous: 2, total: 32, confidence: 0.79, document_count: 32, window_start: "2026-06-19", window_end: "2026-06-26" },
+  // Financial Times
+  { source: "Financial Times",   source_type: "news",       topic: "Economy",    supportive: 15, critical:  7, neutral: 12, ambiguous: 3, total: 37, confidence: 0.70, document_count: 37, window_start: "2026-06-19", window_end: "2026-06-26" },
+  { source: "Financial Times",   source_type: "news",       topic: "Policy",     supportive:  7, critical: 11, neutral:  9, ambiguous: 4, total: 31, confidence: 0.67, document_count: 31, window_start: "2026-06-19", window_end: "2026-06-26" },
+  // The Guardian
+  { source: "The Guardian",      source_type: "news",       topic: "Policy",     supportive:  4, critical: 22, neutral:  7, ambiguous: 5, total: 38, confidence: 0.72, document_count: 38, window_start: "2026-06-19", window_end: "2026-06-26" },
+  { source: "The Guardian",      source_type: "news",       topic: "Energy",     supportive:  3, critical: 19, neutral:  6, ambiguous: 4, total: 32, confidence: 0.75, document_count: 32, window_start: "2026-06-19", window_end: "2026-06-26" },
+  // STAT News
+  { source: "STAT News",         source_type: "news",       topic: "Health",     supportive: 22, critical:  2, neutral:  8, ambiguous: 3, total: 35, confidence: 0.77, document_count: 35, window_start: "2026-06-19", window_end: "2026-06-26" },
+  // Wired
+  { source: "Wired",             source_type: "news",       topic: "Technology", supportive: 17, critical:  5, neutral:  7, ambiguous: 3, total: 32, confidence: 0.73, document_count: 32, window_start: "2026-06-19", window_end: "2026-06-26" },
+  // Blog
+  { source: "energy-transition.blog", source_type: "blog", topic: "Energy",     supportive:  8, critical: 15, neutral:  3, ambiguous: 6, total: 32, confidence: 0.65, document_count: 32, window_start: "2026-06-19", window_end: "2026-06-26" },
+  // Paper / journal
+  { source: "Nature Climate Change", source_type: "paper", topic: "Energy",     supportive: 18, critical:  4, neutral:  6, ambiguous: 2, total: 30, confidence: 0.82, document_count: 30, window_start: "2026-06-19", window_end: "2026-06-26" },
+  { source: "Nature Climate Change", source_type: "paper", topic: "Policy",     supportive: 14, critical:  6, neutral:  5, ambiguous: 3, total: 28, confidence: 0.81, document_count: 28, window_start: "2026-06-19", window_end: "2026-06-26" },
 ];
 
 export const mockControversyGraph: ControversyGraph = {
