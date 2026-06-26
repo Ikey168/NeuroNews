@@ -27,6 +27,7 @@ KG_STREAM_ROUTES_AVAILABLE = False
 ENTITY_CORRECTION_ROUTES_AVAILABLE = False
 SOURCE_COMPARISON_ROUTES_AVAILABLE = False
 METRICS_ROUTES_AVAILABLE = False
+PRIVACY_ROUTES_AVAILABLE = False
 
 # Store imported modules globally
 _imported_modules = {}
@@ -336,6 +337,19 @@ def try_import_metrics_routes():
         return False
 
 
+def try_import_privacy_routes():
+    """Try to import offline privacy routes (issue #64)."""
+    global PRIVACY_ROUTES_AVAILABLE
+    try:
+        from src.api.routes import privacy_routes
+        _imported_modules['privacy_routes'] = privacy_routes
+        PRIVACY_ROUTES_AVAILABLE = True
+        return True
+    except ImportError:
+        PRIVACY_ROUTES_AVAILABLE = False
+        return False
+
+
 def try_import_report_routes():
     """Try to import report generation routes (issues #51, #52)."""
     global REPORT_ROUTES_AVAILABLE
@@ -390,6 +404,7 @@ def check_all_imports():
     try_import_entity_correction_routes()
     try_import_source_comparison_routes()
     try_import_metrics_routes()
+    try_import_privacy_routes()
     _load_domain_packs()
 
 
@@ -697,6 +712,13 @@ def include_optional_routers(app):
             app.include_router(metrics_routes.router)
             routers_included += 1
 
+    # Include offline privacy routes (issue #64)
+    if PRIVACY_ROUTES_AVAILABLE:
+        privacy_routes = _imported_modules.get('privacy_routes')
+        if privacy_routes:
+            app.include_router(privacy_routes.router)
+            routers_included += 1
+
     return routers_included
 
 
@@ -798,6 +820,7 @@ async def root():
             "entity_corrections": ENTITY_CORRECTION_ROUTES_AVAILABLE,
             "source_comparison": SOURCE_COMPARISON_ROUTES_AVAILABLE,
             "resource_metrics": METRICS_ROUTES_AVAILABLE,
+            "privacy": PRIVACY_ROUTES_AVAILABLE,
         },
     }
 
