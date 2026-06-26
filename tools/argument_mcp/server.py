@@ -29,6 +29,7 @@ Tools (non-overlapping with pipeline_mcp which owns positions/conflicts):
   list_outlet_scores(source_type?,       -> latest transparency scores per outlet
                      sort_by?, limit?)
   trigger_outlet_scoring(date_range?)    -> compute+store weekly scores (RW)
+  get_benchmark_results(model?)         -> read docs/benchmark_results.json (no inference)
 
 Design constraints (same as pipeline_mcp):
   * Lazy imports inside each tool — top-level imports are stdlib + fastmcp only.
@@ -934,6 +935,70 @@ def trigger_outlet_scoring(date_range: str = "90d") -> dict:
         return result
     except Exception as e:
         return {"error": f"write connection failed — warehouse may be locked: {e}"}
+
+
+@mcp.tool
+def get_benchmark_results(model: Optional[str] = None) -> dict:
+    """
+    Read the latest argument-mining benchmark results from ``docs/benchmark_results.json``.
+
+    Returns the stored JSON without running any inference — instant and read-only.
+    Run ``python scripts/benchmark_models.py`` to refresh the results first.
+
+    Args:
+        model: Filter to a single model: "claim_detector" | "stance_classifier" |
+               "frame_classifier".  Omit to return all three plus IAA and cross-dataset.
+
+    Returns dict with keys: evaluated_at, claim_detector, stance_classifier,
+    frame_classifier, iaa, cross_dataset (or the single requested model's sub-dict).
+    """
+    import json as _json
+
+    bench_path = REPO_ROOT / "docs" / "benchmark_results.json"
+    if not bench_path.exists():
+        return {
+            "error": "docs/benchmark_results.json not found",
+            "hint": "Run: python scripts/benchmark_models.py",
+        }
+    try:
+        data = _json.loads(bench_path.read_text())
+    except Exception as e:
+        return {"error": f"could not parse benchmark_results.json: {e}"}
+
+    if model:
+        if model not in data:
+            return {
+                "error": f"unknown model '{model}'",
+                "available": [k for k in data if k != "evaluated_at"],
+            }
+        return {
+            "evaluated_at": data.get("evaluated_at"),
+            model: data[model],
+        }
+
+    # Return compact summary to avoid bloating context
+    def _compact(m: dict) -> dict:
+        o = m.get("overall", {})
+        return {
+            "mode":          o.get("mode"),
+            "f1":            o.get("f1") or o.get("macro_f1"),
+            "accuracy":      o.get("accuracy"),
+            "n":             o.get("n"),
+            "per_source_type": {
+                stype: {"f1": v.get("f1") or v.get("macro_f1"), "n": v.get("n")}
+                for stype, v in m.get("per_source_type", {}).items()
+            },
+        }
+
+    return {
+        "evaluated_at":      data.get("evaluated_at"),
+        "claim_detector":    _compact(data.get("claim_detector", {})),
+        "stance_classifier": _compact(data.get("stance_classifier", {})),
+        "frame_classifier":  _compact(data.get("frame_classifier", {})),
+        "iaa":               data.get("iaa", {}),
+        "cross_dataset":     {k: {"f1": v.get("f1"), "n": v.get("n")}
+                              for k, v in data.get("cross_dataset", {}).items()},
+    }
 
 
 if __name__ == "__main__":
