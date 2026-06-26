@@ -21,6 +21,7 @@ import type {
   ConflictPair,
   ControversyGraph,
   SourceStance,
+  StanceDriftEvent,
 } from "../types";
 
 const NOW = Date.now();
@@ -338,6 +339,17 @@ export const mockSourceStances: SourceStance[] = [
   // Paper / journal
   { source: "Nature Climate Change", source_type: "paper", topic: "Energy",     supportive: 18, critical:  4, neutral:  6, ambiguous: 2, total: 30, confidence: 0.82, document_count: 30, window_start: "2026-06-19", window_end: "2026-06-26" },
   { source: "Nature Climate Change", source_type: "paper", topic: "Policy",     supportive: 14, critical:  6, neutral:  5, ambiguous: 3, total: 28, confidence: 0.81, document_count: 28, window_start: "2026-06-19", window_end: "2026-06-26" },
+];
+
+export const mockDriftEvents: StanceDriftEvent[] = [
+  { source: "Reuters",         source_type: "news",  topic: "Economy",    from_stance: "neutral",    to_stance: "critical",   confidence_delta: 0.23, detected_at: "2026-06-19T03:00:00Z", window_pair: "2026-06-05:2026-06-12" },
+  { source: "Reuters",         source_type: "news",  topic: "Economy",    from_stance: "critical",   to_stance: "supportive", confidence_delta: 0.31, detected_at: "2026-06-19T03:00:00Z", window_pair: "2026-06-12:2026-06-19" },
+  { source: "Reuters",         source_type: "news",  topic: "Energy",     from_stance: "neutral",    to_stance: "critical",   confidence_delta: 0.25, detected_at: "2026-06-19T03:00:00Z", window_pair: "2026-06-05:2026-06-12" },
+  { source: "Bloomberg",       source_type: "news",  topic: "Economy",    from_stance: "supportive", to_stance: "neutral",    confidence_delta: 0.22, detected_at: "2026-06-19T03:00:00Z", window_pair: "2026-06-05:2026-06-12" },
+  { source: "Bloomberg",       source_type: "news",  topic: "Technology", from_stance: "neutral",    to_stance: "supportive", confidence_delta: 0.28, detected_at: "2026-06-19T03:00:00Z", window_pair: "2026-06-12:2026-06-19" },
+  { source: "Financial Times", source_type: "news",  topic: "Policy",     from_stance: "neutral",    to_stance: "critical",   confidence_delta: 0.21, detected_at: "2026-06-19T03:00:00Z", window_pair: "2026-06-05:2026-06-12" },
+  { source: "The Guardian",    source_type: "news",  topic: "Energy",     from_stance: "critical",   to_stance: "ambiguous",  confidence_delta: 0.19, detected_at: "2026-06-19T03:00:00Z", window_pair: "2026-06-12:2026-06-19" },
+  { source: "energy-transition.blog", source_type: "blog", topic: "Energy", from_stance: "supportive", to_stance: "critical", confidence_delta: 0.34, detected_at: "2026-06-19T03:00:00Z", window_pair: "2026-06-05:2026-06-12" },
 ];
 
 export const mockControversyGraph: ControversyGraph = {

@@ -261,6 +261,19 @@ def try_import_argument_routes():
         from src.api.routes import argument_routes
         _imported_modules['argument_routes'] = argument_routes
         ARGUMENT_ROUTES_AVAILABLE = True
+        try:
+            from src.argument_mining.stance_aggregator import schedule_stance_job
+            from src.argument_mining.drift_detector import schedule_drift_job
+            from apscheduler.schedulers.background import BackgroundScheduler
+            _sched = BackgroundScheduler()
+            schedule_stance_job(_sched, hour=3)
+            schedule_drift_job(_sched, hour=4)
+            _sched.start()
+        except Exception:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Argument mining schedulers could not be started", exc_info=True
+            )
         return True
     except ImportError:
         ARGUMENT_ROUTES_AVAILABLE = False

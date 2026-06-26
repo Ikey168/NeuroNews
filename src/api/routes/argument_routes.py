@@ -13,7 +13,7 @@ GET  /api/v1/arguments/claims/{id}               — single claim with evidence 
 GET  /api/v1/arguments/claims/{id}/evidence      — evidence for a claim
 POST /api/v1/arguments/claims/{id}/factcheck     — trigger on-demand fact-check (#97)
 GET  /api/v1/arguments/stance/sources            — stance per (source, topic) from source_stances table (#99)
-GET  /api/v1/arguments/stance/drift              — 7-bucket supportive-ratio time series
+GET  /api/v1/arguments/stance/drift              — structured drift events + 7-bucket time series (#102)
 GET  /api/v1/arguments/stance                    — stance distribution across topics
 GET  /api/v1/arguments/positions                 — actor positions derived from claims
 GET  /api/v1/arguments/controversy               — conflict pairs ranked by contradiction count
@@ -777,8 +777,17 @@ async def get_stance_drift(
     source: Optional[str] = Query(None, description="Filter by publication source name"),
     source_type: Optional[str] = Query(None, description="Filter by source type"),
     topic: Optional[str] = Query(None, description="Filter by topic/category keyword"),
+    limit: int = Query(50, ge=1, le=500),
 ) -> Dict[str, Any]:
-    """Return a 7-bucket time-series of the supportive-claim ratio."""
+    """
+    Return stance drift data for (source, topic).
+
+    Primary response: structured drift events from `stance_drift_events` (populated
+    nightly by the drift detection job — issue #102).
+
+    Also returns a 7-bucket supportive-ratio time series derived from claim rows
+    for the sparkline in the Stance panel (backward compat).
+    """
     import threading
     from datetime import datetime
 
@@ -787,6 +796,11 @@ async def get_stance_drift(
     conn = get_shared_connection()
     lock = getattr(conn, "_lock", None) or threading.Lock()
 
+    # ── Structured drift events from the dedicated table ─────────────────────
+    events = _load_drift_events(conn, lock, source=source, source_type=source_type,
+                                topic=topic, limit=limit)
+
+    # ── Legacy 7-bucket time-series (sparkline) ───────────────────────────────
     rows = _load_claim_stance_rows(conn, lock, source_type, source, topic, cutoff=None)
 
     def _parse_ts(s: str) -> Optional[datetime]:
@@ -796,45 +810,98 @@ async def get_stance_drift(
             return None
 
     timed = [(r[3], r[2], int(r[4]), int(r[5])) for r in rows if r[3]]
-    if not timed:
-        return {"drift": [], "periods": [], "topic": topic, "source": source, "source_type": source_type, "count": 0}
+    drift: list[float] = []
+    periods: list[str] = []
 
-    ts_objs = [_parse_ts(r[0]) for r in timed]
-    valid = [(ts, r[1], r[2], r[3]) for ts, r in zip(ts_objs, timed) if ts is not None]
-    if not valid:
-        return {"drift": [], "periods": [], "topic": topic, "source": source, "source_type": source_type, "count": 0}
-
-    t_min = min(v[0] for v in valid)
-    t_max = max(v[0] for v in valid)
-    span = max((t_max - t_min).total_seconds(), 1)
-    n_buckets = 7
-
-    buckets: list[dict] = [{"supportive": 0, "total": 0} for _ in range(n_buckets)]
-    periods = [
-        (t_min + (t_max - t_min) * (i / n_buckets)).strftime("%Y-%m-%d")
-        for i in range(n_buckets)
-    ]
-
-    for ts, confidence, sup, con in valid:
-        frac = (ts - t_min).total_seconds() / span
-        idx = min(n_buckets - 1, int(frac * n_buckets))
-        buckets[idx]["total"] += 1
-        if _classify_stance(sup, con, float(confidence or 0)) == "supportive":
-            buckets[idx]["supportive"] += 1
-
-    drift = [
-        round(b["supportive"] / b["total"], 3) if b["total"] > 0 else 0.0
-        for b in buckets
-    ]
+    if timed:
+        ts_objs = [_parse_ts(r[0]) for r in timed]
+        valid = [(ts, r[1], r[2], r[3]) for ts, r in zip(ts_objs, timed) if ts is not None]
+        if valid:
+            t_min = min(v[0] for v in valid)
+            t_max = max(v[0] for v in valid)
+            span = max((t_max - t_min).total_seconds(), 1)
+            n_buckets = 7
+            buckets: list[dict] = [{"supportive": 0, "total": 0} for _ in range(n_buckets)]
+            periods = [
+                (t_min + (t_max - t_min) * (i / n_buckets)).strftime("%Y-%m-%d")
+                for i in range(n_buckets)
+            ]
+            for ts, confidence, sup, con in valid:
+                frac = (ts - t_min).total_seconds() / span
+                idx = min(n_buckets - 1, int(frac * n_buckets))
+                buckets[idx]["total"] += 1
+                if _classify_stance(sup, con, float(confidence or 0)) == "supportive":
+                    buckets[idx]["supportive"] += 1
+            drift = [
+                round(b["supportive"] / b["total"], 3) if b["total"] > 0 else 0.0
+                for b in buckets
+            ]
 
     return {
+        "events": events,
         "drift": drift,
         "periods": periods,
         "topic": topic,
         "source": source,
         "source_type": source_type,
-        "count": len(valid),
+        "count": len(events),
     }
+
+
+def _load_drift_events(
+    conn,
+    lock,
+    *,
+    source: Optional[str],
+    source_type: Optional[str],
+    topic: Optional[str],
+    limit: int,
+) -> list[dict]:
+    """Query stance_drift_events filtered by source/source_type/topic."""
+    conditions = []
+    params: list = []
+    if source:
+        conditions.append("source = ?")
+        params.append(source)
+    if source_type:
+        conditions.append("source_type = ?")
+        params.append(source_type)
+    if topic:
+        conditions.append("topic = ?")
+        params.append(topic)
+
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    params.append(limit)
+
+    try:
+        with lock:
+            rows = conn.execute(
+                f"""
+                SELECT source, source_type, topic, from_stance, to_stance,
+                       confidence_delta, detected_at, window_pair
+                FROM stance_drift_events
+                {where}
+                ORDER BY window_pair DESC
+                LIMIT ?
+                """,
+                params,
+            ).fetchall()
+    except Exception:
+        return []
+
+    return [
+        {
+            "source": r[0],
+            "source_type": r[1],
+            "topic": r[2],
+            "from_stance": r[3],
+            "to_stance": r[4],
+            "confidence_delta": r[5],
+            "detected_at": r[6],
+            "window_pair": r[7],
+        }
+        for r in rows
+    ]
 
 
 @router.get("/stance")
