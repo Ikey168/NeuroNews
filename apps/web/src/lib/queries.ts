@@ -33,7 +33,7 @@ import {
   mockDriftEvents,
   mockFramesBySource,
 } from "../data/mock";
-import type { RawClaim, RawStanceSummary, RawActorPosition, RawPositionUpdate, RawSourceStance, RawDriftEvent, RawFrameSource, RawActor, RawActorSummary } from "./api";
+import type { RawClaim, RawStanceSummary, RawActorPosition, RawPositionUpdate, RawSourceStance, RawDriftEvent, RawFrameSource, RawActor, RawActorSummary, RawOutletCluster } from "./api";
 import { palette, ACCENT } from "../theme";
 import type {
   Article,
@@ -57,6 +57,7 @@ import type {
   StanceDriftEvent,
   DocumentActor,
   ActorSummary,
+  OutletCluster,
 } from "../types";
 
 export type Source = "live" | "demo";
@@ -438,6 +439,29 @@ export function useArgumentActors(params?: { document_id?: string; source_type?:
         role:         r.role,
         confidence:   r.confidence,
         extracted_at: r.extracted_at,
+      }));
+    },
+    [],
+  );
+}
+
+export function useOutletClusters(params?: { source_type?: string; cluster_id?: number }): Result<OutletCluster[]> {
+  const key = `outletClusters-${params?.source_type ?? "all"}-${params?.cluster_id ?? ""}`;
+  return useWithFallback(
+    key,
+    async (): Promise<OutletCluster[]> => {
+      const res = await api.argumentOutletClusters(params);
+      if (!res.outlets.length) throw new Error("empty");
+      return res.outlets.map((r: RawOutletCluster) => ({
+        source:        r.source,
+        source_type:   r.source_type as SourceType,
+        cluster_id:    r.cluster_id,
+        cluster_label: r.cluster_label,
+        pca_x:         r.pca_x,
+        pca_y:         r.pca_y,
+        dominant_frame: r.dominant_frame,
+        doc_count:     r.doc_count,
+        computed_at:   r.computed_at,
       }));
     },
     [],

@@ -132,6 +132,19 @@ CREATE TABLE IF NOT EXISTS document_actors (
     extracted_at VARCHAR,
     PRIMARY KEY (document_id, actor_name, role)
 );
+
+CREATE TABLE IF NOT EXISTS outlet_clusters (
+    source         VARCHAR NOT NULL,
+    source_type    VARCHAR NOT NULL,
+    cluster_id     INTEGER NOT NULL,
+    cluster_label  VARCHAR NOT NULL,
+    pca_x          DOUBLE,
+    pca_y          DOUBLE,
+    dominant_frame VARCHAR,
+    doc_count      INTEGER,
+    computed_at    VARCHAR,
+    PRIMARY KEY (source, source_type)
+);
 """
 
 # Each topic seeds a cluster of articles sharing a leading title word (the
