@@ -1,0 +1,37 @@
+{
+  "total_examples": 5000,
+  "by_source_type": {
+    "blog": 800,
+    "book": 600,
+    "news": 1500,
+    "note": 600,
+    "paper": 800,
+    "transcript": 700
+  },
+  "by_split": {
+    "test": 750,
+    "train": 3500,
+    "val": 750
+  },
+  "claim_distribution": {
+    "1": 4342,
+    "0": 658
+  },
+  "stance_distribution": {
+    "neutral": 3403,
+    "critical": 615,
+    "supportive": 541,
+    "ambiguous": 441
+  },
+  "iaa": {
+    "n_examples": 500,
+    "kappa_claim": 0.7632,
+    "kappa_stance": 0.7529
+  },
+  "acceptance_criteria": {
+    "total_ge_5000": true,
+    "all_types_ge_500": true,
+    "iaa_claim_kappa_ge_070": true,
+    "iaa_stance_kappa_ge_070": true
+  }
+}
