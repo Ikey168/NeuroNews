@@ -273,7 +273,7 @@ async def get_claims(
     document_id: Optional[str] = Query(None, description="Filter by document ID"),
     source_type: Optional[str] = Query(None, description="Filter by source type"),
     topic: Optional[str] = Query(None, description="Full-text filter on claim text"),
-    unsourced_only: bool = Query(False, description="Return only claims with no evidence"),
+    unsourced_only: bool = Query(False, description="Return only unsourced (attributed=false) claims"),
     limit: int = Query(100, ge=1, le=1000, description="Max results"),
 ) -> Dict[str, Any]:
     """Query stored argument claims, filterable by document, source type, or keyword topic."""
@@ -297,9 +297,8 @@ async def get_claims(
         conditions.append("claim_text ILIKE ?")
         params.append(f"%{topic}%")
     if unsourced_only:
-        conditions.append(
-            "claim_id NOT IN (SELECT DISTINCT claim_id FROM claim_evidence)"
-        )
+        # attributed IS NULL means not yet classified — treat as unsourced
+        conditions.append("(attributed = false OR attributed IS NULL)")
 
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
     params.append(limit)
@@ -308,7 +307,8 @@ async def get_claims(
         rows = conn.execute(
             f"""
             SELECT claim_id, claim_text, document_id, source_type, confidence,
-                   extracted_at, factcheck_verdict, factcheck_url, factcheck_publisher
+                   extracted_at, factcheck_verdict, factcheck_url, factcheck_publisher,
+                   attributed, attribution_text
             FROM argument_claims
             {where}
             ORDER BY confidence DESC
@@ -328,10 +328,34 @@ async def get_claims(
             "factcheck_verdict": r[6],
             "factcheck_url": r[7],
             "factcheck_publisher": r[8],
+            "attributed": r[9],
+            "attribution_text": r[10],
         }
         for r in rows
     ]
     return {"claims": claims, "count": len(claims)}
+
+
+@router.post("/claims/classify-attribution")
+async def classify_attribution_batch(
+    limit: int = Query(500, ge=1, le=5000, description="Max claims to classify per call"),
+) -> Dict[str, Any]:
+    """
+    Run content-type-aware attribution classification over unclassified claims.
+
+    Sweeps ``argument_claims`` rows where ``attributed IS NULL`` and updates
+    them with sourced/unsourced verdict and optional attribution snippet.
+    Safe to call repeatedly.
+    """
+    import threading
+
+    from src.database.local_analytics_connector import get_shared_connection
+    from src.argument_mining.attribution import run_attribution_batch
+
+    conn = get_shared_connection()
+    lock = getattr(conn, "_lock", None) or threading.Lock()
+    result = run_attribution_batch(conn, lock, limit=limit)
+    return result
 
 
 @router.post("/claims/extract")
