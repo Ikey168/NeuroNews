@@ -283,3 +283,8 @@ dbt_packages/
 # Local DuckDB analytics warehouse (generated on first run)
 *.duckdb
 *.duckdb.wal
+
+# Local encryption artifacts (Issue #62)
+data/tls/server.key
+data/tls/server.crt
+data/backups/*.enc
