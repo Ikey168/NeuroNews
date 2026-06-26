@@ -1,8 +1,12 @@
-.PHONY: help airflow-up airflow-down airflow-logs marquez-ui airflow-init airflow-status airflow-build airflow-test-openlineage mlflow-up mlflow-down mlflow-ui rag-up rag-down rag-migrate rag-connect rag-reset rag-logs rag-index contract.publish contract.validate
+.PHONY: help demo airflow-up airflow-down airflow-logs marquez-ui airflow-init airflow-status airflow-build airflow-test-openlineage mlflow-up mlflow-down mlflow-ui rag-up rag-down rag-migrate rag-connect rag-reset rag-logs rag-index contract.publish contract.validate
 
 # Default target
 help:
 	@echo "NeuroNews Makefile"
+	@echo ""
+	@echo "Demo:"
+	@echo "  demo             - Run the offline end-to-end pipeline demo (no Docker/Kafka/Spark)"
+	@echo "  demo-api         - Run demo then launch FastAPI on port 8000"
 	@echo ""
 	@echo "Airflow & Marquez Orchestration:"
 	@echo "  airflow-build    - Build custom Airflow image with OpenLineage"
@@ -316,3 +320,11 @@ contract.validate:
 			--avro-schema contracts/schemas/avro/article-ingest-v1.avsc; \
 	fi
 	@echo "✅ Event validation complete!"
+
+demo:
+	@echo "Running NeuroNews offline demo pipeline..."
+	python3 scripts/demo.py
+
+demo-api:
+	@echo "Running NeuroNews offline demo pipeline (with API server)..."
+	python3 scripts/demo.py --open-api
