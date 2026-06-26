@@ -1,221 +1,254 @@
 ![Airflow DAG Check](https://github.com/Ikey168/NeuroNews/actions/workflows/airflow-dag-check.yml/badge.svg)
 ![MLflow CI](https://github.com/Ikey168/NeuroNews/actions/workflows/mlops-ci.yml/badge.svg)
 
-# NeuroNews - AI-Powered News Intelligence Pipeline
+# Noesis — News Intelligence Platform
 
-Real-time ETL pipeline for politics and technology news, with AI-driven insights,
-sentiment analysis, and trend detection.
-
----
-
-## Overview
-
-NeuroNews is an ETL pipeline that scrapes, analyzes, and visualizes politics and
-technology news using NLP, sentiment analysis, and knowledge-graph-based insights.
-It runs entirely against local, self-hostable services - object storage, a
-document/metadata store, and a graph database - so it can be developed and tested
-without any managed cloud account. Each backend speaks a standard protocol, so the
-same code runs against a local emulator in development and a hosted equivalent in
-production by changing only an endpoint.
+Noesis (formerly NeuroNews) is a full-stack news intelligence platform that
+ingests articles, blog posts, papers, and transcripts, mines arguments from
+them, and surfaces insights through an interactive React dashboard and a
+FastAPI backend.
 
 ---
 
-## Features
+## What it does
 
-- Automated news scraping - extracts articles from multiple sources using Scrapy
-  with optional Playwright/Selenium rendering.
-- AI-powered event detection - clusters related articles into significant
-  political and technology events.
-- NLP and sentiment analysis - extracts named entities, sentiment scores, and
-  keyword/topic trends.
-- Knowledge graph integration - links entities, policies, and historical context
-  using a Gremlin-compatible graph database.
-- Custom dashboards and reports - interactive visualizations and AI-driven
-  summaries via Streamlit.
-- Historical news context - tracks the timeline-based evolution of news topics.
-- REST API for insights - structured access to event summaries, trends, and
-  sentiment data.
-
----
-
-## Architecture (local-first)
-
-NeuroNews replaces managed cloud services with local, standards-compatible
-alternatives. No proprietary cloud SDK calls are required to run the stack.
-
-| Concern             | Local backend                                             |
-| ------------------- | --------------------------------------------------------- |
-| Object storage      | S3-compatible store (e.g. MinIO) via a configurable endpoint |
-| Article metadata    | DynamoDB-compatible store (e.g. DynamoDB Local)           |
-| Knowledge graph     | Gremlin server (e.g. TinkerPop/JanusGraph), `NEPTUNE_ENDPOINT` |
-| Analytics warehouse | Local Snowflake-compatible connector                      |
-| Streaming ingest    | Kafka (`bootstrap.servers` defaults to `localhost:9092`)  |
-| Vector search       | Qdrant and PostgreSQL/pgvector                            |
-| Alerting & metrics  | Local JSON/log files (no managed monitoring service)      |
-| Request firewall    | In-process WAF (SQL-injection / XSS detection)            |
-| Sentiment & translation | Local Python models and lexicons                      |
-
-Endpoints are environment-driven (for example `S3_ENDPOINT_URL`,
-`DYNAMODB_ENDPOINT_URL`, `NEPTUNE_ENDPOINT`, `AWS_ENDPOINT_URL`), defaulting to
-localhost so the system works out of the box for development and tests.
+- **Argument mining** — detects claims, classifies stances, identifies frames
+  (economic / security / humanitarian / legal / political / scientific / other),
+  extracts actor/entity mentions, and tracks how policy positions evolve over
+  time.
+- **Source transparency ranking** — scores every outlet by framing diversity,
+  claim attribution rate, and stance neutrality; publishes a weekly snapshot
+  with sparkline history.
+- **Outlet clustering** — groups sources by editorial framing using k-means +
+  Ward hierarchical clustering, with a PCA 2-D scatter plot.
+- **Conflict graph** — visualises claim conflicts and contradictions between
+  sources.
+- **Fact-checking integration** — links claims to external verdicts; flags
+  unsourced assertions.
+- **Blog / feed ingestion** — subscribes to Atom/RSS watchlists and ingests
+  matching posts into the pipeline.
+- **News scraping** — Scrapy-based spiders with Playwright/Selenium rendering
+  for JavaScript-heavy pages.
+- **NLP & sentiment** — named-entity extraction, sentiment scoring, keyword
+  trends, knowledge-graph linking.
 
 ---
 
-## Use Cases
+## Architecture
 
-- Journalists and analysts - quick access to AI-generated summaries and sentiment
-  shifts.
-- Policy makers and think tanks - track legislative impact and policy evolution.
-- Business intelligence teams - analyze technology trends and company sentiment.
-- Researchers and data scientists - leverage knowledge-graph insights and
-  historical data.
+### Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React 18, Vite, TypeScript, React Query |
+| Backend | FastAPI, uvicorn |
+| Analytics warehouse | DuckDB (local file; single-writer) |
+| Argument mining | distilbert / heuristic fallback, scikit-learn, spaCy |
+| Scraping | Scrapy, Playwright, Selenium |
+| Orchestration | Apache Airflow |
+| MLOps | MLflow |
+| Vector search | Qdrant, PostgreSQL/pgvector |
+| Object storage | S3-compatible (MinIO) |
+| Metadata store | DynamoDB-compatible |
+| Streaming | Kafka (`localhost:9092` default) |
+
+### Local-first
+
+Every external service has a localhost default. Set environment variables to
+point at managed equivalents in production:
+
+```
+S3_ENDPOINT_URL        http://localhost:9000     # MinIO
+DYNAMODB_ENDPOINT_URL  http://localhost:8000     # DynamoDB Local
+NEPTUNE_ENDPOINT       ws://localhost:8182/gremlin
+NEURONEWS_DB_PATH      data/local_warehouse.duckdb  # DuckDB warehouse path
+```
+
+### MCP dev servers
+
+Token-efficient MCP stdio servers for development tooling (each reads the
+warehouse read-only so they never conflict with the API writer):
+
+| Server | Tools |
+|---|---|
+| `tools/argument_mcp/` | `am_stats`, `list_claims`, `list_stances`, `list_drift_events`, `claim_evidence_pairs`, `list_unsourced_claims`, `trigger_attribution_batch`, `list_actors`, `actor_summary`, `trigger_actor_batch`, `list_outlet_clusters`, `trigger_outlet_clustering`, `list_outlet_scores`, `trigger_outlet_scoring`, `get_benchmark_results` |
+| `tools/pipeline_mcp/` | `list_sources`, `run_connector`, `run_stage`, `trace_article` |
+| `tools/contract_mcp/` | `list_contracts`, `get_contract`, `validate` |
+| `tools/lineage_mcp/` | `list_namespaces`, `list_nodes`, `lineage`, `impact`, `run_history` |
+| `tools/domain_packs_mcp/` | `list`, `enable`, `disable`, `run_enrichers`, `get_ui_flags` |
+| `tools/blog_mcp/` | `subscribe_feed`, `ingest_feeds`, `run_watchlist`, `harvest_feed` |
+| `tools/schema_mcp/` | `list_tables`, `get_schema`, `list_routes`, `get_route` |
+| `tools/dataset_mcp/` | `get_stats`, `get_schema`, `label_distribution`, `sample_examples`, `check_criteria` |
 
 ---
 
-## Tech Stack
+## Getting started
 
-- Backend and scraping: Python, Scrapy, Selenium, Playwright, FastAPI.
-- NLP and AI: Hugging Face Transformers, sentence-transformers, scikit-learn.
-- Storage: S3-compatible object storage, DynamoDB-compatible metadata store,
-  PostgreSQL, Qdrant.
-- Event detection and summarization: embeddings, k-means / LDA clustering.
-- Visualization and reporting: Streamlit, Plotly.
-- Orchestration and MLOps: Apache Airflow, MLflow.
-
----
-
-## Getting Started
-
-### Project structure
-
-See [`docs/PROJECT_STRUCTURE.md`](docs/PROJECT_STRUCTURE.md) for a detailed
-overview of the directory layout and organization guidelines.
-
-### 1. Clone the repository
+### 1. Clone
 
 ```bash
 git clone https://github.com/Ikey168/NeuroNews.git
 cd NeuroNews
 ```
 
-### 2. Install dependencies
+### 2. Install Python dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Docker development (recommended)
+### 3. Install frontend dependencies
 
 ```bash
-# Run with Docker Compose for development
-docker compose up --build
+cd apps/web && npm install && cd ../..
+```
 
-# Run tests in a containerized environment
+### 4. Run the API
+
+```bash
+NEURONEWS_DEV_MODE=true \
+NEURONEWS_DB_PATH=/tmp/neuronews-dev.duckdb \
+uvicorn src.api.app:app --port 8012
+```
+
+`NEURONEWS_DEV_MODE=true` disables the WAF so development requests are not
+rejected. Use a separate `NEURONEWS_DB_PATH` to avoid locking the main
+warehouse file.
+
+### 5. Run the frontend
+
+```bash
+cd apps/web
+npm run dev          # http://localhost:5173
+```
+
+The React app falls back to bundled mock data when the API is unreachable, so
+the dashboard works standalone for UI development.
+
+### 6. Run tests
+
+```bash
+pytest                      # unit + integration tests
+npx tsc --noEmit -p apps/web/tsconfig.json   # TypeScript type check
+```
+
+### 7. Evaluate argument mining models
+
+```bash
+# Evaluate ClaimDetector, StanceClassifier, FrameClassifier on test split
+python scripts/benchmark_models.py
+
+# Enforce the ≥2 pp F1 improvement gate before merging a new checkpoint
+python scripts/benchmark_models.py --gate
+
+# With external benchmark datasets (optional)
+python scripts/benchmark_models.py --fever /data/fever/ --liar /data/liar/
+```
+
+Results are written to `docs/benchmark_results.json` and
+`docs/model_benchmarks.md`.
+
+### 8. Train argument mining models
+
+```bash
+# Requires data/argument_mining/{claims,stance,frames}.parquet (issue #109)
+python -m src.argument_mining.train_claim  --data data/argument_mining
+python -m src.argument_mining.train_stance --data data/argument_mining
+python -m src.argument_mining.train_frames --data data/argument_mining
+```
+
+Models are saved to `models/{claim_detector,stance_classifier,frame_classifier}/`.
+When a trained checkpoint is absent the pipeline falls back to keyword heuristics
+and still returns valid predictions.
+
+### 9. Run the scraper
+
+```bash
+python -m src.scraper.run --help
+python -m src.scraper.run --spider bbc
+python -m src.scraper.run --multi-source
+```
+
+### 10. Docker (optional)
+
+```bash
+docker compose up --build
 docker compose -f docker-compose.test-minimal.yml up --build --abort-on-container-exit
 ```
 
-### 4. Configure local services
+---
 
-Set the endpoints for the local backends (sensible localhost defaults are used
-when unset):
+## Dashboard views
 
-```bash
-export S3_ENDPOINT_URL=http://localhost:9000        # MinIO
-export DYNAMODB_ENDPOINT_URL=http://localhost:8000  # DynamoDB Local
-export NEPTUNE_ENDPOINT=ws://localhost:8182/gremlin # local Gremlin server
-```
+| View | What it shows |
+|---|---|
+| Dashboard | Sentiment overview, top topics, trending entities |
+| Arguments | Claim list, stance drift, conflict graph, outlet ranking, outlet clustering |
+| Sentiment | Source-level sentiment breakdown and timeline |
+| Timeline | Chronological article and event viewer |
+| Trending | Keyword and topic velocity |
+| NewsFeed | Live article feed with filters |
+| Watchlists | Blog/feed subscriptions and digest matches |
+| Clusters | Topic and source clustering visualisations |
+| Library | Document library for papers, books, transcripts |
+| Workspaces | Saved analysis sessions |
 
-Any non-empty credentials are accepted by the local emulators.
+---
 
-### 5. Run tests and generate a coverage report
+## Key warehouse tables
 
-```bash
-# Run the test suite with coverage
-pytest
+| Table | Contains |
+|---|---|
+| `news_articles` | Ingested articles and metadata |
+| `argument_claims` | Detected claims with attribution and fact-check verdicts |
+| `source_stances` | Per-source stance aggregations by topic |
+| `stance_drift_events` | Detected stance reversals |
+| `document_frames` | Per-document frame scores (7 dimensions) |
+| `document_actors` | Actor/entity mentions extracted from documents |
+| `policy_positions` | Extracted actor policy stances |
+| `position_updates` | Tracked changes to policy positions |
+| `claim_conflicts` | Claim-vs-claim contradiction records |
+| `outlet_clusters` | k-means / hierarchical cluster assignments |
+| `outlet_scores` | Weekly transparency scores (diversity / attribution / neutrality) |
 
-# Open coverage_report/index.html in your browser to view the report
-```
+---
 
-The coverage report provides line and branch coverage, untested-code
-identification, and module-level summaries.
+## Model benchmarks (heuristic baseline)
 
-If you also run the Terraform validation steps, install the Terraform CLI first,
-then:
+| Model | F1 | Notes |
+|---|---|---|
+| ClaimDetector | 0.8645 | Binary; blog and transcript are the weakest source types |
+| StanceClassifier | 0.4506 macro | Neutral class dominates; minority stances underperform |
+| FrameClassifier | 0.5200 macro | Political frame recall is near zero in heuristic mode |
 
-```bash
-terraform -chdir=deployment/terraform init -backend=false
-terraform -chdir=deployment/terraform validate
-```
-
-### 6. Run demo scripts
-
-```bash
-# Explore available demos
-ls demo/
-
-# Run a specific demo
-python demo/demo_airflow_bootstrap.py
-```
-
-### 7. MLflow autologging demo
-
-Experience MLflow's automatic experiment tracking with scikit-learn models:
-
-```bash
-# Run the MLflow autologging demonstration
-python examples/train_sklearn_demo.py
-
-# Results are stored in ./mlruns (or viewable in the MLflow UI if running)
-
-# Explore the interactive Jupyter notebook
-jupyter notebook notebooks/mlflow_autolog_demo.ipynb
-```
-
-What gets logged automatically:
-
-- Model hyperparameters (C, n_estimators, max_depth, and similar).
-- Training and test metrics.
-- Model artifacts (serialized models) and signatures (input/output schema).
-- Feature importance for tree-based models.
-
-### 8. Run the scraper
-
-Run it as a module from the repository root (it uses package-relative imports):
-
-```bash
-python -m src.scraper.run --help          # list all options
-python -m src.scraper.run --spider bbc    # scrape a single source
-python -m src.scraper.run --multi-source  # scrape all sources
-```
-
-### 9. Access dashboards and reports
-
-- Streamlit dashboards for visualizations and insights.
-- REST API for news sentiment, event tracking, and historical context.
+See [`docs/model_benchmarks.md`](docs/model_benchmarks.md) for full breakdown
+by source type, article length, and per-class metrics.
 
 ---
 
 ## Documentation
 
 - [Project structure](docs/PROJECT_STRUCTURE.md)
+- [Model benchmarks](docs/model_benchmarks.md)
 - [Exactly-once delivery design](docs/EXACTLY_ONCE_DESIGN.md)
 
 ---
 
 ## Roadmap
 
-- Phase 1: Web scraping and data ingestion - complete.
-- Phase 2: NLP processing and sentiment analysis - complete.
-- Phase 3: Event detection and AI summarization - complete.
-- Phase 4: Knowledge graph and deep linking - complete.
-- Phase 5: Interactive dashboards and API development - complete.
-- Future: predictive analytics, real-time fact-checking, and news verification.
+- Phase 1: Web scraping and data ingestion — complete
+- Phase 2: NLP, sentiment analysis, and knowledge graph — complete
+- Phase 3: Event detection and AI summarisation — complete
+- Phase 4: Interactive dashboards and REST API — complete
+- Phase 5: Argument mining pipeline (claims, stances, frames, positions, conflicts, actors) — complete
+- Phase 6: Outlet analysis (clustering, transparency scoring, conflict graph) — complete
+- Upcoming: trained model checkpoints; cross-dataset generalisation (FEVER / LIAR / AVeriTeC); predictive analytics; real-time fact-checking
 
 ---
 
-## Contact and Contributions
+## Contact and contributions
 
-- GitHub Issues: report bugs and request features.
-- Pull Requests: contributions welcome - see CONTRIBUTING.md for guidelines.
+- GitHub Issues: bug reports and feature requests
+- Pull Requests: contributions welcome — see CONTRIBUTING.md
 - Email: ikey168@proton.me
 - License: MIT
