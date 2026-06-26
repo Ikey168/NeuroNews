@@ -33,7 +33,7 @@ import {
   mockDriftEvents,
   mockFramesBySource,
 } from "../data/mock";
-import type { RawClaim, RawStanceSummary, RawActorPosition, RawPositionUpdate, RawSourceStance, RawDriftEvent, RawFrameSource } from "./api";
+import type { RawClaim, RawStanceSummary, RawActorPosition, RawPositionUpdate, RawSourceStance, RawDriftEvent, RawFrameSource, RawActor, RawActorSummary } from "./api";
 import { palette, ACCENT } from "../theme";
 import type {
   Article,
@@ -55,6 +55,8 @@ import type {
   ControversyGraph,
   SourceStance,
   StanceDriftEvent,
+  DocumentActor,
+  ActorSummary,
 } from "../types";
 
 export type Source = "live" | "demo";
@@ -419,6 +421,44 @@ export function useArgumentFramesBySource(params?: { source?: string; source_typ
     params?.source_type && params.source_type !== "all"
       ? mockFramesBySource.filter((s) => s.source_type === params.source_type)
       : mockFramesBySource,
+  );
+}
+
+export function useArgumentActors(params?: { document_id?: string; source_type?: string; role?: string; actor_name?: string; limit?: number }): Result<DocumentActor[]> {
+  const key = `argumentActors-${params?.document_id ?? ""}-${params?.source_type ?? "all"}-${params?.role ?? ""}-${params?.actor_name ?? ""}`;
+  return useWithFallback(
+    key,
+    async (): Promise<DocumentActor[]> => {
+      const res = await api.argumentActors(params);
+      return res.actors.map((r: RawActor) => ({
+        document_id:  r.document_id,
+        source_type:  r.source_type as SourceType,
+        actor_name:   r.actor_name,
+        entity_id:    r.entity_id,
+        role:         r.role,
+        confidence:   r.confidence,
+        extracted_at: r.extracted_at,
+      }));
+    },
+    [],
+  );
+}
+
+export function useArgumentActorsSummary(params?: { source_type?: string; role?: string; limit?: number }): Result<ActorSummary[]> {
+  const key = `argumentActorsSummary-${params?.source_type ?? "all"}-${params?.role ?? ""}`;
+  return useWithFallback(
+    key,
+    async (): Promise<ActorSummary[]> => {
+      const res = await api.argumentActorsSummary(params);
+      return res.actors.map((r: RawActorSummary) => ({
+        actor_name:     r.actor_name,
+        entity_id:      r.entity_id,
+        role:           r.role,
+        doc_count:      r.doc_count,
+        avg_confidence: r.avg_confidence,
+      }));
+    },
+    [],
   );
 }
 

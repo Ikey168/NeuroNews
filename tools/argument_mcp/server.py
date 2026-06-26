@@ -14,6 +14,14 @@ Tools (non-overlapping with pipeline_mcp which owns positions/conflicts):
                     limit?)
   claim_evidence_pairs(claim_id?,         -> claim-to-claim evidence pairs
                        relation?, limit?)
+  list_unsourced_claims(source_type?,     -> unattributed claim records
+                        limit?)
+  trigger_attribution_batch(limit?)       -> classify unattributed claims (RW)
+  list_actors(document_id?, source_type?, -> actor/source metadata rows
+              role?, actor_name?, limit?)
+  actor_summary(source_type?, role?,      -> top actors by document frequency
+                limit?)
+  trigger_actor_batch(limit?)             -> extract actors from news_articles (RW)
 
 Design constraints (same as pipeline_mcp):
   * Lazy imports inside each tool — top-level imports are stdlib + fastmcp only.
@@ -511,6 +519,184 @@ def trigger_attribution_batch(limit: int = 500) -> dict:
     try:
         rw_conn = duckdb.connect(db_path, read_only=False)
         result = run_attribution_batch(rw_conn, lock, limit=limit)
+        rw_conn.close()
+        return result
+    except Exception as e:
+        return {"error": f"write connection failed — warehouse may be locked: {e}"}
+
+
+@mcp.tool
+def list_actors(
+    document_id: Optional[str] = None,
+    source_type: Optional[str] = None,
+    role: Optional[str] = None,
+    actor_name: Optional[str] = None,
+    limit: int = MAX_LIST,
+) -> dict:
+    """
+    Query extracted actor/source metadata from ``document_actors``.
+
+    Filter by any combination of document_id, source_type, role
+    (speaker|subject|author), or partial actor_name.
+
+    Returns compact rows with entity_id, role, and confidence.
+
+    Args:
+        document_id: Restrict to one document.
+        source_type: news|blog|paper|transcript|book|note|web.
+        role:        speaker, subject, or author.
+        actor_name:  Substring match (case-insensitive).
+        limit:       Max rows (default 50).
+    """
+    conn, err = _warehouse_ro()
+    if err or conn is None:
+        return {"error": err or "no connection"}
+
+    conditions: list[str] = []
+    params: list = []
+
+    if document_id:
+        conditions.append("document_id = ?")
+        params.append(document_id)
+    if source_type:
+        conditions.append("source_type = ?")
+        params.append(source_type)
+    if role:
+        conditions.append("role = ?")
+        params.append(role)
+    if actor_name:
+        conditions.append("lower(actor_name) LIKE ?")
+        params.append(f"%{actor_name.lower()}%")
+
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    params.append(limit)
+
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT document_id, source_type, actor_name, entity_id,
+                   role, confidence, extracted_at
+            FROM document_actors
+            {where}
+            ORDER BY confidence DESC NULLS LAST
+            LIMIT ?
+            """,
+            params,
+        ).fetchall()
+    except Exception as e:
+        return {"error": str(e)}
+
+    return {
+        "count": len(rows),
+        "actors": [
+            {
+                "document_id":  r[0],
+                "source_type":  r[1],
+                "actor_name":   r[2],
+                "entity_id":    r[3],
+                "role":         r[4],
+                "confidence":   round(r[5], 3) if r[5] is not None else None,
+                "extracted_at": r[6],
+            }
+            for r in rows
+        ],
+    }
+
+
+@mcp.tool
+def actor_summary(
+    source_type: Optional[str] = None,
+    role: Optional[str] = None,
+    limit: int = 30,
+) -> dict:
+    """
+    Top actors by document frequency across all ingested content.
+
+    Useful for seeding stance-detection and policy-position pipelines with a
+    pre-ranked actor list without scanning full article text.
+
+    Args:
+        source_type: Filter by content type.
+        role:        Filter by role (speaker|subject|author).
+        limit:       Top-N (default 30).
+    """
+    conn, err = _warehouse_ro()
+    if err or conn is None:
+        return {"error": err or "no connection"}
+
+    conditions: list[str] = []
+    params: list = []
+
+    if source_type:
+        conditions.append("source_type = ?")
+        params.append(source_type)
+    if role:
+        conditions.append("role = ?")
+        params.append(role)
+
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    params.append(limit)
+
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT actor_name, entity_id, role,
+                   COUNT(DISTINCT document_id) AS doc_count,
+                   ROUND(AVG(confidence), 4)   AS avg_confidence
+            FROM document_actors
+            {where}
+            GROUP BY actor_name, entity_id, role
+            ORDER BY doc_count DESC, avg_confidence DESC
+            LIMIT ?
+            """,
+            params,
+        ).fetchall()
+    except Exception as e:
+        return {"error": str(e)}
+
+    return {
+        "count": len(rows),
+        "actors": [
+            {
+                "actor_name":     r[0],
+                "entity_id":      r[1],
+                "role":           r[2],
+                "doc_count":      r[3],
+                "avg_confidence": float(r[4]) if r[4] is not None else 0.0,
+            }
+            for r in rows
+        ],
+    }
+
+
+@mcp.tool
+def trigger_actor_batch(limit: int = 200) -> dict:
+    """
+    Extract actors for news_articles documents not yet in ``document_actors``.
+
+    Calls ``run_actor_batch`` from ``src.argument_mining.metadata``.
+    Safe to call repeatedly — already-processed documents are skipped.
+
+    Args:
+        limit: Max documents per call (default 200).
+
+    Returns {"processed": int, "actors": int, "skipped": int}.
+    """
+    import os, threading, duckdb
+
+    try:
+        from src.argument_mining.metadata import run_actor_batch  # type: ignore[import]
+    except ImportError as e:
+        return {"error": f"metadata module unavailable: {e}"}
+
+    db_path = os.environ.get(
+        "NEURONEWS_DB_PATH",
+        str(REPO_ROOT / "data" / "local_warehouse.duckdb"),
+    )
+    try:
+        rw_conn = duckdb.connect(db_path, read_only=False)
+        lock = threading.Lock()
+        result = run_actor_batch(rw_conn, lock, limit=limit)
         rw_conn.close()
         return result
     except Exception as e:

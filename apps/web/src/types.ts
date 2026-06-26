@@ -296,6 +296,24 @@ export interface ControversyGraph {
 
 export type SourceType = "news" | "blog" | "paper" | "book" | "transcript" | "web" | "note";
 
+export interface DocumentActor {
+  document_id: string;
+  source_type: SourceType;
+  actor_name: string;
+  entity_id: string;
+  role: "speaker" | "subject" | "author";
+  confidence: number | null;
+  extracted_at: string | null;
+}
+
+export interface ActorSummary {
+  actor_name: string;
+  entity_id: string;
+  role: "speaker" | "subject" | "author";
+  doc_count: number;
+  avg_confidence: number;
+}
+
 export interface KnowledgeDocument {
   document_id: string;
   source_type: SourceType;

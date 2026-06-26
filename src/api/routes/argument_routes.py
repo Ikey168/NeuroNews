@@ -1813,3 +1813,214 @@ async def get_sources_ranking(
     ]
 
     return {"sources": sources, "count": len(sources)}
+
+
+# ---------------------------------------------------------------------------
+# Actor / source metadata endpoints (#114)
+# ---------------------------------------------------------------------------
+
+@router.get("/actors")
+async def get_actors(
+    document_id: Optional[str] = Query(None, description="Filter by document ID"),
+    source_type: Optional[str] = Query(None, description="Filter by content type"),
+    role: Optional[str] = Query(None, description="Filter by role: speaker|subject|author"),
+    actor_name: Optional[str] = Query(None, description="Partial name match (ILIKE)"),
+    limit: int = Query(100, ge=1, le=1000, description="Max results"),
+) -> Dict[str, Any]:
+    """
+    Query ``document_actors`` for extracted actor/source metadata.
+
+    Each record carries a stable ``entity_id`` (sha1 of the canonical name)
+    that joins to the entity graph without a separate entity table.
+    """
+    import threading
+
+    from src.database.local_analytics_connector import get_shared_connection
+
+    conn = get_shared_connection()
+    lock = getattr(conn, "_lock", None) or threading.Lock()
+
+    conditions: list[str] = []
+    params: list[Any] = []
+
+    if document_id:
+        conditions.append("document_id = ?")
+        params.append(document_id)
+    if source_type:
+        conditions.append("source_type = ?")
+        params.append(source_type)
+    if role:
+        conditions.append("role = ?")
+        params.append(role)
+    if actor_name:
+        conditions.append("actor_name ILIKE ?")
+        params.append(f"%{actor_name}%")
+
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    params.append(limit)
+
+    with lock:
+        rows = conn.execute(
+            f"""
+            SELECT document_id, source_type, actor_name, entity_id,
+                   role, confidence, extracted_at
+            FROM document_actors
+            {where}
+            ORDER BY confidence DESC
+            LIMIT ?
+            """,
+            params,
+        ).fetchall()
+
+    actors = [
+        {
+            "document_id":  r[0],
+            "source_type":  r[1],
+            "actor_name":   r[2],
+            "entity_id":    r[3],
+            "role":         r[4],
+            "confidence":   round(r[5], 4) if r[5] is not None else None,
+            "extracted_at": r[6],
+        }
+        for r in rows
+    ]
+    return {"actors": actors, "count": len(actors)}
+
+
+@router.post("/actors/extract")
+async def extract_actors_for_document(
+    document_id: str = Query(..., description="Document ID in news_articles"),
+    source_type: str = Query("news", description="Source type of the document"),
+) -> Dict[str, Any]:
+    """
+    Run actor extraction on a single stored document and persist results.
+
+    Uses spaCy NER when ``en_core_web_sm`` is installed; falls back to
+    regex heuristics automatically.
+    """
+    import threading, time
+
+    from src.database.local_analytics_connector import get_shared_connection
+    from src.argument_mining.metadata import extract_actors, store_actors
+
+    conn = get_shared_connection()
+    lock = getattr(conn, "_lock", None) or threading.Lock()
+
+    with lock:
+        row = conn.execute(
+            "SELECT id, title, content, source FROM news_articles WHERE id = ? LIMIT 1",
+            [document_id],
+        ).fetchone()
+
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Document '{document_id}' not found")
+
+    from services.ingest.common.document_model import Document  # type: ignore[import]
+
+    doc = Document(
+        document_id=row[0],
+        source_type=source_type,
+        language="en",
+        ingested_at=int(time.time() * 1000),
+        source_id=row[3],
+        title=row[1],
+        content=row[2] or "",
+    )
+    records = extract_actors(doc)
+    if records:
+        with lock:
+            store_actors(records, conn)
+
+    return {
+        "document_id": document_id,
+        "source_type": source_type,
+        "actors_extracted": len(records),
+        "actors": [
+            {"actor_name": r.actor_name, "role": r.role,
+             "entity_id": r.entity_id, "confidence": round(r.confidence, 4)}
+            for r in records
+        ],
+    }
+
+
+@router.post("/actors/batch")
+async def run_actors_batch(
+    limit: int = Query(200, ge=1, le=2000,
+                       description="Max news_articles documents to process"),
+) -> Dict[str, Any]:
+    """
+    Extract actors for news_articles documents not yet in ``document_actors``.
+
+    Safe to call repeatedly — already-processed documents are skipped.
+    """
+    import threading
+
+    from src.database.local_analytics_connector import get_shared_connection
+    from src.argument_mining.metadata import run_actor_batch
+
+    conn = get_shared_connection()
+    lock = getattr(conn, "_lock", None) or threading.Lock()
+    return run_actor_batch(conn, lock, limit=limit)
+
+
+@router.get("/actors/summary")
+async def get_actors_summary(
+    source_type: Optional[str] = Query(None, description="Filter by content type"),
+    role: Optional[str] = Query(None, description="Filter by role"),
+    limit: int = Query(30, ge=1, le=200, description="Top-N actors by document frequency"),
+) -> Dict[str, Any]:
+    """
+    Aggregate view: most frequent actors across all documents.
+
+    Returns top actors by document_count, broken down by role.  Useful for
+    feeding the stance detection and policy position pipelines with a
+    pre-ranked actor list.
+    """
+    import threading
+
+    from src.database.local_analytics_connector import get_shared_connection
+
+    conn = get_shared_connection()
+    lock = getattr(conn, "_lock", None) or threading.Lock()
+
+    conditions: list[str] = []
+    params: list[Any] = []
+
+    if source_type:
+        conditions.append("source_type = ?")
+        params.append(source_type)
+    if role:
+        conditions.append("role = ?")
+        params.append(role)
+
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    params.append(limit)
+
+    with lock:
+        rows = conn.execute(
+            f"""
+            SELECT actor_name, entity_id, role,
+                   COUNT(DISTINCT document_id) AS doc_count,
+                   ROUND(AVG(confidence), 4)   AS avg_confidence
+            FROM document_actors
+            {where}
+            GROUP BY actor_name, entity_id, role
+            ORDER BY doc_count DESC, avg_confidence DESC
+            LIMIT ?
+            """,
+            params,
+        ).fetchall()
+
+    return {
+        "actors": [
+            {
+                "actor_name":     r[0],
+                "entity_id":      r[1],
+                "role":           r[2],
+                "doc_count":      r[3],
+                "avg_confidence": float(r[4]) if r[4] is not None else 0.0,
+            }
+            for r in rows
+        ],
+        "count": len(rows),
+    }
