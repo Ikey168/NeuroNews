@@ -217,10 +217,23 @@ def _migrate_factcheck_columns(conn: duckdb.DuckDBPyConnection) -> None:
             pass  # column already exists
 
 
+def _migrate_attribution_columns(conn: duckdb.DuckDBPyConnection) -> None:
+    """Add attribution columns to argument_claims (#113)."""
+    for col, dtype in [
+        ("attributed",       "BOOLEAN"),
+        ("attribution_text", "VARCHAR"),
+    ]:
+        try:
+            conn.execute(f"ALTER TABLE argument_claims ADD COLUMN {col} {dtype}")
+        except Exception:
+            pass  # column already exists
+
+
 def ensure_schema(conn: duckdb.DuckDBPyConnection) -> None:
     """Create the news_articles table if it does not exist."""
     conn.execute(_SCHEMA)
     _migrate_factcheck_columns(conn)
+    _migrate_attribution_columns(conn)
 
 
 def seed_if_empty(conn: duckdb.DuckDBPyConnection) -> None:

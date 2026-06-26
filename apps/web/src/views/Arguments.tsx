@@ -162,18 +162,52 @@ function TabBar({ active, onChange }: { active: ArgumentTab; onChange: (t: Argum
 // ─── Claims panel ─────────────────────────────────────────────────────────────
 
 function ClaimsPanel({ sourceType }: { sourceType: string }) {
-  const { data: claims, source, isLoading } = useArgumentClaims();
+  const [unsourcedOnly, setUnsourcedOnly] = useState(false);
+  const { data: claims, source, isLoading } = useArgumentClaims(
+    unsourcedOnly ? { unsourced_only: true } : undefined,
+  );
   const filtered = sourceType === "all" ? claims : claims.filter((c) => c.source_type === sourceType);
   const claimsOnly = filtered.filter((c) => c.is_claim);
+  const unsourcedCount = claimsOnly.filter((c) => c.attributed === false).length;
+
+  // Per-document unsourced counts for the summary header
+  const docUnsourced: Record<string, number> = {};
+  for (const c of claimsOnly) {
+    if (c.attributed === false) {
+      docUnsourced[c.document_id] = (docUnsourced[c.document_id] ?? 0) + 1;
+    }
+  }
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-        <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontFamily: fonts.grotesk, fontWeight: 600, fontSize: 14 }}>Detected Claims</span>
-          <span style={{ ...mono10, marginLeft: 10, fontFamily: fonts.mono, fontSize: 10 }}>{claimsOnly.length} of {filtered.length} sentences</span>
+          <span style={{ ...mono10, fontFamily: fonts.mono, fontSize: 10 }}>{claimsOnly.length} of {filtered.length} sentences</span>
+          {unsourcedCount > 0 && (
+            <span style={{
+              fontFamily: fonts.mono, fontSize: 9.5, letterSpacing: "0.08em",
+              color: palette.amber, background: `${palette.amber}18`,
+              border: `1px solid ${palette.amber}40`, borderRadius: 4, padding: "2px 7px",
+            }}>
+              {unsourcedCount} unsourced
+            </span>
+          )}
         </div>
-        <SourceBadge source={source} isLoading={isLoading} />
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button
+            onClick={() => setUnsourcedOnly((v) => !v)}
+            style={{
+              fontFamily: fonts.mono, fontSize: 10, padding: "3px 9px", borderRadius: 5, cursor: "pointer",
+              border: unsourcedOnly ? `1px solid ${palette.amber}` : `1px solid ${colors.border2}`,
+              background: unsourcedOnly ? `${palette.amber}18` : "transparent",
+              color: unsourcedOnly ? palette.amber : palette.dim,
+            }}
+          >
+            unsourced only
+          </button>
+          <SourceBadge source={source} isLoading={isLoading} />
+        </div>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -181,20 +215,29 @@ function ClaimsPanel({ sourceType }: { sourceType: string }) {
           const verdict = c.factcheck_verdict;
           const verdictColor = verdict ? VERDICT_COLORS[verdict] : palette.faint;
           const verdictLabel = verdict ? (VERDICT_LABELS[verdict] ?? verdict.toUpperCase()) : "—";
+          const isUnsourced = c.attributed === false;
+          const leftBorderColor = isUnsourced ? palette.amber : (c.is_claim ? palette.blue : colors.border2);
           return (
             <div
               key={`${c.document_id}-${i}`}
               style={{
                 ...card,
                 padding: "12px 16px",
-                borderLeft: `3px solid ${c.is_claim ? palette.blue : colors.border2}`,
+                borderLeft: `3px solid ${leftBorderColor}`,
                 opacity: c.is_claim ? 1 : 0.6,
               }}
             >
               <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 500, color: colors.text, lineHeight: 1.5 }}>{c.text}</div>
-                  <div style={{ marginTop: 6, fontFamily: fonts.mono, fontSize: 10.5, color: palette.faint }}>{c.title}</div>
+                  <div style={{ marginTop: 4, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    <span style={{ fontFamily: fonts.mono, fontSize: 10.5, color: palette.faint }}>{c.title}</span>
+                    {c.attribution_text && (
+                      <span style={{ fontFamily: fonts.mono, fontSize: 10, color: palette.pos }}>
+                        via {c.attribution_text}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
                   <span style={{
@@ -206,6 +249,18 @@ function ClaimsPanel({ sourceType }: { sourceType: string }) {
                   }}>
                     {c.is_claim ? "CLAIM" : "NON-CLAIM"}
                   </span>
+
+                  {c.attributed !== null && (
+                    <span style={{
+                      fontFamily: fonts.mono, fontSize: 9.5, letterSpacing: "0.08em",
+                      color: isUnsourced ? palette.amber : palette.pos,
+                      background: `${isUnsourced ? palette.amber : palette.pos}18`,
+                      border: `1px solid ${isUnsourced ? palette.amber : palette.pos}40`,
+                      borderRadius: 5, padding: "2px 7px",
+                    }}>
+                      {isUnsourced ? "UNSOURCED" : "SOURCED"}
+                    </span>
+                  )}
 
                   {c.factcheck_url ? (
                     <a

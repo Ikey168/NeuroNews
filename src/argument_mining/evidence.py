@@ -65,6 +65,8 @@ class ClaimRecord:
     source_type: str
     confidence: float
     extracted_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    attributed: Optional[bool] = None
+    attribution_text: Optional[str] = None
 
 
 @dataclass
@@ -136,18 +138,23 @@ def _cosine_similarities(claim_text: str, corpus_texts: List[str]) -> List[float
 
 def extract_claims(document: Document) -> List[ClaimRecord]:
     """Run ClaimDetector over `document`; return only sentences classified as claims."""
+    from src.argument_mining.attribution import classify_attribution  # lazy — avoids circular import
+
     detector = get_claim_detector()
     predictions = detector.predict(document)
     records = []
     for pred in predictions:
         if not pred.is_claim:
             continue
+        attributed, attribution_text = classify_attribution(pred.text, document.source_type)
         records.append(ClaimRecord(
             claim_id=_claim_id(document.document_id, pred.sentence_idx),
             claim_text=pred.text,
             document_id=document.document_id,
             source_type=document.source_type,
             confidence=pred.confidence,
+            attributed=attributed,
+            attribution_text=attribution_text,
         ))
     return records
 
@@ -213,11 +220,13 @@ def store_claim(record: ClaimRecord, conn) -> None:
     conn.execute(
         """
         INSERT OR REPLACE INTO argument_claims
-            (claim_id, claim_text, document_id, source_type, confidence, extracted_at)
-        VALUES (?, ?, ?, ?, ?, ?)
+            (claim_id, claim_text, document_id, source_type, confidence,
+             extracted_at, attributed, attribution_text)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
         [record.claim_id, record.claim_text, record.document_id,
-         record.source_type, record.confidence, record.extracted_at],
+         record.source_type, record.confidence, record.extracted_at,
+         record.attributed, record.attribution_text],
     )
 
 

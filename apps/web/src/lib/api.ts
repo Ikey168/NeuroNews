@@ -17,7 +17,7 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, params?: Record<string, string | number | undefined>): Promise<T> {
+async function request<T>(path: string, params?: Record<string, string | number | boolean | undefined>): Promise<T> {
   const url = new URL(BASE_URL + path, BASE_URL || window.location.origin);
   if (params) {
     for (const [k, v] of Object.entries(params)) {
@@ -180,6 +180,8 @@ export interface RawClaim {
   factcheck_verdict: string | null;
   factcheck_url: string | null;
   factcheck_publisher: string | null;
+  attributed: boolean | null;
+  attribution_text: string | null;
 }
 
 export interface RawStanceSummary {
@@ -328,7 +330,7 @@ export const api = {
   argumentFrames: (params?: { source_type?: string; document_id?: string; limit?: number }) =>
     request<RawFrameDistribution>("/api/v1/arguments/frames", params),
 
-  argumentClaims: (params?: { document_id?: string; source_type?: string; topic?: string; limit?: number }) =>
+  argumentClaims: (params?: { document_id?: string; source_type?: string; topic?: string; unsourced_only?: boolean; limit?: number }) =>
     request<{ claims: RawClaim[]; count: number }>("/api/v1/arguments/claims", params),
 
   argumentStance: (params?: { topic?: string; source?: string; source_type?: string; date_range?: string }) =>

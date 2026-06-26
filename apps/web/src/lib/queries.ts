@@ -253,8 +253,8 @@ export function useTicker(): Result<string> {
 
 // ─── Argument Mining ─────────────────────────────────────────────────────────
 
-export function useArgumentClaims(params?: { source_type?: string; topic?: string }): Result<ClaimResult[]> {
-  const key = `argumentClaims-${params?.source_type ?? "all"}-${params?.topic ?? ""}`;
+export function useArgumentClaims(params?: { source_type?: string; topic?: string; unsourced_only?: boolean }): Result<ClaimResult[]> {
+  const key = `argumentClaims-${params?.source_type ?? "all"}-${params?.topic ?? ""}-${params?.unsourced_only ?? false}`;
   return useWithFallback(
     key,
     async (): Promise<ClaimResult[]> => {
@@ -269,6 +269,8 @@ export function useArgumentClaims(params?: { source_type?: string; topic?: strin
         factcheck_url: r.factcheck_url ?? null,
         factcheck_publisher: r.factcheck_publisher ?? null,
         title: "",
+        attributed: r.attributed ?? null,
+        attribution_text: r.attribution_text ?? null,
       }));
     },
     mockClaims,

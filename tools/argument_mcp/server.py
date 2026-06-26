@@ -411,5 +411,111 @@ def claim_evidence_pairs(
     }
 
 
+@mcp.tool
+def list_unsourced_claims(
+    source_type: Optional[str] = None,
+    limit: int = MAX_LIST,
+) -> dict:
+    """
+    Claims flagged as unsourced (``attributed = false``) from ``argument_claims``.
+
+    Useful for auditing how many assertions in ingested content lack an
+    attributed source.  Groups results by document_id so you can see the
+    per-document unsourced count at a glance.
+
+    Args:
+        source_type: Filter by content type (news/blog/paper/transcript/book/note).
+        limit:       Max rows (default 30, max 100).
+
+    Returns a list of dicts: {claim_id, source_type, document_id, confidence,
+    claim_preview} plus a top-level per_document_counts summary.
+    """
+    conn, err = _warehouse_ro()
+    if err or conn is None:
+        return {"error": err or "no connection"}
+
+    limit = min(limit, 100)
+    where: list[str] = ["(attributed = false OR attributed IS NULL)"]
+    params: list = []
+
+    if source_type:
+        where.append("source_type = ?")
+        params.append(source_type)
+
+    clause = "WHERE " + " AND ".join(where)
+    params.append(limit)
+
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT claim_id, source_type, document_id, confidence, claim_text
+            FROM argument_claims
+            {clause}
+            ORDER BY confidence DESC NULLS LAST
+            LIMIT ?
+            """,
+            params,
+        ).fetchall()
+    except Exception as e:
+        return {"error": str(e)}
+
+    per_doc: dict[str, int] = {}
+    claims = []
+    for r in rows:
+        per_doc[r[2]] = per_doc.get(r[2], 0) + 1
+        claims.append({
+            "claim_id":      r[0],
+            "source_type":   r[1],
+            "document_id":   r[2],
+            "confidence":    round(r[3], 3) if r[3] is not None else None,
+            "claim_preview": _clip(r[4] or ""),
+        })
+
+    return {
+        "count": len(claims),
+        "per_document_counts": per_doc,
+        "claims": claims,
+    }
+
+
+@mcp.tool
+def trigger_attribution_batch(limit: int = 500) -> dict:
+    """
+    Run the attribution classifier over unclassified claims (``attributed IS NULL``).
+
+    Calls ``run_attribution_batch`` from ``src.argument_mining.attribution``.
+    Safe to call repeatedly — already-classified rows are skipped.
+
+    Args:
+        limit: Max claims to classify per call (default 500).
+
+    Returns {"updated": int, "skipped": int}.
+    """
+    conn, err = _warehouse_ro()
+    if err or conn is None:
+        return {"error": err or "no connection"}
+
+    import threading
+    try:
+        from src.argument_mining.attribution import run_attribution_batch  # type: ignore[import]
+    except ImportError as e:
+        return {"error": f"attribution module unavailable: {e}"}
+
+    lock = threading.Lock()
+    # attribution batch needs write access; try to open rw
+    import os, duckdb
+    db_path = os.environ.get(
+        "NEURONEWS_DB_PATH",
+        str(REPO_ROOT / "data" / "local_warehouse.duckdb"),
+    )
+    try:
+        rw_conn = duckdb.connect(db_path, read_only=False)
+        result = run_attribution_batch(rw_conn, lock, limit=limit)
+        rw_conn.close()
+        return result
+    except Exception as e:
+        return {"error": f"write connection failed — warehouse may be locked: {e}"}
+
+
 if __name__ == "__main__":
     mcp.run()

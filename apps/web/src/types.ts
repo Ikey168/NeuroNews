@@ -197,6 +197,8 @@ export interface ClaimResult {
   factcheck_url: string | null;
   factcheck_publisher: string | null;
   title: string;
+  attributed: boolean | null;
+  attribution_text: string | null;
 }
 
 export interface StanceSummary {
