@@ -1,16 +1,17 @@
 """
-Argument Mining API routes (Issues #90, #93, #95, #96).
+Argument Mining API routes (Issues #90, #93, #95, #96, #97).
 
 GET  /api/v1/arguments/frames                    — aggregate frame distribution
 GET  /api/v1/arguments/frames?document_id=       — frames for a specific document
 GET  /api/v1/arguments/frames?source_type=       — aggregate filtered by source type
 GET  /api/v1/arguments/frames?date_range=        — aggregate filtered by time window (7d/30d/90d)
 GET  /api/v1/arguments/frames/source             — frames aggregated per publication source
-GET  /api/v1/arguments/claims                    — query stored claims
+GET  /api/v1/arguments/claims                    — query stored claims (includes factcheck fields)
 GET  /api/v1/arguments/claims?unsourced_only=    — claims with no corroborating evidence
 POST /api/v1/arguments/claims/extract            — run pipeline on a stored document
-GET  /api/v1/arguments/claims/{id}               — single claim with evidence links
+GET  /api/v1/arguments/claims/{id}               — single claim with evidence links + factcheck verdict
 GET  /api/v1/arguments/claims/{id}/evidence      — evidence for a claim
+POST /api/v1/arguments/claims/{id}/factcheck     — trigger on-demand fact-check (#97)
 GET  /api/v1/arguments/stance                    — stance distribution across topics
 GET  /api/v1/arguments/stance/drift              — 7-bucket supportive-ratio time series
 GET  /api/v1/arguments/positions                 — actor positions derived from claims
@@ -302,7 +303,8 @@ async def get_claims(
     with lock:
         rows = conn.execute(
             f"""
-            SELECT claim_id, claim_text, document_id, source_type, confidence, extracted_at
+            SELECT claim_id, claim_text, document_id, source_type, confidence,
+                   extracted_at, factcheck_verdict, factcheck_url, factcheck_publisher
             FROM argument_claims
             {where}
             ORDER BY confidence DESC
@@ -319,6 +321,9 @@ async def get_claims(
             "source_type": r[3],
             "confidence": round(r[4], 4) if r[4] is not None else None,
             "extracted_at": r[5],
+            "factcheck_verdict": r[6],
+            "factcheck_url": r[7],
+            "factcheck_publisher": r[8],
         }
         for r in rows
     ]
@@ -462,7 +467,8 @@ async def get_claim(claim_id: str) -> Dict[str, Any]:
     with lock:
         row = conn.execute(
             """
-            SELECT claim_id, claim_text, document_id, source_type, confidence, extracted_at
+            SELECT claim_id, claim_text, document_id, source_type, confidence,
+                   extracted_at, factcheck_verdict, factcheck_url, factcheck_publisher
             FROM argument_claims WHERE claim_id = ?
             """,
             [claim_id],
@@ -489,7 +495,9 @@ async def get_claim(claim_id: str) -> Dict[str, Any]:
         "source_type": row[3],
         "confidence": round(row[4], 4) if row[4] is not None else None,
         "extracted_at": row[5],
-        "factcheck_verdict": None,
+        "factcheck_verdict": row[6],
+        "factcheck_url": row[7],
+        "factcheck_publisher": row[8],
         "evidence": [
             {
                 "evidence_id": e[0],
@@ -503,6 +511,59 @@ async def get_claim(claim_id: str) -> Dict[str, Any]:
             for e in ev_rows
         ],
         "evidence_count": len(ev_rows),
+    }
+
+
+# ---------------------------------------------------------------------------
+# On-demand fact-check endpoint (#97)
+# ---------------------------------------------------------------------------
+
+@router.post("/claims/{claim_id}/factcheck")
+async def factcheck_claim(claim_id: str) -> Dict[str, Any]:
+    """
+    Trigger an on-demand fact-check for a single claim via Google Fact Check Tools.
+
+    Requires GOOGLE_FACTCHECK_API_KEY in the environment.  Returns 503 when the
+    key is not configured.  Results are cached in argument_claims so repeated
+    calls for the same claim are fast.
+    """
+    import threading
+    import os
+
+    from src.database.local_analytics_connector import get_shared_connection
+    from src.argument_mining.factcheck import lookup_claim, store_result
+
+    if not os.getenv("GOOGLE_FACTCHECK_API_KEY"):
+        raise HTTPException(
+            status_code=503,
+            detail="GOOGLE_FACTCHECK_API_KEY is not configured on this server.",
+        )
+
+    conn = get_shared_connection()
+    lock = getattr(conn, "_lock", None) or threading.Lock()
+
+    with lock:
+        row = conn.execute(
+            "SELECT claim_text FROM argument_claims WHERE claim_id = ?",
+            [claim_id],
+        ).fetchone()
+
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Claim '{claim_id}' not found")
+
+    result = lookup_claim(row[0])
+    if result is None:
+        raise HTTPException(status_code=502, detail="Fact Check Tools API returned no result")
+
+    store_result(conn, lock, claim_id, result)
+
+    return {
+        "claim_id": claim_id,
+        "factcheck_verdict": result.verdict,
+        "factcheck_url": result.url,
+        "factcheck_publisher": result.publisher,
+        "textual_rating": result.textual_rating,
+        "checked_at": result.checked_at,
     }
 
 

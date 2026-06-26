@@ -177,6 +177,9 @@ export interface RawClaim {
   source_type: string;
   confidence: number | null;
   extracted_at: string | null;
+  factcheck_verdict: string | null;
+  factcheck_url: string | null;
+  factcheck_publisher: string | null;
 }
 
 export interface RawStanceSummary {

@@ -42,12 +42,16 @@ CREATE TABLE IF NOT EXISTS document_frames (
 );
 
 CREATE TABLE IF NOT EXISTS argument_claims (
-    claim_id      VARCHAR PRIMARY KEY,
-    claim_text    VARCHAR NOT NULL,
-    document_id   VARCHAR NOT NULL,
-    source_type   VARCHAR NOT NULL,
-    confidence    DOUBLE,
-    extracted_at  VARCHAR
+    claim_id              VARCHAR PRIMARY KEY,
+    claim_text            VARCHAR NOT NULL,
+    document_id           VARCHAR NOT NULL,
+    source_type           VARCHAR NOT NULL,
+    confidence            DOUBLE,
+    extracted_at          VARCHAR,
+    factcheck_verdict     VARCHAR,
+    factcheck_url         VARCHAR,
+    factcheck_publisher   VARCHAR,
+    factcheck_checked_at  VARCHAR
 );
 
 CREATE TABLE IF NOT EXISTS claim_evidence (
@@ -142,9 +146,24 @@ def _build_rows(now: datetime) -> List[tuple]:
     return rows
 
 
+def _migrate_factcheck_columns(conn: duckdb.DuckDBPyConnection) -> None:
+    """Add factcheck columns to argument_claims if they were added after initial creation."""
+    for col, dtype in [
+        ("factcheck_verdict",    "VARCHAR"),
+        ("factcheck_url",        "VARCHAR"),
+        ("factcheck_publisher",  "VARCHAR"),
+        ("factcheck_checked_at", "VARCHAR"),
+    ]:
+        try:
+            conn.execute(f"ALTER TABLE argument_claims ADD COLUMN {col} {dtype}")
+        except Exception:
+            pass  # column already exists
+
+
 def ensure_schema(conn: duckdb.DuckDBPyConnection) -> None:
     """Create the news_articles table if it does not exist."""
     conn.execute(_SCHEMA)
+    _migrate_factcheck_columns(conn)
 
 
 def seed_if_empty(conn: duckdb.DuckDBPyConnection) -> None:
