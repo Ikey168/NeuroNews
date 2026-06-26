@@ -166,6 +166,16 @@ export type ViewKey =
 
 export type ArgumentTab = "claims" | "stance" | "frames" | "positions" | "controversy" | "sources";
 
+export interface FrameSource {
+  source: string;
+  source_type: SourceType;
+  frames: Record<string, number>;
+  doc_count: number;
+  dominant: string;
+  concentrated: boolean;
+  concentrated_frame: string | null;
+}
+
 export interface StanceDriftEvent {
   source: string;
   source_type: SourceType;

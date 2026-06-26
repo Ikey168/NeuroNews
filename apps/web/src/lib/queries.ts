@@ -31,8 +31,9 @@ import {
   mockControversyGraph,
   mockSourceStances,
   mockDriftEvents,
+  mockFramesBySource,
 } from "../data/mock";
-import type { RawClaim, RawStanceSummary, RawActorPosition, RawSourceStance, RawDriftEvent } from "./api";
+import type { RawClaim, RawStanceSummary, RawActorPosition, RawSourceStance, RawDriftEvent, RawFrameSource } from "./api";
 import { palette, ACCENT } from "../theme";
 import type {
   Article,
@@ -48,6 +49,7 @@ import type {
   ActorPosition,
   ConflictPair,
   FrameDistribution,
+  FrameSource,
   SourceType,
   ControversyGraph,
   SourceStance,
@@ -382,6 +384,29 @@ export function useArgumentStanceDrift(params?: { source?: string; source_type?:
       }));
     },
     mockDriftEvents,
+  );
+}
+
+export function useArgumentFramesBySource(params?: { source?: string; source_type?: string; topic?: string; date_range?: string }): Result<FrameSource[]> {
+  const key = `argumentFramesBySource-${params?.source_type ?? "all"}-${params?.topic ?? ""}-${params?.date_range ?? ""}`;
+  return useWithFallback(
+    key,
+    async (): Promise<FrameSource[]> => {
+      const res = await api.argumentFramesBySource(params);
+      if (!res.sources || res.sources.length === 0) throw new Error("empty");
+      return res.sources.map((r: RawFrameSource) => ({
+        source: r.source,
+        source_type: r.source_type as SourceType,
+        frames: r.frames,
+        doc_count: r.doc_count,
+        dominant: r.dominant,
+        concentrated: r.concentrated,
+        concentrated_frame: r.concentrated_frame,
+      }));
+    },
+    params?.source_type && params.source_type !== "all"
+      ? mockFramesBySource.filter((s) => s.source_type === params.source_type)
+      : mockFramesBySource,
   );
 }
 

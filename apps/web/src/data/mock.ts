@@ -17,6 +17,7 @@ import type {
   ClaimResult,
   StanceSummary,
   FrameDistribution,
+  FrameSource,
   ActorPosition,
   ConflictPair,
   ControversyGraph,
@@ -382,3 +383,16 @@ export const mockControversyGraph: ControversyGraph = {
     { source: "c3",  target: "c5",  severity: 0.48, relation: "contradicts" },
   ],
 };
+
+export const mockFramesBySource: FrameSource[] = [
+  { source: "Reuters",                source_type: "news",       frames: { economic: 0.61, political: 0.42, security: 0.30, scientific: 0.16, humanitarian: 0.18, legal: 0.19, other: 0.05 }, doc_count: 64, dominant: "economic",     concentrated: true,  concentrated_frame: "economic"    },
+  { source: "Bloomberg",              source_type: "news",       frames: { economic: 0.72, political: 0.35, security: 0.24, scientific: 0.20, humanitarian: 0.12, legal: 0.15, other: 0.04 }, doc_count: 69, dominant: "economic",     concentrated: true,  concentrated_frame: "economic"    },
+  { source: "Financial Times",        source_type: "news",       frames: { economic: 0.58, political: 0.47, security: 0.26, scientific: 0.18, humanitarian: 0.21, legal: 0.23, other: 0.06 }, doc_count: 68, dominant: "economic",     concentrated: false, concentrated_frame: null          },
+  { source: "The Guardian",           source_type: "news",       frames: { economic: 0.34, political: 0.52, security: 0.28, scientific: 0.22, humanitarian: 0.46, legal: 0.24, other: 0.08 }, doc_count: 70, dominant: "political",    concentrated: false, concentrated_frame: null          },
+  { source: "STAT News",              source_type: "news",       frames: { economic: 0.22, political: 0.18, security: 0.12, scientific: 0.44, humanitarian: 0.38, legal: 0.14, other: 0.06 }, doc_count: 35, dominant: "scientific",   concentrated: false, concentrated_frame: null          },
+  { source: "Wired",                  source_type: "news",       frames: { economic: 0.30, political: 0.22, security: 0.18, scientific: 0.55, humanitarian: 0.14, legal: 0.12, other: 0.10 }, doc_count: 32, dominant: "scientific",   concentrated: false, concentrated_frame: null          },
+  { source: "energy-transition.blog", source_type: "blog",       frames: { economic: 0.28, political: 0.36, security: 0.14, scientific: 0.42, humanitarian: 0.30, legal: 0.10, other: 0.18 }, doc_count: 32, dominant: "scientific",   concentrated: false, concentrated_frame: null          },
+  { source: "Nature Climate Change",  source_type: "paper",      frames: { economic: 0.14, political: 0.10, security: 0.08, scientific: 0.78, humanitarian: 0.22, legal: 0.11, other: 0.04 }, doc_count: 58, dominant: "scientific",   concentrated: true,  concentrated_frame: "scientific"  },
+  { source: "IMF Working Papers",     source_type: "paper",      frames: { economic: 0.82, political: 0.28, security: 0.10, scientific: 0.34, humanitarian: 0.16, legal: 0.20, other: 0.03 }, doc_count: 24, dominant: "economic",     concentrated: true,  concentrated_frame: "economic"    },
+  { source: "Energy Policy Podcast",  source_type: "transcript", frames: { economic: 0.44, political: 0.58, security: 0.22, scientific: 0.28, humanitarian: 0.18, legal: 0.24, other: 0.09 }, doc_count: 18, dominant: "political",    concentrated: false, concentrated_frame: null          },
+];

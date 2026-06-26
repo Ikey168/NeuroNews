@@ -193,6 +193,16 @@ export interface RawStanceSummary {
   by_source: Record<string, { supportive: number; critical: number; neutral: number; ambiguous: number }>;
 }
 
+export interface RawFrameSource {
+  source: string;
+  source_type: string;
+  frames: Record<string, number>;
+  doc_count: number;
+  dominant: string;
+  concentrated: boolean;
+  concentrated_frame: string | null;
+}
+
 export interface RawDriftEvent {
   source: string;
   source_type: string;
@@ -328,4 +338,7 @@ export const api = {
 
   argumentStanceDrift: (params?: { source?: string; source_type?: string; topic?: string; limit?: number }) =>
     request<{ events: RawDriftEvent[]; drift: number[]; periods: string[]; count: number }>("/api/v1/arguments/stance/drift", params),
+
+  argumentFramesBySource: (params?: { source?: string; source_type?: string; topic?: string; date_range?: string; limit?: number }) =>
+    request<{ sources: RawFrameSource[]; count: number }>("/api/v1/arguments/frames/source", params),
 };
