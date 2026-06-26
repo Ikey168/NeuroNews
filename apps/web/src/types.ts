@@ -172,7 +172,9 @@ export interface ClaimResult {
   text: string;
   is_claim: boolean;
   confidence: number;
-  factcheck_verdict: "verified" | "disputed" | "unverified" | null;
+  factcheck_verdict: "verified" | "disputed" | "mixed" | "unverified" | null;
+  factcheck_url: string | null;
+  factcheck_publisher: string | null;
   title: string;
 }
 

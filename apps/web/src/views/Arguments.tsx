@@ -49,7 +49,15 @@ const STANCE_COLORS = {
 const VERDICT_COLORS: Record<string, string> = {
   verified:   palette.pos,
   disputed:   palette.neg,
-  unverified: palette.amber,
+  mixed:      palette.amber,
+  unverified: palette.dim,
+};
+
+const VERDICT_LABELS: Record<string, string> = {
+  verified:   "✓ TRUE",
+  disputed:   "✗ FALSE",
+  mixed:      "⚠ MIXED",
+  unverified: "? UNVERIFIED",
 };
 
 const POSITION_COLORS: Record<string, string> = { for: palette.pos, against: palette.neg, neutral: palette.neu };
@@ -158,6 +166,7 @@ function ClaimsPanel({ sourceType }: { sourceType: string }) {
         {filtered.map((c, i) => {
           const verdict = c.factcheck_verdict;
           const verdictColor = verdict ? VERDICT_COLORS[verdict] : palette.faint;
+          const verdictLabel = verdict ? (VERDICT_LABELS[verdict] ?? verdict.toUpperCase()) : "—";
           return (
             <div
               key={`${c.document_id}-${i}`}
@@ -184,13 +193,36 @@ function ClaimsPanel({ sourceType }: { sourceType: string }) {
                     {c.is_claim ? "CLAIM" : "NON-CLAIM"}
                   </span>
 
-                  <span style={{
-                    fontFamily: fonts.mono, fontSize: 9.5, letterSpacing: "0.08em",
-                    color: verdictColor, background: `${verdictColor}18`,
-                    border: `1px solid ${verdictColor}40`, borderRadius: 5, padding: "2px 7px",
-                  }}>
-                    {verdict ? verdict.toUpperCase() : "—"}
-                  </span>
+                  {c.factcheck_url ? (
+                    <a
+                      href={c.factcheck_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={c.factcheck_publisher ?? undefined}
+                      style={{
+                        fontFamily: fonts.mono, fontSize: 9.5, letterSpacing: "0.08em",
+                        color: verdictColor, background: `${verdictColor}18`,
+                        border: `1px solid ${verdictColor}40`, borderRadius: 5, padding: "2px 7px",
+                        textDecoration: "none",
+                      }}
+                    >
+                      {verdictLabel}
+                    </a>
+                  ) : (
+                    <span style={{
+                      fontFamily: fonts.mono, fontSize: 9.5, letterSpacing: "0.08em",
+                      color: verdictColor, background: `${verdictColor}18`,
+                      border: `1px solid ${verdictColor}40`, borderRadius: 5, padding: "2px 7px",
+                    }}>
+                      {verdictLabel}
+                    </span>
+                  )}
+
+                  {c.factcheck_publisher && (
+                    <span style={{ fontFamily: fonts.mono, fontSize: 9, color: palette.faint, letterSpacing: "0.06em" }}>
+                      {c.factcheck_publisher}
+                    </span>
+                  )}
 
                   <SourceTypePill type={c.source_type} />
                 </div>

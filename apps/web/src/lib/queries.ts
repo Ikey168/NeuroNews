@@ -258,7 +258,9 @@ export function useArgumentClaims(params?: { source_type?: string; topic?: strin
         text: r.claim_text,
         is_claim: true,
         confidence: r.confidence ?? 0,
-        factcheck_verdict: null,
+        factcheck_verdict: (r.factcheck_verdict as ClaimResult["factcheck_verdict"]) ?? null,
+        factcheck_url: r.factcheck_url ?? null,
+        factcheck_publisher: r.factcheck_publisher ?? null,
         title: "",
       }));
     },
