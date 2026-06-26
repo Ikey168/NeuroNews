@@ -28,6 +28,7 @@ import {
   mockPositions,
   mockConflicts,
   mockFrameDistribution,
+  mockControversyGraph,
 } from "../data/mock";
 import type { RawClaim, RawStanceSummary, RawActorPosition } from "./api";
 import { palette, ACCENT } from "../theme";
@@ -46,6 +47,7 @@ import type {
   ConflictPair,
   FrameDistribution,
   SourceType,
+  ControversyGraph,
 } from "../types";
 
 export type Source = "live" | "demo";
@@ -314,6 +316,19 @@ export function useArgumentControversy(params?: { topic?: string; source_type?: 
       return res.conflicts;
     },
     mockConflicts,
+  );
+}
+
+export function useArgumentControversyGraph(params?: { topic?: string; source_type?: string; date_range?: string }): Result<ControversyGraph> {
+  const key = `argumentControversyGraph-${params?.source_type ?? "all"}-${params?.topic ?? ""}-${params?.date_range ?? ""}`;
+  return useWithFallback(
+    key,
+    async (): Promise<ControversyGraph> => {
+      const res = await api.argumentControversyGraph(params);
+      if (!res.nodes.length) throw new Error("empty");
+      return res;
+    },
+    mockControversyGraph,
   );
 }
 

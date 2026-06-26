@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { fonts, palette, colors, ACCENT, accentSoft, accentBorder } from "../theme";
-import { useArgumentClaims, useArgumentStance, useArgumentFrames, useArgumentPositions, useArgumentControversy } from "../lib/queries";
+import { useArgumentClaims, useArgumentStance, useArgumentFrames, useArgumentPositions, useArgumentControversy, useArgumentControversyGraph } from "../lib/queries";
 import { mockFramesBySourceType } from "../data/mock";
 import PageHeader from "../components/PageHeader";
 import SourceBadge from "../components/SourceBadge";
 import Sparkline from "../components/charts/Sparkline";
-import type { ArgumentTab, SourceType, StanceSummary } from "../types";
+import type { ArgumentTab, SourceType, StanceSummary, ControversyNode, ControversyEdge } from "../types";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -461,58 +461,377 @@ function PositionsPanel({ sourceType }: { sourceType: string }) {
 
 // ─── Controversy panel ────────────────────────────────────────────────────────
 
+const ST_COLORS: Record<string, string> = {
+  news: palette.blue, blog: palette.teal, paper: palette.violet,
+  transcript: palette.amber, book: palette.pos, note: palette.dim,
+};
+
+interface SimNode extends ControversyNode {
+  x: number; y: number; vx: number; vy: number;
+}
+
+function useForceSimulation(
+  nodes: ControversyNode[],
+  edges: ControversyEdge[],
+  width: number,
+  height: number,
+) {
+  const simRef = useRef<SimNode[]>([]);
+  const rafRef = useRef<number>(0);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    cancelAnimationFrame(rafRef.current);
+    simRef.current = nodes.map((n, i) => ({
+      ...n,
+      x: width / 2 + Math.cos((i / nodes.length) * Math.PI * 2) * 160,
+      y: height / 2 + Math.sin((i / nodes.length) * Math.PI * 2) * 120,
+      vx: 0, vy: 0,
+    }));
+    let iter = 0;
+
+    function step() {
+      const sim = simRef.current;
+      const alpha = Math.max(0.01, 0.8 * Math.pow(0.975, iter));
+      const cx = width / 2, cy = height / 2;
+      const R = 18;
+
+      for (let i = 0; i < sim.length; i++) {
+        sim[i].vx += (cx - sim[i].x) * 0.012 * alpha;
+        sim[i].vy += (cy - sim[i].y) * 0.012 * alpha;
+        for (let j = i + 1; j < sim.length; j++) {
+          const dx = sim[i].x - sim[j].x;
+          const dy = sim[i].y - sim[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          const force = (alpha * 3200) / (dist * dist);
+          const fx = (dx / dist) * force;
+          const fy = (dy / dist) * force;
+          sim[i].vx += fx; sim[i].vy += fy;
+          sim[j].vx -= fx; sim[j].vy -= fy;
+        }
+      }
+
+      for (const e of edges) {
+        const a = sim.find((n) => n.id === e.source);
+        const b = sim.find((n) => n.id === e.target);
+        if (!a || !b) continue;
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const restLen = 120;
+        const force = ((dist - restLen) / dist) * alpha * 0.35 * e.severity;
+        const fx = dx * force, fy = dy * force;
+        a.vx += fx; a.vy += fy;
+        b.vx -= fx; b.vy -= fy;
+      }
+
+      for (const n of sim) {
+        n.vx *= 0.72; n.vy *= 0.72;
+        n.x = Math.max(R, Math.min(width - R, n.x + n.vx));
+        n.y = Math.max(R, Math.min(height - R, n.y + n.vy));
+      }
+
+      iter++;
+      setTick((t) => t + 1);
+      if (iter < 220) rafRef.current = requestAnimationFrame(step);
+    }
+
+    rafRef.current = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [nodes, edges, width, height]);
+
+  return { sim: simRef.current, tick };
+}
+
+function ConflictGraph({
+  nodes,
+  edges,
+  selectedId,
+  onSelect,
+}: {
+  nodes: ControversyNode[];
+  edges: ControversyEdge[];
+  selectedId: string | null;
+  onSelect: (id: string | null) => void;
+}) {
+  const W = 740, H = 420;
+  const { sim } = useForceSimulation(nodes, edges, W, H);
+
+  const posMap = new Map(sim.map((n) => [n.id, { x: n.x, y: n.y }]));
+
+  return (
+    <svg
+      width="100%"
+      viewBox={`0 0 ${W} ${H}`}
+      style={{ display: "block", background: colors.cardInner, borderRadius: 8 }}
+      onClick={() => onSelect(null)}
+    >
+      <defs>
+        <marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L6,3 L0,6 Z" fill={`${palette.neg}88`} />
+        </marker>
+      </defs>
+
+      {/* Edges */}
+      {edges.map((e, i) => {
+        const a = posMap.get(e.source);
+        const b = posMap.get(e.target);
+        if (!a || !b) return null;
+        const w = 1 + e.severity * 3.5;
+        const opacity = selectedId
+          ? e.source === selectedId || e.target === selectedId ? 0.85 : 0.12
+          : 0.45;
+        return (
+          <line key={i}
+            x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+            stroke={palette.neg}
+            strokeWidth={w}
+            strokeOpacity={opacity}
+            markerEnd="url(#arr)"
+          />
+        );
+      })}
+
+      {/* Nodes */}
+      {sim.map((n) => {
+        const color = ST_COLORS[n.source_type] ?? palette.dim;
+        const isSelected = n.id === selectedId;
+        const dimmed = selectedId !== null && !isSelected &&
+          !edges.some((e) => e.source === selectedId && e.target === n.id || e.target === selectedId && e.source === n.id);
+        return (
+          <g key={n.id} transform={`translate(${n.x},${n.y})`}
+            style={{ cursor: "pointer" }}
+            onClick={(ev) => { ev.stopPropagation(); onSelect(isSelected ? null : n.id); }}
+          >
+            <circle r={isSelected ? 20 : 14}
+              fill={`${color}22`}
+              stroke={isSelected ? color : `${color}88`}
+              strokeWidth={isSelected ? 2.5 : 1.5}
+              opacity={dimmed ? 0.2 : 1}
+            />
+            <text
+              textAnchor="middle" dominantBaseline="middle"
+              fontSize={9} fill={color}
+              opacity={dimmed ? 0.2 : 1}
+              style={{ pointerEvents: "none", userSelect: "none", fontFamily: fonts.mono }}
+            >
+              {n.label.length > 10 ? n.label.slice(0, 9) + "…" : n.label}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+function NodeDetail({
+  node,
+  edges,
+  nodes,
+  onClose,
+}: {
+  node: ControversyNode;
+  edges: ControversyEdge[];
+  nodes: ControversyNode[];
+  onClose: () => void;
+}) {
+  const color = ST_COLORS[node.source_type] ?? palette.dim;
+  const linked = edges
+    .filter((e) => e.source === node.id || e.target === node.id)
+    .map((e) => {
+      const peerId = e.source === node.id ? e.target : e.source;
+      const peer = nodes.find((n) => n.id === peerId);
+      return peer ? { peer, edge: e } : null;
+    })
+    .filter(Boolean) as { peer: ControversyNode; edge: ControversyEdge }[];
+
+  return (
+    <div style={{ ...card, padding: "16px 18px", borderLeft: `3px solid ${color}` }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div>
+          <span style={{ fontWeight: 600, fontSize: 13 }}>{node.source}</span>
+          <SourceTypePill type={node.source_type} />
+          <span style={{ fontFamily: fonts.mono, fontSize: 10, color: palette.faint, marginLeft: 8 }}>
+            {node.date ?? "—"} · {node.topic}
+          </span>
+        </div>
+        <button onClick={onClose} style={{ background: "none", border: "none", color: palette.dim, cursor: "pointer", fontSize: 16, lineHeight: 1 }}>
+          ✕
+        </button>
+      </div>
+      <div style={{ marginTop: 10, fontSize: 13, lineHeight: 1.6, color: colors.text }}>
+        "{node.claim_text}"
+      </div>
+      <div style={{ marginTop: 8 }}>
+        <div style={{ ...mono10, marginBottom: 6 }}>confidence</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ flex: 1, height: 4, background: colors.cardInner, borderRadius: 2 }}>
+            <div style={{ width: `${node.confidence * 100}%`, height: "100%", borderRadius: 2, background: color }} />
+          </div>
+          <span style={{ fontFamily: fonts.mono, fontSize: 10, color }}>{Math.round(node.confidence * 100)}%</span>
+        </div>
+      </div>
+      {linked.length > 0 && (
+        <div style={{ marginTop: 14 }}>
+          <div style={{ ...mono10, marginBottom: 8 }}>conflicting with ({linked.length})</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {linked.map(({ peer, edge }) => {
+              const pcolor = ST_COLORS[peer.source_type] ?? palette.dim;
+              const sev = Math.round(edge.severity * 100);
+              return (
+                <div key={peer.id} style={{ background: colors.cardInner, borderRadius: 6, padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <span style={{ fontFamily: fonts.mono, fontSize: 10, color: pcolor, marginRight: 6 }}>{peer.source}</span>
+                    <span style={{ fontSize: 11.5, color: colors.textMuted }}>"{peer.claim_text.slice(0, 90)}{peer.claim_text.length > 90 ? "…" : ""}"</span>
+                  </div>
+                  <span style={{ fontFamily: fonts.mono, fontSize: 9, color: sev >= 75 ? palette.neg : palette.amber, background: `${sev >= 75 ? palette.neg : palette.amber}18`, border: `1px solid ${sev >= 75 ? palette.neg : palette.amber}40`, borderRadius: 4, padding: "2px 6px", flexShrink: 0 }}>
+                    {sev}% sev
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ControversyPanel({ sourceType }: { sourceType: string }) {
-  const { data: conflicts, source, isLoading } = useArgumentControversy(
+  const [topic, setTopicFilter] = useState<string | null>(null);
+  const [dateRange, setDateRange] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const { data: conflicts, source: listSource, isLoading: listLoading } = useArgumentControversy(
     sourceType !== "all" ? { source_type: sourceType } : undefined,
   );
-  const sorted = [...conflicts].sort((a, b) => b.intensity - a.intensity);
+  const params: { topic?: string; source_type?: string; date_range?: string } = {};
+  if (sourceType !== "all") params.source_type = sourceType;
+  if (topic) params.topic = topic;
+  if (dateRange) params.date_range = dateRange;
+  const { data: graph, source: graphSource, isLoading: graphLoading } = useArgumentControversyGraph(
+    Object.keys(params).length ? params : undefined,
+  );
+
+  const allTopics = Array.from(new Set([
+    ...graph.nodes.map((n) => n.topic),
+    ...conflicts.map((c) => c.topic),
+  ])).sort();
+
+  const filteredNodes = topic ? graph.nodes.filter((n) => n.topic === topic) : graph.nodes;
+  const filteredNodeIds = new Set(filteredNodes.map((n) => n.id));
+  const filteredEdges = graph.edges.filter((e) => filteredNodeIds.has(e.source) && filteredNodeIds.has(e.target));
+
+  const selectedNode = selectedId ? filteredNodes.find((n) => n.id === selectedId) ?? null : null;
+
+  const onSelect = useCallback((id: string | null) => {
+    setSelectedId(id);
+  }, []);
+
+  const DATE_RANGES = [
+    { key: null, label: "All time" },
+    { key: "7d",  label: "7 days" },
+    { key: "30d", label: "30 days" },
+    { key: "90d", label: "90 days" },
+  ];
 
   return (
     <div>
+      {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-        <span style={{ fontFamily: fonts.grotesk, fontWeight: 600, fontSize: 14 }}>Conflict Map</span>
+        <span style={{ fontFamily: fonts.grotesk, fontWeight: 600, fontSize: 14 }}>Conflict Graph</span>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <span style={{ fontFamily: fonts.mono, fontSize: 9.5, color: palette.blue, background: `${palette.blue}14`, border: `1px solid ${palette.blue}40`, borderRadius: 5, padding: "3px 8px", letterSpacing: "0.1em" }}>
-            GRAPH IN #96
+          <SourceBadge source={graphSource} isLoading={graphLoading} />
+        </div>
+      </div>
+
+      {/* Filters row */}
+      <div style={{ display: "flex", gap: 16, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
+        {/* Topic picker */}
+        <div style={{ display: "flex", gap: 5, flexWrap: "wrap", alignItems: "center" }}>
+          <span style={{ ...mono10, marginRight: 4 }}>Topic</span>
+          {[{ key: null, label: "All" }, ...allTopics.map((t) => ({ key: t, label: t }))].map(({ key, label }) => (
+            <button key={label} onClick={() => { setTopicFilter(key); setSelectedId(null); }}
+              style={{
+                fontFamily: fonts.mono, fontSize: 10, padding: "3px 9px", borderRadius: 5, cursor: "pointer",
+                border: topic === key ? `1px solid ${accentBorder(ACCENT)}` : `1px solid ${colors.border2}`,
+                background: topic === key ? accentSoft(ACCENT) : "transparent",
+                color: topic === key ? ACCENT : palette.dim,
+              }}
+            >{label}</button>
+          ))}
+        </div>
+        {/* Date range */}
+        <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+          <span style={{ ...mono10, marginRight: 4 }}>Period</span>
+          {DATE_RANGES.map(({ key, label }) => (
+            <button key={label} onClick={() => setDateRange(key)}
+              style={{
+                fontFamily: fonts.mono, fontSize: 10, padding: "3px 9px", borderRadius: 5, cursor: "pointer",
+                border: dateRange === key ? `1px solid ${accentBorder(ACCENT)}` : `1px solid ${colors.border2}`,
+                background: dateRange === key ? accentSoft(ACCENT) : "transparent",
+                color: dateRange === key ? ACCENT : palette.dim,
+              }}
+            >{label}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div style={{ display: "flex", gap: 14, marginBottom: 12, flexWrap: "wrap" }}>
+        {Object.entries(ST_COLORS).map(([type, color]) => (
+          <span key={type} style={{ display: "flex", alignItems: "center", gap: 4, fontFamily: fonts.mono, fontSize: 9.5, color }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, display: "inline-block" }} />
+            {type}
           </span>
-          <SourceBadge source={source} isLoading={isLoading} />
-        </div>
+        ))}
+        <span style={{ fontFamily: fonts.mono, fontSize: 9.5, color: palette.faint, marginLeft: 8 }}>
+          edge thickness = conflict severity · click node for details
+        </span>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {sorted.map((c) => {
-          const intPct = Math.round(c.intensity * 100);
-          const color = c.intensity > 0.75 ? palette.neg : c.intensity > 0.5 ? palette.amber : palette.neu;
-          return (
-            <div key={`${c.actor_a}-${c.actor_b}`} style={{ ...card, padding: "14px 18px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                {/* Actor A */}
-                <span style={{ fontWeight: 600, fontSize: 13, flex: 1, textAlign: "right" }}>{c.actor_a}</span>
-                {/* Conflict indicator */}
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flexShrink: 0, minWidth: 80 }}>
-                  <span style={{ fontFamily: fonts.mono, fontSize: 9.5, color, letterSpacing: "0.1em" }}>
-                    {intPct}% intensity
-                  </span>
-                  <div style={{ width: 80, height: 6, background: colors.cardInner, borderRadius: 3 }}>
-                    <div style={{ width: `${intPct}%`, height: "100%", borderRadius: 3, background: color }} />
+      {/* Graph */}
+      <div style={{ ...card, padding: 12, marginBottom: 14 }}>
+        {filteredNodes.length === 0 ? (
+          <div style={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: fonts.mono, fontSize: 12, color: palette.faint }}>
+            No conflict data for selected filters.
+          </div>
+        ) : (
+          <ConflictGraph nodes={filteredNodes} edges={filteredEdges} selectedId={selectedId} onSelect={onSelect} />
+        )}
+      </div>
+
+      {/* Node detail panel */}
+      {selectedNode && (
+        <div style={{ marginBottom: 14 }}>
+          <NodeDetail node={selectedNode} edges={filteredEdges} nodes={filteredNodes} onClose={() => setSelectedId(null)} />
+        </div>
+      )}
+
+      {/* Conflict list (collapsed summary) */}
+      <div style={{ marginTop: 4 }}>
+        <div style={{ ...mono10, marginBottom: 8 }}>Top conflicts by intensity</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {[...conflicts].sort((a, b) => b.intensity - a.intensity).slice(0, 5).map((c) => {
+            const intPct = Math.round(c.intensity * 100);
+            const color = c.intensity > 0.75 ? palette.neg : c.intensity > 0.5 ? palette.amber : palette.neu;
+            return (
+              <div key={`${c.actor_a}-${c.actor_b}`} style={{ ...card, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontWeight: 600, fontSize: 12, flex: 1, textAlign: "right", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.actor_a}</span>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, flexShrink: 0, minWidth: 70 }}>
+                  <div style={{ width: 70, height: 4, background: colors.cardInner, borderRadius: 2 }}>
+                    <div style={{ width: `${intPct}%`, height: "100%", borderRadius: 2, background: color }} />
                   </div>
-                  <span style={{ fontFamily: fonts.mono, fontSize: 9, color: palette.faint }}>{c.source_count} sources</span>
+                  <span style={{ fontFamily: fonts.mono, fontSize: 9, color, letterSpacing: "0.08em" }}>{intPct}%</span>
                 </div>
-                {/* Actor B */}
-                <span style={{ fontWeight: 600, fontSize: 13, flex: 1 }}>{c.actor_b}</span>
+                <span style={{ fontWeight: 600, fontSize: 12, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.actor_b}</span>
               </div>
-              <div style={{ marginTop: 8, textAlign: "center", fontFamily: fonts.mono, fontSize: 10.5, color: palette.faint }}>
-                {c.topic}
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
-      <div style={{ marginTop: 20, ...card, padding: "14px 18px", borderColor: `${palette.blue}44`, background: `${palette.blue}08` }}>
-        <div style={{ fontFamily: fonts.mono, fontSize: 11, color: palette.blue }}>
-          ◈ Interactive force-directed conflict graph with source_type colour coding on nodes ships in issue #96.
-        </div>
+      {/* List source badge */}
+      <div style={{ marginTop: 10, display: "flex", justifyContent: "flex-end" }}>
+        <SourceBadge source={listSource} isLoading={listLoading} />
       </div>
     </div>
   );

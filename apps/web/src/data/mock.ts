@@ -19,6 +19,7 @@ import type {
   FrameDistribution,
   ActorPosition,
   ConflictPair,
+  ControversyGraph,
 } from "../types";
 
 const NOW = Date.now();
@@ -313,3 +314,34 @@ export const mockConflicts: ConflictPair[] = [
   { actor_a: "WHO",              actor_b: "Pharma Industry",  topic: "Drug Pricing",               intensity: 0.47, source_count: 7  },
   { actor_a: "BIS",              actor_b: "Goldman Sachs",    topic: "Central Bank Independence",  intensity: 0.61, source_count: 9  },
 ];
+
+export const mockControversyGraph: ControversyGraph = {
+  node_count: 10,
+  edge_count: 12,
+  nodes: [
+    { id: "c1",  label: "Reuters",        source: "Reuters",        source_type: "news",       topic: "AI Regulation",        date: "2024-11-12", claim_text: "AI systems require mandatory pre-deployment safety audits before any commercial release.", confidence: 0.89, document_id: "doc-n-01" },
+    { id: "c2",  label: "EU Commission",  source: "EU Commission",  source_type: "paper",      topic: "AI Regulation",        date: "2024-11-15", claim_text: "Current AI systems do not yet pose an existential safety risk requiring immediate regulatory intervention.", confidence: 0.76, document_id: "doc-p-01" },
+    { id: "c3",  label: "Bloomberg",      source: "Bloomberg",      source_type: "news",       topic: "Interest Rate Policy", date: "2024-10-08", claim_text: "The Federal Reserve will cut rates by 50 basis points before year-end to stimulate economic growth.", confidence: 0.82, document_id: "doc-n-02" },
+    { id: "c4",  label: "WSJ Editorial",  source: "WSJ Editorial",  source_type: "blog",       topic: "Interest Rate Policy", date: "2024-10-14", claim_text: "Premature rate cuts risk reigniting inflation that has not yet been durably subdued.", confidence: 0.71, document_id: "doc-b-01" },
+    { id: "c5",  label: "OPEC Report",    source: "OPEC Report",    source_type: "paper",      topic: "Oil Production",       date: "2024-09-05", claim_text: "Global oil demand will peak no earlier than 2030, supporting continued upstream investment.", confidence: 0.93, document_id: "doc-p-02" },
+    { id: "c6",  label: "IEA",            source: "IEA",            source_type: "paper",      topic: "Oil Production",       date: "2024-09-10", claim_text: "Oil demand is set to peak well before 2030 as EV adoption and renewable capacity accelerate.", confidence: 0.88, document_id: "doc-p-03" },
+    { id: "c7",  label: "FT",             source: "FT",             source_type: "news",       topic: "Trade Tariffs",        date: "2024-08-22", claim_text: "Broad tariffs on Chinese imports will reduce the US trade deficit and protect domestic manufacturing.", confidence: 0.67, document_id: "doc-n-03" },
+    { id: "c8",  label: "IMF Report",     source: "IMF Report",     source_type: "paper",      topic: "Trade Tariffs",        date: "2024-08-28", claim_text: "Tariff escalation will reduce global GDP by 0.7% and primarily harm the economies imposing them.", confidence: 0.91, document_id: "doc-p-04" },
+    { id: "c9",  label: "Nature Podcast", source: "Nature Podcast", source_type: "transcript", topic: "Drug Pricing",         date: "2024-07-11", claim_text: "Price controls on pharmaceuticals will stifle R&D investment and reduce long-term innovation.", confidence: 0.74, document_id: "doc-t-01" },
+    { id: "c10", label: "WHO",            source: "WHO",            source_type: "paper",      topic: "Drug Pricing",         date: "2024-07-20", claim_text: "Excessive drug pricing by pharmaceutical companies is the primary barrier to equitable global healthcare access.", confidence: 0.85, document_id: "doc-p-05" },
+  ],
+  edges: [
+    { source: "c1",  target: "c2",  severity: 0.87, relation: "contradicts" },
+    { source: "c2",  target: "c1",  severity: 0.82, relation: "contradicts" },
+    { source: "c3",  target: "c4",  severity: 0.78, relation: "contradicts" },
+    { source: "c4",  target: "c3",  severity: 0.74, relation: "contradicts" },
+    { source: "c5",  target: "c6",  severity: 0.93, relation: "contradicts" },
+    { source: "c6",  target: "c5",  severity: 0.91, relation: "contradicts" },
+    { source: "c7",  target: "c8",  severity: 0.83, relation: "contradicts" },
+    { source: "c8",  target: "c7",  severity: 0.86, relation: "contradicts" },
+    { source: "c9",  target: "c10", severity: 0.72, relation: "contradicts" },
+    { source: "c10", target: "c9",  severity: 0.79, relation: "contradicts" },
+    { source: "c1",  target: "c7",  severity: 0.55, relation: "contradicts" },
+    { source: "c3",  target: "c5",  severity: 0.48, relation: "contradicts" },
+  ],
+};
