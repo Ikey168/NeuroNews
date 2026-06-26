@@ -1,0 +1,7 @@
+# MCP server framework
+fastmcp>=3.0
+
+# Already in the main requirements:
+# pandas
+# pyarrow
+# scikit-learn
