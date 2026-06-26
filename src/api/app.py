@@ -23,6 +23,7 @@ DOCUMENT_ROUTES_AVAILABLE = False
 REPORT_ROUTES_AVAILABLE = False
 ALERT_ROUTES_AVAILABLE = False
 ARGUMENT_ROUTES_AVAILABLE = False
+KG_STREAM_ROUTES_AVAILABLE = False
 
 # Store imported modules globally
 _imported_modules = {}
@@ -280,6 +281,19 @@ def try_import_argument_routes():
         return False
 
 
+def try_import_kg_stream_routes():
+    """Try to import knowledge-graph streaming-update routes (issue #42)."""
+    global KG_STREAM_ROUTES_AVAILABLE
+    try:
+        from src.api.routes import kg_stream_routes
+        _imported_modules['kg_stream_routes'] = kg_stream_routes
+        KG_STREAM_ROUTES_AVAILABLE = True
+        return True
+    except ImportError:
+        KG_STREAM_ROUTES_AVAILABLE = False
+        return False
+
+
 def try_import_report_routes():
     """Try to import report generation routes (issues #51, #52)."""
     global REPORT_ROUTES_AVAILABLE
@@ -330,6 +344,7 @@ def check_all_imports():
     try_import_report_routes()
     try_import_alert_routes()
     try_import_argument_routes()
+    try_import_kg_stream_routes()
     _load_domain_packs()
 
 
@@ -609,6 +624,13 @@ def include_optional_routers(app):
             app.include_router(argument_routes.router)
             routers_included += 1
 
+    # Include KG streaming-update routes (issue #42)
+    if KG_STREAM_ROUTES_AVAILABLE:
+        kg_stream_routes = _imported_modules.get('kg_stream_routes')
+        if kg_stream_routes:
+            app.include_router(kg_stream_routes.router)
+            routers_included += 1
+
     return routers_included
 
 
@@ -695,6 +717,7 @@ async def root():
             "graph_search": GRAPH_SEARCH_AVAILABLE,
             "influence_analysis": INFLUENCE_ANALYSIS_AVAILABLE,
             "document_routes": DOCUMENT_ROUTES_AVAILABLE,
+            "kg_stream": KG_STREAM_ROUTES_AVAILABLE,
         },
     }
 
