@@ -1,11 +1,11 @@
 """
-Argument Mining API routes (Issues #90, #93, #95, #96, #97, #99).
+Argument Mining API routes (Issues #90, #93, #95, #96, #97, #99, #102, #105).
 
 GET  /api/v1/arguments/frames                    — aggregate frame distribution
 GET  /api/v1/arguments/frames?document_id=       — frames for a specific document
 GET  /api/v1/arguments/frames?source_type=       — aggregate filtered by source type
 GET  /api/v1/arguments/frames?date_range=        — aggregate filtered by time window (7d/30d/90d)
-GET  /api/v1/arguments/frames/source             — frames aggregated per publication source
+GET  /api/v1/arguments/frames/source             — per-source frame distribution with concentrated-framing flag (#105)
 GET  /api/v1/arguments/claims                    — query stored claims (includes factcheck fields)
 GET  /api/v1/arguments/claims?unsourced_only=    — claims with no corroborating evidence
 POST /api/v1/arguments/claims/extract            — run pipeline on a stored document
@@ -969,8 +969,11 @@ async def get_stance(
 
 
 # ---------------------------------------------------------------------------
-# Frames/source endpoint (#95)
+# Frames/source endpoint (#95, enhanced by #105)
 # ---------------------------------------------------------------------------
+
+_CONCENTRATED_THRESHOLD = 0.60  # single frame dominance above this → concentrated framing flag
+
 
 @router.get("/frames/source")
 async def get_frames_by_source(
@@ -978,9 +981,20 @@ async def get_frames_by_source(
     source_type: Optional[str] = Query(None, description="Filter by source type"),
     topic: Optional[str] = Query(None, description="Filter by topic/category keyword"),
     date_range: Optional[str] = Query(None, description="Time window: 7d, 30d, 90d"),
-    limit: int = Query(10, ge=1, le=100, description="Max number of sources to return"),
+    limit: int = Query(20, ge=1, le=200, description="Max number of sources to return"),
 ) -> Dict[str, Any]:
-    """Return frame distribution aggregated per news publication source."""
+    """
+    Return frame distribution aggregated per publication source, across all content types (#105).
+
+    Each entry includes:
+    - source: publication name (falls back to source_type for non-news when no name is available)
+    - source_type: content type (news/blog/paper/transcript/book/note)
+    - frames: avg score per frame label
+    - doc_count: number of documents classified
+    - dominant: highest-scoring frame
+    - concentrated: True when any single frame avg_score > 60% (editorial framing signal)
+    - concentrated_frame: name of the concentrated frame, or null
+    """
     import threading
 
     from src.database.local_analytics_connector import get_shared_connection
@@ -989,57 +1003,99 @@ async def get_frames_by_source(
     lock = getattr(conn, "_lock", None) or threading.Lock()
 
     cutoff = _parse_date_cutoff(date_range)
-    where_parts = ["n.source IS NOT NULL"]
-    params: list[Any] = []
 
-    if source_type:
-        where_parts.append("df.source_type = ?")
-        params.append(source_type)
+    # ── news branch: join news_articles for source names ──────────────────────
+    news_where: list[str] = ["n.source IS NOT NULL"]
+    news_params: list[Any] = []
+    if source_type and source_type != "news":
+        news_where.append("1=0")  # exclude news entirely when filtering for non-news
+    elif source_type == "news":
+        pass  # include all news
     if source:
-        where_parts.append("n.source ILIKE ?")
-        params.append(f"%{source}%")
+        news_where.append("n.source ILIKE ?")
+        news_params.append(f"%{source}%")
     if topic:
-        where_parts.append("n.category ILIKE ?")
-        params.append(f"%{topic}%")
+        news_where.append("n.category ILIKE ?")
+        news_params.append(f"%{topic}%")
     if cutoff:
-        where_parts.append("n.publish_date >= ?")
-        params.append(cutoff)
+        news_where.append("n.publish_date >= ?")
+        news_params.append(cutoff)
 
-    where_clause = " AND ".join(where_parts)
+    # ── non-news branch: fall back to source_type as source name ─────────────
+    # (doc source names for non-news are available in source_stances when populated)
+    other_where: list[str] = ["df.source_type != 'news'"]
+    other_params: list[Any] = []
+    if source_type and source_type != "news":
+        other_where.append("df.source_type = ?")
+        other_params.append(source_type)
+    elif source_type == "news":
+        other_where.append("1=0")  # exclude non-news when filtering for news only
+    if cutoff:
+        other_where.append("df.classified_at >= ?")
+        other_params.append(cutoff)
+
+    news_where_clause = " AND ".join(news_where)
+    other_where_clause = " AND ".join(other_where)
 
     with lock:
-        rows = conn.execute(
+        news_rows = conn.execute(
             f"""
-            SELECT n.source, df.frame,
+            SELECT n.source,
+                   'news'            AS source_type,
+                   df.frame,
                    AVG(df.score)                  AS avg_score,
                    COUNT(DISTINCT df.document_id) AS doc_count
             FROM document_frames df
             JOIN news_articles n ON df.document_id = n.id
-            WHERE {where_clause}
+            WHERE {news_where_clause}
             GROUP BY n.source, df.frame
-            ORDER BY n.source, avg_score DESC
             """,
-            params,
+            news_params,
+        ).fetchall()
+
+        other_rows = conn.execute(
+            f"""
+            SELECT df.source_type      AS source,
+                   df.source_type,
+                   df.frame,
+                   AVG(df.score)                  AS avg_score,
+                   COUNT(DISTINCT df.document_id) AS doc_count
+            FROM document_frames df
+            WHERE {other_where_clause}
+            GROUP BY df.source_type, df.frame
+            """,
+            other_params,
         ).fetchall()
 
     by_source: dict[str, Any] = {}
-    for row in rows:
-        src, frame, avg_score, doc_count = row
-        if src not in by_source:
-            by_source[src] = {"frames": {}, "doc_count": 0}
-        entry_s: Any = by_source[src]
+    for row in list(news_rows) + list(other_rows):
+        src, src_type, frame, avg_score, doc_count = row
+        key = f"{src_type}::{src}"
+        if key not in by_source:
+            by_source[key] = {"source": src, "source_type": src_type, "frames": {}, "doc_count": 0}
+        entry_s: Any = by_source[key]
         entry_s["frames"][frame] = round(float(avg_score), 4)
         entry_s["doc_count"] = max(entry_s["doc_count"], int(doc_count))
 
-    result = [
-        {
-            "source": src,
-            "frames": data["frames"],
+    result = []
+    for data in sorted(by_source.values(), key=lambda x: -x["doc_count"]):
+        frames = data["frames"]
+        dominant = max(frames, key=frames.__getitem__) if frames else "other"
+        top_score = frames.get(dominant, 0.0)
+        concentrated = top_score > _CONCENTRATED_THRESHOLD
+        result.append({
+            "source": data["source"],
+            "source_type": data["source_type"],
+            "frames": frames,
             "doc_count": data["doc_count"],
-            "dominant": max(data["frames"], key=data["frames"].__getitem__) if data["frames"] else "other",
-        }
-        for src, data in sorted(by_source.items(), key=lambda x: -x[1]["doc_count"])
-    ]
+            "dominant": dominant,
+            "concentrated": concentrated,
+            "concentrated_frame": dominant if concentrated else None,
+        })
+
+    # Apply name-based filter after aggregation (handles fallback source names)
+    if source:
+        result = [r for r in result if source.lower() in r["source"].lower()]
 
     return {"sources": result[:limit], "count": len(result)}
 

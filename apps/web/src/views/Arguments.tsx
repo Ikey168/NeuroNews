@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { fonts, palette, colors, ACCENT, accentSoft, accentBorder } from "../theme";
-import { useArgumentClaims, useArgumentStance, useArgumentFrames, useArgumentPositions, useArgumentControversy, useArgumentControversyGraph, useArgumentStanceSources, useArgumentStanceDrift } from "../lib/queries";
-import { mockFramesBySourceType } from "../data/mock";
+import { useArgumentClaims, useArgumentStance, useArgumentFrames, useArgumentPositions, useArgumentControversy, useArgumentControversyGraph, useArgumentStanceSources, useArgumentStanceDrift, useArgumentFramesBySource } from "../lib/queries";
 import PageHeader from "../components/PageHeader";
 import SourceBadge from "../components/SourceBadge";
 import Sparkline from "../components/charts/Sparkline";
-import type { ArgumentTab, SourceType, StanceSummary, ControversyNode, ControversyEdge, SourceStance, StanceDriftEvent } from "../types";
+import type { ArgumentTab, SourceType, StanceSummary, ControversyNode, ControversyEdge, SourceStance, StanceDriftEvent, FrameSource } from "../types";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -324,12 +323,27 @@ function StancePanel({ sourceType }: { sourceType: string }) {
 
 // ─── Frames panel ─────────────────────────────────────────────────────────────
 
+const SOURCE_TYPE_COLORS: Record<string, string> = {
+  news: palette.blue, blog: palette.teal, paper: palette.violet,
+  transcript: palette.amber, book: palette.pos, note: palette.dim,
+};
+
 function FramesPanel({ sourceType }: { sourceType: string }) {
+  const [compSourceType, setCompSourceType] = useState<string>("all");
   const { data: frames, source, isLoading } = useArgumentFrames(sourceType === "all" ? undefined : sourceType);
+  const { data: bySource, source: bySrc, isLoading: bySrcLoading } = useArgumentFramesBySource(
+    compSourceType !== "all" ? { source_type: compSourceType } : undefined,
+  );
   const dist = frames.distribution;
   const maxScore = Math.max(0.01, ...Object.values(dist));
 
-  const crossTypes = ["news", "blog", "paper", "transcript", "book", "note"];
+  const COMP_TYPES = [
+    { key: "all", label: "All" },
+    { key: "news", label: "News" },
+    { key: "blog", label: "Blog" },
+    { key: "paper", label: "Paper" },
+    { key: "transcript", label: "Transcript" },
+  ];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -366,43 +380,124 @@ function FramesPanel({ sourceType }: { sourceType: string }) {
         </div>
       </div>
 
-      {/* Cross-format comparison table */}
-      <div style={{ ...card, padding: "18px 20px", overflowX: "auto" }}>
-        <div style={{ fontFamily: fonts.grotesk, fontWeight: 600, fontSize: 14, marginBottom: 14 }}>Cross-Format Comparison</div>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: fonts.mono, fontSize: 11 }}>
-          <thead>
-            <tr>
-              <th style={{ textAlign: "left", padding: "4px 10px 8px 0", color: palette.dim, fontWeight: 400, fontSize: 10, letterSpacing: "0.1em" }}>FRAME</th>
-              {crossTypes.map((st) => (
-                <th key={st} style={{ textAlign: "right", padding: "4px 8px 8px", color: palette.dim, fontWeight: 400, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase" }}>{st}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {FRAME_LABELS.map((frame) => {
-              const color = FRAME_COLORS[frame] ?? palette.dim;
+      {/* Per-source comparison table */}
+      <div style={{ ...card, padding: "18px 20px" }}>
+        {/* Header + source_type filter tabs */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontFamily: fonts.grotesk, fontWeight: 600, fontSize: 14 }}>Source Framing Comparison</span>
+            <SourceBadge source={bySrc} isLoading={bySrcLoading} />
+          </div>
+          <div style={{ display: "flex", gap: 4 }}>
+            {COMP_TYPES.map(({ key, label }) => {
+              const active = compSourceType === key;
               return (
-                <tr key={frame} style={{ borderTop: `1px solid ${colors.border}` }}>
-                  <td style={{ padding: "7px 10px 7px 0", color, textTransform: "capitalize" }}>{frame}</td>
-                  {crossTypes.map((st) => {
-                    const val = mockFramesBySourceType[st]?.[frame] ?? 0;
-                    const intensity = Math.round(val * 255).toString(16).padStart(2, "0");
-                    return (
-                      <td key={st} style={{ textAlign: "right", padding: "7px 8px", color: `${color}`, opacity: 0.4 + val * 0.6 }}>
-                        <span style={{
-                          display: "inline-block", padding: "2px 7px", borderRadius: 4,
-                          background: `${color}${intensity}`, color: val > 0.4 ? colors.bg : color,
-                        }}>
-                          {(val * 100).toFixed(0)}%
-                        </span>
-                      </td>
-                    );
-                  })}
-                </tr>
+                <button key={key} onClick={() => setCompSourceType(key)} style={{
+                  fontFamily: fonts.mono, fontSize: 10, padding: "3px 9px", borderRadius: 5, cursor: "pointer",
+                  border: active ? `1px solid ${accentBorder(ACCENT)}` : `1px solid ${colors.border2}`,
+                  background: active ? accentSoft(ACCENT) : "transparent",
+                  color: active ? ACCENT : palette.dim,
+                }}>
+                  {label}
+                </button>
               );
             })}
-          </tbody>
-        </table>
+          </div>
+        </div>
+
+        {/* Legend */}
+        <div style={{ display: "flex", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
+          {Object.entries(SOURCE_TYPE_COLORS).map(([type, color]) => (
+            <span key={type} style={{ display: "flex", alignItems: "center", gap: 4, fontFamily: fonts.mono, fontSize: 9.5, color }}>
+              <span style={{ width: 7, height: 7, borderRadius: 2, background: color, display: "inline-block" }} />
+              {type}
+            </span>
+          ))}
+          <span style={{ fontFamily: fonts.mono, fontSize: 9.5, color: palette.amber, marginLeft: 4 }}>
+            ⚠ = concentrated framing (&gt;60%)
+          </span>
+        </div>
+
+        {/* Source rows */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {bySource.length === 0 ? (
+            <div style={{ padding: "20px 0", textAlign: "center", color: palette.dim, fontFamily: fonts.mono, fontSize: 12 }}>
+              No frame data available for selected filter.
+            </div>
+          ) : (
+            bySource.map((s: FrameSource) => {
+              const stColor = SOURCE_TYPE_COLORS[s.source_type] ?? palette.dim;
+              const dominantColor = FRAME_COLORS[s.dominant] ?? palette.dim;
+              const sortedFrames = FRAME_LABELS.slice().sort((a, b) => (s.frames[b] ?? 0) - (s.frames[a] ?? 0));
+              const topScore = s.frames[s.dominant] ?? 0;
+              return (
+                <div key={`${s.source_type}::${s.source}`} style={{
+                  ...card,
+                  padding: "11px 14px",
+                  borderLeft: `3px solid ${stColor}`,
+                }}>
+                  {/* Source header */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontFamily: fonts.mono, fontSize: 12, color: colors.text }}>{s.source}</span>
+                      <span style={{
+                        fontFamily: fonts.mono, fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase",
+                        color: stColor, background: `${stColor}18`, border: `1px solid ${stColor}40`,
+                        borderRadius: 4, padding: "1px 5px",
+                      }}>{s.source_type}</span>
+                      {s.concentrated && (
+                        <span style={{
+                          fontFamily: fonts.mono, fontSize: 9, letterSpacing: "0.07em",
+                          color: palette.amber, background: `${palette.amber}18`,
+                          border: `1px solid ${palette.amber}40`, borderRadius: 4, padding: "1px 6px",
+                        }}>
+                          ⚠ {s.concentrated_frame}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontFamily: fonts.mono, fontSize: 10, color: dominantColor }}>
+                        {s.dominant} {(topScore * 100).toFixed(0)}%
+                      </span>
+                      <span style={{ fontFamily: fonts.mono, fontSize: 10, color: palette.faint }}>{s.doc_count} docs</span>
+                    </div>
+                  </div>
+
+                  {/* Mini frame bar */}
+                  <div style={{ display: "flex", height: 6, borderRadius: 3, overflow: "hidden" }}>
+                    {sortedFrames.map((frame) => {
+                      const score = s.frames[frame] ?? 0;
+                      if (score < 0.05) return null;
+                      const color = FRAME_COLORS[frame] ?? palette.dim;
+                      return (
+                        <div key={frame}
+                          title={`${frame}: ${(score * 100).toFixed(0)}%`}
+                          style={{ flex: score, background: color, minWidth: 2 }}
+                        />
+                      );
+                    })}
+                  </div>
+
+                  {/* Frame scores row */}
+                  <div style={{ display: "flex", gap: 10, marginTop: 6, flexWrap: "wrap" }}>
+                    {sortedFrames.slice(0, 5).map((frame) => {
+                      const score = s.frames[frame] ?? 0;
+                      const color = FRAME_COLORS[frame] ?? palette.dim;
+                      return (
+                        <span key={frame} style={{
+                          fontFamily: fonts.mono, fontSize: 10, color,
+                          opacity: score < 0.15 ? 0.4 : 1,
+                        }}>
+                          {frame.slice(0, 3).toUpperCase()} {(score * 100).toFixed(0)}%
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
     </div>
   );
