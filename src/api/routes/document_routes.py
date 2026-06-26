@@ -11,7 +11,7 @@ from __future__ import annotations
 import time
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from services.ingest.common.document_model import SOURCE_TYPES
@@ -58,12 +58,19 @@ _store: Dict[str, Dict[str, Any]] = {}
 # --------------------------------------------------------------------------- #
 
 @router.post("/ingest", response_model=DocumentOut, status_code=201)
-async def ingest_document(doc: DocumentIn) -> Dict[str, Any]:
+async def ingest_document(
+    doc: DocumentIn,
+    background_tasks: BackgroundTasks,
+) -> Dict[str, Any]:
     """Ingest a document into the knowledge engine.
 
     This endpoint is source-type-agnostic — it accepts any ``source_type``
     from the document-ingest-v1 contract. News-specific enrichment is applied
     downstream by the news domain pack when enabled.
+
+    A background task updates the live knowledge graph after the response is
+    sent, extracting entity mentions and recording new connections so they
+    are visible via GET /kg/connections/emerging and GET /kg/topics/evolving.
     """
     if doc.source_type not in SOURCE_TYPES:
         raise HTTPException(
@@ -73,6 +80,13 @@ async def ingest_document(doc: DocumentIn) -> Dict[str, Any]:
     record = doc.model_dump()
     record["ingested_at"] = int(time.time() * 1000)
     _store[doc.document_id] = record
+
+    try:
+        from src.knowledge_graph.kg_updater import update_from_document
+        background_tasks.add_task(update_from_document, record)
+    except Exception:
+        pass  # KG update is best-effort; never block the ingestion response
+
     return record
 
 
