@@ -166,6 +166,17 @@ export type ViewKey =
 
 export type ArgumentTab = "claims" | "stance" | "frames" | "positions" | "controversy" | "sources";
 
+export interface StanceDriftEvent {
+  source: string;
+  source_type: SourceType;
+  topic: string;
+  from_stance: "supportive" | "critical" | "neutral" | "ambiguous";
+  to_stance: "supportive" | "critical" | "neutral" | "ambiguous";
+  confidence_delta: number | null;
+  detected_at: string | null;
+  window_pair: string | null;
+}
+
 export interface ClaimResult {
   document_id: string;
   source_type: SourceType;

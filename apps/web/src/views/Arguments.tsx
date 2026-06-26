@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { fonts, palette, colors, ACCENT, accentSoft, accentBorder } from "../theme";
-import { useArgumentClaims, useArgumentStance, useArgumentFrames, useArgumentPositions, useArgumentControversy, useArgumentControversyGraph, useArgumentStanceSources } from "../lib/queries";
+import { useArgumentClaims, useArgumentStance, useArgumentFrames, useArgumentPositions, useArgumentControversy, useArgumentControversyGraph, useArgumentStanceSources, useArgumentStanceDrift } from "../lib/queries";
 import { mockFramesBySourceType } from "../data/mock";
 import PageHeader from "../components/PageHeader";
 import SourceBadge from "../components/SourceBadge";
 import Sparkline from "../components/charts/Sparkline";
-import type { ArgumentTab, SourceType, StanceSummary, ControversyNode, ControversyEdge, SourceStance } from "../types";
+import type { ArgumentTab, SourceType, StanceSummary, ControversyNode, ControversyEdge, SourceStance, StanceDriftEvent } from "../types";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -902,8 +902,82 @@ function StanceBar({ s }: { s: SourceStance }) {
   );
 }
 
+// ─── Drift timeline ───────────────────────────────────────────────────────────
+
+function DriftTimeline({ source, sourceType }: { source: string; sourceType: string }) {
+  const params = {
+    source,
+    ...(sourceType !== "all" ? { source_type: sourceType } : {}),
+  };
+  const { data: events, source: dataSource } = useArgumentStanceDrift(params);
+
+  const filtered = events.filter((e: StanceDriftEvent) => e.source === source);
+
+  function windowLabel(pair: string | null): string {
+    if (!pair) return "—";
+    const [a, b] = pair.split(":");
+    return `${a} → ${b}`;
+  }
+
+  return (
+    <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${colors.border}` }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <span style={{ ...mono10 }}>Drift timeline</span>
+        <span style={{
+          fontFamily: fonts.mono, fontSize: 9, letterSpacing: "0.07em",
+          color: dataSource === "live" ? palette.pos : palette.dim,
+          background: `${dataSource === "live" ? palette.pos : palette.dim}18`,
+          border: `1px solid ${dataSource === "live" ? palette.pos : palette.dim}40`,
+          borderRadius: 4, padding: "1px 6px", textTransform: "uppercase",
+        }}>{dataSource}</span>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div style={{ fontFamily: fonts.mono, fontSize: 11, color: palette.dim, padding: "8px 0" }}>
+          No drift events detected for this source.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {filtered.map((e: StanceDriftEvent, i: number) => {
+            const fromColor = STANCE_COLORS[e.from_stance];
+            const toColor   = STANCE_COLORS[e.to_stance];
+            const delta = e.confidence_delta != null ? `Δ${(e.confidence_delta * 100).toFixed(0)}%` : null;
+            return (
+              <div key={i} style={{
+                display: "flex", alignItems: "center", gap: 10,
+                padding: "7px 10px", borderRadius: 7,
+                background: colors.cardInner, border: `1px solid ${colors.border2}`,
+              }}>
+                <span style={{ fontFamily: fonts.mono, fontSize: 10, color: palette.dim, width: 170, flexShrink: 0 }}>
+                  {windowLabel(e.window_pair)}
+                </span>
+                <span style={{ fontFamily: fonts.mono, fontSize: 10, fontWeight: 600, color: fromColor }}>{e.from_stance}</span>
+                <span style={{ color: palette.dim, fontSize: 12 }}>→</span>
+                <span style={{ fontFamily: fonts.mono, fontSize: 10, fontWeight: 600, color: toColor }}>{e.to_stance}</span>
+                {e.topic && (
+                  <span style={{ fontFamily: fonts.mono, fontSize: 9, color: palette.dim, marginLeft: "auto", flexShrink: 0 }}>{e.topic}</span>
+                )}
+                {delta && (
+                  <span style={{
+                    fontFamily: fonts.mono, fontSize: 9, color: palette.amber,
+                    background: `${palette.amber}18`, border: `1px solid ${palette.amber}40`,
+                    borderRadius: 4, padding: "1px 5px", flexShrink: 0,
+                  }}>{delta}</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Sources panel ────────────────────────────────────────────────────────────
+
 function SourcesPanel({ sourceType }: { sourceType: string }) {
   const [selectedTopic, setSelectedTopic] = useState<string>("all");
+  const [expandedSource, setExpandedSource] = useState<string | null>(null);
   const params = sourceType !== "all" ? { source_type: sourceType } : undefined;
   const { data: stances, source, isLoading } = useArgumentStanceSources(params);
 
@@ -966,6 +1040,7 @@ function SourcesPanel({ sourceType }: { sourceType: string }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {sorted.map(([src, { source_type, sup, crit, neu, amb, total }]) => {
             const color = ST_COLORS_SHARED[source_type] ?? palette.dim;
+            const isExpanded = expandedSource === src;
             const row: SourceStance = {
               source: src, source_type: source_type as SourceType,
               topic: selectedTopic === "all" ? "all" : selectedTopic,
@@ -975,7 +1050,10 @@ function SourcesPanel({ sourceType }: { sourceType: string }) {
             };
             return (
               <div key={src} style={{ ...card, padding: "10px 14px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <div
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, cursor: "pointer" }}
+                  onClick={() => setExpandedSource(isExpanded ? null : src)}
+                >
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <div style={{ width: 6, height: 6, borderRadius: "50%", background: color, flexShrink: 0 }} />
                     <span style={{ fontFamily: fonts.mono, fontSize: 12, color: colors.text }}>{src}</span>
@@ -985,9 +1063,13 @@ function SourcesPanel({ sourceType }: { sourceType: string }) {
                       borderRadius: 4, padding: "1px 5px", flexShrink: 0, textTransform: "uppercase",
                     }}>{source_type}</span>
                   </div>
-                  <span style={{ fontFamily: fonts.mono, fontSize: 10, color: palette.dim }}>{total} docs</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontFamily: fonts.mono, fontSize: 10, color: palette.dim }}>{total} docs</span>
+                    <span style={{ fontFamily: fonts.mono, fontSize: 10, color: palette.dim }}>{isExpanded ? "▲" : "▼"}</span>
+                  </div>
                 </div>
                 <StanceBar s={row} />
+                {isExpanded && <DriftTimeline source={src} sourceType={sourceType} />}
               </div>
             );
           })}
@@ -1048,7 +1130,7 @@ export default function Arguments() {
     <div>
       <PageHeader
         title="Argument Mining"
-        subtitle="Claims · stance · sources · frames · positions · controversy — across all content types"
+        subtitle="Claims · stance · sources · drift · frames · positions · controversy — across all content types"
         right={
           <FilterPills value={sourceType} onChange={setSourceType} />
         }

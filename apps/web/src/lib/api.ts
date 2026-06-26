@@ -193,6 +193,17 @@ export interface RawStanceSummary {
   by_source: Record<string, { supportive: number; critical: number; neutral: number; ambiguous: number }>;
 }
 
+export interface RawDriftEvent {
+  source: string;
+  source_type: string;
+  topic: string;
+  from_stance: string;
+  to_stance: string;
+  confidence_delta: number | null;
+  detected_at: string | null;
+  window_pair: string | null;
+}
+
 export interface RawActorPosition {
   actor: string;
   position: string;
@@ -314,4 +325,7 @@ export const api = {
 
   argumentStanceSources: (params?: { topic?: string; source?: string; source_type?: string; date_range?: string; limit?: number }) =>
     request<{ sources: RawSourceStance[]; count: number }>("/api/v1/arguments/stance/sources", params),
+
+  argumentStanceDrift: (params?: { source?: string; source_type?: string; topic?: string; limit?: number }) =>
+    request<{ events: RawDriftEvent[]; drift: number[]; periods: string[]; count: number }>("/api/v1/arguments/stance/drift", params),
 };

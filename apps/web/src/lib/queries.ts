@@ -30,8 +30,9 @@ import {
   mockFrameDistribution,
   mockControversyGraph,
   mockSourceStances,
+  mockDriftEvents,
 } from "../data/mock";
-import type { RawClaim, RawStanceSummary, RawActorPosition, RawSourceStance } from "./api";
+import type { RawClaim, RawStanceSummary, RawActorPosition, RawSourceStance, RawDriftEvent } from "./api";
 import { palette, ACCENT } from "../theme";
 import type {
   Article,
@@ -50,6 +51,7 @@ import type {
   SourceType,
   ControversyGraph,
   SourceStance,
+  StanceDriftEvent,
 } from "../types";
 
 export type Source = "live" | "demo";
@@ -358,6 +360,28 @@ export function useArgumentStanceSources(params?: { topic?: string; source?: str
       }));
     },
     mockSourceStances,
+  );
+}
+
+export function useArgumentStanceDrift(params?: { source?: string; source_type?: string; topic?: string }): Result<StanceDriftEvent[]> {
+  const key = `argumentStanceDrift-${params?.source ?? ""}-${params?.source_type ?? "all"}-${params?.topic ?? ""}`;
+  return useWithFallback(
+    key,
+    async (): Promise<StanceDriftEvent[]> => {
+      const res = await api.argumentStanceDrift(params);
+      if (!res.events || res.events.length === 0) throw new Error("empty");
+      return res.events.map((r: RawDriftEvent) => ({
+        source: r.source,
+        source_type: r.source_type as SourceType,
+        topic: r.topic,
+        from_stance: r.from_stance as StanceDriftEvent["from_stance"],
+        to_stance: r.to_stance as StanceDriftEvent["to_stance"],
+        confidence_delta: r.confidence_delta,
+        detected_at: r.detected_at,
+        window_pair: r.window_pair,
+      }));
+    },
+    mockDriftEvents,
   );
 }
 

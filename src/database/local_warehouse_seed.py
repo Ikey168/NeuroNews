@@ -76,6 +76,17 @@ CREATE TABLE IF NOT EXISTS source_stances (
     window_end     VARCHAR,
     computed_at    VARCHAR
 );
+
+CREATE TABLE IF NOT EXISTS stance_drift_events (
+    source           VARCHAR NOT NULL,
+    source_type      VARCHAR NOT NULL,
+    topic            VARCHAR NOT NULL,
+    from_stance      VARCHAR NOT NULL,
+    to_stance        VARCHAR NOT NULL,
+    confidence_delta DOUBLE,
+    detected_at      VARCHAR,
+    window_pair      VARCHAR
+);
 """
 
 # Each topic seeds a cluster of articles sharing a leading title word (the
