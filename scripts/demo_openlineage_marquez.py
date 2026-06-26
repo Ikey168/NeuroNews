@@ -158,7 +158,7 @@ def run_streaming_job_demo():
         # Set environment variables for the job
         env = {
             **dict(os.environ),
-            "KAFKA_TOPIC": "articles.raw.lineage.test",
+            "STREAM_TOPIC": "articles.raw.lineage.test",
             "ICEBERG_TABLE": "demo.news.articles_streaming_lineage_test",
             "CHECKPOINT_LOCATION": "/tmp/chk/lineage_test",
             "MARQUEZ_URL": "http://localhost:5000"

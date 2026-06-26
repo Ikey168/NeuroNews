@@ -75,19 +75,12 @@ def get_detector() -> FakeNewsDetector:
 
 
 def get_snowflake_connection():
-    """Get Snowflake connection for testing compatibility."""
+    """Return the shared DuckDB connection (replaces legacy Snowflake connection)."""
     try:
-        snowflake_account = os.getenv("SNOWFLAKE_ACCOUNT", "test-account")
-        return SnowflakeConnection(
-            account=snowflake_account,
-            user=os.getenv("SNOWFLAKE_USER", "admin"),
-            password=os.getenv("SNOWFLAKE_PASSWORD", "test-pass"),
-            warehouse=os.getenv("SNOWFLAKE_WAREHOUSE", "ANALYTICS_WH"),
-            database=os.getenv("SNOWFLAKE_DATABASE", "NEURONEWS"),
-            schema=os.getenv("SNOWFLAKE_SCHEMA", "PUBLIC"),
-        )
+        from src.database.local_analytics_connector import get_shared_connection
+        return get_shared_connection()
     except Exception as e:
-        logger.warning("Could not create Snowflake connection: {0}".format(e))
+        logger.warning("Could not get DuckDB connection: {0}".format(e))
         return None
 
 
@@ -109,7 +102,7 @@ def store_veracity_result(
     """
     try:
         if redshift_conn is None:
-            redshift_conn = get_redshift_connection()
+            redshift_conn = get_snowflake_connection()
             if redshift_conn is None:
                 return False
 

@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from src.utils.database_utils import get_redshift_connection_params
+from src.utils.database_utils import get_duckdb_path
 from src.nlp.article_embedder import ArticleEmbedder
 from src.nlp.event_clusterer import EventClusterer
 
@@ -119,14 +119,14 @@ class EventDetectionStatsResponse(BaseModel):
 async def get_embedder() -> ArticleEmbedder:
     """Get article embedder instance."""
     return ArticleEmbedder(
-        model_name="all-MiniLM-L6-v2", conn_params=get_redshift_connection_params()
+        model_name="all-MiniLM-L6-v2", conn_params={"duckdb_path": get_duckdb_path()}
     )
 
 
 async def get_clusterer() -> EventClusterer:
     """Get event clusterer instance."""
     return EventClusterer(
-        conn_params=get_redshift_connection_params(),
+        conn_params={"duckdb_path": get_duckdb_path()},
         min_cluster_size=3,
         max_clusters=20,
     )
@@ -342,7 +342,7 @@ async def get_articles_in_cluster(
     try:
         logger.info("Getting articles for cluster: {0}".format(cluster_id))
 
-        conn_params = get_redshift_connection_params()
+        conn_params = {"duckdb_path": get_duckdb_path()}
 
         import psycopg2
         from psycopg2.extras import RealDictCursor
@@ -490,7 +490,7 @@ async def get_trending_categories():
     showing which categories are most active.
     """
     try:
-        conn_params = get_redshift_connection_params()
+        conn_params = {"duckdb_path": get_duckdb_path()}
 
         import psycopg2
         from psycopg2.extras import RealDictCursor
@@ -544,7 +544,7 @@ async def get_event_detection_stats():
     including processing metrics and system health indicators.
     """
     try:
-        conn_params = get_redshift_connection_params()
+        conn_params = {"duckdb_path": get_duckdb_path()}
 
         import psycopg2
         from psycopg2.extras import RealDictCursor

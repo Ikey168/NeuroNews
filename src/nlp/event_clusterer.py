@@ -964,19 +964,6 @@ class EventClusterer:
         return self.stats.copy()
 
 
-# Helper functions
-def get_snowflake_connection_params() -> Dict[str, str]:
-    """Get Snowflake connection parameters from environment variables."""
-    import os
-
-    return {
-        "account": os.getenv("SNOWFLAKE_ACCOUNT", "test-account"),
-        "user": os.getenv("SNOWFLAKE_USER", "admin"),
-        "password": os.getenv("SNOWFLAKE_PASSWORD", "password"),
-        "warehouse": os.getenv("SNOWFLAKE_WAREHOUSE", "ANALYTICS_WH"),
-        "database": os.getenv("SNOWFLAKE_DATABASE", "NEURONEWS"),
-        "schema": os.getenv("SNOWFLAKE_SCHEMA", "PUBLIC"),
-    }
 
 
 if __name__ == "__main__":
@@ -986,8 +973,8 @@ if __name__ == "__main__":
         # This would typically be called with real embeddings data
         from src.nlp.article_embedder import ArticleEmbedder
 
-        embedder = ArticleEmbedder(conn_params=get_redshift_connection_params())
-        clusterer = EventClusterer(conn_params=get_redshift_connection_params())
+        embedder = ArticleEmbedder(conn_params={})
+        clusterer = EventClusterer(conn_params={})
 
         # Get some embeddings for testing
         embeddings_data = await embedder.get_embeddings_for_clustering(limit=20)

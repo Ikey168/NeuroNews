@@ -718,21 +718,6 @@ class ArticleEmbedder:
             logger.error("Error creating embeddings table: {0}".format(e))
 
 
-# Helper functions for configuration
-def get_snowflake_connection_params() -> Dict[str, str]:
-    """Get Snowflake connection parameters from environment variables."""
-    import os
-
-    return {
-        "account": os.getenv("SNOWFLAKE_ACCOUNT", "test-account"),
-        "user": os.getenv("SNOWFLAKE_USER", "admin"),
-        "password": os.getenv("SNOWFLAKE_PASSWORD", "password"),
-        "warehouse": os.getenv("SNOWFLAKE_WAREHOUSE", "ANALYTICS_WH"),
-        "database": os.getenv("SNOWFLAKE_DATABASE", "NEURONEWS"),
-        "schema": os.getenv("SNOWFLAKE_SCHEMA", "PUBLIC"),
-    }
-
-
 # Available embedding models
 EMBEDDING_MODELS = {
     "all-MiniLM-L6-v2": {
@@ -767,7 +752,7 @@ if __name__ == "__main__":
 
     async def test_embedder():
         embedder = ArticleEmbedder(
-            model_name="all-MiniLM-L6-v2", conn_params=get_redshift_connection_params()
+            model_name="all-MiniLM-L6-v2", conn_params={}
         )
 
         # Test single embedding

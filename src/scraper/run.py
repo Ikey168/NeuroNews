@@ -110,13 +110,6 @@ def run_spider(
         )
         settings.set("ITEM_PIPELINES", pipelines)
 
-        # Set AWS credentials and S3 settings
-        if aws_access_key_id:
-            settings.set("AWS_ACCESS_KEY_ID", aws_access_key_id)
-        if aws_secret_access_key:
-            settings.set("AWS_SECRET_ACCESS_KEY", aws_secret_access_key)
-        if s3_bucket:
-            settings.set("S3_BUCKET", s3_bucket)
         if s3_prefix:
             settings.set("S3_PREFIX", s3_prefix)
 
@@ -155,11 +148,6 @@ def run_spider(
     if cloudwatch_logging:
         settings.set("CLOUDWATCH_LOGGING_ENABLED", True)
 
-        # Set AWS credentials and CloudWatch settings
-        if aws_access_key_id:
-            settings.set("AWS_ACCESS_KEY_ID", aws_access_key_id)
-        if aws_secret_access_key:
-            settings.set("AWS_SECRET_ACCESS_KEY", aws_secret_access_key)
         if aws_region:
             settings.set("AWS_REGION", aws_region)
         if cloudwatch_log_group:
@@ -406,28 +394,6 @@ def main():
             "log_level", cloudwatch_log_level
         )
 
-    # Check if AWS services are enabled but required credentials are missing
-    aws_services_enabled = s3_storage or cloudwatch_logging
-    aws_creds_available = (os.environ.get("AWS_ACCESS_KEY_ID") or args.aws_key_id) and (
-        os.environ.get("AWS_SECRET_ACCESS_KEY") or args.aws_secret_key
-    )
-    aws_profile_available = aws_profile is not None
-
-    if aws_services_enabled and not (aws_creds_available or aws_profile_available):
-        parser.error(
-            "AWS credentials are required for S3 storage or CloudWatch logging. "
-            "Provide them with --aws-key-id and --aws-secret-key, "
-            "set the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables, "
-            "or use --aws-profile to specify an AWS profile."
-        )
-
-    # Check if S3 storage is enabled but bucket name is missing
-    if s3_storage and not s3_bucket:
-        parser.error(
-            "S3 bucket name is required for S3 storage. "
-            "Provide it with --s3-bucket, set the S3_BUCKET environment variable, "
-            "or specify it in the AWS configuration file."
-        )
 
     print("Starting NeuroNews scraper...")
     if args.playwright:

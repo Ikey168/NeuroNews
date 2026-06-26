@@ -409,24 +409,10 @@ class KeywordTopicDatabase:
 
 
 async def create_keyword_topic_db(
-    snowflake_config: Optional[Dict[str, str]] = None,
+    connector: Optional[object] = None,
 ) -> KeywordTopicDatabase:
-    """Factory function to create keyword topic database connection."""
-    if not snowflake_config:
-        snowflake_config = {
-            "account": os.getenv("SNOWFLAKE_ACCOUNT"),
-            "user": os.getenv("SNOWFLAKE_USER", "admin"),
-            "password": os.getenv("SNOWFLAKE_PASSWORD"),
-            "warehouse": os.getenv("SNOWFLAKE_WAREHOUSE", "ANALYTICS_WH"),
-            "database": os.getenv("SNOWFLAKE_DATABASE", "NEURONEWS"),
-            "schema": os.getenv("SNOWFLAKE_SCHEMA", "PUBLIC"),
-        }
-
-    # Validate required config
-    if not snowflake_config.get("account"):
-        raise ValueError("SNOWFLAKE_ACCOUNT is required")
-
-    db = SnowflakeAnalyticsConnector(**snowflake_config)
-    await db.connect()
-
-    return KeywordTopicDatabase(db)
+    """Factory function to create keyword topic database using DuckDB."""
+    if connector is None:
+        from src.database.local_analytics_connector import get_shared_connection
+        connector = get_shared_connection()
+    return KeywordTopicDatabase(connector)

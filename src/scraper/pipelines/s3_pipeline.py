@@ -14,10 +14,12 @@ from src.utils.local_cloud import get_client
 class S3StoragePipeline:
     """Pipeline for storing scraped items in Amazon S3."""
 
-    def __init__(self, aws_access_key_id, aws_secret_access_key, s3_bucket, s3_prefix):
-        """Initialize the S3 storage pipeline."""
-        self.aws_access_key_id = aws_access_key_id
-        self.aws_secret_access_key = aws_secret_access_key
+    def __init__(self, s3_bucket: str, s3_prefix: str = "news_articles"):
+        """Initialize the S3 storage pipeline.
+
+        Credentials are resolved from the local emulator defaults in
+        ``src.utils.local_cloud`` — no explicit AWS keys needed.
+        """
         self.s3_bucket = s3_bucket
         self.s3_prefix = s3_prefix
         self.s3_client = None
@@ -26,20 +28,13 @@ class S3StoragePipeline:
     def from_crawler(cls, crawler):
         """Create a new instance from the crawler settings."""
         return cls(
-            aws_access_key_id=crawler.settings.get("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=crawler.settings.get("AWS_SECRET_ACCESS_KEY"),
-            s3_bucket=crawler.settings.get("S3_BUCKET"),
+            s3_bucket=crawler.settings.get("LOCAL_BUCKET_NAME", "neuronews-local"),
             s3_prefix=crawler.settings.get("S3_PREFIX", "news_articles"),
         )
 
     def open_spider(self, spider):
         """Called when the spider is opened."""
-        # Initialize S3 client
-        self.s3_client = get_client(
-            "s3",
-            aws_access_key_id=self.aws_access_key_id,
-            aws_secret_access_key=self.aws_secret_access_key,
-        )
+        self.s3_client = get_client("s3")
 
         # Check if the bucket exists
         try:

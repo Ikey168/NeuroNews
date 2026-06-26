@@ -48,16 +48,11 @@ class RefreshRequest(BaseModel):
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-# Database dependency for tests
-async def get_db() -> SnowflakeAnalyticsConnector:
-    return SnowflakeAnalyticsConnector(
-        account=os.getenv("SNOWFLAKE_ACCOUNT", "test-account"),
-        user=os.getenv("SNOWFLAKE_USER", "admin"),
-        password=os.getenv("SNOWFLAKE_PASSWORD", "test-pass"),
-        warehouse=os.getenv("SNOWFLAKE_WAREHOUSE", "ANALYTICS_WH"),
-        database=os.getenv("SNOWFLAKE_DATABASE", "NEURONEWS"),
-        schema=os.getenv("SNOWFLAKE_SCHEMA", "PUBLIC"),
-    )
+# Database dependency
+async def get_db():
+    """Return the shared DuckDB connection."""
+    from src.database.local_analytics_connector import get_shared_connection
+    return get_shared_connection()
 
 
 @router.post("/register", response_model=TokenResponse)

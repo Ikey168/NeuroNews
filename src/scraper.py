@@ -130,9 +130,7 @@ def scrape_news(
     if use_playwright:
         print("Using Playwright for JavaScript-heavy pages")
     if s3_storage:
-        print(
-            f"Storing articles in S3 bucket: {s3_bucket or os.environ.get('S3_BUCKET')}"
-        )
+        print(f"Storing articles in local S3 bucket: {s3_bucket}")
     if cloudwatch_logging:
         print(
             "Logging to CloudWatch: {0}/{1}-*".format(

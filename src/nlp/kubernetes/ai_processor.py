@@ -169,18 +169,10 @@ class KubernetesAIProcessor:
 
             logger.info("Topic model ({0}) initialized".format(self.topic_model_type))
 
-            # Initialize Snowflake connection
-            snowflake_config = {
-                "account": os.getenv("SNOWFLAKE_ACCOUNT"),
-                "user": os.getenv("SNOWFLAKE_USER", "admin"),
-                "password": os.getenv("SNOWFLAKE_PASSWORD"),
-                "warehouse": os.getenv("SNOWFLAKE_WAREHOUSE", "ANALYTICS_WH"),
-                "database": os.getenv("SNOWFLAKE_DATABASE", "NEURONEWS"),
-                "schema": os.getenv("SNOWFLAKE_SCHEMA", "PUBLIC"),
-            }
-
-            self.snowflake_processor = SnowflakeAnalyticsConnector(**snowflake_config)
-            logger.info("Snowflake processor initialized")
+            # Use local DuckDB for analytics storage
+            from src.database.local_analytics_connector import get_shared_connection
+            self.snowflake_processor = get_shared_connection()
+            logger.info("DuckDB analytics connector initialized")
 
             # Initialize PostgreSQL connection for reading articles
             self.postgres_conn = psycopg2.connect(

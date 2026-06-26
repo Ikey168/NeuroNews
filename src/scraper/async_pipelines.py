@@ -31,12 +31,12 @@ class AsyncPipelineProcessor:
 
         self.logger = logging.getLogger(__name__)
 
-        # Initialize S3 client if configured
+        # Initialize S3 client against local emulator (MinIO default)
         self.s3_client = None
-        if all(
-            os.getenv(key) for key in ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]
-        ):
+        try:
             self.s3_client = get_client("s3")
+        except Exception:
+            pass
 
     async def process_articles_async(
         self, articles: List[Dict[str, Any]]

@@ -616,29 +616,9 @@ class SummaryDatabase:
         return self.metrics.copy()
 
 
-# Utility functions for database setup
-def get_snowflake_connection_params() -> Dict[str, Any]:
-    """
-    Get Snowflake connection parameters from environment variables.
-
-    Returns:
-        Dictionary with connection parameters
-    """
-    import os
-
-    return {
-        "account": os.getenv("SNOWFLAKE_ACCOUNT", "test-account"),
-        "user": os.getenv("SNOWFLAKE_USER", "admin"),
-        "password": os.getenv("SNOWFLAKE_PASSWORD", "password"),
-        "warehouse": os.getenv("SNOWFLAKE_WAREHOUSE", "ANALYTICS_WH"),
-        "database": os.getenv("SNOWFLAKE_DATABASE", "NEURONEWS"),
-        "schema": os.getenv("SNOWFLAKE_SCHEMA", "PUBLIC"),
-    }
-
-
 async def setup_summary_database():
-    """Set up the summary database with proper schema."""
-    connection_params = get_snowflake_connection_params()
-    db = SummaryDatabase(connection_params)
+    """Set up the summary database with the local DuckDB connection."""
+    from src.database.local_analytics_connector import get_shared_connection
+    db = SummaryDatabase({"duckdb_path": "data/neuronews.duckdb"})
     await db.create_table()
     return db
