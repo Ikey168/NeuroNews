@@ -108,6 +108,14 @@
         "tools/kg_mcp/server.py"
       ],
       "env": {}
+    },
+    "neuronews-sources": {
+      "type": "stdio",
+      "command": "python3",
+      "args": [
+        "tools/sources_mcp/server.py"
+      ],
+      "env": {}
     }
   }
 }
