@@ -15,7 +15,8 @@ POST /api/v1/arguments/claims/{id}/factcheck     — trigger on-demand fact-chec
 GET  /api/v1/arguments/stance/sources            — stance per (source, topic) from source_stances table (#99)
 GET  /api/v1/arguments/stance/drift              — structured drift events + 7-bucket time series (#102)
 GET  /api/v1/arguments/stance                    — stance distribution across topics
-GET  /api/v1/arguments/positions                 — actor positions derived from claims
+GET  /api/v1/arguments/positions                 — actor policy positions from policy_positions table (#110)
+POST /api/v1/arguments/positions/extract         — run position extraction on a stored document (#110)
 GET  /api/v1/arguments/controversy               — conflict pairs ranked by contradiction count
 GET  /api/v1/arguments/controversy/graph         — force-directed graph: nodes=claims, edges=contradictions (#96)
 GET  /api/v1/arguments/sources/ranking           — sources ranked by claim quality
@@ -1106,15 +1107,19 @@ async def get_frames_by_source(
 
 @router.get("/positions")
 async def get_positions(
-    actor: Optional[str] = Query(None, description="Filter by actor/source name"),
-    topic: Optional[str] = Query(None, description="Filter by topic/category keyword"),
+    actor: Optional[str] = Query(None, description="Filter by actor name (ILIKE)"),
+    topic: Optional[str] = Query(None, description="Filter by topic keyword (ILIKE)"),
     source_type: Optional[str] = Query(None, description="Filter by source type"),
+    date_range: Optional[str] = Query(None, description="Time window: 7d, 30d, 90d"),
     limit: int = Query(50, ge=1, le=500),
 ) -> Dict[str, Any]:
     """
-    Return actor policy positions derived from argument claims.
-    Actor = the news/content source; position = the claim text;
-    stance is inferred from supporting/contradicting evidence.
+    Return actor policy positions from the ``policy_positions`` table (#110).
+
+    Each position is a sentence where a named actor asserts an intention or
+    commitment on a policy topic. Results come from
+    ``src.argument_mining.positions.extract_positions`` run as a post-ingestion
+    stage. Falls back to claim-derived positions when the table is empty.
     """
     import threading
 
@@ -1123,70 +1128,206 @@ async def get_positions(
     conn = get_shared_connection()
     lock = getattr(conn, "_lock", None) or threading.Lock()
 
+    date_cutoff = _parse_date_cutoff(date_range)
     where_parts: list[str] = []
     params: list[Any] = []
 
     if source_type:
-        where_parts.append("c.source_type = ?")
+        where_parts.append("source_type = ?")
         params.append(source_type)
     if actor:
-        where_parts.append("n.source ILIKE ?")
+        where_parts.append("actor ILIKE ?")
         params.append(f"%{actor}%")
     if topic:
-        where_parts.append("n.category ILIKE ?")
+        where_parts.append("topic ILIKE ?")
         params.append(f"%{topic}%")
+    if date_cutoff:
+        where_parts.append("position_date >= ?")
+        params.append(date_cutoff)
 
     where_clause = ("WHERE " + " AND ".join(where_parts)) if where_parts else ""
     params.append(limit)
 
     with lock:
-        rows = conn.execute(
-            f"""
-            WITH evidence_counts AS (
-                SELECT claim_id,
-                       SUM(CASE WHEN relation = 'supports'    THEN 1 ELSE 0 END) AS sup,
-                       SUM(CASE WHEN relation = 'contradicts' THEN 1 ELSE 0 END) AS con
-                FROM claim_evidence
-                GROUP BY claim_id
-            )
-            SELECT
-                COALESCE(n.source, c.source_type)   AS actor,
-                c.claim_text                        AS position,
-                COALESCE(n.category, 'general')     AS topic,
-                c.source_type,
-                c.document_id,
-                n.publish_date,
-                c.confidence,
-                COALESCE(ec.sup, 0)                 AS sup,
-                COALESCE(ec.con, 0)                 AS con
-            FROM argument_claims c
-            LEFT JOIN news_articles n    ON c.document_id = n.id
-            LEFT JOIN evidence_counts ec ON c.claim_id   = ec.claim_id
-            {where_clause}
-            ORDER BY n.publish_date DESC NULLS LAST, c.confidence DESC
-            LIMIT ?
-            """,
-            params,
-        ).fetchall()
+        # Try the dedicated policy_positions table first
+        try:
+            rows = conn.execute(
+                f"""
+                SELECT position_id, actor, topic, position_text,
+                       source_type, document_id, position_date, confidence
+                FROM policy_positions
+                {where_clause}
+                ORDER BY position_date DESC NULLS LAST, confidence DESC
+                LIMIT ?
+                """,
+                params,
+            ).fetchall()
+        except Exception:
+            rows = []
 
-    positions = []
-    for row in rows:
-        actor_name, pos_text, topic_name, src_type, doc_id, pub_date, confidence, sup, con = row
-        internal_stance = _classify_stance(int(sup), int(con), float(confidence or 0))
-        pos_stance = "for" if internal_stance == "supportive" else (
-            "against" if internal_stance == "critical" else "neutral"
-        )
-        positions.append({
-            "actor": actor_name or src_type,
-            "position": pos_text,
-            "stance": pos_stance,
-            "date": str(pub_date) if pub_date else "",
-            "source_type": src_type,
-            "document_id": doc_id,
-            "topic": topic_name,
-        })
+        # If table is empty, fall back to claim-derived positions
+        if not rows:
+            fb_where_parts = []
+            fb_params: list[Any] = []
+            if source_type:
+                fb_where_parts.append("c.source_type = ?")
+                fb_params.append(source_type)
+            if actor:
+                fb_where_parts.append("n.source ILIKE ?")
+                fb_params.append(f"%{actor}%")
+            if topic:
+                fb_where_parts.append("n.category ILIKE ?")
+                fb_params.append(f"%{topic}%")
+            fb_where = ("WHERE " + " AND ".join(fb_where_parts)) if fb_where_parts else ""
+            fb_params.append(limit)
+            try:
+                fb_rows = conn.execute(
+                    f"""
+                    WITH evidence_counts AS (
+                        SELECT claim_id,
+                               SUM(CASE WHEN relation = 'supports'    THEN 1 ELSE 0 END) AS sup,
+                               SUM(CASE WHEN relation = 'contradicts' THEN 1 ELSE 0 END) AS con
+                        FROM claim_evidence
+                        GROUP BY claim_id
+                    )
+                    SELECT
+                        c.claim_id,
+                        COALESCE(n.source, c.source_type)   AS actor,
+                        COALESCE(n.category, 'general')     AS topic,
+                        c.claim_text,
+                        c.source_type,
+                        c.document_id,
+                        n.publish_date,
+                        c.confidence
+                    FROM argument_claims c
+                    LEFT JOIN news_articles n    ON c.document_id = n.id
+                    LEFT JOIN evidence_counts ec ON c.claim_id   = ec.claim_id
+                    {fb_where}
+                    ORDER BY n.publish_date DESC NULLS LAST, c.confidence DESC
+                    LIMIT ?
+                    """,
+                    fb_params,
+                ).fetchall()
+                return {
+                    "positions": [
+                        {
+                            "position_id": r[0],
+                            "actor": r[1] or r[4],
+                            "topic": r[2],
+                            "position": r[3],
+                            "source_type": r[4],
+                            "document_id": r[5],
+                            "date": str(r[6]) if r[6] else "",
+                            "confidence": round(float(r[7] or 0), 4),
+                            "_source": "claims_fallback",
+                        }
+                        for r in fb_rows
+                    ],
+                    "count": len(fb_rows),
+                    "_note": "policy_positions table is empty — run /positions/extract first",
+                }
+            except Exception:
+                return {"positions": [], "count": 0}
 
+    positions = [
+        {
+            "position_id": row[0],
+            "actor": row[1],
+            "topic": row[2],
+            "position": row[3],
+            "source_type": row[4],
+            "document_id": row[5],
+            "date": row[6] or "",
+            "confidence": round(float(row[7] or 0), 4),
+        }
+        for row in rows
+    ]
     return {"positions": positions, "count": len(positions)}
+
+
+@router.post("/positions/extract")
+async def extract_positions_for_document(
+    document_id: str = Query(..., description="ID of a document already in news_articles"),
+    source_type: str = Query("news", description="Source type label"),
+) -> Dict[str, Any]:
+    """
+    Run position extraction on a stored document and persist results (#110).
+
+    Identifies sentences where a named actor asserts a commitment on a policy
+    topic and stores them in ``policy_positions``. Runs
+    ``src.argument_mining.positions.run_position_pipeline`` which also calls
+    ``extract_positions`` internally.
+    """
+    import threading
+    import time
+
+    from src.database.local_analytics_connector import get_shared_connection
+
+    conn = get_shared_connection()
+    lock = getattr(conn, "_lock", None) or threading.Lock()
+
+    with lock:
+        row = conn.execute(
+            "SELECT id, title, content, publish_date, source, category "
+            "FROM news_articles WHERE id = ? LIMIT 1",
+            [document_id],
+        ).fetchone()
+
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Document '{document_id}' not found")
+
+    doc_id, title, content, publish_date, source, category = row
+    if not content:
+        raise HTTPException(status_code=422, detail="Document has no content to process")
+
+    try:
+        from services.ingest.common.document_model import Document
+        from src.argument_mining.positions import run_position_pipeline
+
+        metadata: Dict[str, Any] = {}
+        if category:
+            metadata["category"] = category
+
+        created_at_ms: Optional[int] = None
+        if publish_date is not None:
+            try:
+                created_at_ms = int(publish_date.timestamp() * 1000)
+            except (AttributeError, OSError, ValueError):
+                pass
+
+        doc = Document(
+            document_id=doc_id,
+            source_type=source_type,
+            language="en",
+            ingested_at=int(time.time() * 1000),
+            source_id=source,
+            title=title,
+            content=content,
+            created_at=created_at_ms,
+            metadata=metadata,
+        )
+
+        with lock:
+            records = run_position_pipeline(doc, conn)
+
+        return {
+            "document_id": doc_id,
+            "source_type": source_type,
+            "positions_extracted": len(records),
+            "positions": [
+                {
+                    "position_id": r.position_id,
+                    "actor": r.actor,
+                    "topic": r.topic,
+                    "position_text": r.position_text,
+                    "date": r.position_date or "",
+                    "confidence": r.confidence,
+                }
+                for r in records
+            ],
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Extraction failed: {exc}")
 
 
 # ---------------------------------------------------------------------------
