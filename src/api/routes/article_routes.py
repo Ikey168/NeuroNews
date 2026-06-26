@@ -17,16 +17,10 @@ router = APIRouter(prefix="/articles", tags=["articles"])
 
 
 # Database dependency
-async def get_db() -> SnowflakeAnalyticsConnector:
-    """Return a SnowflakeAnalyticsConnector using environment configuration."""
-    db = SnowflakeAnalyticsConnector(
-        account=os.getenv("SNOWFLAKE_ACCOUNT"),
-        user=os.getenv("SNOWFLAKE_USER"),
-        password=os.getenv("SNOWFLAKE_PASSWORD"),
-        database=os.getenv("SNOWFLAKE_DATABASE", "NEURONEWS"),
-        warehouse=os.getenv("SNOWFLAKE_WAREHOUSE", "ANALYTICS_WH"),
-    )
-    return db
+async def get_db():
+    """Return the shared DuckDB connection."""
+    from src.database.local_analytics_connector import get_shared_connection
+    return get_shared_connection()
 
 
 # Request/Response Models

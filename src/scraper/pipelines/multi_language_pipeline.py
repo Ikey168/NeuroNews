@@ -54,18 +54,15 @@ class MultiLanguagePipeline:
             quality_threshold: Minimum quality score for accepting translations
             min_content_length: Minimum content length for processing
         """
-        # Use environment variables as fallback
-        self.snowflake_account = snowflake_account or os.getenv("SNOWFLAKE_ACCOUNT")
-        self.snowflake_user = snowflake_user or os.getenv("SNOWFLAKE_USER")
-        self.snowflake_password = snowflake_password or os.getenv("SNOWFLAKE_PASSWORD")
-        self.snowflake_warehouse = snowflake_warehouse or os.getenv("SNOWFLAKE_WAREHOUSE", "ANALYTICS_WH")
-        self.snowflake_database = snowflake_database or os.getenv("SNOWFLAKE_DATABASE", "NEURONEWS")
-        self.snowflake_schema = snowflake_schema or os.getenv("SNOWFLAKE_SCHEMA", "PUBLIC")
+        self.snowflake_account = snowflake_account or ""
+        self.snowflake_user = snowflake_user or ""
+        self.snowflake_password = snowflake_password or ""
+        self.snowflake_warehouse = snowflake_warehouse
+        self.snowflake_database = snowflake_database
+        self.snowflake_schema = snowflake_schema
         self.aws_region = aws_region
-        self.aws_access_key_id = aws_access_key_id or os.getenv("AWS_ACCESS_KEY_ID")
-        self.aws_secret_access_key = aws_secret_access_key or os.getenv(
-            "AWS_SECRET_ACCESS_KEY"
-        )
+        self.aws_access_key_id = aws_access_key_id or ""
+        self.aws_secret_access_key = aws_secret_access_key or ""
         self.enabled = True
         self.target_language = target_language
         self.translation_enabled = translation_enabled
@@ -83,18 +80,6 @@ class MultiLanguagePipeline:
     def open_spider(self, spider):
         """Initialize pipeline when spider opens."""
         logger.info("Opening multi-language pipeline")
-
-        # Validate required settings
-        required_settings = [
-            self.snowflake_account,
-            self.snowflake_user,
-            self.snowflake_password,
-            self.snowflake_database,
-        ]
-
-        if not all(required_settings):
-            logger.error("Missing required Snowflake configuration")
-            raise ValueError("Missing required Snowflake configuration")
 
         # Initialize processor
         try:
@@ -302,15 +287,7 @@ class LanguageFilterPipeline:
 
         # Add settings to the MultiLanguagePipeline instance
         return MultiLanguagePipeline(
-            snowflake_account=settings.get("SNOWFLAKE_ACCOUNT"),
-            snowflake_user=settings.get("SNOWFLAKE_USER"),
-            snowflake_password=settings.get("SNOWFLAKE_PASSWORD"),
-            snowflake_warehouse=settings.get("SNOWFLAKE_WAREHOUSE", "ANALYTICS_WH"),
-            snowflake_database=settings.get("SNOWFLAKE_DATABASE", "NEURONEWS"),
-            snowflake_schema=settings.get("SNOWFLAKE_SCHEMA", "PUBLIC"),
             aws_region=settings.get("AWS_REGION", "us-east-1"),
-            aws_access_key_id=settings.get("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=settings.get("AWS_SECRET_ACCESS_KEY"),
             target_language=settings.get("TARGET_LANGUAGE", "en"),
             translation_enabled=settings.getbool("TRANSLATION_ENABLED", True),
             quality_threshold=settings.getfloat("TRANSLATION_QUALITY_THRESHOLD", 0.7),

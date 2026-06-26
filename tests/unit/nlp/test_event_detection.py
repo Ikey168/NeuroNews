@@ -588,23 +588,13 @@ class TestEventDetectionAPI:
 class TestDatabaseIntegration:
     """Test database integration functionality."""
 
-    def test_connection_parameters(self):
+    def test_connection_parameters(self, monkeypatch):
         """Test database connection parameter handling."""
-        from src.nlp.article_embedder import get_redshift_connection_params
+        from src.utils.database_utils import get_duckdb_path
 
-        with patch.dict(
-            "os.environ",
-            {
-                "SNOWFLAKE_ACCOUNT": "test-host",
-                "REDSHIFT_PORT": "5439",
-                "REDSHIFT_DATABASE": "test-db",
-            },
-        ):
-            params = get_redshift_connection_params()
-
-            assert params["host"] == "test-host"
-            assert params["port"] == 5439
-            assert params["database"] == "test-db"
+        monkeypatch.setenv("NEURONEWS_DB_PATH", "/tmp/test.duckdb")
+        path = get_duckdb_path()
+        assert path == "/tmp/test.duckdb"
 
     @pytest.mark.asyncio
     async def test_embedding_storage_preparation(self):

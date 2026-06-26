@@ -10,10 +10,8 @@ Endpoints are resolved from environment variables with sensible local defaults:
 * ``DYNAMODB_ENDPOINT_URL``  (default ``http://localhost:8000`` -- DynamoDB Local)
 * ``AWS_ENDPOINT_URL``       global override for any service
 * ``AWS_REGION`` / ``AWS_DEFAULT_REGION`` (default ``us-east-1``)
-* ``AWS_ACCESS_KEY_ID`` / ``AWS_SECRET_ACCESS_KEY`` (default ``local``/``local``)
-
-The local emulators accept any non-empty credentials, so the defaults work
-out of the box for development and tests.
+Credentials default to ``local``/``local`` which all emulators accept.
+No cloud account or real credentials are needed.
 """
 
 import os
@@ -60,8 +58,8 @@ def get_region(region_name: Optional[str] = None) -> str:
 def _credentials() -> dict:
     """Credentials for local emulators (any non-empty value is accepted)."""
     return {
-        "aws_access_key_id": os.getenv("AWS_ACCESS_KEY_ID") or "local",
-        "aws_secret_access_key": os.getenv("AWS_SECRET_ACCESS_KEY") or "local",
+        "aws_access_key_id": "local",
+        "aws_secret_access_key": "local",
     }
 
 

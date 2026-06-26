@@ -93,16 +93,12 @@ class AlertResponse(BaseModel):
 
 
 async def get_sentiment_analyzer() -> SentimentTrendAnalyzer:
-    """Dependency to get SentimentTrendAnalyzer instance."""
-    snowflake_config = {
-        "snowflake_account": settings.SNOWFLAKE_ACCOUNT,
-        "snowflake_user": settings.SNOWFLAKE_USER,
-        "snowflake_password": settings.SNOWFLAKE_PASSWORD,
-        "snowflake_warehouse": settings.SNOWFLAKE_WAREHOUSE,
-        "snowflake_database": settings.SNOWFLAKE_DATABASE,
-        "snowflake_schema": settings.SNOWFLAKE_SCHEMA,
-    }
-    return SentimentTrendAnalyzer(**snowflake_config)
+    """Dependency to get SentimentTrendAnalyzer instance (offline-first stub)."""
+    return SentimentTrendAnalyzer(
+        snowflake_account="",
+        snowflake_user="",
+        snowflake_password="",
+    )
 
 
 @router.get("/sentiment_trends/analyze")

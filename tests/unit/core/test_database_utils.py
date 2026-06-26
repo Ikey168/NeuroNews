@@ -7,38 +7,14 @@ from src.utils.database_utils import (
     build_where_clause,
     create_database_config,
     format_connection_string,
+    get_duckdb_path,
     get_postgres_connection_params,
-    get_redshift_connection_params,
-    get_snowflake_connection_params,
     sanitize_table_name,
     validate_connection_params,
 )
 
 
 class TestConnectionParams:
-    def test_redshift_defaults(self, monkeypatch):
-        for var in (
-            "REDSHIFT_HOST",
-            "REDSHIFT_PORT",
-            "REDSHIFT_DATABASE",
-            "REDSHIFT_USERNAME",
-            "REDSHIFT_PASSWORD",
-            "REDSHIFT_SSL_MODE",
-        ):
-            monkeypatch.delenv(var, raising=False)
-        params = get_redshift_connection_params()
-        assert params["host"] == "localhost"
-        assert params["port"] == 5439
-        assert params["database"] == "neuronews"
-        assert params["ssl_mode"] == "require"
-
-    def test_redshift_env_overrides(self, monkeypatch):
-        monkeypatch.setenv("REDSHIFT_HOST", "redshift.aws")
-        monkeypatch.setenv("REDSHIFT_PORT", "5440")
-        params = get_redshift_connection_params()
-        assert params["host"] == "redshift.aws"
-        assert params["port"] == 5440
-
     def test_postgres_defaults(self, monkeypatch):
         for var in ("POSTGRES_HOST", "POSTGRES_PORT", "POSTGRES_SSL_MODE"):
             monkeypatch.delenv(var, raising=False)
@@ -47,13 +23,13 @@ class TestConnectionParams:
         assert params["username"] == "postgres"
         assert params["ssl_mode"] == "prefer"
 
-    def test_snowflake_defaults(self, monkeypatch):
-        for var in ("SNOWFLAKE_ACCOUNT", "SNOWFLAKE_WAREHOUSE", "SNOWFLAKE_ROLE"):
-            monkeypatch.delenv(var, raising=False)
-        params = get_snowflake_connection_params()
-        assert params["account"] == "mock_account"
-        assert params["warehouse"] == "COMPUTE_WH"
-        assert params["role"] == "SYSADMIN"
+    def test_duckdb_path_default(self, monkeypatch):
+        monkeypatch.delenv("NEURONEWS_DB_PATH", raising=False)
+        assert get_duckdb_path() == "data/neuronews.duckdb"
+
+    def test_duckdb_path_env_override(self, monkeypatch):
+        monkeypatch.setenv("NEURONEWS_DB_PATH", "/tmp/test.duckdb")
+        assert get_duckdb_path() == "/tmp/test.duckdb"
 
 
 class TestFormatConnectionString:
@@ -69,31 +45,10 @@ class TestFormatConnectionString:
         conn = format_connection_string(params, "postgresql")
         assert conn == "postgresql://u:p@h:5432/d?sslmode=require"
 
-    def test_redshift(self):
-        params = {
-            "username": "u",
-            "password": "p",
-            "host": "h",
-            "port": 5439,
-            "database": "d",
-        }
-        conn = format_connection_string(params, "redshift")
-        assert conn.startswith("redshift://u:p@h:5439/d")
-        # default ssl mode applied when missing
-        assert conn.endswith("?sslmode=prefer")
-
-    def test_snowflake(self):
-        params = {
-            "user": "u",
-            "password": "p",
-            "account": "acct",
-            "database": "d",
-            "schema": "s",
-            "warehouse": "wh",
-            "role": "r",
-        }
-        conn = format_connection_string(params, "snowflake")
-        assert conn == "snowflake://u:p@acct/d/s?warehouse=wh&role=r"
+    def test_duckdb(self, monkeypatch):
+        monkeypatch.setenv("NEURONEWS_DB_PATH", "/tmp/test.duckdb")
+        conn = format_connection_string({}, "duckdb")
+        assert conn == "/tmp/test.duckdb"
 
     def test_unsupported_type_raises(self):
         with pytest.raises(ValueError):
@@ -112,13 +67,6 @@ class TestValidateConnectionParams:
 
 
 class TestCreateDatabaseConfig:
-    def test_redshift(self, monkeypatch):
-        monkeypatch.delenv("REDSHIFT_SSL_MODE", raising=False)
-        config = create_database_config("redshift")
-        assert isinstance(config, DatabaseConfig)
-        assert config.port == 5439
-        assert config.ssl_mode == "require"
-
     def test_postgres(self):
         config = create_database_config("postgres")
         assert isinstance(config, DatabaseConfig)

@@ -40,18 +40,10 @@ ITEM_PIPELINES = {
     # Optional language filtering
     "src.scraper.pipelines.multi_language_pipeline.LanguageFilterPipeline": 260,
     "src.scraper.pipelines.enhanced_pipelines.EnhancedJsonWriterPipeline": 300,
-    "src.scraper.pipelines.s3_pipeline.S3StoragePipeline": 400,
 }
 
-# S3 storage pipeline configuration
-
-# AWS settings (override these with environment variables or command line
-# arguments)
-AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID", "")
-AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY", "")
+# AWS region for local emulators (MinIO, DynamoDB Local) — no cloud account needed
 AWS_REGION = os.environ.get("AWS_REGION", config["aws"]["region"])
-S3_BUCKET = os.environ.get("S3_BUCKET", config["aws"]["s3"]["bucket"])
-S3_PREFIX = os.environ.get("S3_PREFIX", config["aws"]["s3"]["prefix"])
 
 # Multi-language processing settings
 TARGET_LANGUAGE = os.environ.get("TARGET_LANGUAGE", "en")
@@ -74,13 +66,6 @@ BLOCKED_LANGUAGES = (
 )
 REQUIRE_TRANSLATION = os.environ.get("REQUIRE_TRANSLATION", "false").lower() == "true"
 
-# Snowflake settings for analytics and data processing
-SNOWFLAKE_ACCOUNT = os.environ.get("SNOWFLAKE_ACCOUNT", "")
-SNOWFLAKE_USER = os.environ.get("SNOWFLAKE_USER", "")
-SNOWFLAKE_PASSWORD = os.environ.get("SNOWFLAKE_PASSWORD", "")
-SNOWFLAKE_WAREHOUSE = os.environ.get("SNOWFLAKE_WAREHOUSE", "ANALYTICS_WH")
-SNOWFLAKE_DATABASE = os.environ.get("SNOWFLAKE_DATABASE", "NEURONEWS")
-SNOWFLAKE_SCHEMA = os.environ.get("SNOWFLAKE_SCHEMA", "PUBLIC")
 
 # CloudWatch logging settings (disabled by default, enabled with
 # --cloudwatch flag)

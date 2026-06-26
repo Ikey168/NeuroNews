@@ -562,10 +562,10 @@ class TestEventRoutes:
         assert len(events) == 1
         assert events[0]["cluster_name"] == "Tech Event"
 
-    @patch("src.api.routes.event_routes.get_redshift_connection_params")
+    @patch("src.api.routes.event_routes.get_duckdb_path")
     def test_get_event_clusters_success(self, mock_conn_params, client):
         """Test successful event clusters retrieval."""
-        mock_conn_params.return_value = {"host": "test", "port": 5432}
+        mock_conn_params.return_value = "data/test.duckdb"
         
         with patch("psycopg2.connect") as mock_connect:
             mock_cursor = MagicMock()

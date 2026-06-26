@@ -87,15 +87,7 @@ class DynamoDBMetadataPipeline:
             create_indexes=settings.getbool("CREATE_DYNAMODB_INDEXES", True),
         )
 
-        # AWS credentials from settings
-        aws_credentials = None
-        if settings.get("AWS_ACCESS_KEY_ID"):
-            aws_credentials = {
-                "aws_access_key_id": settings.get("AWS_ACCESS_KEY_ID"),
-                "aws_secret_access_key": settings.get("AWS_SECRET_ACCESS_KEY"),
-            }
-
-        pipeline = cls(config, aws_credentials)
+        pipeline = cls(config, None)
 
         # Connect to spider signals for lifecycle management
         crawler.signals.connect(pipeline.spider_opened, signal=signals.spider_opened)

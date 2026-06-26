@@ -14,25 +14,9 @@ router = APIRouter(prefix="/search", tags=["search"])
 
 
 async def get_db():
-    """Dependency to get database connection."""
-    account = os.getenv("SNOWFLAKE_ACCOUNT")
-    if not account:
-        raise HTTPException(
-            status_code=500, detail="SNOWFLAKE_ACCOUNT environment variable not set"
-        )
-
-    db = SnowflakeAnalyticsConnector(
-        account=account,
-        user=os.getenv("SNOWFLAKE_USER"),
-        password=os.getenv("SNOWFLAKE_PASSWORD"),
-        database=os.getenv("SNOWFLAKE_DATABASE", "NEURONEWS"),
-        warehouse=os.getenv("SNOWFLAKE_WAREHOUSE", "ANALYTICS_WH"),
-    )
-    try:
-        db.connect()
-        yield db
-    finally:
-        db.disconnect()
+    """Return the shared DuckDB connection."""
+    from src.database.local_analytics_connector import get_shared_connection
+    return get_shared_connection()
 
 
 @router.get("/articles")

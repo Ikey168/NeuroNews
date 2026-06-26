@@ -31,7 +31,7 @@ from src.nlp.ai_summarizer import (
     SummaryLength,
 )
 from src.nlp.summary_database import SummaryDatabase
-from src.utils.database_utils import get_redshift_connection_params
+from src.utils.database_utils import get_duckdb_path
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +127,7 @@ async def get_summary_database() -> SummaryDatabase:
     """Get the global summary database instance."""
     global _summary_db
     if _summary_db is None:
-        connection_params = get_redshift_connection_params()
+        connection_params = {"duckdb_path": get_duckdb_path()}
         _summary_db = SummaryDatabase(connection_params)
         await _summary_db.create_table()
     return _summary_db

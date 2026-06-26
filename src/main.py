@@ -34,26 +34,11 @@ def main():
         default="dev",
     )
 
-    # AWS credentials
-    aws_group = parser.add_argument_group("AWS Credentials")
-    aws_group.add_argument("--aws-profile", help="AWS profile name")
-    aws_group.add_argument("--aws-key-id", help="AWS access key ID")
-    aws_group.add_argument("--aws-secret-key", help="AWS secret access key")
-    aws_group.add_argument(
-        "--aws-region", help="AWS region (default: us-east-1)", default="us-east-1"
+    # AWS region for local emulators
+    parser.add_argument(
+        "--aws-region", help="AWS region for local emulators (default: us-east-1)", default="us-east-1"
     )
-
-    # S3 storage options
-    s3_group = parser.add_argument_group("S3 Storage Options")
-    s3_group.add_argument(
-        "--s3", action="store_true", help="Store articles in Amazon S3"
-    )
-    s3_group.add_argument("--s3-bucket", help="S3 bucket name")
-    s3_group.add_argument(
-        "--s3-prefix",
-        help="S3 key prefix (default: news_articles)",
-        default="news_articles",
-    )
+    parser.add_argument("--aws-profile", help="AWS profile name")
 
     # CloudWatch logging options
     cloudwatch_group = parser.add_argument_group("CloudWatch Logging Options")
@@ -144,29 +129,6 @@ def main():
                 "log_level", cloudwatch_log_level
             )
 
-        # Check if AWS services are enabled but required credentials are
-        # missing
-        aws_services_enabled = s3_storage or cloudwatch_logging
-        aws_creds_available = (
-            os.environ.get("AWS_ACCESS_KEY_ID") or args.aws_key_id
-        ) and (os.environ.get("AWS_SECRET_ACCESS_KEY") or args.aws_secret_key)
-        aws_profile_available = aws_profile is not None
-
-        if aws_services_enabled and not (aws_creds_available or aws_profile_available):
-            parser.error(
-                "AWS credentials are required for S3 storage or CloudWatch logging. "
-                "Provide them with --aws-key-id and --aws-secret-key, "
-                "set the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables, "
-                "or use --aws-profile to specify an AWS profile."
-            )
-
-        # Check if S3 storage is enabled but bucket name is missing
-        if s3_storage and not s3_bucket:
-            parser.error(
-                "S3 bucket name is required for S3 storage. "
-                "Provide it with --s3-bucket, set the S3_BUCKET environment variable, "
-                "or specify it in the AWS configuration file."
-            )
 
         if args.playwright:
             print("Using Playwright for JavaScript-heavy pages")

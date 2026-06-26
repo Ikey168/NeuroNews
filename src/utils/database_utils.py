@@ -23,18 +23,6 @@ class DatabaseConfig:
     ssl_mode: str = "require"
 
 
-def get_redshift_connection_params() -> Dict[str, Any]:
-    """Get Redshift connection parameters from environment variables."""
-    return {
-        "host": os.getenv("REDSHIFT_HOST", "localhost"),
-        "port": int(os.getenv("REDSHIFT_PORT", "5439")),
-        "database": os.getenv("REDSHIFT_DATABASE", "neuronews"),
-        "username": os.getenv("REDSHIFT_USERNAME", "admin"),
-        "password": os.getenv("REDSHIFT_PASSWORD", "password"),
-        "ssl_mode": os.getenv("REDSHIFT_SSL_MODE", "require")
-    }
-
-
 def get_postgres_connection_params() -> Dict[str, Any]:
     """Get PostgreSQL connection parameters from environment variables."""
     return {
@@ -47,33 +35,21 @@ def get_postgres_connection_params() -> Dict[str, Any]:
     }
 
 
-def get_snowflake_connection_params() -> Dict[str, Any]:
-    """Get Snowflake connection parameters from environment variables."""
-    return {
-        "account": os.getenv("SNOWFLAKE_ACCOUNT", "mock_account"),
-        "user": os.getenv("SNOWFLAKE_USER", "admin"),
-        "password": os.getenv("SNOWFLAKE_PASSWORD", "password"),
-        "warehouse": os.getenv("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH"),
-        "database": os.getenv("SNOWFLAKE_DATABASE", "NEURONEWS"),
-        "schema": os.getenv("SNOWFLAKE_SCHEMA", "PUBLIC"),
-        "role": os.getenv("SNOWFLAKE_ROLE", "SYSADMIN")
-    }
+def get_duckdb_path() -> str:
+    """Return the path to the local DuckDB warehouse file."""
+    return os.getenv("NEURONEWS_DB_PATH", "data/neuronews.duckdb")
 
 
 def format_connection_string(params: Dict[str, Any], db_type: str = "postgresql") -> str:
     """Format connection parameters into a connection string."""
-    if db_type == "postgresql" or db_type == "redshift":
+    if db_type in ("postgresql", "postgres"):
         return (
-            f"{db_type}://{params['username']}:{params['password']}"
+            f"postgresql://{params['username']}:{params['password']}"
             f"@{params['host']}:{params['port']}/{params['database']}"
             f"?sslmode={params.get('ssl_mode', 'prefer')}"
         )
-    elif db_type == "snowflake":
-        return (
-            f"snowflake://{params['user']}:{params['password']}"
-            f"@{params['account']}/{params['database']}/{params['schema']}"
-            f"?warehouse={params['warehouse']}&role={params.get('role', '')}"
-        )
+    elif db_type == "duckdb":
+        return get_duckdb_path()
     else:
         raise ValueError(f"Unsupported database type: {db_type}")
 
@@ -95,9 +71,7 @@ def validate_connection_params(params: Dict[str, Any], required_keys: list) -> b
 def create_database_config(db_type: str) -> Optional[DatabaseConfig]:
     """Create a DatabaseConfig object for the specified database type."""
     try:
-        if db_type == "redshift":
-            params = get_redshift_connection_params()
-        elif db_type == "postgres":
+        if db_type == "postgres":
             params = get_postgres_connection_params()
         else:
             logger.error(f"Unsupported database type for DatabaseConfig: {db_type}")
