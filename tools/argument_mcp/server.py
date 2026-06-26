@@ -22,6 +22,10 @@ Tools (non-overlapping with pipeline_mcp which owns positions/conflicts):
   actor_summary(source_type?, role?,      -> top actors by document frequency
                 limit?)
   trigger_actor_batch(limit?)             -> extract actors from news_articles (RW)
+  list_outlet_clusters(source_type?,      -> stored outlet cluster assignments
+                       cluster_id?)
+  trigger_outlet_clustering(date_range?,  -> embed+cluster outlets, persist (RW)
+                            k_min?, k_max?)
 
 Design constraints (same as pipeline_mcp):
   * Lazy imports inside each tool — top-level imports are stdlib + fastmcp only.
@@ -697,6 +701,119 @@ def trigger_actor_batch(limit: int = 200) -> dict:
         rw_conn = duckdb.connect(db_path, read_only=False)
         lock = threading.Lock()
         result = run_actor_batch(rw_conn, lock, limit=limit)
+        rw_conn.close()
+        return result
+    except Exception as e:
+        return {"error": f"write connection failed — warehouse may be locked: {e}"}
+
+
+@mcp.tool
+def list_outlet_clusters(
+    source_type: Optional[str] = None,
+    cluster_id: Optional[int] = None,
+    limit: int = MAX_LIST,
+) -> dict:
+    """
+    Return stored outlet cluster assignments with PCA 2D coordinates.
+
+    Each record includes source, cluster_id, descriptive cluster_label,
+    pca_x/pca_y scatter coordinates, dominant_frame, and doc_count.
+
+    Run ``trigger_outlet_clustering()`` first if the table is empty.
+
+    Args:
+        source_type: Filter by content type (news|blog|paper|transcript…).
+        cluster_id:  Filter to one cluster.
+        limit:       Max rows (default 50).
+    """
+    conn, err = _warehouse_ro()
+    if err or conn is None:
+        return {"error": err or "no connection"}
+
+    conditions: list[str] = []
+    params: list = []
+    if source_type:
+        conditions.append("source_type = ?")
+        params.append(source_type)
+    if cluster_id is not None:
+        conditions.append("cluster_id = ?")
+        params.append(cluster_id)
+
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    params.append(limit)
+
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT source, source_type, cluster_id, cluster_label,
+                   ROUND(pca_x, 3) AS pca_x, ROUND(pca_y, 3) AS pca_y,
+                   dominant_frame, doc_count, computed_at
+            FROM outlet_clusters
+            {where}
+            ORDER BY cluster_id, doc_count DESC
+            LIMIT ?
+            """,
+            params,
+        ).fetchall()
+    except Exception as e:
+        return {"error": str(e)}
+
+    return {
+        "count": len(rows),
+        "outlets": [
+            {
+                "source":         r[0],
+                "source_type":    r[1],
+                "cluster_id":     r[2],
+                "cluster_label":  r[3],
+                "pca_x":          r[4],
+                "pca_y":          r[5],
+                "dominant_frame": r[6],
+                "doc_count":      r[7],
+                "computed_at":    r[8],
+            }
+            for r in rows
+        ],
+    }
+
+
+@mcp.tool
+def trigger_outlet_clustering(
+    date_range: str = "90d",
+    k_min: int = 2,
+    k_max: int = 8,
+) -> dict:
+    """
+    Embed news outlets as 7-dim frame vectors, run k-means + hierarchical
+    clustering (k_min..k_max), pick best k by silhouette score, project to
+    2D via PCA, and persist results to ``outlet_clusters``.
+
+    Safe to call repeatedly — each call overwrites the previous run.
+
+    Args:
+        date_range: Frame aggregation window: 7d|30d|90d|180d|365d (default "90d").
+        k_min:      Minimum k to try (default 2).
+        k_max:      Maximum k to try (default 8).
+
+    Returns {"n_outlets", "k", "method", "silhouette", "computed_at"}.
+    """
+    import os, threading, duckdb
+
+    try:
+        from src.argument_mining.outlet_clustering import run_cluster_pipeline  # type: ignore[import]
+    except ImportError as e:
+        return {"error": f"outlet_clustering module unavailable: {e}"}
+
+    db_path = os.environ.get(
+        "NEURONEWS_DB_PATH",
+        str(REPO_ROOT / "data" / "local_warehouse.duckdb"),
+    )
+    try:
+        rw_conn = duckdb.connect(db_path, read_only=False)
+        lock = threading.Lock()
+        result = run_cluster_pipeline(
+            rw_conn, lock, date_range=date_range, k_min=k_min, k_max=k_max
+        )
         rw_conn.close()
         return result
     except Exception as e:

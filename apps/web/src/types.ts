@@ -314,6 +314,18 @@ export interface ActorSummary {
   avg_confidence: number;
 }
 
+export interface OutletCluster {
+  source: string;
+  source_type: SourceType;
+  cluster_id: number;
+  cluster_label: string;
+  pca_x: number;
+  pca_y: number;
+  dominant_frame: string;
+  doc_count: number;
+  computed_at: string | null;
+}
+
 export interface KnowledgeDocument {
   document_id: string;
   source_type: SourceType;

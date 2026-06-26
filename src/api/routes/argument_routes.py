@@ -2024,3 +2024,95 @@ async def get_actors_summary(
         ],
         "count": len(rows),
     }
+
+
+# ---------------------------------------------------------------------------
+# Outlet editorial-framing cluster endpoints (#115)
+# ---------------------------------------------------------------------------
+
+@router.get("/outlets/clusters")
+async def get_outlet_clusters(
+    source_type: Optional[str] = Query(None, description="Filter by content type"),
+    cluster_id:  Optional[int] = Query(None, description="Filter by cluster ID"),
+    limit: int = Query(200, ge=1, le=1000),
+) -> Dict[str, Any]:
+    """
+    Return stored outlet cluster assignments with PCA 2D coordinates.
+
+    Each record includes source name, source_type, cluster_id, descriptive
+    cluster_label, pca_x/pca_y scatter coordinates, dominant_frame, and
+    doc_count.  Coordinates are in PCA space (arbitrary scale, centered near 0).
+
+    Run ``POST /outlets/cluster`` first if the table is empty.
+    """
+    import threading
+
+    from src.database.local_analytics_connector import get_shared_connection
+
+    conn = get_shared_connection()
+    lock = getattr(conn, "_lock", None) or threading.Lock()
+
+    conditions: list[str] = []
+    params: list[Any] = []
+    if source_type:
+        conditions.append("source_type = ?")
+        params.append(source_type)
+    if cluster_id is not None:
+        conditions.append("cluster_id = ?")
+        params.append(cluster_id)
+
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    params.append(limit)
+
+    with lock:
+        rows = conn.execute(
+            f"""
+            SELECT source, source_type, cluster_id, cluster_label,
+                   pca_x, pca_y, dominant_frame, doc_count, computed_at
+            FROM outlet_clusters
+            {where}
+            ORDER BY cluster_id, doc_count DESC
+            LIMIT ?
+            """,
+            params,
+        ).fetchall()
+
+    outlets = [
+        {
+            "source":        r[0],
+            "source_type":   r[1],
+            "cluster_id":    r[2],
+            "cluster_label": r[3],
+            "pca_x":         round(r[4], 4) if r[4] is not None else 0.0,
+            "pca_y":         round(r[5], 4) if r[5] is not None else 0.0,
+            "dominant_frame": r[6],
+            "doc_count":     r[7],
+            "computed_at":   r[8],
+        }
+        for r in rows
+    ]
+    return {"outlets": outlets, "count": len(outlets)}
+
+
+@router.post("/outlets/cluster")
+async def trigger_outlet_clustering(
+    date_range: str = Query("90d", description="Frame aggregation window: 7d|30d|90d|180d|365d"),
+    k_min: int = Query(2, ge=2, le=5,  description="Minimum number of clusters to try"),
+    k_max: int = Query(8, ge=2, le=12, description="Maximum number of clusters to try"),
+) -> Dict[str, Any]:
+    """
+    Embed outlets as frame vectors, run k-means + hierarchical clustering (k_min..k_max),
+    select best k via silhouette score, project to 2D via PCA, and persist results.
+
+    Safe to call repeatedly — each call overwrites the previous run.
+
+    Returns a summary: n_outlets, chosen k, method, silhouette score.
+    """
+    import threading
+
+    from src.database.local_analytics_connector import get_shared_connection
+    from src.argument_mining.outlet_clustering import run_cluster_pipeline
+
+    conn = get_shared_connection()
+    lock = getattr(conn, "_lock", None) or threading.Lock()
+    return run_cluster_pipeline(conn, lock, date_range=date_range, k_min=k_min, k_max=k_max)

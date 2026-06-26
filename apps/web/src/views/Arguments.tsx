@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { fonts, palette, colors, ACCENT, accentSoft, accentBorder } from "../theme";
-import { useArgumentClaims, useArgumentStance, useArgumentFrames, useArgumentPositions, useArgumentControversy, useArgumentControversyGraph, useArgumentStanceSources, useArgumentStanceDrift, useArgumentFramesBySource } from "../lib/queries";
+import { useArgumentClaims, useArgumentStance, useArgumentFrames, useArgumentPositions, useArgumentControversy, useArgumentControversyGraph, useArgumentStanceSources, useArgumentStanceDrift, useArgumentFramesBySource, useOutletClusters } from "../lib/queries";
 import PageHeader from "../components/PageHeader";
 import SourceBadge from "../components/SourceBadge";
 import Sparkline from "../components/charts/Sparkline";
-import type { ArgumentTab, SourceType, StanceSummary, ControversyNode, ControversyEdge, SourceStance, StanceDriftEvent, FrameSource, PositionUpdate, UpdateType } from "../types";
+import type { ArgumentTab, SourceType, StanceSummary, ControversyNode, ControversyEdge, SourceStance, StanceDriftEvent, FrameSource, PositionUpdate, UpdateType, OutletCluster } from "../types";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -1276,6 +1276,166 @@ function DriftTimeline({ source, sourceType }: { source: string; sourceType: str
   );
 }
 
+// ─── Outlet cluster scatter plot (#115) ──────────────────────────────────────
+
+// 8 distinct colours for up to 8 clusters (Okabe–Ito palette, colourblind-safe)
+const CLUSTER_COLORS = [
+  "#0072B2", "#E69F00", "#009E73", "#CC79A7",
+  "#56B4E9", "#D55E00", "#F0E442", "#999999",
+];
+
+// (reuses FRAME_COLORS defined at module level)
+
+function OutletClusterScatter({ outlets }: { outlets: OutletCluster[] }) {
+  const [hovered, setHovered] = useState<OutletCluster | null>(null);
+  const W = 440, H = 260, PAD = 32;
+
+  if (outlets.length === 0) {
+    return (
+      <div style={{ padding: "18px 0", textAlign: "center", color: palette.dim, fontFamily: fonts.mono, fontSize: 11 }}>
+        No cluster data. Run <code style={{ color: ACCENT }}>POST /api/v1/arguments/outlets/cluster</code> to generate.
+      </div>
+    );
+  }
+
+  const xs = outlets.map((o) => o.pca_x);
+  const ys = outlets.map((o) => o.pca_y);
+  const xMin = Math.min(...xs), xMax = Math.max(...xs);
+  const yMin = Math.min(...ys), yMax = Math.max(...ys);
+  const xRange = xMax - xMin || 1;
+  const yRange = yMax - yMin || 1;
+
+  function toSvg(o: OutletCluster) {
+    const px = PAD + ((o.pca_x - xMin) / xRange) * (W - 2 * PAD);
+    const py = PAD + (1 - (o.pca_y - yMin) / yRange) * (H - 2 * PAD);
+    return { px, py };
+  }
+
+  // Cluster label positions — centroid of member points
+  const clusterCentroids: Record<number, { px: number; py: number; label: string }> = {};
+  for (const o of outlets) {
+    const { px, py } = toSvg(o);
+    if (!clusterCentroids[o.cluster_id]) {
+      clusterCentroids[o.cluster_id] = { px: 0, py: 0, label: o.cluster_label };
+    }
+    clusterCentroids[o.cluster_id].px += px;
+    clusterCentroids[o.cluster_id].py += py;
+  }
+  const clusterSizes: Record<number, number> = {};
+  for (const o of outlets) clusterSizes[o.cluster_id] = (clusterSizes[o.cluster_id] ?? 0) + 1;
+  for (const [cid, c] of Object.entries(clusterCentroids)) {
+    const n = clusterSizes[Number(cid)] ?? 1;
+    c.px /= n; c.py /= n;
+  }
+
+  // Unique clusters for legend
+  const uniqueClusters = Array.from(
+    new Map(outlets.map((o) => [o.cluster_id, o])).entries()
+  ).sort(([a], [b]) => a - b);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ fontFamily: fonts.grotesk, fontWeight: 600, fontSize: 14 }}>
+          Editorial Framing Clusters
+        </span>
+        <span style={{ fontFamily: fonts.mono, fontSize: 10, color: palette.dim }}>
+          PCA 2D · {outlets.length} outlets
+        </span>
+      </div>
+
+      <div style={{ position: "relative", borderRadius: 10, overflow: "hidden", border: `1px solid ${colors.border}`, background: colors.card }}>
+        <svg width={W} height={H} style={{ display: "block" }}>
+          {/* Faint grid */}
+          {[0.25, 0.5, 0.75].map((t) => (
+            <g key={t}>
+              <line x1={PAD + t * (W - 2 * PAD)} y1={PAD} x2={PAD + t * (W - 2 * PAD)} y2={H - PAD}
+                stroke={colors.border} strokeWidth={0.5} />
+              <line x1={PAD} y1={PAD + t * (H - 2 * PAD)} x2={W - PAD} y2={PAD + t * (H - 2 * PAD)}
+                stroke={colors.border} strokeWidth={0.5} />
+            </g>
+          ))}
+
+          {/* Cluster centroid labels */}
+          {Object.entries(clusterCentroids).map(([cid, c]) => (
+            <text key={cid}
+              x={c.px} y={c.py - 14}
+              textAnchor="middle"
+              style={{ fontFamily: fonts.mono, fontSize: 8, fill: CLUSTER_COLORS[Number(cid) % CLUSTER_COLORS.length], opacity: 0.75, pointerEvents: "none" }}
+            >
+              {c.label}
+            </text>
+          ))}
+
+          {/* Outlet circles */}
+          {outlets.map((o) => {
+            const { px, py } = toSvg(o);
+            const color = CLUSTER_COLORS[o.cluster_id % CLUSTER_COLORS.length];
+            const isHov = hovered?.source === o.source && hovered?.source_type === o.source_type;
+            const r = Math.max(5, Math.min(11, 4 + Math.sqrt(o.doc_count / 10)));
+            return (
+              <g key={`${o.source_type}::${o.source}`}
+                onMouseEnter={() => setHovered(o)}
+                onMouseLeave={() => setHovered(null)}
+                style={{ cursor: "pointer" }}
+              >
+                <circle cx={px} cy={py} r={r + (isHov ? 3 : 0)}
+                  fill={color} fillOpacity={isHov ? 0.95 : 0.65}
+                  stroke={color} strokeWidth={isHov ? 2 : 1}
+                />
+              </g>
+            );
+          })}
+        </svg>
+
+        {/* Tooltip */}
+        {hovered && (() => {
+          const { px, py } = toSvg(hovered);
+          const clr = CLUSTER_COLORS[hovered.cluster_id % CLUSTER_COLORS.length];
+          const frameClr = FRAME_COLORS[hovered.dominant_frame as keyof typeof FRAME_COLORS] ?? palette.dim;
+          const left = px < W / 2 ? px + 14 : undefined;
+          const right = px >= W / 2 ? W - px + 14 : undefined;
+          return (
+            <div style={{
+              position: "absolute",
+              top: py - 4,
+              left: left !== undefined ? left : undefined,
+              right: right !== undefined ? right : undefined,
+              pointerEvents: "none",
+              background: colors.cardInner, border: `1px solid ${clr}60`,
+              borderRadius: 7, padding: "6px 10px",
+              fontFamily: fonts.mono, fontSize: 10, color: colors.text,
+              whiteSpace: "nowrap", zIndex: 10, boxShadow: "0 2px 8px #0004",
+            }}>
+              <div style={{ fontWeight: 700, color: clr, marginBottom: 2 }}>{hovered.source}</div>
+              <div style={{ color: palette.dim }}>{hovered.cluster_label}</div>
+              <div style={{ marginTop: 3 }}>
+                <span style={{ color: frameClr }}>{hovered.dominant_frame}</span>
+                <span style={{ color: palette.dim }}> · {hovered.doc_count} docs</span>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* Cluster legend */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        {uniqueClusters.map(([cid, o]) => {
+          const color = CLUSTER_COLORS[cid % CLUSTER_COLORS.length];
+          return (
+            <div key={cid} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: color }} />
+              <span style={{ fontFamily: fonts.mono, fontSize: 10, color: palette.dim }}>
+                {o.cluster_label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Sources panel ────────────────────────────────────────────────────────────
 
 function SourcesPanel({ sourceType }: { sourceType: string }) {
@@ -1283,6 +1443,7 @@ function SourcesPanel({ sourceType }: { sourceType: string }) {
   const [expandedSource, setExpandedSource] = useState<string | null>(null);
   const params = sourceType !== "all" ? { source_type: sourceType } : undefined;
   const { data: stances, source, isLoading } = useArgumentStanceSources(params);
+  const { data: clusters } = useOutletClusters(params);
 
   const topics = Array.from(new Set(stances.map((s) => s.topic))).sort();
   const filtered = selectedTopic === "all" ? stances : stances.filter((s) => s.topic === selectedTopic);
@@ -1301,10 +1462,16 @@ function SourcesPanel({ sourceType }: { sourceType: string }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontFamily: fonts.grotesk, fontWeight: 600, fontSize: 14 }}>Stance by Source</span>
-        <SourceBadge source={source} isLoading={isLoading} />
+      {/* Editorial framing cluster scatter plot (#115) */}
+      <OutletClusterScatter outlets={clusters} />
+
+      {/* Separator */}
+      <div style={{ borderTop: `1px solid ${colors.border}`, paddingTop: 14 }}>
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontFamily: fonts.grotesk, fontWeight: 600, fontSize: 14 }}>Stance by Source</span>
+          <SourceBadge source={source} isLoading={isLoading} />
+        </div>
       </div>
 
       {/* Topic filter pills */}

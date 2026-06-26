@@ -307,6 +307,18 @@ export interface RawActorSummary {
   avg_confidence: number;
 }
 
+export interface RawOutletCluster {
+  source: string;
+  source_type: string;
+  cluster_id: number;
+  cluster_label: string;
+  pca_x: number;
+  pca_y: number;
+  dominant_frame: string;
+  doc_count: number;
+  computed_at: string | null;
+}
+
 // ---------- endpoint calls ----------
 
 export const api = {
@@ -380,4 +392,7 @@ export const api = {
 
   argumentActorsSummary: (params?: { source_type?: string; role?: string; limit?: number }) =>
     request<{ actors: RawActorSummary[]; count: number }>("/api/v1/arguments/actors/summary", params),
+
+  argumentOutletClusters: (params?: { source_type?: string; cluster_id?: number; limit?: number }) =>
+    request<{ outlets: RawOutletCluster[]; count: number }>("/api/v1/arguments/outlets/clusters", params),
 };

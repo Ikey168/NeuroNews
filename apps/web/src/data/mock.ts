@@ -23,6 +23,7 @@ import type {
   ControversyGraph,
   SourceStance,
   StanceDriftEvent,
+  OutletCluster,
 } from "../types";
 
 const NOW = Date.now();
@@ -465,3 +466,24 @@ export const mockFramesBySource: FrameSource[] = [
   { source: "IMF Working Papers",     source_type: "paper",      frames: { economic: 0.82, political: 0.28, security: 0.10, scientific: 0.34, humanitarian: 0.16, legal: 0.20, other: 0.03 }, doc_count: 24, dominant: "economic",     concentrated: true,  concentrated_frame: "economic"    },
   { source: "Energy Policy Podcast",  source_type: "transcript", frames: { economic: 0.44, political: 0.58, security: 0.22, scientific: 0.28, humanitarian: 0.18, legal: 0.24, other: 0.09 }, doc_count: 18, dominant: "political",    concentrated: false, concentrated_frame: null          },
 ];
+
+// Outlet editorial-framing clusters (#115) — 5 clusters, PCA 2D projection
+// Cluster labels derived from dominant frame centroid; pca_x/y are illustrative
+// but maintain realistic relative distances between editorial families.
+export const mockOutletClusters: OutletCluster[] = [
+  // Cluster 0 — economic-dominant (financial press)
+  { source: "Bloomberg",              source_type: "news",       cluster_id: 0, cluster_label: "economic-dominant",         pca_x: -1.42, pca_y:  0.28, dominant_frame: "economic",     doc_count: 69, computed_at: null },
+  { source: "Reuters",                source_type: "news",       cluster_id: 0, cluster_label: "economic-dominant",         pca_x: -1.28, pca_y:  0.11, dominant_frame: "economic",     doc_count: 64, computed_at: null },
+  { source: "Financial Times",        source_type: "news",       cluster_id: 0, cluster_label: "economic-dominant",         pca_x: -1.10, pca_y:  0.47, dominant_frame: "economic",     doc_count: 68, computed_at: null },
+  { source: "IMF Working Papers",     source_type: "paper",      cluster_id: 0, cluster_label: "economic-dominant",         pca_x: -1.55, pca_y: -0.18, dominant_frame: "economic",     doc_count: 24, computed_at: null },
+  // Cluster 1 — scientific-dominant (science & research)
+  { source: "Nature Climate Change",  source_type: "paper",      cluster_id: 1, cluster_label: "scientific-dominant",       pca_x:  1.60, pca_y:  0.95, dominant_frame: "scientific",   doc_count: 58, computed_at: null },
+  { source: "STAT News",              source_type: "news",       cluster_id: 1, cluster_label: "scientific-dominant",       pca_x:  1.22, pca_y:  0.82, dominant_frame: "scientific",   doc_count: 35, computed_at: null },
+  { source: "Wired",                  source_type: "news",       cluster_id: 1, cluster_label: "scientific-dominant",       pca_x:  1.38, pca_y:  0.60, dominant_frame: "scientific",   doc_count: 32, computed_at: null },
+  // Cluster 2 — balanced-political-economic (broad broadsheets)
+  { source: "The Guardian",           source_type: "news",       cluster_id: 2, cluster_label: "balanced-political-economic", pca_x: -0.22, pca_y:  1.18, dominant_frame: "political",   doc_count: 70, computed_at: null },
+  { source: "energy-transition.blog", source_type: "blog",       cluster_id: 2, cluster_label: "balanced-political-economic", pca_x:  0.18, pca_y:  1.32, dominant_frame: "political",   doc_count: 32, computed_at: null },
+  // Cluster 3 — political-focused (policy commentary)
+  { source: "Energy Policy Podcast",  source_type: "transcript", cluster_id: 3, cluster_label: "political-focused",         pca_x: -0.60, pca_y: -1.10, dominant_frame: "political",   doc_count: 18, computed_at: null },
+];
+
