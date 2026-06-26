@@ -1,5 +1,5 @@
 """
-Argument Mining API routes (Issues #90, #93, #95, #96, #97, #99, #102, #105, #110, #111).
+Argument Mining API routes (Issues #90, #93, #95, #96, #97, #99, #102, #105, #110, #111, #112).
 
 GET  /api/v1/arguments/frames                    — aggregate frame distribution
 GET  /api/v1/arguments/frames?document_id=       — frames for a specific document
@@ -18,8 +18,9 @@ GET  /api/v1/arguments/stance                    — stance distribution across 
 GET  /api/v1/arguments/positions                 — actor policy positions with follow-through history (#110, #111)
 POST /api/v1/arguments/positions/extract         — run position extraction on a stored document (#110)
 POST /api/v1/arguments/positions/{id}/check      — trigger follow-through check for one position (#111)
-GET  /api/v1/arguments/controversy               — conflict pairs ranked by contradiction count
-GET  /api/v1/arguments/controversy/graph         — force-directed graph: nodes=claims, edges=contradictions (#96)
+GET  /api/v1/arguments/controversy               — conflict pairs ranked by similarity (#112 uses claim_conflicts, fallback claim_evidence)
+GET  /api/v1/arguments/controversy/graph         — force-directed graph: nodes=claims, edges=conflicts (#96, #112)
+POST /api/v1/arguments/controversy/compute       — trigger on-demand conflict detection batch (#112)
 GET  /api/v1/arguments/sources/ranking           — sources ranked by claim quality
 """
 from __future__ import annotations
@@ -1454,8 +1455,13 @@ async def get_controversy(
     limit: int = Query(20, ge=1, le=200),
 ) -> Dict[str, Any]:
     """
-    Return conflict pairs where one source's claim is contradicted by a different source's
-    evidence. Intensity is normalized to [0, 1] within the result set.
+    Return conflict pairs ranked by similarity score (#112).
+
+    Prefers the ``claim_conflicts`` table populated by the semantic-similarity
+    batch job (``POST /controversy/compute``).  Falls back to deriving pairs
+    from ``claim_evidence`` contradictions when the table is empty.
+
+    Intensity is normalised to [0, 1] within the result set.
     """
     import threading
 
@@ -1465,25 +1471,83 @@ async def get_controversy(
     lock = getattr(conn, "_lock", None) or threading.Lock()
 
     cutoff = _parse_date_cutoff(date_range)
-    where_parts = [
+
+    # ── Primary: claim_conflicts ──────────────────────────────────────────────
+    cf_where: list[str] = []
+    cf_params: list[Any] = []
+    if source_type:
+        cf_where.append("(cf.source_type_a = ? OR cf.source_type_b = ?)")
+        cf_params.extend([source_type, source_type])
+    if topic:
+        cf_where.append("cf.topic ILIKE ?")
+        cf_params.append(f"%{topic}%")
+    if cutoff:
+        cf_where.append("cf.computed_at >= ?")
+        cf_params.append(cutoff)
+    cf_where_clause = ("WHERE " + " AND ".join(cf_where)) if cf_where else ""
+    cf_params.append(limit * 3)
+
+    with lock:
+        try:
+            cf_rows = conn.execute(
+                f"""
+                SELECT
+                    COALESCE(na.source, ca.source_type) AS actor_a,
+                    COALESCE(nb.source, cb.source_type) AS actor_b,
+                    cf.topic,
+                    cf.similarity_score,
+                    cf.conflict_type,
+                    cf.source_type_a,
+                    cf.source_type_b
+                FROM claim_conflicts cf
+                JOIN argument_claims ca ON cf.claim_id_a = ca.claim_id
+                JOIN argument_claims cb ON cf.claim_id_b = cb.claim_id
+                LEFT JOIN news_articles na ON ca.document_id = na.id
+                LEFT JOIN news_articles nb ON cb.document_id = nb.id
+                {cf_where_clause}
+                ORDER BY cf.similarity_score DESC
+                LIMIT ?
+                """,
+                cf_params,
+            ).fetchall()
+        except Exception:
+            cf_rows = []
+
+    if cf_rows:
+        max_sim = max(r[3] or 0 for r in cf_rows) or 1.0
+        conflicts = [
+            {
+                "actor_a":      r[0],
+                "actor_b":      r[1],
+                "topic":        r[2],
+                "intensity":    round((r[3] or 0) / max_sim, 2),
+                "source_count": 1,
+                "conflict_type": r[4],
+                "source_type_a": r[5],
+                "source_type_b": r[6],
+            }
+            for r in cf_rows[:limit]
+        ]
+        return {"conflicts": conflicts, "count": len(conflicts), "_source": "claim_conflicts"}
+
+    # ── Fallback: claim_evidence contradictions ───────────────────────────────
+    fb_where = [
         "e.relation = 'contradicts'",
         "n1.source IS NOT NULL",
         "n2.source IS NOT NULL",
         "n1.source != n2.source",
     ]
-    params: list[Any] = []
-
+    fb_params: list[Any] = []
     if source_type:
-        where_parts.append("c.source_type = ?")
-        params.append(source_type)
+        fb_where.append("c.source_type = ?")
+        fb_params.append(source_type)
     if topic:
-        where_parts.append("n1.category ILIKE ?")
-        params.append(f"%{topic}%")
+        fb_where.append("n1.category ILIKE ?")
+        fb_params.append(f"%{topic}%")
     if cutoff:
-        where_parts.append("n1.publish_date >= ?")
-        params.append(cutoff)
-
-    params.append(limit * 3)  # over-fetch for normalisation
+        fb_where.append("n1.publish_date >= ?")
+        fb_params.append(cutoff)
+    fb_params.append(limit * 3)
 
     with lock:
         rows = conn.execute(
@@ -1498,12 +1562,12 @@ async def get_controversy(
             JOIN argument_claims c   ON e.claim_id            = c.claim_id
             JOIN news_articles n1    ON c.document_id          = n1.id
             JOIN news_articles n2    ON e.evidence_document_id = n2.id
-            WHERE {' AND '.join(where_parts)}
+            WHERE {' AND '.join(fb_where)}
             GROUP BY n1.source, n2.source, COALESCE(n1.category, 'general')
             ORDER BY contradiction_count DESC
             LIMIT ?
             """,
-            params,
+            fb_params,
         ).fetchall()
 
     if not rows:
@@ -1520,12 +1584,11 @@ async def get_controversy(
         }
         for r in rows[:limit]
     ]
-
-    return {"conflicts": conflicts, "count": len(conflicts)}
+    return {"conflicts": conflicts, "count": len(conflicts), "_source": "claim_evidence_fallback"}
 
 
 # ---------------------------------------------------------------------------
-# Controversy graph endpoint (#96)
+# Controversy graph endpoint (#96, #112)
 # ---------------------------------------------------------------------------
 
 @router.get("/controversy/graph")
@@ -1536,112 +1599,135 @@ async def get_controversy_graph(
     limit: int = Query(60, ge=1, le=300),
 ) -> Dict[str, Any]:
     """
-    Return a force-directed graph of contested claims.
+    Return a force-directed graph of contested claims (#96, #112).
 
-    Nodes are individual claims involved in cross-source contradictions.
-    Edges are claim_evidence rows where relation='contradicts' and the two
-    claims come from different source outlets.
+    Prefers ``claim_conflicts`` (semantic-similarity conflicts) populated by
+    ``POST /controversy/compute``.  Falls back to ``claim_evidence`` contradictions.
 
-    Node fields:  id, label, source, source_type, topic, date, claim_text, confidence
-    Edge fields:  source, target, severity (similarity_score ∈ [0,1]), relation
+    Node fields:  id, label, source, source_type, topic, date, claim_text,
+                  confidence, document_id, conflict_type
+    Edge fields:  source, target, severity (similarity ∈ [0,1]), relation,
+                  conflict_type
     """
     import threading
 
     from src.database.local_analytics_connector import get_shared_connection
+    from src.argument_mining.conflict_graph import build_conflict_graph
 
     conn = get_shared_connection()
     lock = getattr(conn, "_lock", None) or threading.Lock()
-
     cutoff = _parse_date_cutoff(date_range)
-    conditions: list[str] = [
-        "e.relation = 'contradicts'",
-        "n1.source IS NOT NULL",
-        "n2.source IS NOT NULL",
-        "n1.source != n2.source",
-    ]
-    params: list[Any] = []
 
-    if source_type:
-        conditions.append("(c1.source_type = ? OR c2.source_type = ?)")
-        params.extend([source_type, source_type])
-    if topic:
-        conditions.append("(n1.category ILIKE ? OR n2.category ILIKE ?)")
-        params.extend([f"%{topic}%", f"%{topic}%"])
-    if cutoff:
-        conditions.append("(n1.publish_date >= ? OR n2.publish_date >= ?)")
-        params.extend([cutoff, cutoff])
+    result = build_conflict_graph(conn, lock, topic=topic, source_type=source_type,
+                                  date_cutoff=cutoff, limit=limit)
 
-    params.append(limit)
+    # If claim_conflicts is empty, fall back to old claim_evidence query
+    if result["node_count"] == 0:
+        conditions: list[str] = [
+            "e.relation = 'contradicts'",
+            "n1.source IS NOT NULL",
+            "n2.source IS NOT NULL",
+            "n1.source != n2.source",
+        ]
+        fb_params: list[Any] = []
+        if source_type:
+            conditions.append("(c1.source_type = ? OR c2.source_type = ?)")
+            fb_params.extend([source_type, source_type])
+        if topic:
+            conditions.append("(n1.category ILIKE ? OR n2.category ILIKE ?)")
+            fb_params.extend([f"%{topic}%", f"%{topic}%"])
+        if cutoff:
+            conditions.append("(n1.publish_date >= ? OR n2.publish_date >= ?)")
+            fb_params.extend([cutoff, cutoff])
+        fb_params.append(limit)
 
-    with lock:
-        rows = conn.execute(
-            f"""
-            SELECT
-                c1.claim_id                          AS claim_id_a,
-                c1.claim_text                        AS text_a,
-                c1.source_type                       AS source_type_a,
-                c1.confidence                        AS confidence_a,
-                c1.extracted_at                      AS date_a,
-                COALESCE(n1.source, c1.source_type)  AS source_a,
-                COALESCE(n1.category, 'general')     AS topic_a,
-                c1.document_id                       AS doc_id_a,
-                c2.claim_id                          AS claim_id_b,
-                c2.claim_text                        AS text_b,
-                c2.source_type                       AS source_type_b,
-                c2.confidence                        AS confidence_b,
-                c2.extracted_at                      AS date_b,
-                COALESCE(n2.source, c2.source_type)  AS source_b,
-                COALESCE(n2.category, 'general')     AS topic_b,
-                c2.document_id                       AS doc_id_b,
-                COALESCE(e.similarity_score, 0.5)    AS severity
-            FROM claim_evidence e
-            JOIN argument_claims c1 ON e.claim_id             = c1.claim_id
-            JOIN argument_claims c2 ON e.evidence_document_id = c2.document_id
-            LEFT JOIN news_articles n1 ON c1.document_id       = n1.id
-            LEFT JOIN news_articles n2 ON c2.document_id       = n2.id
-            WHERE {' AND '.join(conditions)}
-            ORDER BY severity DESC
-            LIMIT ?
-            """,
-            params,
-        ).fetchall()
+        with lock:
+            rows = conn.execute(
+                f"""
+                SELECT
+                    c1.claim_id, c1.claim_text, c1.source_type,
+                    c1.confidence, c1.extracted_at,
+                    COALESCE(n1.source, c1.source_type), COALESCE(n1.category, 'general'),
+                    c1.document_id,
+                    c2.claim_id, c2.claim_text, c2.source_type,
+                    c2.confidence, c2.extracted_at,
+                    COALESCE(n2.source, c2.source_type), COALESCE(n2.category, 'general'),
+                    c2.document_id,
+                    COALESCE(e.similarity_score, 0.5)
+                FROM claim_evidence e
+                JOIN argument_claims c1 ON e.claim_id             = c1.claim_id
+                JOIN argument_claims c2 ON e.evidence_document_id = c2.document_id
+                LEFT JOIN news_articles n1 ON c1.document_id = n1.id
+                LEFT JOIN news_articles n2 ON c2.document_id = n2.id
+                WHERE {' AND '.join(conditions)}
+                ORDER BY COALESCE(e.similarity_score, 0.5) DESC
+                LIMIT ?
+                """,
+                fb_params,
+            ).fetchall()
 
-    nodes: dict[str, Any] = {}
-    edges: list[dict[str, Any]] = []
+        nodes: dict[str, Any] = {}
+        edges: list[dict[str, Any]] = []
+        for r in rows:
+            cid_a, txt_a, st_a, cf_a, dt_a, src_a, tp_a, doc_a, \
+            cid_b, txt_b, st_b, cf_b, dt_b, src_b, tp_b, doc_b, sev = r
+            for cid, txt, stype, conf, date_, src, tp, doc in [
+                (cid_a, txt_a, st_a, cf_a, dt_a, src_a, tp_a, doc_a),
+                (cid_b, txt_b, st_b, cf_b, dt_b, src_b, tp_b, doc_b),
+            ]:
+                if cid not in nodes:
+                    nodes[cid] = {"id": cid, "label": src, "source": src,
+                                  "source_type": stype, "topic": tp,
+                                  "date": str(date_) if date_ else None,
+                                  "claim_text": txt,
+                                  "confidence": float(conf) if conf is not None else 0.5,
+                                  "document_id": doc}
+            edges.append({"source": cid_a, "target": cid_b,
+                           "severity": round(float(sev), 3), "relation": "contradicts"})
 
-    for r in rows:
-        (
-            cid_a, txt_a, stype_a, conf_a, date_a, src_a, topic_a, doc_a,
-            cid_b, txt_b, stype_b, conf_b, date_b, src_b, topic_b, doc_b,
-            severity,
-        ) = r
-        if cid_a not in nodes:
-            nodes[cid_a] = {
-                "id": cid_a, "label": src_a, "source": src_a,
-                "source_type": stype_a, "topic": topic_a,
-                "date": str(date_a) if date_a else None,
-                "claim_text": txt_a,
-                "confidence": float(conf_a) if conf_a is not None else 0.5,
-                "document_id": doc_a,
-            }
-        if cid_b not in nodes:
-            nodes[cid_b] = {
-                "id": cid_b, "label": src_b, "source": src_b,
-                "source_type": stype_b, "topic": topic_b,
-                "date": str(date_b) if date_b else None,
-                "claim_text": txt_b,
-                "confidence": float(conf_b) if conf_b is not None else 0.5,
-                "document_id": doc_b,
-            }
-        edges.append({
-            "source": cid_a,
-            "target": cid_b,
-            "severity": round(float(severity), 3),
-            "relation": "contradicts",
-        })
+        node_list = list(nodes.values())
+        result = {"nodes": node_list, "edges": edges,
+                  "node_count": len(node_list), "edge_count": len(edges),
+                  "_source": "claim_evidence_fallback"}
 
-    node_list = list(nodes.values())
-    return {"nodes": node_list, "edges": edges, "node_count": len(node_list), "edge_count": len(edges)}
+    return result
+
+
+# ---------------------------------------------------------------------------
+# On-demand conflict computation (#112)
+# ---------------------------------------------------------------------------
+
+@router.post("/controversy/compute")
+async def compute_conflicts(
+    limit: int = Query(300, ge=1, le=1000, description="Max claims to scan"),
+    date_range: Optional[str] = Query(None, description="Only scan claims since: 7d, 30d, 90d"),
+) -> Dict[str, Any]:
+    """
+    Trigger on-demand conflict detection across stored claims (#112).
+
+    Computes pairwise cosine similarity between claims in the same topic window,
+    flags pairs with similarity ≥ 0.65 and opposing stance signals as conflicts
+    (direct: ≥ 0.80 + explicit contradiction; implied: ≥ 0.65 + cross-format),
+    and stores results in ``claim_conflicts``.
+
+    Run nightly automatically via the APScheduler job in
+    ``src.argument_mining.conflict_scheduler``.
+    """
+    import threading
+
+    from src.database.local_analytics_connector import get_shared_connection
+    from src.argument_mining.conflict_graph import compute_claim_conflicts
+
+    conn = get_shared_connection()
+    lock = getattr(conn, "_lock", None) or threading.Lock()
+    cutoff = _parse_date_cutoff(date_range)
+
+    try:
+        counts = compute_claim_conflicts(conn, lock, limit=limit, date_range=cutoff)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Conflict computation failed: {exc}")
+
+    return {"status": "ok", **counts}
 
 
 # ---------------------------------------------------------------------------
