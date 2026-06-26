@@ -28,6 +28,7 @@ ENTITY_CORRECTION_ROUTES_AVAILABLE = False
 SOURCE_COMPARISON_ROUTES_AVAILABLE = False
 METRICS_ROUTES_AVAILABLE = False
 PRIVACY_ROUTES_AVAILABLE = False
+SECURITY_ROUTES_AVAILABLE = False
 
 # Store imported modules globally
 _imported_modules = {}
@@ -350,6 +351,19 @@ def try_import_privacy_routes():
         return False
 
 
+def try_import_security_routes():
+    """Try to import local storage security routes (issue #66)."""
+    global SECURITY_ROUTES_AVAILABLE
+    try:
+        from src.api.routes import security_routes
+        _imported_modules['security_routes'] = security_routes
+        SECURITY_ROUTES_AVAILABLE = True
+        return True
+    except ImportError:
+        SECURITY_ROUTES_AVAILABLE = False
+        return False
+
+
 def try_import_report_routes():
     """Try to import report generation routes (issues #51, #52)."""
     global REPORT_ROUTES_AVAILABLE
@@ -405,6 +419,7 @@ def check_all_imports():
     try_import_source_comparison_routes()
     try_import_metrics_routes()
     try_import_privacy_routes()
+    try_import_security_routes()
     _load_domain_packs()
 
 
@@ -719,6 +734,13 @@ def include_optional_routers(app):
             app.include_router(privacy_routes.router)
             routers_included += 1
 
+    # Include local storage security routes (issue #66)
+    if SECURITY_ROUTES_AVAILABLE:
+        security_routes = _imported_modules.get('security_routes')
+        if security_routes:
+            app.include_router(security_routes.router)
+            routers_included += 1
+
     return routers_included
 
 
@@ -821,6 +843,7 @@ async def root():
             "source_comparison": SOURCE_COMPARISON_ROUTES_AVAILABLE,
             "resource_metrics": METRICS_ROUTES_AVAILABLE,
             "privacy": PRIVACY_ROUTES_AVAILABLE,
+            "local_storage_security": SECURITY_ROUTES_AVAILABLE,
         },
     }
 

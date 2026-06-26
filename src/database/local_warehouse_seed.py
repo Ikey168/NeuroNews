@@ -175,6 +175,26 @@ CREATE TABLE IF NOT EXISTS user_privacy_prefs (
     pref_value VARCHAR NOT NULL,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS local_api_keys (
+    key_id      VARCHAR PRIMARY KEY,
+    key_hash    VARCHAR NOT NULL,
+    key_prefix  VARCHAR NOT NULL,
+    name        VARCHAR NOT NULL,
+    role        VARCHAR NOT NULL DEFAULT 'viewer',
+    status      VARCHAR NOT NULL DEFAULT 'active',
+    created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at  TIMESTAMP,
+    last_used_at TIMESTAMP,
+    usage_count INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS admin_mfa_secrets (
+    user_id    VARCHAR PRIMARY KEY,
+    totp_secret VARCHAR NOT NULL,
+    enabled    BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 # Each topic seeds a cluster of articles sharing a leading title word (the
