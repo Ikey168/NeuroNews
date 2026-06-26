@@ -169,6 +169,12 @@ CREATE TABLE IF NOT EXISTS resource_metrics (
     pid          INTEGER,
     process_name VARCHAR
 );
+
+CREATE TABLE IF NOT EXISTS user_privacy_prefs (
+    pref_key   VARCHAR PRIMARY KEY,
+    pref_value VARCHAR NOT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 # Each topic seeds a cluster of articles sharing a leading title word (the
