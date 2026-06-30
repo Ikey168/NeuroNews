@@ -1,28 +1,39 @@
 """
 Comprehensive tests for Graph Queries Module
 
-This test suite achieves 100% coverage for src/api/graph/queries.py
-by testing all query processing, filtering, pagination, and optimization methods.
+This test suite exercises the query processing, filtering, pagination,
+aggregation, optimization and statistics behaviour of
+``src/api/graph/queries.py``.
+
+The tests are aligned to the *current* source API:
+
+* ``QueryFilter`` / ``QuerySort`` use the field name ``property_name`` and
+  ``QueryFilter`` requires an ``operator`` argument.
+* The async ``execute_*`` methods return a ``QueryResult`` dataclass (not a
+  plain ``dict``); results live in ``.data`` with ``.total_results`` /
+  ``.returned_results`` counts and a ``.metadata`` dict.
+* The real helper methods are ``_apply_filter`` (mock filtering),
+  ``_apply_gremlin_filter`` (Gremlin traversal filtering), ``_generate_query_id``,
+  ``_generate_cache_key``, ``_update_query_stats`` / ``get_query_statistics``,
+  ``optimize_query`` (synchronous) and ``explain_query_plan``.
 """
 
 import pytest
-from unittest.mock import Mock, AsyncMock, patch
-from datetime import datetime
-import json
-import hashlib
+from unittest.mock import Mock, AsyncMock
 
 from src.api.graph.queries import (
     GraphQueries,
     QueryFilter,
     QuerySort,
     QueryPagination,
-    QueryParams
+    QueryParams,
+    QueryResult,
 )
 
 
 @pytest.fixture
 def graph_queries():
-    """Create a GraphQueries instance for testing."""
+    """Create a GraphQueries instance backed by a mock graph builder."""
     mock_graph = Mock()
     mock_graph.g = Mock()
     return GraphQueries(mock_graph)
@@ -30,964 +41,658 @@ def graph_queries():
 
 @pytest.fixture
 def mock_graph_queries():
-    """Create a GraphQueries instance without graph builder for testing."""
+    """Create a GraphQueries instance without a graph builder (mock data path)."""
     return GraphQueries()
+
+
+def _chainable_traversal(to_list_return, count_return=None):
+    """Build a Mock Gremlin traversal where every step returns itself.
+
+    ``count()`` returns a separate object exposing an async ``next()`` so the
+    source can do ``await query.count().next()`` while still chaining
+    ``valueMap``/``limit``/``toList`` on the original traversal.
+    """
+    trav = Mock()
+    for step in (
+        "hasLabel", "has", "order", "by", "skip", "limit",
+        "valueMap", "id", "project", "values",
+    ):
+        setattr(trav, step, Mock(return_value=trav))
+
+    if count_return is not None:
+        count_obj = Mock()
+        count_obj.next = AsyncMock(return_value=count_return)
+        trav.count = Mock(return_value=count_obj)
+
+    trav.toList = AsyncMock(return_value=to_list_return)
+    return trav
 
 
 class TestQueryFilter:
     """Test QueryFilter dataclass."""
-    
-    def test_query_filter_default(self):
-        """Test QueryFilter with default values."""
-        filter_obj = QueryFilter()
-        
-        assert filter_obj.property is None
-        assert filter_obj.operator == "="
-        assert filter_obj.value is None
-        assert filter_obj.case_sensitive is True
-    
+
     def test_query_filter_custom(self):
-        """Test QueryFilter with custom values."""
+        """QueryFilter stores property_name, operator and value."""
         filter_obj = QueryFilter(
-            property="name",
+            property_name="name",
             operator="contains",
             value="John",
-            case_sensitive=False
         )
-        
-        assert filter_obj.property == "name"
+
+        assert filter_obj.property_name == "name"
         assert filter_obj.operator == "contains"
         assert filter_obj.value == "John"
-        assert filter_obj.case_sensitive is False
+
+    def test_query_filter_requires_operator(self):
+        """operator is a required positional argument (no default)."""
+        with pytest.raises(TypeError):
+            QueryFilter(property_name="name", value="John")
 
 
 class TestQuerySort:
     """Test QuerySort dataclass."""
-    
-    def test_query_sort_default(self):
-        """Test QuerySort with default values."""
-        sort_obj = QuerySort()
-        
-        assert sort_obj.property is None
+
+    def test_query_sort_default_direction(self):
+        """QuerySort defaults to ascending order."""
+        sort_obj = QuerySort(property_name="created_at")
+
+        assert sort_obj.property_name == "created_at"
         assert sort_obj.direction == "asc"
-    
+
     def test_query_sort_custom(self):
-        """Test QuerySort with custom values."""
-        sort_obj = QuerySort(
-            property="created_at",
-            direction="desc"
-        )
-        
-        assert sort_obj.property == "created_at"
+        """QuerySort with custom direction."""
+        sort_obj = QuerySort(property_name="created_at", direction="desc")
+
+        assert sort_obj.property_name == "created_at"
         assert sort_obj.direction == "desc"
 
 
 class TestQueryPagination:
     """Test QueryPagination dataclass."""
-    
+
     def test_query_pagination_default(self):
         """Test QueryPagination with default values."""
         pagination = QueryPagination()
-        
+
         assert pagination.offset == 0
         assert pagination.limit == 100
-    
+
     def test_query_pagination_custom(self):
         """Test QueryPagination with custom values."""
-        pagination = QueryPagination(
-            offset=50,
-            limit=25
-        )
-        
+        pagination = QueryPagination(offset=50, limit=25)
+
         assert pagination.offset == 50
         assert pagination.limit == 25
 
 
 class TestQueryParams:
     """Test QueryParams dataclass."""
-    
+
     def test_query_params_default(self):
-        """Test QueryParams with default values."""
+        """QueryParams defaults: collections are None, flags have defaults."""
         params = QueryParams()
-        
-        assert params.filters == []
-        assert params.sorts == []
-        assert isinstance(params.pagination, QueryPagination)
-        assert params.include_metadata is True
-        assert params.return_format == "json"
-    
+
+        assert params.node_labels is None
+        assert params.edge_labels is None
+        assert params.filters is None
+        assert params.sort is None
+        assert params.pagination is None
+        assert params.include_properties is True
+        assert params.include_edges is False
+
     def test_query_params_custom(self):
         """Test QueryParams with custom values."""
-        filters = [QueryFilter(property="name", value="John")]
-        sorts = [QuerySort(property="age", direction="desc")]
+        filters = [QueryFilter(property_name="name", operator="eq", value="John")]
+        sort = [QuerySort(property_name="age", direction="desc")]
         pagination = QueryPagination(offset=10, limit=50)
-        
+
         params = QueryParams(
+            node_labels=["Person"],
             filters=filters,
-            sorts=sorts,
+            sort=sort,
             pagination=pagination,
-            include_metadata=False,
-            return_format="graphml"
+            include_properties=False,
+            include_edges=True,
         )
-        
+
+        assert params.node_labels == ["Person"]
         assert params.filters == filters
-        assert params.sorts == sorts
+        assert params.sort == sort
         assert params.pagination == pagination
-        assert params.include_metadata is False
-        assert params.return_format == "graphml"
+        assert params.include_properties is False
+        assert params.include_edges is True
 
 
 class TestGraphQueries:
     """Test GraphQueries class methods."""
-    
+
     def test_initialization(self, graph_queries):
-        """Test GraphQueries initialization with graph."""
+        """Test GraphQueries initialization with a graph builder."""
         assert graph_queries.graph is not None
-        assert hasattr(graph_queries, '_cache')
-        assert graph_queries._cache_enabled is True
-        assert graph_queries._cache_ttl == 300
+        assert graph_queries.query_cache == {}
+        assert graph_queries.cache_timestamps == {}
+        assert graph_queries.query_history == []
+        assert graph_queries.query_stats.query_count == 0
 
     def test_initialization_without_graph(self, mock_graph_queries):
-        """Test GraphQueries initialization without graph."""
+        """Test GraphQueries initialization without a graph builder."""
         assert mock_graph_queries.graph is None
-        assert hasattr(mock_graph_queries, '_cache')
+        assert mock_graph_queries.query_cache == {}
 
     @pytest.mark.asyncio
     async def test_execute_node_query_mock_basic(self, mock_graph_queries):
-        """Test basic node query execution with mock implementation."""
+        """Basic node query returns a QueryResult from the mock data path."""
         params = QueryParams()
-        
+
         result = await mock_graph_queries.execute_node_query(params)
-        
-        assert 'nodes' in result
-        assert 'total_count' in result
-        assert 'execution_time' in result
-        assert 'metadata' in result
-        assert isinstance(result['nodes'], list)
-        assert isinstance(result['total_count'], int)
+
+        assert isinstance(result, QueryResult)
+        assert isinstance(result.data, list)
+        assert isinstance(result.total_results, int)
+        assert result.metadata["query_type"] == "node_query"
+        assert result.metadata["mock"] is True
+        # Default (no pagination) yields min(20, 10) == 10 mock nodes.
+        assert result.returned_results == 10
+        assert result.total_results == 10
 
     @pytest.mark.asyncio
     async def test_execute_node_query_with_filters(self, mock_graph_queries):
-        """Test node query with filters."""
-        filters = [
-            QueryFilter(property="name", operator="contains", value="John"),
-            QueryFilter(property="age", operator=">", value=25)
-        ]
+        """Node query applies mock filters to the generated data."""
+        # Mock nodes have properties.value == i * 10 for i in range(10),
+        # so value > 50 matches i in {6,7,8,9} -> 4 nodes.
+        filters = [QueryFilter(property_name="value", operator="gt", value=50)]
         params = QueryParams(filters=filters)
-        
+
         result = await mock_graph_queries.execute_node_query(params)
-        
-        assert 'nodes' in result
-        # In mock implementation, filters are applied
-        assert result['total_count'] >= 0
+
+        assert result.total_results == 4
+        assert len(result.data) == 4
+        for item in result.data:
+            assert item["properties"]["value"] > 50
 
     @pytest.mark.asyncio
     async def test_execute_node_query_with_sorting(self, mock_graph_queries):
-        """Test node query with sorting."""
-        sorts = [QuerySort(property="name", direction="asc")]
-        params = QueryParams(sorts=sorts)
-        
+        """Node query with a sort parameter still returns mock results."""
+        sort = [QuerySort(property_name="name", direction="asc")]
+        params = QueryParams(sort=sort)
+
         result = await mock_graph_queries.execute_node_query(params)
-        
-        assert 'nodes' in result
-        # Mock implementation should return sorted results
-        assert len(result['nodes']) >= 0
+
+        assert isinstance(result, QueryResult)
+        assert len(result.data) >= 0
 
     @pytest.mark.asyncio
     async def test_execute_node_query_with_pagination(self, mock_graph_queries):
-        """Test node query with pagination."""
+        """Node query respects the pagination limit in the mock path."""
         pagination = QueryPagination(offset=10, limit=5)
         params = QueryParams(pagination=pagination)
-        
-        result = await mock_graph_queries.execute_node_query(params)
-        
-        assert 'nodes' in result
-        # Should respect pagination limits
-        assert len(result['nodes']) <= 5
 
-    @pytest.mark.asyncio
-    async def test_execute_node_query_without_metadata(self, mock_graph_queries):
-        """Test node query without metadata."""
-        params = QueryParams(include_metadata=False)
-        
         result = await mock_graph_queries.execute_node_query(params)
-        
-        # Should still have some metadata but potentially less detailed
-        assert 'metadata' in result  # Mock still includes it
 
-    @pytest.mark.asyncio
-    async def test_execute_node_query_graphml_format(self, mock_graph_queries):
-        """Test node query with GraphML return format."""
-        params = QueryParams(return_format="graphml")
-        
-        result = await mock_graph_queries.execute_node_query(params)
-        
-        assert result['format'] == "graphml"
-        assert 'nodes' in result
+        # Mock generates min(20, limit) == 5 nodes.
+        assert len(result.data) == 5
+        assert result.returned_results == 5
 
     @pytest.mark.asyncio
     async def test_execute_node_query_with_graph(self, graph_queries):
-        """Test node query with real graph implementation."""
-        # Mock graph responses
-        mock_traversal = Mock()
-        mock_traversal.has = Mock(return_value=mock_traversal)
-        mock_traversal.order = Mock(return_value=mock_traversal)
-        mock_traversal.by = Mock(return_value=mock_traversal)
-        mock_traversal.range = Mock(return_value=mock_traversal)
-        mock_traversal.valueMap = Mock(return_value=mock_traversal)
-        mock_traversal.toList = AsyncMock(return_value=[
-            {"id": "node_1", "name": "John", "type": "Person"},
-            {"id": "node_2", "name": "Jane", "type": "Person"}
-        ])
-        
-        # Mock count query
-        mock_count_traversal = Mock()
-        mock_count_traversal.count = Mock(return_value=mock_count_traversal)
-        mock_count_traversal.next = AsyncMock(return_value=2)
-        
-        graph_queries.graph.g.V = Mock(side_effect=[mock_traversal, mock_count_traversal])
-        
+        """Node query against the real-graph traversal path."""
+        trav = _chainable_traversal(
+            to_list_return=[{"name": ["John"]}, {"name": ["Jane"]}],
+            count_return=2,
+        )
+        graph_queries.graph.g.V = Mock(return_value=trav)
+
         params = QueryParams()
         result = await graph_queries.execute_node_query(params)
-        
-        assert 'nodes' in result
-        assert result['total_count'] == 2
+
+        assert isinstance(result, QueryResult)
+        assert result.total_results == 2
+        assert result.returned_results == 2
+        assert result.metadata["query_type"] == "node_query"
 
     @pytest.mark.asyncio
     async def test_execute_relationship_query_mock_basic(self, mock_graph_queries):
-        """Test basic relationship query execution with mock implementation."""
+        """Basic relationship query returns mock edges in a QueryResult."""
         params = QueryParams()
-        
+
         result = await mock_graph_queries.execute_relationship_query(params)
-        
-        assert 'relationships' in result
-        assert 'total_count' in result
-        assert 'execution_time' in result
-        assert isinstance(result['relationships'], list)
+
+        assert isinstance(result, QueryResult)
+        assert isinstance(result.data, list)
+        assert result.metadata["query_type"] == "relationship_query"
+        assert result.metadata["mock"] is True
+        # Default mock relationship path yields min(15, 10) == 10 edges.
+        assert result.returned_results == 10
 
     @pytest.mark.asyncio
-    async def test_execute_relationship_query_with_filters(self, mock_graph_queries):
-        """Test relationship query with specific filters."""
-        filters = [
-            QueryFilter(property="type", value="KNOWS"),
-            QueryFilter(property="weight", operator=">", value=0.5)
-        ]
-        params = QueryParams(filters=filters)
-        
+    async def test_execute_relationship_query_mock_edge_labels(self, mock_graph_queries):
+        """Relationship query honours the requested edge label in mock data."""
+        params = QueryParams(edge_labels=["KNOWS"])
+
         result = await mock_graph_queries.execute_relationship_query(params)
-        
-        assert 'relationships' in result
-        assert result['total_count'] >= 0
+
+        assert result.data
+        assert result.data[0]["label"] == "KNOWS"
 
     @pytest.mark.asyncio
     async def test_execute_relationship_query_with_graph(self, graph_queries):
-        """Test relationship query with real graph implementation."""
-        # Mock edge queries
-        mock_traversal = Mock()
-        mock_traversal.has = Mock(return_value=mock_traversal)
-        mock_traversal.order = Mock(return_value=mock_traversal)
-        mock_traversal.by = Mock(return_value=mock_traversal)
-        mock_traversal.range = Mock(return_value=mock_traversal)
-        mock_traversal.valueMap = Mock(return_value=mock_traversal)
-        mock_traversal.toList = AsyncMock(return_value=[
-            {"id": "edge_1", "label": "KNOWS", "weight": 0.8},
-            {"id": "edge_2", "label": "WORKS_WITH", "since": "2020"}
-        ])
-        
-        mock_count_traversal = Mock()
-        mock_count_traversal.count = Mock(return_value=mock_count_traversal)
-        mock_count_traversal.next = AsyncMock(return_value=2)
-        
-        graph_queries.graph.g.E = Mock(side_effect=[mock_traversal, mock_count_traversal])
-        
-        params = QueryParams()
+        """Relationship query against the real-graph traversal path.
+
+        ``include_properties=False`` is used so the source takes the
+        ``query.id().toList()`` branch. The default ``include_properties=True``
+        branch references an undefined ``__`` symbol (the ``gremlin_python``
+        anonymous traversal is only imported inside ``_apply_gremlin_filter``)
+        and therefore cannot execute -- see the source-bug note below.
+        """
+        trav = _chainable_traversal(
+            to_list_return=["edge_1", "edge_2"],
+            count_return=2,
+        )
+        graph_queries.graph.g.E = Mock(return_value=trav)
+
+        params = QueryParams(include_properties=False)
         result = await graph_queries.execute_relationship_query(params)
-        
-        assert 'relationships' in result
-        assert result['total_count'] == 2
+
+        assert isinstance(result, QueryResult)
+        assert result.total_results == 2
+        assert result.data == [{"id": "edge_1"}, {"id": "edge_2"}]
 
     @pytest.mark.asyncio
     async def test_execute_pattern_query_mock_basic(self, mock_graph_queries):
-        """Test basic pattern query execution."""
+        """Pattern query echoes the pattern and returns mock matches."""
         pattern = "(:Person)-[:KNOWS]->(:Person)"
-        params = QueryParams()
-        
-        result = await mock_graph_queries.execute_pattern_query(pattern, params)
-        
-        assert 'matches' in result
-        assert 'pattern' in result
-        assert result['pattern'] == pattern
-        assert 'execution_time' in result
+
+        result = await mock_graph_queries.execute_pattern_query(pattern)
+
+        assert isinstance(result, QueryResult)
+        assert result.metadata["pattern"] == pattern
+        assert result.metadata["query_type"] == "pattern_query"
+        # Mock pattern path always returns 5 matches.
+        assert result.total_results == 5
+        assert result.data[0]["pattern"] == pattern
 
     @pytest.mark.asyncio
     async def test_execute_pattern_query_complex_pattern(self, mock_graph_queries):
-        """Test pattern query with complex pattern."""
-        pattern = "(:Person {name: 'John'})-[:WORKS_FOR]->(:Organization)-[:LOCATED_IN]->(:City)"
-        params = QueryParams()
-        
-        result = await mock_graph_queries.execute_pattern_query(pattern, params)
-        
-        assert result['pattern'] == pattern
-        assert 'matches' in result
+        """Pattern query preserves a complex pattern string."""
+        pattern = (
+            "(:Person {name: 'John'})-[:WORKS_FOR]->"
+            "(:Organization)-[:LOCATED_IN]->(:City)"
+        )
 
-    @pytest.mark.asyncio 
-    async def test_execute_pattern_query_with_graph(self, graph_queries):
-        """Test pattern query with real graph implementation."""
-        # This would use Gremlin pattern matching in real implementation
-        pattern = "(:Person)-[:KNOWS]->(:Person)"
-        params = QueryParams()
-        
-        # Mock complex pattern matching result
-        mock_result = [
-            {"source": {"id": "node_1", "name": "John"}, 
-             "edge": {"id": "edge_1", "type": "KNOWS"},
-             "target": {"id": "node_2", "name": "Jane"}}
-        ]
-        
-        with patch.object(graph_queries, '_execute_gremlin_pattern') as mock_gremlin:
-            mock_gremlin.return_value = mock_result
-            
-            result = await graph_queries.execute_pattern_query(pattern, params)
-            
-            assert result['pattern'] == pattern
-            assert 'matches' in result
+        result = await mock_graph_queries.execute_pattern_query(pattern)
+
+        assert result.metadata["pattern"] == pattern
+        assert len(result.data) == 5
 
     @pytest.mark.asyncio
-    async def test_execute_aggregation_query_mock_basic(self, mock_graph_queries):
-        """Test basic aggregation query."""
-        aggregation = {
-            'group_by': ['type'],
-            'aggregates': [
-                {'function': 'count', 'property': '*', 'alias': 'total'},
-                {'function': 'avg', 'property': 'age', 'alias': 'avg_age'}
-            ]
-        }
-        params = QueryParams()
-        
-        result = await mock_graph_queries.execute_aggregation_query(aggregation, params)
-        
-        assert 'groups' in result
-        assert 'aggregation_config' in result
-        assert result['aggregation_config'] == aggregation
+    async def test_execute_aggregation_query_count_mock(self, mock_graph_queries):
+        """Count aggregation returns the mock count result."""
+        result = await mock_graph_queries.execute_aggregation_query("count", QueryParams())
+
+        assert isinstance(result, QueryResult)
+        assert result.metadata["aggregation_type"] == "count"
+        assert result.data[0]["aggregation_type"] == "count"
+        assert result.data[0]["result"] == 42
 
     @pytest.mark.asyncio
-    async def test_execute_aggregation_query_count_only(self, mock_graph_queries):
-        """Test aggregation query with count only."""
-        aggregation = {
-            'aggregates': [
-                {'function': 'count', 'property': '*', 'alias': 'node_count'}
-            ]
-        }
-        params = QueryParams()
-        
-        result = await mock_graph_queries.execute_aggregation_query(aggregation, params)
-        
-        assert 'groups' in result
-        assert len(result['groups']) >= 0
+    async def test_execute_aggregation_query_avg_mock(self, mock_graph_queries):
+        """Non-count aggregation returns the mock numeric result."""
+        result = await mock_graph_queries.execute_aggregation_query("avg", QueryParams())
+
+        assert result.data[0]["aggregation_type"] == "avg"
+        assert result.data[0]["result"] == 123.45
+
+    @pytest.mark.asyncio
+    async def test_execute_aggregation_query_uses_filter_property(self, mock_graph_queries):
+        """Aggregation echoes the first filter's property in mock data."""
+        params = QueryParams(
+            filters=[QueryFilter(property_name="age", operator="gt", value=18)]
+        )
+
+        result = await mock_graph_queries.execute_aggregation_query("count", params)
+
+        assert result.data[0]["property"] == "age"
 
     @pytest.mark.asyncio
     async def test_execute_aggregation_query_with_graph(self, graph_queries):
-        """Test aggregation query with real graph implementation."""
-        aggregation = {
-            'group_by': ['label'],
-            'aggregates': [{'function': 'count', 'property': '*', 'alias': 'count'}]
-        }
-        
-        # Mock group by results
-        mock_traversal = Mock()
-        mock_traversal.group = Mock(return_value=mock_traversal)
-        mock_traversal.by = Mock(return_value=mock_traversal)
-        mock_traversal.toList = AsyncMock(return_value={
-            "Person": [{"id": "node_1"}, {"id": "node_2"}],
-            "Organization": [{"id": "node_3"}]
-        })
-        
-        graph_queries.graph.g.V = Mock(return_value=mock_traversal)
-        
-        result = await graph_queries.execute_aggregation_query(aggregation, QueryParams())
-        
-        assert 'groups' in result
+        """Count aggregation against the real-graph traversal path."""
+        trav = _chainable_traversal(to_list_return=[], count_return=7)
+        graph_queries.graph.g.V = Mock(return_value=trav)
+
+        result = await graph_queries.execute_aggregation_query("count", QueryParams())
+
+        assert isinstance(result, QueryResult)
+        assert result.data[0]["result"] == 7
+        assert result.metadata["aggregation_type"] == "count"
+
+    def test_optimize_query_many_filters_slow(self, graph_queries):
+        """optimize_query flags many filters as slow with a recommendation."""
+        result = graph_queries.optimize_query("node_query", {"filters": [1] * 6})
+
+        assert result["estimated_performance"] == "slow"
+        assert result["recommendations"]
+        assert result["query_type"] == "node_query"
+
+    def test_optimize_query_large_pagination_slow(self, graph_queries):
+        """optimize_query flags large page sizes as slow."""
+        result = graph_queries.optimize_query(
+            "node_query", {"pagination": {"limit": 5000}}
+        )
+
+        assert result["estimated_performance"] == "slow"
+
+    def test_optimize_query_no_filters_recommends_selectivity(self, graph_queries):
+        """optimize_query recommends adding filters/labels when there are none."""
+        result = graph_queries.optimize_query("node_query", {})
+
+        assert result["estimated_performance"] == "slow"
+        assert any(
+            "filter" in r.lower() or "label" in r.lower()
+            for r in result["recommendations"]
+        )
+
+    def test_optimize_query_well_optimized(self, graph_queries):
+        """A selective query with no problems is reported as fast."""
+        result = graph_queries.optimize_query(
+            "node_query", {"node_labels": ["Person"], "filters": [1]}
+        )
+
+        assert result["estimated_performance"] == "fast"
+        assert result["recommendations"] == ["Query is well-optimized"]
+
+    def test_get_query_statistics_shape(self, graph_queries):
+        """get_query_statistics returns the expected statistics keys."""
+        result = graph_queries.get_query_statistics()
+
+        assert "total_queries" in result
+        assert "average_execution_time" in result
+        assert "cache_hit_rate" in result
+        assert "query_history_size" in result
+        assert "last_updated" in result
+        assert isinstance(result["total_queries"], int)
+
+    def test_update_query_stats_average(self, graph_queries):
+        """_update_query_stats maintains a running average execution time."""
+        graph_queries._update_query_stats(2.0)
+        graph_queries._update_query_stats(4.0)
+
+        stats = graph_queries.get_query_statistics()
+        assert stats["total_queries"] == 2
+        assert stats["average_execution_time"] == 3.0
 
     @pytest.mark.asyncio
-    async def test_optimize_query_mock(self, mock_graph_queries):
-        """Test query optimization."""
-        params = QueryParams(
-            filters=[QueryFilter(property="name", value="John")],
-            sorts=[QuerySort(property="created_at", direction="desc")]
+    async def test_explain_query_plan_node_query(self, graph_queries):
+        """explain_query_plan describes the steps for a node query."""
+        plan = await graph_queries.explain_query_plan(
+            "node_query",
+            {"node_labels": ["Person"], "filters": [1], "sort": [1], "pagination": {}},
         )
-        
-        optimized = await mock_graph_queries.optimize_query(params)
-        
-        assert 'optimized_params' in optimized
-        assert 'optimization_applied' in optimized
-        assert 'estimated_performance_gain' in optimized
+
+        assert plan["query_type"] == "node_query"
+        assert plan["execution_steps"]
+        assert plan["estimated_cost"] == len(plan["execution_steps"]) * 10
+        assert "plan_generated_at" in plan
 
     @pytest.mark.asyncio
-    async def test_optimize_query_complex_filters(self, mock_graph_queries):
-        """Test optimization of complex filters."""
-        params = QueryParams(
-            filters=[
-                QueryFilter(property="type", value="Person"),  # High selectivity
-                QueryFilter(property="active", value=True),
-                QueryFilter(property="age", operator=">", value=18)
-            ]
+    async def test_explain_query_plan_relationship_query(self, graph_queries):
+        """explain_query_plan describes the steps for a relationship query."""
+        plan = await graph_queries.explain_query_plan(
+            "relationship_query", {"edge_labels": ["KNOWS"]}
         )
-        
-        optimized = await mock_graph_queries.optimize_query(params)
-        
-        # Should suggest reordering or other optimizations
-        assert optimized['optimization_applied'] is True
 
-    @pytest.mark.asyncio
-    async def test_get_query_stats_mock(self, mock_graph_queries):
-        """Test getting query statistics."""
-        result = await mock_graph_queries.get_query_stats()
-        
-        assert 'total_queries' in result
-        assert 'avg_execution_time' in result
-        assert 'cache_hit_rate' in result
-        assert 'slow_queries' in result
-        assert isinstance(result['total_queries'], int)
+        assert plan["query_type"] == "relationship_query"
+        assert any("edges" in step.lower() for step in plan["execution_steps"])
 
-    def test_build_gremlin_filter_equals(self, graph_queries):
-        """Test building Gremlin filter for equals operator."""
-        query_filter = QueryFilter(property="name", operator="=", value="John")
-        
-        gremlin_filter = graph_queries._build_gremlin_filter(query_filter)
-        
-        assert gremlin_filter == "has('name', 'John')"
 
-    def test_build_gremlin_filter_not_equals(self, graph_queries):
-        """Test building Gremlin filter for not equals operator."""
-        query_filter = QueryFilter(property="age", operator="!=", value=25)
-        
-        gremlin_filter = graph_queries._build_gremlin_filter(query_filter)
-        
-        assert gremlin_filter == "not(has('age', 25))"
+class TestApplyFilter:
+    """Test the mock-data filter helper ``_apply_filter``."""
 
-    def test_build_gremlin_filter_greater_than(self, graph_queries):
-        """Test building Gremlin filter for greater than operator."""
-        query_filter = QueryFilter(property="score", operator=">", value=80)
-        
-        gremlin_filter = graph_queries._build_gremlin_filter(query_filter)
-        
-        assert gremlin_filter == "has('score', gt(80))"
+    @pytest.mark.parametrize(
+        "operator,filter_value,target,expected",
+        [
+            ("eq", 5, 5, True),
+            ("eq", 5, 6, False),
+            ("ne", 5, 6, True),
+            ("gt", 25, 30, True),
+            ("gt", 25, 20, False),
+            ("lt", 25, 20, True),
+            ("gte", 5, 5, True),
+            ("lte", 5, 5, True),
+            ("contains", "ell", "hello", True),
+            ("contains", "xyz", "hello", False),
+            ("in", [1, 2, 3], 2, True),
+            ("in", [1, 2, 3], 9, False),
+        ],
+    )
+    def test_apply_filter_operators(self, graph_queries, operator, filter_value, target, expected):
+        """_apply_filter evaluates each supported operator correctly."""
+        f = QueryFilter(property_name="x", operator=operator, value=filter_value)
+        assert graph_queries._apply_filter(target, f) is expected
 
-    def test_build_gremlin_filter_less_than(self, graph_queries):
-        """Test building Gremlin filter for less than operator."""
-        query_filter = QueryFilter(property="price", operator="<", value=100.50)
-        
-        gremlin_filter = graph_queries._build_gremlin_filter(query_filter)
-        
-        assert gremlin_filter == "has('price', lt(100.5))"
+    def test_apply_filter_unknown_operator_returns_true(self, graph_queries):
+        """Unknown operators fall through and match everything (return True)."""
+        f = QueryFilter(property_name="x", operator="weird", value=1)
+        assert graph_queries._apply_filter(5, f) is True
 
-    def test_build_gremlin_filter_greater_equal(self, graph_queries):
-        """Test building Gremlin filter for greater than or equal operator."""
-        query_filter = QueryFilter(property="rating", operator=">=", value=4.0)
-        
-        gremlin_filter = graph_queries._build_gremlin_filter(query_filter)
-        
-        assert gremlin_filter == "has('rating', gte(4.0))"
 
-    def test_build_gremlin_filter_less_equal(self, graph_queries):
-        """Test building Gremlin filter for less than or equal operator."""
-        query_filter = QueryFilter(property="count", operator="<=", value=10)
-        
-        gremlin_filter = graph_queries._build_gremlin_filter(query_filter)
-        
-        assert gremlin_filter == "has('count', lte(10))"
+class TestApplyGremlinFilter:
+    """Test the Gremlin traversal filter helper ``_apply_gremlin_filter``."""
 
-    def test_build_gremlin_filter_contains_case_sensitive(self, graph_queries):
-        """Test building Gremlin filter for contains operator (case sensitive)."""
-        query_filter = QueryFilter(property="description", operator="contains", 
-                                 value="important", case_sensitive=True)
-        
-        gremlin_filter = graph_queries._build_gremlin_filter(query_filter)
-        
-        assert "containing('important')" in gremlin_filter
+    def _make_query(self):
+        query = Mock()
+        query.has = Mock(return_value="HAS_RESULT")
+        return query
 
-    def test_build_gremlin_filter_contains_case_insensitive(self, graph_queries):
-        """Test building Gremlin filter for contains operator (case insensitive)."""
-        query_filter = QueryFilter(property="title", operator="contains", 
-                                 value="News", case_sensitive=False)
-        
-        gremlin_filter = graph_queries._build_gremlin_filter(query_filter)
-        
-        # Should use case-insensitive comparison
-        assert "regex" in gremlin_filter.lower() or "contains" in gremlin_filter.lower()
+    def test_gremlin_filter_eq(self, graph_queries):
+        """eq operator calls .has with P.eq and returns the chained query."""
+        query = self._make_query()
+        f = QueryFilter(property_name="name", operator="eq", value="John")
 
-    def test_build_gremlin_filter_starts_with(self, graph_queries):
-        """Test building Gremlin filter for starts_with operator."""
-        query_filter = QueryFilter(property="name", operator="starts_with", value="Dr.")
-        
-        gremlin_filter = graph_queries._build_gremlin_filter(query_filter)
-        
-        assert "startingWith('Dr.')" in gremlin_filter
+        result = graph_queries._apply_gremlin_filter(query, f)
 
-    def test_build_gremlin_filter_ends_with(self, graph_queries):
-        """Test building Gremlin filter for ends_with operator."""
-        query_filter = QueryFilter(property="email", operator="ends_with", value="@company.com")
-        
-        gremlin_filter = graph_queries._build_gremlin_filter(query_filter)
-        
-        assert "endingWith('@company.com')" in gremlin_filter
+        assert result == "HAS_RESULT"
+        assert query.has.call_args.args[0] == "name"
 
-    def test_build_gremlin_filter_in_list(self, graph_queries):
-        """Test building Gremlin filter for in operator with list."""
-        query_filter = QueryFilter(property="category", operator="in", value=["tech", "science", "ai"])
-        
-        gremlin_filter = graph_queries._build_gremlin_filter(query_filter)
-        
-        assert "within(['tech', 'science', 'ai'])" in gremlin_filter
+    def test_gremlin_filter_gt(self, graph_queries):
+        """gt operator routes through .has."""
+        query = self._make_query()
+        f = QueryFilter(property_name="score", operator="gt", value=80)
 
-    def test_build_gremlin_filter_unsupported_operator(self, graph_queries):
-        """Test building Gremlin filter with unsupported operator."""
-        query_filter = QueryFilter(property="field", operator="unsupported_op", value="test")
-        
-        # Should fallback to equals
-        gremlin_filter = graph_queries._build_gremlin_filter(query_filter)
-        
-        assert gremlin_filter == "has('field', 'test')"
+        result = graph_queries._apply_gremlin_filter(query, f)
 
-    def test_build_gremlin_sort_ascending(self, graph_queries):
-        """Test building Gremlin sort for ascending order."""
-        query_sort = QuerySort(property="name", direction="asc")
-        
-        gremlin_sort = graph_queries._build_gremlin_sort(query_sort)
-        
-        assert gremlin_sort == "order().by('name', asc)"
+        assert result == "HAS_RESULT"
+        query.has.assert_called_once()
 
-    def test_build_gremlin_sort_descending(self, graph_queries):
-        """Test building Gremlin sort for descending order."""
-        query_sort = QuerySort(property="created_at", direction="desc")
-        
-        gremlin_sort = graph_queries._build_gremlin_sort(query_sort)
-        
-        assert gremlin_sort == "order().by('created_at', desc)"
+    def test_gremlin_filter_unsupported_returns_query_unchanged(self, graph_queries):
+        """An unsupported operator returns the original query untouched."""
+        query = self._make_query()
+        f = QueryFilter(property_name="field", operator="unsupported_op", value="x")
 
-    def test_apply_pagination(self, graph_queries):
-        """Test applying pagination to results."""
-        data = list(range(100))  # 100 items
-        pagination = QueryPagination(offset=20, limit=10)
-        
-        paginated = graph_queries._apply_pagination(data, pagination)
-        
-        assert len(paginated) == 10
-        assert paginated[0] == 20  # Should start from offset
-        assert paginated[-1] == 29  # Should end at offset + limit - 1
+        result = graph_queries._apply_gremlin_filter(query, f)
 
-    def test_apply_pagination_beyond_data(self, graph_queries):
-        """Test pagination when offset is beyond available data."""
-        data = list(range(10))  # Only 10 items
-        pagination = QueryPagination(offset=20, limit=10)
-        
-        paginated = graph_queries._apply_pagination(data, pagination)
-        
-        assert len(paginated) == 0  # No data available at that offset
+        assert result is query
+        query.has.assert_not_called()
 
-    def test_apply_pagination_large_limit(self, graph_queries):
-        """Test pagination with limit larger than remaining data."""
-        data = list(range(25))  # 25 items
-        pagination = QueryPagination(offset=20, limit=10)
-        
-        paginated = graph_queries._apply_pagination(data, pagination)
-        
-        assert len(paginated) == 5  # Only 5 items remaining from offset 20
 
-    def test_apply_sorting_single_property(self, graph_queries):
-        """Test applying sorting on single property."""
-        data = [
-            {"name": "Charlie", "age": 25},
-            {"name": "Alice", "age": 30},
-            {"name": "Bob", "age": 20}
-        ]
-        sorts = [QuerySort(property="name", direction="asc")]
-        
-        sorted_data = graph_queries._apply_sorting(data, sorts)
-        
-        assert sorted_data[0]["name"] == "Alice"
-        assert sorted_data[1]["name"] == "Bob" 
-        assert sorted_data[2]["name"] == "Charlie"
+class TestCacheKeyGeneration:
+    """Test query id and cache key generation helpers."""
 
-    def test_apply_sorting_multiple_properties(self, graph_queries):
-        """Test applying sorting on multiple properties."""
-        data = [
-            {"name": "Alice", "age": 25, "score": 90},
-            {"name": "Alice", "age": 30, "score": 85},
-            {"name": "Bob", "age": 25, "score": 95}
-        ]
-        sorts = [
-            QuerySort(property="name", direction="asc"),
-            QuerySort(property="age", direction="desc")
-        ]
-        
-        sorted_data = graph_queries._apply_sorting(data, sorts)
-        
-        # Alice entries should come first, then by age descending
-        assert sorted_data[0]["name"] == "Alice" and sorted_data[0]["age"] == 30
-        assert sorted_data[1]["name"] == "Alice" and sorted_data[1]["age"] == 25
-        assert sorted_data[2]["name"] == "Bob"
+    def test_generate_query_id_length(self, graph_queries):
+        """_generate_query_id returns a 16-character identifier."""
+        qid = graph_queries._generate_query_id("node_query", {"a": 1})
 
-    def test_apply_sorting_descending(self, graph_queries):
-        """Test applying descending sort."""
-        data = [{"score": 75}, {"score": 90}, {"score": 80}]
-        sorts = [QuerySort(property="score", direction="desc")]
-        
-        sorted_data = graph_queries._apply_sorting(data, sorts)
-        
-        assert sorted_data[0]["score"] == 90
-        assert sorted_data[1]["score"] == 80
-        assert sorted_data[2]["score"] == 75
+        assert isinstance(qid, str)
+        assert len(qid) == 16
 
-    def test_apply_filters_equals(self, graph_queries):
-        """Test applying equals filter."""
-        data = [
-            {"name": "John", "age": 25},
-            {"name": "Jane", "age": 30},
-            {"name": "John", "age": 35}
-        ]
-        filters = [QueryFilter(property="name", operator="=", value="John")]
-        
-        filtered_data = graph_queries._apply_filters(data, filters)
-        
-        assert len(filtered_data) == 2
-        for item in filtered_data:
-            assert item["name"] == "John"
+    def test_generate_cache_key_prefix(self, graph_queries):
+        """_generate_cache_key returns a prefixed, non-empty string."""
+        cache_key = graph_queries._generate_cache_key("node_query", {"a": 1})
 
-    def test_apply_filters_greater_than(self, graph_queries):
-        """Test applying greater than filter."""
-        data = [
-            {"age": 20}, {"age": 25}, {"age": 30}, {"age": 35}
-        ]
-        filters = [QueryFilter(property="age", operator=">", value=25)]
-        
-        filtered_data = graph_queries._apply_filters(data, filters)
-        
-        assert len(filtered_data) == 2
-        for item in filtered_data:
-            assert item["age"] > 25
-
-    def test_apply_filters_contains_case_sensitive(self, graph_queries):
-        """Test applying contains filter (case sensitive)."""
-        data = [
-            {"text": "Hello World"},
-            {"text": "hello world"},
-            {"text": "Good Morning"}
-        ]
-        filters = [QueryFilter(property="text", operator="contains", 
-                             value="Hello", case_sensitive=True)]
-        
-        filtered_data = graph_queries._apply_filters(data, filters)
-        
-        assert len(filtered_data) == 1
-        assert filtered_data[0]["text"] == "Hello World"
-
-    def test_apply_filters_contains_case_insensitive(self, graph_queries):
-        """Test applying contains filter (case insensitive)."""
-        data = [
-            {"text": "Hello World"},
-            {"text": "hello world"},
-            {"text": "Good Morning"}
-        ]
-        filters = [QueryFilter(property="text", operator="contains", 
-                             value="HELLO", case_sensitive=False)]
-        
-        filtered_data = graph_queries._apply_filters(data, filters)
-        
-        assert len(filtered_data) == 2  # Both "Hello World" and "hello world"
-
-    def test_apply_filters_multiple_conditions(self, graph_queries):
-        """Test applying multiple filters (AND logic)."""
-        data = [
-            {"name": "John", "age": 25, "active": True},
-            {"name": "Jane", "age": 30, "active": True},
-            {"name": "Bob", "age": 25, "active": False}
-        ]
-        filters = [
-            QueryFilter(property="age", operator="=", value=25),
-            QueryFilter(property="active", operator="=", value=True)
-        ]
-        
-        filtered_data = graph_queries._apply_filters(data, filters)
-        
-        assert len(filtered_data) == 1
-        assert filtered_data[0]["name"] == "John"
-
-    def test_generate_cache_key(self, graph_queries):
-        """Test cache key generation."""
-        params = QueryParams(
-            filters=[QueryFilter(property="name", value="John")],
-            sorts=[QuerySort(property="age", direction="asc")]
-        )
-        
-        cache_key = graph_queries._generate_cache_key("node_query", params)
-        
         assert isinstance(cache_key, str)
-        assert len(cache_key) > 0
+        assert cache_key.startswith("query_cache:")
 
     def test_generate_cache_key_consistency(self, graph_queries):
-        """Test that same parameters generate same cache key."""
-        params1 = QueryParams(filters=[QueryFilter(property="name", value="John")])
-        params2 = QueryParams(filters=[QueryFilter(property="name", value="John")])
-        
-        key1 = graph_queries._generate_cache_key("node_query", params1)
-        key2 = graph_queries._generate_cache_key("node_query", params2)
-        
+        """Same parameters produce the same cache key."""
+        key1 = graph_queries._generate_cache_key("node_query", {"name": "John"})
+        key2 = graph_queries._generate_cache_key("node_query", {"name": "John"})
+
         assert key1 == key2
 
     def test_generate_cache_key_different_params(self, graph_queries):
-        """Test that different parameters generate different cache keys."""
-        params1 = QueryParams(filters=[QueryFilter(property="name", value="John")])
-        params2 = QueryParams(filters=[QueryFilter(property="name", value="Jane")])
-        
-        key1 = graph_queries._generate_cache_key("node_query", params1)
-        key2 = graph_queries._generate_cache_key("node_query", params2)
-        
+        """Different parameters produce different cache keys."""
+        key1 = graph_queries._generate_cache_key("node_query", {"name": "John"})
+        key2 = graph_queries._generate_cache_key("node_query", {"name": "Jane"})
+
         assert key1 != key2
-
-    @pytest.mark.asyncio
-    async def test_cache_operations(self, graph_queries):
-        """Test cache set and get operations."""
-        cache_key = "test_key"
-        test_data = {"result": "test_value", "count": 42}
-        
-        # Set cache
-        graph_queries._set_cache(cache_key, test_data)
-        
-        # Get from cache
-        cached_data = graph_queries._get_cache(cache_key)
-        
-        assert cached_data == test_data
-
-    def test_cache_expiry(self, graph_queries):
-        """Test cache expiry functionality."""
-        cache_key = "expiry_test"
-        test_data = {"data": "expires_soon"}
-        
-        # Set cache with very short TTL
-        graph_queries._cache_ttl = 0.001  # 1ms
-        graph_queries._set_cache(cache_key, test_data)
-        
-        # Wait for expiry
-        import time
-        time.sleep(0.002)
-        
-        # Should be expired
-        cached_data = graph_queries._get_cache(cache_key)
-        assert cached_data is None
-
-    def test_cache_disabled(self, mock_graph_queries):
-        """Test operations when cache is disabled."""
-        mock_graph_queries._cache_enabled = False
-        
-        cache_key = "disabled_test"
-        test_data = {"data": "should_not_cache"}
-        
-        # Set cache (should be ignored)
-        mock_graph_queries._set_cache(cache_key, test_data)
-        
-        # Get from cache (should return None)
-        cached_data = mock_graph_queries._get_cache(cache_key)
-        
-        assert cached_data is None
 
 
 class TestComplexQueryScenarios:
     """Test complex query scenarios combining multiple features."""
-    
+
     @pytest.mark.asyncio
     async def test_complex_node_query_full_features(self, mock_graph_queries):
-        """Test node query with all features combined."""
+        """Node query with filters, sort and pagination combined."""
         params = QueryParams(
+            node_labels=["Person"],
             filters=[
-                QueryFilter(property="type", value="Person"),
-                QueryFilter(property="age", operator=">=", value=18),
-                QueryFilter(property="name", operator="contains", value="John", case_sensitive=False)
+                QueryFilter(property_name="value", operator="gte", value=0),
+                QueryFilter(property_name="category", operator="eq", value="test"),
             ],
-            sorts=[
-                QuerySort(property="age", direction="desc"),
-                QuerySort(property="name", direction="asc")
+            sort=[
+                QuerySort(property_name="value", direction="desc"),
+                QuerySort(property_name="name", direction="asc"),
             ],
             pagination=QueryPagination(offset=5, limit=10),
-            include_metadata=True,
-            return_format="json"
+            include_properties=True,
         )
-        
+
         result = await mock_graph_queries.execute_node_query(params)
-        
-        assert 'nodes' in result
-        assert 'metadata' in result
-        assert result['format'] == "json"
-        assert len(result['nodes']) <= 10  # Pagination limit
+
+        assert isinstance(result, QueryResult)
+        # Mock generates min(20, 10) == 10 nodes; both filters match all of them.
+        assert len(result.data) <= 10
+        assert result.metadata["query_type"] == "node_query"
 
     @pytest.mark.asyncio
     async def test_pattern_query_with_aggregation(self, mock_graph_queries):
-        """Test pattern query combined with aggregation."""
+        """A pattern query followed by an aggregation query."""
         pattern = "(:Person)-[:WORKS_FOR]->(:Organization)"
-        aggregation = {
-            'group_by': ['organization_name'],
-            'aggregates': [
-                {'function': 'count', 'property': '*', 'alias': 'employee_count'},
-                {'function': 'avg', 'property': 'salary', 'alias': 'avg_salary'}
-            ]
-        }
-        
-        # First execute pattern query
-        pattern_result = await mock_graph_queries.execute_pattern_query(pattern, QueryParams())
-        
-        # Then execute aggregation 
-        agg_result = await mock_graph_queries.execute_aggregation_query(aggregation, QueryParams())
-        
-        assert 'matches' in pattern_result
-        assert 'groups' in agg_result
+
+        pattern_result = await mock_graph_queries.execute_pattern_query(pattern)
+        agg_result = await mock_graph_queries.execute_aggregation_query("count", QueryParams())
+
+        assert pattern_result.metadata["pattern"] == pattern
+        assert agg_result.data[0]["aggregation_type"] == "count"
 
     @pytest.mark.asyncio
-    async def test_performance_optimization_workflow(self, mock_graph_queries):
-        """Test the complete performance optimization workflow."""
-        # Create a potentially slow query
-        params = QueryParams(
-            filters=[
-                QueryFilter(property="description", operator="contains", value="keyword"),
-                QueryFilter(property="active", value=True),
-                QueryFilter(property="score", operator=">", value=0.5)
-            ],
-            sorts=[QuerySort(property="created_at", direction="desc")],
-            pagination=QueryPagination(limit=1000)
-        )
-        
-        # Optimize the query
-        optimization = await mock_graph_queries.optimize_query(params)
-        
-        # Execute with optimized parameters
-        optimized_params = optimization['optimized_params']
-        result = await mock_graph_queries.execute_node_query(optimized_params)
-        
-        assert 'nodes' in result
-        assert optimization['optimization_applied'] is True
+    async def test_query_statistics_track_real_graph_queries(self, graph_queries):
+        """Executing real-graph queries increments the statistics counter."""
+        trav = _chainable_traversal(to_list_return=[{"name": ["A"]}], count_return=1)
+        graph_queries.graph.g.V = Mock(return_value=trav)
+
+        assert graph_queries.get_query_statistics()["total_queries"] == 0
+        await graph_queries.execute_node_query(QueryParams())
+        assert graph_queries.get_query_statistics()["total_queries"] == 1
 
 
 class TestErrorHandlingAndEdgeCases:
     """Test error handling and edge cases."""
-    
+
     @pytest.mark.asyncio
-    async def test_execute_node_query_empty_results(self, mock_graph_queries):
-        """Test node query returning empty results."""
-        # Mock to return no results
-        with patch.object(mock_graph_queries, '_generate_mock_nodes', return_value=[]):
-            params = QueryParams()
-            result = await mock_graph_queries.execute_node_query(params)
-            
-            assert result['total_count'] == 0
-            assert result['nodes'] == []
+    async def test_node_query_filter_no_matches(self, mock_graph_queries):
+        """A filter matching nothing yields an empty, well-formed result."""
+        # Mock nodes have properties.value in {0, 10, ..., 90}; none equal 999.
+        params = QueryParams(
+            filters=[QueryFilter(property_name="value", operator="eq", value=999)]
+        )
+
+        result = await mock_graph_queries.execute_node_query(params)
+
+        assert result.total_results == 0
+        assert result.data == []
 
     @pytest.mark.asyncio
     async def test_invalid_filter_operator(self, mock_graph_queries):
-        """Test handling of invalid filter operator."""
+        """An unsupported filter operator is handled gracefully (matches all)."""
         params = QueryParams(
-            filters=[QueryFilter(property="name", operator="invalid_op", value="test")]
+            filters=[QueryFilter(property_name="name", operator="invalid_op", value="test")]
         )
-        
-        # Should not crash, should handle gracefully
+
         result = await mock_graph_queries.execute_node_query(params)
-        
-        assert 'nodes' in result
+
+        # Unknown operators fall through to ``return True`` so nothing is dropped.
+        assert isinstance(result, QueryResult)
+        assert result.total_results == 10
 
     @pytest.mark.asyncio
     async def test_missing_filter_property(self, mock_graph_queries):
-        """Test filter with missing property in data."""
+        """A filter on a property absent from the data drops non-matching rows."""
         params = QueryParams(
-            filters=[QueryFilter(property="nonexistent_field", value="test")]
+            filters=[QueryFilter(property_name="nonexistent_field", operator="eq", value="test")]
         )
-        
+
         result = await mock_graph_queries.execute_node_query(params)
-        
-        # Should handle missing properties gracefully
-        assert 'nodes' in result
+
+        # Missing property -> None != "test" -> no matches, but no crash.
+        assert isinstance(result, QueryResult)
+        assert result.total_results == 0
 
     @pytest.mark.asyncio
     async def test_invalid_pagination_values(self, mock_graph_queries):
-        """Test invalid pagination values."""
-        params = QueryParams(
-            pagination=QueryPagination(offset=-10, limit=0)
-        )
-        
+        """Zero/negative pagination values are handled without crashing."""
+        params = QueryParams(pagination=QueryPagination(offset=-10, limit=0))
+
         result = await mock_graph_queries.execute_node_query(params)
-        
-        # Should handle invalid pagination gracefully
-        assert 'nodes' in result
+
+        # range(min(20, 0)) is empty.
+        assert isinstance(result, QueryResult)
+        assert result.data == []
+        assert result.total_results == 0
 
     @pytest.mark.asyncio
     async def test_graph_connection_error(self, graph_queries):
-        """Test handling of graph connection errors."""
-        # Mock graph to raise connection error
+        """A graph connection failure propagates from execute_node_query."""
         graph_queries.graph.g.V = Mock(side_effect=Exception("Connection failed"))
-        
-        params = QueryParams()
-        
+
         with pytest.raises(Exception) as exc_info:
-            await graph_queries.execute_node_query(params)
-        
+            await graph_queries.execute_node_query(QueryParams())
+
         assert "Connection failed" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_malformed_aggregation_config(self, mock_graph_queries):
-        """Test handling of malformed aggregation configuration."""
-        malformed_aggregation = {
-            'invalid_key': 'invalid_value',
-            # Missing required keys
-        }
-        
-        with pytest.raises(Exception):  # Should raise appropriate error
-            await mock_graph_queries.execute_aggregation_query(malformed_aggregation, QueryParams())
+    async def test_aggregation_unknown_type_falls_back_to_count(self, mock_graph_queries):
+        """An unknown aggregation type still returns a valid mock result."""
+        result = await mock_graph_queries.execute_aggregation_query("median", QueryParams())
+
+        # Mock path echoes the requested type; result is the non-count branch.
+        assert result.data[0]["aggregation_type"] == "median"
+        assert result.data[0]["result"] == 123.45
 
     @pytest.mark.asyncio
     async def test_pattern_query_invalid_syntax(self, mock_graph_queries):
-        """Test pattern query with invalid syntax."""
-        invalid_pattern = "(:Person]->[:INVALID"  # Malformed pattern
-        
-        result = await mock_graph_queries.execute_pattern_query(invalid_pattern, QueryParams())
-        
-        # Should handle invalid patterns gracefully or raise appropriate error
-        assert 'pattern' in result
-        assert result['pattern'] == invalid_pattern
+        """A malformed pattern is echoed back rather than raising."""
+        invalid_pattern = "(:Person]->[:INVALID"
+
+        result = await mock_graph_queries.execute_pattern_query(invalid_pattern)
+
+        assert result.metadata["pattern"] == invalid_pattern
+        assert result.data[0]["pattern"] == invalid_pattern
 
     @pytest.mark.asyncio
     async def test_large_result_set_handling(self, mock_graph_queries):
-        """Test handling of very large result sets."""
-        # Mock large dataset
-        with patch.object(mock_graph_queries, '_generate_mock_nodes') as mock_gen:
-            mock_gen.return_value = [{"id": f"node_{i}"} for i in range(10000)]
-            
-            params = QueryParams(pagination=QueryPagination(limit=50))
-            result = await mock_graph_queries.execute_node_query(params)
-            
-            assert len(result['nodes']) == 50  # Should respect pagination
-            assert result['total_count'] == 10000
+        """Pagination caps the mock node result size."""
+        params = QueryParams(pagination=QueryPagination(limit=50))
 
-    def test_sort_with_missing_property(self, graph_queries):
-        """Test sorting when some items don't have the sort property."""
-        data = [
-            {"name": "Alice", "score": 90},
-            {"name": "Bob"},  # Missing score
-            {"name": "Charlie", "score": 85}
-        ]
-        sorts = [QuerySort(property="score", direction="desc")]
-        
-        # Should not crash when property is missing
-        sorted_data = graph_queries._apply_sorting(data, sorts)
-        
-        assert len(sorted_data) == 3  # All items should remain
+        result = await mock_graph_queries.execute_node_query(params)
 
-    def test_filter_with_none_values(self, graph_queries):
-        """Test filtering when data contains None values."""
-        data = [
-            {"name": "Alice", "age": 25},
-            {"name": None, "age": 30},
-            {"name": "Bob", "age": None}
-        ]
-        filters = [QueryFilter(property="name", operator="!=", value=None)]
-        
-        filtered_data = graph_queries._apply_filters(data, filters)
-        
-        # Should handle None values appropriately
-        assert len(filtered_data) >= 0
+        # Mock caps generation at min(20, limit) == 20.
+        assert len(result.data) == 20
+        assert result.returned_results == 20
+
+    def test_apply_filter_with_none_value(self, graph_queries):
+        """_apply_filter compares None values without raising for eq/ne."""
+        f_ne = QueryFilter(property_name="name", operator="ne", value=None)
+        f_eq = QueryFilter(property_name="name", operator="eq", value=None)
+
+        assert graph_queries._apply_filter("Alice", f_ne) is True
+        assert graph_queries._apply_filter(None, f_eq) is True
