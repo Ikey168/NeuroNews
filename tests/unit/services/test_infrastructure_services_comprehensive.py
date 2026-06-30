@@ -226,22 +226,23 @@ class TestVectorServiceIntegration:
     
     def test_vector_service_factory_functionality(self):
         """Test vector service factory pattern"""
-        # This tests the factory pattern without requiring actual implementations
-        with patch('sys.modules', {'services.vector_service': MagicMock()}):
-            # Mock the get_vector_service function
-            mock_service = Mock()
-            mock_service.search.return_value = [{'id': '1', 'score': 0.9}]
-            
-            with patch('services.vector_service.get_vector_service', return_value=mock_service):
-                # Test that factory function works
-                query_vector = np.array([0.1, 0.2, 0.3])
-                filters = {'source': 'test'}
-                
-                from services.vector_service import vector_search
-                results = vector_search(query_vector, k=10, filters=filters)
-                
-                assert results == [{'id': '1', 'score': 0.9}]
-                mock_service.search.assert_called_once_with(query_vector, 10, filters)
+        # Mock the factory at its source module. vector_search() looks up
+        # get_vector_service in the services.vector_service namespace, so patch
+        # it there; it then calls service.search(query_embedding, k, filters)
+        # positionally.
+        mock_service = Mock()
+        mock_service.search.return_value = [{'id': '1', 'score': 0.9}]
+
+        with patch('services.vector_service.get_vector_service', return_value=mock_service):
+            # Test that factory function works
+            query_vector = np.array([0.1, 0.2, 0.3])
+            filters = {'source': 'test'}
+
+            from services.vector_service import vector_search
+            results = vector_search(query_vector, k=10, filters=filters)
+
+            assert results == [{'id': '1', 'score': 0.9}]
+            mock_service.search.assert_called_once_with(query_vector, 10, filters)
     
     def test_embedding_provider_abstract_interface(self):
         """Test embedding provider interface"""
@@ -282,14 +283,18 @@ class TestRAGServiceInterface:
             assert config.overlap_chars == 50
             assert config.split_on == SplitStrategy.SENTENCE
             
-            # Test chunk data structure
+            # Test chunk data structure. TextChunk now also requires
+            # word_count, char_count and metadata.
             chunk = TextChunk(
                 text="Test chunk text",
                 start_offset=0,
                 end_offset=15,
-                chunk_id=1
+                chunk_id=1,
+                word_count=3,
+                char_count=15,
+                metadata={},
             )
-            
+
             assert chunk.text == "Test chunk text"
             assert chunk.start_offset == 0
             assert chunk.chunk_id == 1

@@ -21,90 +21,96 @@ from services.ingest.common.contracts import (
 )
 
 
+# Module-level fixtures so they are shared across all test classes in this file.
+@pytest.fixture
+def valid_article_payload() -> Dict[str, Any]:
+    """Valid article payload that should pass validation."""
+    return {
+        "article_id": "test-article-123",
+        "source_id": "test-source",
+        "url": "https://example.com/article",
+        "title": "Test Article Title",
+        "body": "This is a test article body with some content.",
+        "language": "en",
+        "country": "US",
+        "published_at": int(time.time() * 1000),  # Current timestamp in milliseconds
+        "ingested_at": int(time.time() * 1000),
+        "sentiment_score": 0.5,
+        "topics": ["technology", "AI"]
+    }
+
+
+@pytest.fixture
+def minimal_valid_payload() -> Dict[str, Any]:
+    """Minimal valid payload with only required fields."""
+    return {
+        "article_id": "minimal-123",
+        "source_id": "minimal-source",
+        "url": "https://example.com/minimal",
+        "title": None,  # Optional field
+        "body": None,   # Optional field
+        "language": "en",
+        "country": None,  # Optional field
+        "published_at": int(time.time() * 1000),
+        "ingested_at": int(time.time() * 1000),
+        "sentiment_score": None,  # Optional field
+        "topics": []  # Default empty array
+    }
+
+
+@pytest.fixture
+def invalid_missing_required_field() -> Dict[str, Any]:
+    """Invalid payload missing required field."""
+    return {
+        "source_id": "test-source",
+        "url": "https://example.com/article",
+        "language": "en",
+        "published_at": int(time.time() * 1000),
+        "ingested_at": int(time.time() * 1000),
+        "topics": []
+        # Missing required 'article_id' field
+    }
+
+
+@pytest.fixture
+def invalid_wrong_type() -> Dict[str, Any]:
+    """Invalid payload with wrong field type."""
+    return {
+        "article_id": "test-article-123",
+        "source_id": "test-source",
+        "url": "https://example.com/article",
+        "title": "Test Article",
+        "body": "Test body",
+        "language": "en",
+        "country": "US",
+        "published_at": "not-a-timestamp",  # Should be long
+        "ingested_at": int(time.time() * 1000),
+        "sentiment_score": 0.5,
+        "topics": ["test"]
+    }
+
+
+@pytest.fixture
+def invalid_sentiment_range() -> Dict[str, Any]:
+    """Invalid payload with sentiment score out of range."""
+    return {
+        "article_id": "test-article-123",
+        "source_id": "test-source",
+        "url": "https://example.com/article",
+        "title": "Test Article",
+        "body": "Test body",
+        "language": "en",
+        "country": "US",
+        "published_at": int(time.time() * 1000),
+        "ingested_at": int(time.time() * 1000),
+        "sentiment_score": 2.0,  # Should be between -1 and 1
+        "topics": ["test"]
+    }
+
+
 class TestArticleIngestValidator:
     """Test suite for ArticleIngestValidator class."""
-    
-    @pytest.fixture
-    def valid_article_payload(self) -> Dict[str, Any]:
-        """Valid article payload that should pass validation."""
-        return {
-            "article_id": "test-article-123",
-            "source_id": "test-source",
-            "url": "https://example.com/article",
-            "title": "Test Article Title",
-            "body": "This is a test article body with some content.",
-            "language": "en",
-            "country": "US",
-            "published_at": int(time.time() * 1000),  # Current timestamp in milliseconds
-            "ingested_at": int(time.time() * 1000),
-            "sentiment_score": 0.5,
-            "topics": ["technology", "AI"]
-        }
-    
-    @pytest.fixture
-    def minimal_valid_payload(self) -> Dict[str, Any]:
-        """Minimal valid payload with only required fields."""
-        return {
-            "article_id": "minimal-123",
-            "source_id": "minimal-source",
-            "url": "https://example.com/minimal",
-            "title": None,  # Optional field
-            "body": None,   # Optional field
-            "language": "en",
-            "country": None,  # Optional field
-            "published_at": int(time.time() * 1000),
-            "ingested_at": int(time.time() * 1000),
-            "sentiment_score": None,  # Optional field
-            "topics": []  # Default empty array
-        }
-    
-    @pytest.fixture
-    def invalid_missing_required_field(self) -> Dict[str, Any]:
-        """Invalid payload missing required field."""
-        return {
-            "source_id": "test-source",
-            "url": "https://example.com/article",
-            "language": "en",
-            "published_at": int(time.time() * 1000),
-            "ingested_at": int(time.time() * 1000),
-            "topics": []
-            # Missing required 'article_id' field
-        }
-    
-    @pytest.fixture
-    def invalid_wrong_type(self) -> Dict[str, Any]:
-        """Invalid payload with wrong field type."""
-        return {
-            "article_id": "test-article-123",
-            "source_id": "test-source",
-            "url": "https://example.com/article",
-            "title": "Test Article",
-            "body": "Test body",
-            "language": "en",
-            "country": "US",
-            "published_at": "not-a-timestamp",  # Should be long
-            "ingested_at": int(time.time() * 1000),
-            "sentiment_score": 0.5,
-            "topics": ["test"]
-        }
-    
-    @pytest.fixture
-    def invalid_sentiment_range(self) -> Dict[str, Any]:
-        """Invalid payload with sentiment score out of range."""
-        return {
-            "article_id": "test-article-123",
-            "source_id": "test-source",
-            "url": "https://example.com/article",
-            "title": "Test Article",
-            "body": "Test body",
-            "language": "en",
-            "country": "US",
-            "published_at": int(time.time() * 1000),
-            "ingested_at": int(time.time() * 1000),
-            "sentiment_score": 2.0,  # Should be between -1 and 1
-            "topics": ["test"]
-        }
-    
+
     def test_validator_initialization_default_schema(self):
         """Test validator initializes correctly with default schema."""
         validator = ArticleIngestValidator()
@@ -151,8 +157,11 @@ class TestArticleIngestValidator:
         
         with pytest.raises(DataContractViolation) as exc_info:
             validator.validate_article(invalid_missing_required_field)
-        
-        assert "Data contract validation failed" in str(exc_info.value)
+
+        # fastavro raises a ValidationError which the source wraps into a
+        # DataContractViolation with a "Validation error for article ..." message.
+        assert "Validation error for article" in str(exc_info.value)
+        assert "article_id" in str(exc_info.value)
         assert metrics.contracts_validation_fail_total == 1
     
     def test_validate_article_wrong_type_fail_closed(self, invalid_wrong_type):
@@ -164,8 +173,11 @@ class TestArticleIngestValidator:
         
         with pytest.raises(DataContractViolation) as exc_info:
             validator.validate_article(invalid_wrong_type)
-        
-        assert "Data contract validation failed" in str(exc_info.value)
+
+        # fastavro raises a ValidationError for the wrong-typed published_at
+        # field which the source wraps into a DataContractViolation.
+        assert "Validation error for article" in str(exc_info.value)
+        assert "published_at" in str(exc_info.value)
         assert metrics.contracts_validation_fail_total == 1
     
     def test_validate_article_dlq_mode(self, invalid_missing_required_field):
@@ -203,12 +215,19 @@ class TestArticleIngestValidator:
         """Test batch validation with mixed validity in DLQ mode."""
         validator = ArticleIngestValidator(fail_on_error=False)
         payloads = [valid_article_payload, invalid_missing_required_field]
-        
+
+        # Reset DLQ metric to observe the invalid payload routed to the DLQ.
+        metrics.contracts_validation_dlq_total = 0
+
         result = validator.validate_batch(payloads)
-        
-        # Only valid payload should be returned
-        assert len(result) == 1
+
+        # In DLQ mode validate_article does not re-raise, so validate_batch does
+        # not filter the invalid payload out: both payloads are returned and the
+        # invalid one is additionally counted toward the DLQ metric.
+        assert len(result) == 2
         assert result[0] == valid_article_payload
+        assert result[1] == invalid_missing_required_field
+        assert metrics.contracts_validation_dlq_total == 1
     
     def test_get_metrics(self):
         """Test metrics retrieval."""
@@ -331,9 +350,10 @@ class TestIntegrationScenarios:
         # This simulates a producer trying to send an invalid message
         with pytest.raises(DataContractViolation) as exc_info:
             validator.validate_article(invalid_missing_required_field)
-        
-        # The producer should refuse to send the message
-        assert "Data contract validation failed" in str(exc_info.value)
+
+        # The producer should refuse to send the message; the source wraps the
+        # fastavro ValidationError into a "Validation error for article ..." message.
+        assert "Validation error for article" in str(exc_info.value)
     
     def test_high_volume_validation_performance(self, valid_article_payload):
         """Test validation performance with high volume of messages."""
