@@ -5,10 +5,27 @@ All classifier calls are mocked so these run offline without trained models.
 """
 from __future__ import annotations
 
+import sys
 import threading
+import types
 import unittest
 from dataclasses import dataclass
 from unittest.mock import MagicMock, patch
+
+
+def _fake_apscheduler_modules():
+    """Build stub apscheduler modules so the lazy `from apscheduler.triggers.cron
+    import CronTrigger` inside schedule_stance_job resolves without the real
+    (uninstalled) dependency. Patched into sys.modules at the import location."""
+    cron_mod = types.ModuleType("apscheduler.triggers.cron")
+    cron_mod.CronTrigger = MagicMock(name="CronTrigger")
+    triggers_mod = types.ModuleType("apscheduler.triggers")
+    apscheduler_mod = types.ModuleType("apscheduler")
+    return {
+        "apscheduler": apscheduler_mod,
+        "apscheduler.triggers": triggers_mod,
+        "apscheduler.triggers.cron": cron_mod,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -168,7 +185,8 @@ class TestScheduleStanceJob(unittest.TestCase):
         from src.argument_mining.stance_aggregator import schedule_stance_job
 
         scheduler = MagicMock()
-        schedule_stance_job(scheduler, hour=4)
+        with patch.dict(sys.modules, _fake_apscheduler_modules()):
+            schedule_stance_job(scheduler, hour=4)
         scheduler.add_job.assert_called_once()
         call_kwargs = scheduler.add_job.call_args
         self.assertEqual(call_kwargs.kwargs.get("id") or call_kwargs[1].get("id"), "stance_aggregation")
@@ -177,7 +195,8 @@ class TestScheduleStanceJob(unittest.TestCase):
         from src.argument_mining.stance_aggregator import schedule_stance_job
 
         scheduler = MagicMock()
-        schedule_stance_job(scheduler)
+        with patch.dict(sys.modules, _fake_apscheduler_modules()):
+            schedule_stance_job(scheduler)
         kwargs = scheduler.add_job.call_args[1]
         self.assertTrue(kwargs.get("replace_existing"))
 
