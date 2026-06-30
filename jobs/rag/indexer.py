@@ -29,10 +29,13 @@ try:
     import sys
     sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
     from scripts.capture_env import capture_environment
-except ImportError as e:
-    print(f"Import error: {e}")
-    print("Please ensure you're running from the project root directory")
-    sys.exit(1)
+except ImportError as e:  # pragma: no cover
+    # Re-raise rather than sys.exit so importing this module (e.g. during test
+    # collection) fails gracefully instead of terminating the interpreter.
+    raise ImportError(
+        f"{e}. Ensure you're running from the project root with RAG "
+        "dependencies installed."
+    ) from e
 
 # Configure logging
 logger = logging.getLogger(__name__)

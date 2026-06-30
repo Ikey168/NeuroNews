@@ -352,9 +352,13 @@ class TextChunker:
                 chunks.append(chunk)
                 chunk_id += 1
             
-            # Move forward with overlap
-            i += self.config.max_chars - self.config.overlap_chars
-        
+            # Move forward with overlap, always advancing by at least one full
+            # chunk when overlap_chars >= max_chars, to avoid an infinite loop.
+            step = self.config.max_chars - self.config.overlap_chars
+            if step <= 0:
+                step = self.config.max_chars
+            i += step
+
         return chunks
     
     def _split_into_sentences(self, text: str) -> List[str]:

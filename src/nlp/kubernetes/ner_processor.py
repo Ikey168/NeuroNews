@@ -27,10 +27,13 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "../../.."))
 try:
     from database.snowflake_connector import SnowflakeAnalyticsConnector
     from nlp.ner_processor import NERProcessor
-except ImportError as e:
-    print("Import error: {0}".format(e))
-    print("Please ensure you're running from the project root directory")
-    sys.exit(1)
+except ImportError as e:  # pragma: no cover
+    # Re-raise rather than sys.exit so importing this module (e.g. during test
+    # collection) fails gracefully instead of terminating the interpreter.
+    raise ImportError(
+        "{0}. Ensure you're running from the project root with NLP "
+        "dependencies installed.".format(e)
+    ) from e
 
 # Configure logging
 logging.basicConfig(

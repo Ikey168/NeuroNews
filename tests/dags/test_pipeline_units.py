@@ -410,19 +410,27 @@ class TestTaskIntegration:
         assert "sentiment_path" in nlp_output
     
     def test_all_functions_importable(self):
-        """Test that all task functions can be imported (if dependencies available)."""
-        task_functions = ["scrape", "clean", "nlp", "publish"]
-        
+        """Verify the news_pipeline DAG defines the expected TaskFlow tasks.
+
+        The pipeline uses Airflow's TaskFlow API, so scrape/clean/nlp/publish are
+        ``@task``-decorated functions nested inside the ``@dag`` factory rather
+        than module-level callables. Assert they exist as tasks on the DAG.
+        """
+        expected_tasks = {"scrape", "clean", "nlp", "publish"}
+
         try:
-            import news_pipeline
-            
-            for func_name in task_functions:
-                assert hasattr(news_pipeline, func_name), f"Function {func_name} not found"
-                func = getattr(news_pipeline, func_name)
-                assert callable(func), f"Function {func_name} is not callable"
-                
+            from airflow.models import DagBag
         except ImportError:
-            pytest.skip("Cannot import news_pipeline - Airflow dependencies not available")
+            pytest.skip("Airflow not available in test environment")
+
+        dag_folder = str(Path(__file__).parent.parent.parent / "airflow" / "dags")
+        dag = DagBag(dag_folder=dag_folder, include_examples=False).get_dag("news_pipeline")
+
+        assert dag is not None, "news_pipeline DAG not found"
+        task_ids = {t.task_id for t in dag.tasks}
+        assert expected_tasks.issubset(task_ids), (
+            f"Missing expected tasks. Expected: {expected_tasks}, Found: {task_ids}"
+        )
 
 
 if __name__ == "__main__":

@@ -31,13 +31,15 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 try:
     from services.mlops.tracking import mlrun
-    from services.rag.answer import RAGAnswerService
-    from services.embeddings.provider import EmbeddingProvider
-    from services.api.routes.ask import AskRequest, ask_question, get_rag_service
 except ImportError as e:
     print(f"Import error: {e}")
     print("Please ensure you're running from the project root directory")
     sys.exit(1)
+
+# The heavy retrieval/answer stack (FastAPI ask route, RAG service) is imported
+# lazily inside _evaluate_single_query so lightweight offline paths -- such as
+# the --tiny CI smoke evaluation -- do not require those dependencies to be
+# installed.
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -183,8 +185,14 @@ class EnhancedRAGEvaluator:
     async def _evaluate_single_query(self, example: Dict[str, Any], query_idx: int) -> Dict[str, Any]:
         """Evaluate a single query and return detailed results."""
         query_start = time.time()
-        
+
         try:
+            from services.api.routes.ask import (
+                AskRequest,
+                ask_question,
+                get_rag_service,
+            )
+
             # Create request based on configuration
             request = AskRequest(
                 question=example["query"],
@@ -572,6 +580,72 @@ def print_metrics_table(results: Dict[str, Any]) -> None:
         print(f"  Success rate:    {1 - metrics.get('error_rate', 0):.4f}")
 
 
+def _run_tiny_smoke_eval() -> None:
+    """Run a self-contained offline smoke evaluation and log it to MLflow.
+
+    This exercises the full MLflow tracking pipeline (experiment, run, params,
+    metrics, artifact) using a tiny canned QA set scored with offline
+    token-overlap metrics. It requires no retrieval infrastructure or answer
+    provider, which makes it suitable for CI where those services are absent.
+    """
+    import mlflow
+
+    experiment = os.environ.get("NEURONEWS_PIPELINE", "rag_evaluation_ci")
+
+    # Tiny canned QA set: (question, gold answer, predicted answer).
+    examples = [
+        {"query": "What is the capital of France?", "gold": "Paris", "pred": "Paris"},
+        {"query": "How many sides does a triangle have?", "gold": "three", "pred": "three"},
+    ]
+
+    def _tokens(text: str) -> set:
+        return set(text.lower().split())
+
+    def _token_f1(pred: str, gold: str) -> float:
+        pred_tokens, gold_tokens = _tokens(pred), _tokens(gold)
+        if not pred_tokens or not gold_tokens:
+            return 0.0
+        true_positives = len(pred_tokens & gold_tokens)
+        if true_positives == 0:
+            return 0.0
+        precision = true_positives / len(pred_tokens)
+        recall = true_positives / len(gold_tokens)
+        return 2 * precision * recall / (precision + recall)
+
+    exact = [float(e["pred"].strip().lower() == e["gold"].strip().lower()) for e in examples]
+    token_f1 = [_token_f1(e["pred"], e["gold"]) for e in examples]
+
+    logger.info("Running tiny offline smoke evaluation (%d examples)", len(examples))
+
+    # validate_tags=False: this is a CI smoke test, not a tracked experiment, so
+    # it should not require the full Issue #220 tag set (pipeline / data_version)
+    # or a non-"ci" environment to be configured.
+    with mlrun(
+        name="tiny_smoke",
+        experiment=experiment,
+        tags={"evaluation_type": "tiny_smoke", "mode": "ci", "issue": "235"},
+        validate_tags=False,
+    ):
+        mlflow.log_param("mode", "tiny")
+        mlflow.log_param("dataset_size", len(examples))
+        mlflow.log_metric("avg_exact_match", sum(exact) / len(exact))
+        mlflow.log_metric("avg_token_f1", sum(token_f1) / len(token_f1))
+
+        summary = {
+            "examples": examples,
+            "exact_match": exact,
+            "token_f1": token_f1,
+        }
+        with tempfile.NamedTemporaryFile(
+            "w", suffix=".json", prefix="tiny_eval_", delete=False
+        ) as handle:
+            json.dump(summary, handle, indent=2)
+            artifact_path = handle.name
+        mlflow.log_artifact(artifact_path, "tiny_eval")
+
+    print("✅ Tiny smoke evaluation complete — MLflow run logged.")
+
+
 async def main():
     """Main evaluation function with CLI support."""
     parser = argparse.ArgumentParser(description="RAG System Evaluation with Configuration Comparison")
@@ -607,9 +681,17 @@ async def main():
                        help="Output CSV file path")
     parser.add_argument("--mlflow", action="store_true", default=True,
                        help="Enable MLflow logging")
-    
+    parser.add_argument("--tiny", action="store_true",
+                       help="Run a tiny offline smoke evaluation (no retrieval "
+                            "infra or answer provider) and log it to MLflow. "
+                            "Used by CI to verify the tracking pipeline.")
+
     args = parser.parse_args()
-    
+
+    if args.tiny:
+        _run_tiny_smoke_eval()
+        return
+
     # Load dataset
     logger.info(f"Loading dataset from {args.dataset}")
     dataset = load_qa_dataset(args.dataset)

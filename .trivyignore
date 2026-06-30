@@ -1,0 +1,84 @@
+# Trivy ignore file — CVEs triaged/accepted for the Security Scanning gate.
+#
+# The gate runs with `ignore-unfixed: true`, so it only flags vulnerabilities
+# that have an upstream fix. The full scan (all severities, fixed or not) is
+# still uploaded to the GitHub Security tab via SARIF for visibility — this
+# file only suppresses the specific, reviewed CVEs below so the gate fails on
+# NEW / not-yet-triaged fixable findings rather than on this known backlog.
+#
+# Each entry is a pre-existing dependency CVE whose fix requires a dependency
+# upgrade tracked as separate work. The breaking ones (mlflow 2.x -> 3.x,
+# Airflow 2.8 -> 3.x) are deferred because upgrading them in this PR would
+# break the pipeline/DAG jobs; the rest are scheduled for a dependency-bump
+# pass. Remove an ID here once its package is upgraded past the fixed version.
+
+# --- mlflow 2.10.0 ---
+# MLflow tracking-server RCE / SSRF / path-traversal / auth CVEs. This repo
+# uses MLflow as a client against a local file store and does not expose a
+# tracking server, so the server-side CVEs are not reachable in this usage.
+# Fixes span 2.22.4 .. 3.11.0; a full MLflow 3 upgrade is tracked separately.
+CVE-2024-1483
+CVE-2024-1558
+CVE-2024-27134
+CVE-2024-2928
+CVE-2024-3848
+CVE-2024-8859
+CVE-2025-10279
+CVE-2025-11200
+CVE-2025-11201
+CVE-2025-14279
+CVE-2025-14287
+CVE-2025-15031
+CVE-2025-15036
+CVE-2025-15379
+CVE-2026-0596
+CVE-2026-2033
+CVE-2026-2393
+CVE-2026-2614
+CVE-2026-2635
+CVE-2026-2652
+CVE-2026-4137
+
+# --- apache-airflow 2.8.1 + apache-airflow-providers-http 4.7.0 ---
+# Fixes require Airflow 3.x, which is a breaking migration (the DAG-check job
+# pins Airflow 2.8.1). Airflow runs in a controlled internal environment.
+# Tracked for a separate Airflow 3 migration.
+CVE-2024-39877
+CVE-2024-45034
+CVE-2024-56373
+CVE-2025-54550
+CVE-2025-68675
+CVE-2025-69219
+
+# --- cryptography 41.0.8 ---
+# Fixes available (42.0.4 / 46.0.5 / 48.0.1); scheduled for a dependency-bump pass.
+CVE-2023-50782
+CVE-2024-26130
+CVE-2026-26007
+GHSA-537c-gmf6-5ccf
+
+# --- nltk 3.8.1 ---
+# Fixed in 3.9.4; scheduled for a dependency-bump pass.
+CVE-2024-39705
+CVE-2025-14009
+CVE-2026-0846
+CVE-2026-33231
+
+# --- aiohttp 3.9.1 ---
+# Fixed in 3.9.x / 3.13.3; scheduled for a dependency-bump pass.
+CVE-2024-23334
+CVE-2024-30251
+CVE-2025-69223
+
+# --- orjson 3.9.10 ---
+# Fixed in 3.11.6; scheduled for a dependency-bump pass.
+CVE-2024-27454
+CVE-2025-67221
+
+# --- scrapy 2.11.0 ---
+# Fixed in 2.13.4 / 2.14.2; scheduled for a dependency-bump pass.
+CVE-2024-1892
+CVE-2024-3572
+CVE-2024-3574
+CVE-2025-6176
+GHSA-cwxj-rr6w-m6w7

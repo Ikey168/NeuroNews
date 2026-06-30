@@ -82,11 +82,15 @@ from transformers import (
     pipeline,
 )
 
-# Download required NLTK data
+# Ensure the NLTK sentence tokenizer is available without failing module import
+# if it is missing or corrupt (e.g. a partial download leaving a non-zip file).
 try:
     nltk.data.find("tokenizers/punkt")
-except LookupError:
-    nltk.download("punkt")
+except Exception:  # LookupError if absent, BadZipFile if corrupt, etc.
+    try:
+        nltk.download("punkt", quiet=True)
+    except Exception:
+        pass
 
 logger = logging.getLogger(__name__)
 

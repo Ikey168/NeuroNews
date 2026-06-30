@@ -58,7 +58,8 @@ def test_dag_imports():
     
     # Additional DAG validation
     assert dag.dag_id == "news_pipeline", f"Unexpected DAG ID: {dag.dag_id}"
-    assert dag.is_active, "news_pipeline DAG should be active"
+    # Note: `is_active` is a DagModel (scheduler DB) attribute, not an attribute
+    # of a parsed DAG object, so it is not asserted here in an import-only test.
     assert len(dag.tasks) >= 4, f"Expected at least 4 tasks, found {len(dag.tasks)}"
 
 

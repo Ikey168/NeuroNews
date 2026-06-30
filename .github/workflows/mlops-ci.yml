@@ -44,8 +44,7 @@ jobs:
         pip install nltk spacy
         pip install transformers
         pip install scikit-learn
-        pip install asyncio-compat
-        
+
     - name: Download NLTK data and spaCy models
       run: |
         python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords'); nltk.download('averaged_perceptron_tagger')"
@@ -56,6 +55,8 @@ jobs:
         mkdir -p _mlruns_ci
         export MLFLOW_TRACKING_URI=file:./_mlruns_ci
         echo "MLFLOW_TRACKING_URI=file:./_mlruns_ci" >> $GITHUB_ENV
+        # mlflow >= 3 rejects the file:// tracking store unless this opt-in is set.
+        echo "MLFLOW_ALLOW_FILE_STORE=true" >> $GITHUB_ENV
         echo "NEURONEWS_PIPELINE=rag_evaluation_ci" >> $GITHUB_ENV
         echo "NEURONEWS_DATA_VERSION=v1.0" >> $GITHUB_ENV
         
@@ -63,6 +64,7 @@ jobs:
       run: |
         cd ${{ github.workspace }}
         export MLFLOW_TRACKING_URI=file:./_mlruns_ci
+        export MLFLOW_ALLOW_FILE_STORE=true
         export NEURONEWS_PIPELINE=rag_evaluation_ci
         export NEURONEWS_DATA_VERSION=v1.0
         python evals/run_eval.py --tiny

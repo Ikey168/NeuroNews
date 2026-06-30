@@ -55,7 +55,7 @@ try:
         for name, path in required_data:
             try:
                 nltk.data.find(path)
-            except LookupError:
+            except Exception:  # LookupError if absent, BadZipFile if corrupt
                 try:
                     logger.info("Downloading NLTK data: {0}".format(name))
                     nltk.download(name, quiet=True)
