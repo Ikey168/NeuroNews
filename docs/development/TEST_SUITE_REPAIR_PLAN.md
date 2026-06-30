@@ -102,10 +102,25 @@ dependencies (snowflake / qdrant / AWS-quicksight / scraper connectors); see
 (graph API, database, security, api/routes) tend to share root causes within a
 subsystem.
 
+## Known source bugs surfaced while repairing (fix separately)
+
+- `src/scraper/async_scraper_engine.py`: `get_article_links_http` calls
+  `self.extract_links_from_html(...)`, which is never defined anywhere — any
+  real HTTP scrape reaching link extraction raises `AttributeError`.
+
 ## Progress log
 
 - **vector_services_comprehensive**: added missing source imports, made the
   optional `OpenAIBackend` import non-fatal, and corrected `patch()` targets
   (`services.vector_service.VectorSearchService` →
-  `services.rag.vector.VectorSearchService`). 43 → 21 failures.
+  `services.rag.vector.VectorSearchService`). 43 → 21 failures (remaining 21 are
+  more lazy-import patch-target fixes; routed to a later batch).
+- **ingestion/test_blog_connector**: guarded the optional `feedparser` import
+  (not a declared dependency) with skipif. 17 → 0 (38 pass, 17 skip).
+- **security/test_audit_log**: realigned to the rewritten local-file logger
+  (AWS CloudWatch integration was removed); replaced removed-method tests with
+  the current convenience methods. 26 → 0 (25 pass).
+- **unit/scraper/test_async_scraper_engine**: realigned renamed methods /
+  signatures (PerformanceMonitor, parse_article_html, validate_article); removed
+  9 tests for genuinely-removed helpers. 21 → 0 (14 pass).
 </content>
