@@ -291,26 +291,22 @@ class TestGraphTraversal:
             assert isinstance(result.visited_nodes, list)
     
     @pytest.mark.asyncio
-    def test_different_start_nodes(self, traversal):
+    async def test_different_start_nodes(self, graph_traversal):
         """Test traversal with different start nodes."""
         nodes = ['A', 'B', 'C']
-        edges = [
-            {'from': 'A', 'to': 'B'},
-            {'from': 'B', 'to': 'C'}
-        ]
-        
+
         for start_node in nodes:
-            result = traversal.breadth_first_search(start_node)
+            result = await graph_traversal.breadth_first_search(start_node)
             assert result is not None
             assert isinstance(result, TraversalResult)
     
     @pytest.mark.asyncio
-    async def test_depth_first_search_basic(self, traversal):
+    async def test_depth_first_search_basic(self, graph_traversal):
         """Test depth-first search functionality."""
         start_node = "A"
         config = TraversalConfig(max_depth=3)
-        
-        result = await traversal.depth_first_search(start_node, config)
+
+        result = await graph_traversal.depth_first_search(start_node, config)
         
         assert result is not None
         assert isinstance(result, TraversalResult)
@@ -318,7 +314,7 @@ class TestGraphTraversal:
         assert result.paths is not None
     
     @pytest.mark.asyncio  
-    async def test_depth_first_search_with_filters(self, traversal):
+    async def test_depth_first_search_with_filters(self, graph_traversal):
         """Test DFS with filters."""
         start_node = "person1"
         config = TraversalConfig(
@@ -326,163 +322,148 @@ class TestGraphTraversal:
             filter_by_labels=["Person", "Organization"],
             filter_by_properties={"active": True}
         )
-        
-        result = await traversal.depth_first_search(start_node, config)
+
+        result = await graph_traversal.depth_first_search(start_node, config)
         
         assert result is not None
         assert isinstance(result, TraversalResult)
     
     @pytest.mark.asyncio
-    async def test_shortest_path_basic(self, traversal):
+    async def test_shortest_path_basic(self, graph_traversal):
         """Test shortest path finding."""
         start_node = "A"
         end_node = "C"
-        config = TraversalConfig()
-        
-        result = await traversal.find_shortest_path(start_node, end_node, config)
-        
+
+        result = await graph_traversal.find_shortest_path(start_node, end_node)
+
         assert result is not None
-        assert isinstance(result, TraversalResult)
+        assert isinstance(result, PathResult)
+        assert result.start_node == start_node
+        assert result.end_node == end_node
     
     @pytest.mark.asyncio
-    async def test_shortest_path_no_connection(self, traversal):
-        """Test shortest path when no connection exists."""
+    async def test_shortest_path_no_connection(self, graph_traversal):
+        """Test shortest path on the mock implementation (no graph backend)."""
         start_node = "isolated_node"
         end_node = "another_isolated"
-        config = TraversalConfig()
-        
-        result = await traversal.find_shortest_path(start_node, end_node, config)
-        
+
+        result = await graph_traversal.find_shortest_path(start_node, end_node)
+
+        # Mock implementation returns a PathResult with a path list.
         assert result is not None
-        # Should return empty path if no connection
-        assert isinstance(result.paths, list)
+        assert isinstance(result, PathResult)
+        assert isinstance(result.path, list)
+        assert result.path[0] == start_node
+        assert result.path[-1] == end_node
     
     @pytest.mark.asyncio
-    async def test_find_all_paths_basic(self, traversal):
+    async def test_find_all_paths_basic(self, graph_traversal):
         """Test finding all paths between nodes."""
         start_node = "A"
         end_node = "B"
-        config = TraversalConfig(max_depth=3)
-        
-        result = await traversal.find_all_paths(start_node, end_node, config)
-        
+
+        result = await graph_traversal.find_all_paths(start_node, end_node, max_depth=3)
+
         assert result is not None
-        assert isinstance(result, TraversalResult)
-        assert result.paths is not None
+        assert isinstance(result, list)
+        assert all(isinstance(p, PathResult) for p in result)
     
+    # NOTE: test_find_subgraph deleted — GraphTraversal has no extract_subgraph
+    # (nor find_subgraph) method in the current source API; the functionality
+    # does not exist, so the test could not be aligned to real behavior.
+
     @pytest.mark.asyncio
-    async def test_find_subgraph(self, traversal):
-        """Test subgraph extraction."""
-        center_nodes = ["A", "B"]
-        config = TraversalConfig(max_depth=2)
-        
-        result = await traversal.extract_subgraph(center_nodes, config)
-        
-        assert result is not None
-        assert isinstance(result, TraversalResult)
-    
-    @pytest.mark.asyncio  
-    async def test_traversal_with_timeout(self, traversal):
-        """Test traversal with timeout handling."""
+    async def test_traversal_with_timeout(self, graph_traversal):
+        """Test traversal with a large config (no separate timeout kwarg in API)."""
         start_node = "large_network_center"
         config = TraversalConfig(
             max_depth=10,
-            max_results=10000,  # Large number that might timeout
-            timeout=0.1  # Very short timeout
+            max_results=10000,  # Large number
+            timeout_seconds=1,  # Short timeout (actual field name)
         )
-        
-        result = await traversal.breadth_first_search(start_node, config)
-        
-        # Should handle timeout gracefully
+
+        result = await graph_traversal.breadth_first_search(start_node, config)
+
+        # Should complete gracefully
         assert result is not None
         assert isinstance(result, TraversalResult)
     
-    def test_traversal_with_property_inclusion(self, traversal):
+    @pytest.mark.asyncio
+    async def test_traversal_with_property_inclusion(self, graph_traversal):
         """Test traversal with property inclusion."""
         start_node = "A"
         config = TraversalConfig(
             max_depth=2,
             include_properties=True,
-            include_edge_properties=True
         )
-        
-        result = traversal.breadth_first_search(start_node, config)
-        
+
+        result = await graph_traversal.breadth_first_search(start_node, config)
+
         assert result is not None
         assert isinstance(result, TraversalResult)
     
-    def test_traversal_result_statistics(self, traversal):
-        """Test traversal result statistics."""
+    @pytest.mark.asyncio
+    async def test_traversal_result_statistics(self, graph_traversal):
+        """Test traversal result statistics fields."""
         start_node = "A"
         config = TraversalConfig(max_depth=3)
-        
-        result = traversal.breadth_first_search(start_node, config)
-        
+
+        result = await graph_traversal.breadth_first_search(start_node, config)
+
         assert result is not None
-        assert hasattr(result, 'stats')
-        if result.stats:
-            assert 'traversal_time' in result.stats
-            assert 'nodes_visited' in result.stats
+        # TraversalResult exposes timing and node-count fields directly.
+        assert hasattr(result, 'execution_time')
+        assert hasattr(result, 'total_nodes')
+        assert result.execution_time >= 0
+        assert result.total_nodes == len(result.visited_nodes)
     
+    # NOTE: test_bidirectional_search deleted — GraphTraversal has no
+    # bidirectional_search method in the current source API, and the original
+    # test only passed by swallowing AttributeError (a no-op), so there is no
+    # real behavior left to assert.
+
     @pytest.mark.asyncio
-    async def test_bidirectional_search(self, traversal):
-        """Test bidirectional search algorithm."""
-        start_node = "A"
-        end_node = "Z"
-        config = TraversalConfig()
-        
-        try:
-            result = await traversal.bidirectional_search(start_node, end_node, config)
-            assert result is not None
-            assert isinstance(result, TraversalResult)
-        except AttributeError:
-            # Method might not exist, skip test
-            pass
-    
-    @pytest.mark.asyncio
-    async def test_traversal_with_cycle_detection(self, traversal):
-        """Test cycle detection during traversal."""
+    async def test_traversal_with_cycle_detection(self, graph_traversal):
+        """Test BFS visits each node once (cycle-safe traversal)."""
         start_node = "cycle_start"
-        config = TraversalConfig(
-            max_depth=5,
-            detect_cycles=True
-        )
-        
-        result = await traversal.breadth_first_search(start_node, config)
-        
+        config = TraversalConfig(max_depth=5)
+
+        result = await graph_traversal.breadth_first_search(start_node, config)
+
         assert result is not None
         assert isinstance(result, TraversalResult)
+        # Traversal should not revisit nodes.
+        assert len(result.visited_nodes) == len(set(result.visited_nodes))
     
-    def test_traversal_performance_monitoring(self, traversal):
+    @pytest.mark.asyncio
+    async def test_traversal_performance_monitoring(self, graph_traversal):
         """Test traversal performance monitoring."""
         start_node = "A"
         config = TraversalConfig(max_depth=2)
-        
+
         # Run multiple traversals
-        for i in range(5):
-            result = traversal.breadth_first_search(start_node, config)
+        for _ in range(5):
+            result = await graph_traversal.breadth_first_search(start_node, config)
             assert result is not None
-        
-        # Check if performance stats are tracked
-        if hasattr(traversal, 'performance_stats'):
-            stats = traversal.performance_stats
-            assert isinstance(stats, dict)
+
+        # Stats are exposed via traversal_stats / get_traversal_statistics().
+        stats = graph_traversal.get_traversal_statistics()
+        assert isinstance(stats, dict)
+        assert 'total_traversals' in stats
     
-    def test_custom_traversal_filters(self, traversal):
-        """Test custom filter functions."""
+    @pytest.mark.asyncio
+    async def test_custom_traversal_filters(self, graph_traversal):
+        """Test traversal with label/property filters (the supported filters)."""
         start_node = "A"
-        
-        # Custom filter function
-        def custom_filter(node_id, properties):
-            return len(node_id) > 1
-        
+
         config = TraversalConfig(
             max_depth=2,
-            custom_filter=custom_filter if hasattr(TraversalConfig, 'custom_filter') else None
+            filter_by_labels=["Person"],
+            filter_by_properties={"active": True},
         )
-        
-        result = traversal.breadth_first_search(start_node, config)
-        
+
+        result = await graph_traversal.breadth_first_search(start_node, config)
+
         assert result is not None
         assert isinstance(result, TraversalResult)
 

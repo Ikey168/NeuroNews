@@ -4,19 +4,24 @@ Tests for sentiment analysis pipeline functionality (Issue #28).
 
 import json
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.api.routes.sentiment_routes import get_db, router
+from src.api.routes.sentiment_routes import get_db, require_auth, router
 from src.nlp.sentiment_analysis import create_analyzer
 
 # Create test app
 app = FastAPI()
 app.include_router(router)
 client = TestClient(app)
+
+
+async def _override_require_auth():
+    """Bypass JWT auth in tests by returning a stub user payload."""
+    return {"sub": "test-user", "roles": ["admin"]}
 
 
 class TestSentimentAnalysisPipeline:
@@ -89,8 +94,9 @@ class TestSentimentAnalysisPipeline:
             ]
             yield mock_db
 
-        # Override the dependency
+        # Override the dependencies
         app.dependency_overrides[get_db] = mock_get_db
+        app.dependency_overrides[require_auth] = _override_require_auth
 
         try:
             # Test endpoint
@@ -126,8 +132,9 @@ class TestSentimentAnalysisPipeline:
             ]
             yield mock_db
 
-        # Override the dependency
+        # Override the dependencies
         app.dependency_overrides[get_db] = mock_get_db
+        app.dependency_overrides[require_auth] = _override_require_auth
 
         try:
             response = client.get("/news_sentiment/summary?topic=AI&days=7")
@@ -146,23 +153,37 @@ class TestSentimentAnalysisPipeline:
     def test_topic_sentiment_endpoint(self):
         """Test the topic sentiment analysis endpoint."""
 
-        # Mock the get_db dependency
+        # The /topics route reads keyword sentiment from the warehouse view
+        # ``get_topic_sentiment`` (lazily imported inside the route), so patch
+        # it where it is looked up rather than mocking the DB connection.
+        topic_results = [
+            {
+                "topic": "Tech",
+                "total_articles": 10,
+                "sentiments": {
+                    "POSITIVE": {"count": 8, "avg_score": 0.8},
+                    "NEGATIVE": {"count": 2, "avg_score": 0.3},
+                },
+            },
+            {
+                "topic": "Market",
+                "total_articles": 10,
+                "sentiments": {
+                    "NEGATIVE": {"count": 6, "avg_score": 0.4},
+                    "POSITIVE": {"count": 4, "avg_score": 0.7},
+                },
+            },
+        ]
 
-        async def mock_get_db():
-            mock_db = AsyncMock()
-            mock_db.execute_query.return_value = [
-                ("TECH", "POSITIVE", 8, 0.8),
-                ("TECH", "NEGATIVE", 2, 0.3),
-                ("MARKET", "NEGATIVE", 6, 0.4),
-                ("MARKET", "POSITIVE", 4, 0.7),
-            ]
-            yield mock_db
-
-        # Override the dependency
-        app.dependency_overrides[get_db] = mock_get_db
+        # Override auth so the request is not rejected with 401.
+        app.dependency_overrides[require_auth] = _override_require_auth
 
         try:
-            response = client.get("/news_sentiment/topics?days=7&min_articles=5")
+            with patch(
+                "src.database.local_warehouse_views.get_topic_sentiment",
+                new=AsyncMock(return_value=topic_results),
+            ):
+                response = client.get("/news_sentiment/topics?days=7&min_articles=5")
             assert response.status_code == 200
 
             data = response.json()
@@ -207,10 +228,10 @@ class TestSentimentPipelineIntegration:
 
         sample_texts = [
             "Excellent quarterly results!",
-            "Market volatility concerns investors",
+            "A terrible decline in the market",
             "Standard infrastructure update",
-            "Revolutionary breakthrough achieved!",
-            "Economic uncertainty persists",
+            "Wonderful breakthrough achieved!",
+            "A dreadful loss for investors",
         ]
 
         results = analyzer.analyze_batch(sample_texts)

@@ -170,14 +170,14 @@ class TestPipelineProcessItem:
         assert pipeline.stats["failed_articles"] == 1
         assert pipeline.stats["indexed_articles"] == 0
 
-    def test_from_crawler_with_aws_credentials(self):
+    def test_from_crawler_builds_config_and_connects_signals(self):
         crawler = MagicMock()
         settings = MagicMock()
 
         def _get(key, default=None):
             values = {
-                "AWS_ACCESS_KEY_ID": "AKIA-TEST",
-                "AWS_SECRET_ACCESS_KEY": "secret-test",
+                "DYNAMODB_METADATA_TABLE": "crawler-table",
+                "AWS_REGION": "eu-west-1",
             }
             return values.get(key, default)
 
@@ -187,11 +187,12 @@ class TestPipelineProcessItem:
         crawler.settings = settings
 
         pipeline = DynamoDBMetadataPipeline.from_crawler(crawler)
-        assert pipeline.aws_credentials == {
-            "aws_access_key_id": "AKIA-TEST",
-            "aws_secret_access_key": "secret-test",
-        }
-        crawler.signals.connect.assert_called()
+        # from_crawler builds config from settings and passes None credentials.
+        assert pipeline.config.table_name == "crawler-table"
+        assert pipeline.config.region == "eu-west-1"
+        assert pipeline.aws_credentials is None
+        # Both spider lifecycle signals are wired up.
+        assert crawler.signals.connect.call_count == 2
 
 
 # ---------------------------------------------------------------------------
