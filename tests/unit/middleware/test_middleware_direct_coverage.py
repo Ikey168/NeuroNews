@@ -300,12 +300,12 @@ class TestMiddlewareCoverage:
     def test_middleware_files_exist(self):
         """Test that middleware files exist."""
         middleware_files = [
-            "/workspaces/NeuroNews/src/neuronews/api/routes/rate_limit_middleware.py",
-            "/workspaces/NeuroNews/src/neuronews/api/routes/auth_middleware.py", 
-            "/workspaces/NeuroNews/src/neuronews/api/routes/api_key_middleware.py",
-            "/workspaces/NeuroNews/src/neuronews/api/routes/rbac_middleware.py",
-            "/workspaces/NeuroNews/src/services/api/middleware/metrics.py",
-            "/workspaces/NeuroNews/src/services/api/middleware/ratelimit.py",
+            "/home/user/Noesis/src/api/middleware/rate_limit_middleware.py",
+            "/home/user/Noesis/src/api/middleware/auth_middleware.py",
+            "/home/user/Noesis/src/api/auth/api_key_middleware.py",
+            "/home/user/Noesis/src/api/rbac/rbac_middleware.py",
+            "/home/user/Noesis/services/api/middleware/metrics.py",
+            "/home/user/Noesis/services/api/middleware/ratelimit.py",
         ]
         
         existing_files = []
