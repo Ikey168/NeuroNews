@@ -5,13 +5,45 @@ Modularized from scattered performance tests across multiple files
 
 import pytest
 import asyncio
+import sys
 import time
 import threading
+import types
 import concurrent.futures
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch, MagicMock, AsyncMock
 from datetime import datetime, timezone, timedelta
 import psutil
 import gc
+
+# asyncpg is an optional dependency that may not be installed in the test
+# environment. The async performance tests below only ever patch
+# ``asyncpg.connect`` / ``asyncpg.create_pool`` with mocks, so a lightweight
+# stub module is enough for ``unittest.mock.patch`` to resolve the target
+# without crashing collection.
+try:
+    import asyncpg  # noqa: F401
+except ImportError:
+    asyncpg = types.ModuleType("asyncpg")
+
+    class _StubConnection:
+        """Stub mirroring asyncpg.Connection (used as a type annotation)."""
+
+    class _StubPool:
+        """Stub mirroring asyncpg.Pool."""
+
+    class _StubPostgresError(Exception):
+        """Base stub mirroring asyncpg.PostgresError."""
+
+    class _StubConnectionDoesNotExistError(_StubPostgresError):
+        """Stub mirroring asyncpg.ConnectionDoesNotExistError."""
+
+    asyncpg.connect = lambda *args, **kwargs: None
+    asyncpg.create_pool = lambda *args, **kwargs: None
+    asyncpg.Connection = _StubConnection
+    asyncpg.Pool = _StubPool
+    asyncpg.PostgresError = _StubPostgresError
+    asyncpg.ConnectionDoesNotExistError = _StubConnectionDoesNotExistError
+    sys.modules["asyncpg"] = asyncpg
 
 
 class TestQueryPerformance:
@@ -325,11 +357,11 @@ class TestAsyncPerformance:
     
     async def test_async_query_performance(self):
         """Test asynchronous query performance"""
-        with patch('asyncpg.connect') as mock_connect:
-            mock_connection = Mock()
+        with patch('asyncpg.connect', new_callable=AsyncMock) as mock_connect:
+            mock_connection = AsyncMock()
             mock_connect.return_value = mock_connection
-            mock_connection.fetch = Mock(return_value=[(1, 'test')])
-            
+            mock_connection.fetch = AsyncMock(return_value=[(1, 'test')])
+
             # Test concurrent async queries
             async def run_query(query_id):
                 connection = await mock_connect()
@@ -351,13 +383,15 @@ class TestAsyncPerformance:
     
     async def test_async_connection_pool_performance(self):
         """Test asynchronous connection pool performance"""
-        with patch('asyncpg.create_pool') as mock_create_pool:
-            mock_pool = Mock()
-            mock_connection = Mock()
+        with patch('asyncpg.create_pool', new_callable=AsyncMock) as mock_create_pool:
+            mock_pool = AsyncMock()
+            mock_connection = AsyncMock()
             mock_create_pool.return_value = mock_pool
-            mock_pool.acquire = Mock(return_value=mock_connection)
-            mock_pool.release = Mock()
-            
+            # ``pool.acquire()`` returns an async context manager in asyncpg, so
+            # the call itself is synchronous but yields an awaitable context.
+            mock_pool.acquire = Mock(return_value=AsyncMock())
+            mock_pool.release = AsyncMock()
+
             # Test async connection pool
             pool = await mock_create_pool(
                 min_size=5,
@@ -365,7 +399,7 @@ class TestAsyncPerformance:
                 host='localhost',
                 database='test_db'
             )
-            
+
             async def worker_task(task_id):
                 """Async worker task"""
                 async with pool.acquire() as conn:
@@ -387,13 +421,13 @@ class TestAsyncPerformance:
     
     async def test_async_transaction_performance(self):
         """Test asynchronous transaction performance"""
-        with patch('asyncpg.connect') as mock_connect:
-            mock_connection = Mock()
-            mock_transaction = Mock()
+        with patch('asyncpg.connect', new_callable=AsyncMock) as mock_connect:
+            mock_connection = AsyncMock()
+            mock_transaction = AsyncMock()
             mock_connect.return_value = mock_connection
             mock_connection.transaction = Mock(return_value=mock_transaction)
-            mock_connection.execute = Mock()
-            
+            mock_connection.execute = AsyncMock()
+
             # Test async transaction performance
             async def run_transaction(transaction_id):
                 connection = await mock_connect()

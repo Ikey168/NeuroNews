@@ -6,17 +6,46 @@ Modularized from scattered connection tests across multiple files
 import pytest
 import asyncio
 import os
+import sys
+import types
 import logging
 from unittest.mock import Mock, patch, MagicMock, AsyncMock
 from datetime import datetime, timezone
 import psycopg2
 
-# Optional import for asyncpg
+# asyncpg is an optional dependency that may not be installed in the test
+# environment. The async connection tests below only ever patch
+# ``asyncpg.connect`` / ``asyncpg.create_pool`` with mocks, so a lightweight
+# stub module (including the error types they reference) is enough for the
+# tests to run without the real driver being installed.
 try:
-    import asyncpg
+    import asyncpg  # noqa: F401
     ASYNCPG_AVAILABLE = True
 except ImportError:
-    ASYNCPG_AVAILABLE = False
+    asyncpg = types.ModuleType("asyncpg")
+
+    class Connection:
+        """Stub mirroring asyncpg.Connection (used only as a type annotation)."""
+
+    class Pool:
+        """Stub mirroring asyncpg.Pool."""
+
+    class _AsyncpgError(Exception):
+        """Base stub mirroring asyncpg.PostgresError."""
+
+    class ConnectionDoesNotExistError(_AsyncpgError):
+        """Stub mirroring asyncpg.ConnectionDoesNotExistError."""
+
+    asyncpg.connect = lambda *args, **kwargs: None
+    asyncpg.create_pool = lambda *args, **kwargs: None
+    asyncpg.Connection = Connection
+    asyncpg.Pool = Pool
+    asyncpg.PostgresError = _AsyncpgError
+    asyncpg.ConnectionDoesNotExistError = ConnectionDoesNotExistError
+    # Inject the stub so that ``import asyncpg`` (e.g. in src.database.setup)
+    # resolves and ``unittest.mock.patch('asyncpg.*')`` can find its targets.
+    sys.modules["asyncpg"] = asyncpg
+    ASYNCPG_AVAILABLE = True
 
 
 class TestDatabaseConnectionConfig:
@@ -196,10 +225,10 @@ class TestAsynchronousConnections:
     
     async def test_asyncpg_connection_creation(self):
         """Test asyncpg asynchronous connection creation"""
-        with patch('asyncpg.connect') as mock_connect:
+        with patch('asyncpg.connect', new_callable=AsyncMock) as mock_connect:
             mock_connection = AsyncMock()
             mock_connect.return_value = mock_connection
-            
+
             # Test async connection creation
             try:
                 from src.database.setup import get_async_connection
@@ -219,10 +248,10 @@ class TestAsynchronousConnections:
     
     async def test_async_connection_pooling(self):
         """Test asynchronous connection pooling"""
-        with patch('asyncpg.create_pool') as mock_create_pool:
+        with patch('asyncpg.create_pool', new_callable=AsyncMock) as mock_create_pool:
             mock_pool = AsyncMock()
             mock_create_pool.return_value = mock_pool
-            
+
             # Test async connection pool creation
             try:
                 from src.database.setup import get_async_pool
@@ -240,18 +269,20 @@ class TestAsynchronousConnections:
     
     async def test_async_transaction_handling(self):
         """Test asynchronous transaction handling"""
-        with patch('asyncpg.connect') as mock_connect:
+        with patch('asyncpg.connect', new_callable=AsyncMock) as mock_connect:
             mock_connection = AsyncMock()
             mock_transaction = AsyncMock()
             mock_connect.return_value = mock_connection
-            mock_connection.transaction.return_value = mock_transaction
-            
+            # asyncpg's ``Connection.transaction`` is a synchronous method that
+            # returns an async-context-manager transaction object.
+            mock_connection.transaction = Mock(return_value=mock_transaction)
+
             # Test async transaction
             connection = await mock_connect()
             async with connection.transaction():
                 # Simulate transaction operations
                 await connection.execute("INSERT INTO test_table VALUES ($1)", "test_value")
-            
+
             mock_transaction.__aenter__.assert_called()
             mock_transaction.__aexit__.assert_called()
     
