@@ -78,24 +78,10 @@ class TestMainScrape:
         with pytest.raises(SystemExit):
             main_module.main()
 
-    def test_s3_with_bucket_and_creds(self, monkeypatch, capsys):
-        run_spider = MagicMock()
-        monkeypatch.setattr(main_module, "run_spider", run_spider)
-        monkeypatch.setattr(main_module, "load_aws_config", lambda env: {})
-        monkeypatch.setattr(
-            sys,
-            "argv",
-            [
-                "main.py", "--scrape", "--s3",
-                "--s3-bucket", "my-bucket",
-                "--aws-key-id", "k", "--aws-secret-key", "s",
-            ],
-        )
-        main_module.main()
-        kwargs = run_spider.call_args.kwargs
-        assert kwargs["s3_storage"] is True
-        assert kwargs["s3_bucket"] == "my-bucket"
-        assert "my-bucket" in capsys.readouterr().out
+    # Removed test_s3_with_bucket_and_creds: the --s3/--s3-bucket/--aws-key-id/
+    # --aws-secret-key CLI flags were intentionally removed in the offline
+    # migration (commit 4720b1d). S3 is now opt-in via the AWS config file only,
+    # covered by test_config_file_enables_s3_and_cloudwatch below.
 
     def test_config_file_enables_s3_and_cloudwatch(self, monkeypatch, capsys):
         run_spider = MagicMock()
