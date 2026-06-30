@@ -91,7 +91,10 @@ def fake_qdrant(monkeypatch):
 
 class TestPgVectorBackend:
     def test_import_error_raises(self, monkeypatch):
-        monkeypatch.setitem(sys.modules, "services", None)
+        # PgVectorBackend.__init__ does `from services.rag.vector import ...`.
+        # Block that exact submodule so the import fails even when an earlier
+        # test in the suite has already cached the real module in sys.modules.
+        monkeypatch.setitem(sys.modules, "services.rag.vector", None)
         with pytest.raises(ImportError):
             PgVectorBackend()
 
@@ -143,7 +146,13 @@ class TestPgVectorBackend:
 
 class TestQdrantBackend:
     def test_import_error_raises(self, monkeypatch):
-        monkeypatch.setitem(sys.modules, "services", None)
+        # QdrantBackend.__init__ does
+        # `from services.embeddings.backends.qdrant_store import ...`.
+        # Block that exact submodule so the import fails even when an earlier
+        # test in the suite has already cached the real module in sys.modules.
+        monkeypatch.setitem(
+            sys.modules, "services.embeddings.backends.qdrant_store", None
+        )
         with pytest.raises(ImportError):
             QdrantBackend()
 

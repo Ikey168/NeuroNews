@@ -9,13 +9,25 @@ import os
 import sys
 
 
+# Repo root computed from this file's location:
+# tests/functional/test_issue_31_simple.py -> repo root is three levels up.
+REPO_ROOT = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
+
+
+def _p(*parts):
+    """Build an absolute path inside the repo from path components."""
+    return os.path.join(REPO_ROOT, *parts)
+
+
 # Add src to path for imports
-sys.path.insert(0, "/workspaces/NeuroNews/src")
+sys.path.insert(0, _p("src"))
 
 
 def test_config_validation():
     """Test that the configuration file is valid and contains required settings."""
-    config_path = "/workspaces/NeuroNews/config/event_detection_settings.json"
+    config_path = _p("config", "event_detection_settings.json")
 
     assert os.path.exists(config_path), "Configuration file missing"
 
@@ -49,7 +61,7 @@ def test_config_validation():
 
 def test_database_schema():
     """Test that database schema contains required tables."""
-    schema_path = "/workspaces/NeuroNews/src/database/redshift_schema.sql"
+    schema_path = _p("src", "database", "snowflake_schema.sql")
 
     assert os.path.exists(schema_path), "Database schema file missing"
 
@@ -77,7 +89,7 @@ def test_database_schema():
 
 def test_api_endpoints():
     """Test that API endpoints are properly defined."""
-    api_path = "/workspaces/NeuroNews/src/api/routes/event_routes.py"
+    api_path = _p("src", "api", "routes", "event_routes.py")
 
     assert os.path.exists(api_path), "API routes file missing"
 
@@ -119,7 +131,7 @@ def test_core_implementation():
     """Test that core implementation files are substantial and contain key components."""
 
     # Test ArticleEmbedder
-    embedder_path = "/workspaces/NeuroNews/src/nlp/article_embedder.py"
+    embedder_path = _p("src", "nlp", "article_embedder.py")
     assert os.path.exists(embedder_path), "ArticleEmbedder file missing"
 
     with open(embedder_path, "r") as f:
@@ -138,7 +150,7 @@ def test_core_implementation():
         assert req in embedder_content, f"Missing in ArticleEmbedder: {req}"
 
     # Test EventClusterer
-    clusterer_path = "/workspaces/NeuroNews/src/nlp/event_clusterer.py"
+    clusterer_path = _p("src", "nlp", "event_clusterer.py")
     assert os.path.exists(clusterer_path), "EventClusterer file missing"
 
     with open(clusterer_path, "r") as f:
@@ -162,7 +174,7 @@ def test_core_implementation():
 
 def test_demo_results():
     """Test that demo script produced valid results."""
-    results_path = "/workspaces/NeuroNews/event_detection_demo_results.json"
+    results_path = _p("docs", "demo", "results", "event_detection_demo_results.json")
 
     assert os.path.exists(results_path), "Demo results file missing"
 
@@ -208,9 +220,9 @@ def test_code_quality():
 
     # Count lines of code
     core_files = [
-        "/workspaces/NeuroNews/src/nlp/article_embedder.py",
-        "/workspaces/NeuroNews/src/nlp/event_clusterer.py",
-        "/workspaces/NeuroNews/src/api/routes/event_routes.py",
+        _p("src", "nlp", "article_embedder.py"),
+        _p("src", "nlp", "event_clusterer.py"),
+        _p("src", "api", "routes", "event_routes.py"),
     ]
 
     total_lines = 0
@@ -246,7 +258,7 @@ def test_documentation():
     """Test that documentation is complete."""
 
     # Check implementation summary
-    summary_path = "/workspaces/NeuroNews/ISSUE_31_IMPLEMENTATION_SUMMARY.md"
+    summary_path = _p("docs", "implementation", "ISSUE_31_IMPLEMENTATION_SUMMARY.md")
     assert os.path.exists(summary_path), "Implementation summary missing"
 
     with open(summary_path, "r") as f:
@@ -274,7 +286,7 @@ def test_integration_ready():
     """Test that all integration points are ready."""
 
     # Check main app integration
-    app_path = "/workspaces/NeuroNews/src/api/app.py"
+    app_path = _p("src", "api", "app.py")
     with open(app_path, "r") as f:
         app_content = f.read()
 
@@ -284,7 +296,7 @@ def test_integration_ready():
     ), "Event router not included"
 
     # Check requirements.txt has dependencies
-    req_path = "/workspaces/NeuroNews/requirements.txt"
+    req_path = _p("requirements.txt")
     with open(req_path, "r") as f:
         req_content = f.read()
 
