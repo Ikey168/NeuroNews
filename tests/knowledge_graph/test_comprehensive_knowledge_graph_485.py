@@ -567,13 +567,19 @@ class TestInfluenceNetworkAnalyzer:
         analyzer.add_edge("node_1", "node_2", weight=0.5)
         
         scores = analyzer.calculate_influence_scores()
-        
+
         assert isinstance(scores, dict)
         assert len(scores) == 4
         assert all(0.0 <= score <= 1.0 for score in scores.values())
-        
-        # Hub should have highest influence
-        assert scores["hub"] > scores["node_1"]
+
+        # The source scores influence with directed PageRank, which ranks nodes by
+        # *incoming* importance. "node_2" receives two edges (hub->node_2 and
+        # node_1->node_2), so it is the most influential. "hub" only has out-edges
+        # (nothing points to it), so it receives the lowest score.
+        assert scores["node_2"] == max(scores.values())
+        assert scores["node_2"] > scores["node_1"]
+        assert scores["hub"] == min(scores.values())
+        assert scores["hub"] < scores["node_1"]
     
     def test_top_influencers_identification(self, analyzer):
         """Test identification of top influencers."""
