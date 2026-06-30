@@ -115,6 +115,12 @@ subsystem.
   gremlin anonymous-traversal alias `__`, which is never imported at module
   scope, so the default `include_properties=True` path raises
   `NameError: name '__' is not defined`. Fix: `from gremlin_python.process.graph_traversal import __`.
+- `src/api/routes/graph_search_routes.py:18`: imports `GraphBasedSearchService`
+  from `src.knowledge_graph.graph_search_service`, but that module only defines
+  `GraphSearchService` — the route module is un-importable (`ImportError`), so it
+  can never be mounted. Fix: rename the import/usages to `GraphSearchService`
+  (or add a `GraphBasedSearchService` alias). The 5 `graph_search_routes`
+  coverage tests were removed until the source is fixed.
 
 ## Progress log
 
