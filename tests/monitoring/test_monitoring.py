@@ -4,18 +4,14 @@ Test suite for monitoring and error handling system.
 Tests CloudWatch logging, DynamoDB failure tracking, SNS alerting, and retry logic.
 """
 
-try:
-    from scraper.sns_alert_manager import Alert, AlertSeverity, AlertType, SNSAlertManager
-except ImportError as _e:  # stale or optional dependency
-    import pytest
-    pytest.skip("module import failed: {0}".format(_e), allow_module_level=True)
-from scraper.enhanced_retry_manager import (
+from src.scraper.sns_alert_manager import Alert, AlertSeverity, AlertType, SNSAlertManager
+from src.scraper.enhanced_retry_manager import (
     EnhancedRetryManager,
     RetryConfig,
     RetryReason,
 )
-from scraper.dynamodb_failure_manager import DynamoDBFailureManager, FailedUrl
-from scraper.cloudwatch_logger import CloudWatchLogger, ScrapingMetrics, ScrapingStatus
+from src.scraper.dynamodb_failure_manager import DynamoDBFailureManager, FailedUrl
+from src.scraper.cloudwatch_logger import CloudWatchLogger, ScrapingMetrics, ScrapingStatus
 import asyncio
 import json
 import sys
@@ -42,7 +38,6 @@ class TestCloudWatchLogger:
         assert logger.region_name == "us-east-1"
 
     @pytest.mark.asyncio
-    @mock_aws
     async def test_log_scraping_attempt(self):
         """Test logging scraping attempts."""
         logger = CloudWatchLogger(region_name="us-east-1")
@@ -65,7 +60,6 @@ class TestCloudWatchLogger:
             mock_metrics.assert_called_once()
 
     @pytest.mark.asyncio
-    @mock_aws
     async def test_batch_metrics_sending(self):
         """Test batch metrics functionality."""
         logger = CloudWatchLogger(region_name="us-east-1")
@@ -108,61 +102,61 @@ class TestDynamoDBFailureManager:
         assert manager.region_name == "us-east-1"
 
     @pytest.mark.asyncio
-    @mock_aws
     async def test_record_failure(self):
         """Test recording failure attempts."""
-        manager = DynamoDBFailureManager(
-            table_name="test-failed-urls", region_name="us-east-1"
-        )
-
-        # Mock DynamoDB operations
-        with patch.object(manager.dynamodb, "get_item") as mock_get, patch.object(
-            manager.dynamodb, "put_item"
-        ) as mock_put:
-
-            # Simulate new failure
-            mock_get.return_value = {}
-
-            failed_url = await manager.record_failure(
-                url="https://test.com",
-                failure_reason="timeout",
-                error_details="Connection timeout",
+        with mock_aws():
+            manager = DynamoDBFailureManager(
+                table_name="test-failed-urls", region_name="us-east-1"
             )
 
-            assert failed_url.url == "https://test.com"
-            assert failed_url.failure_reason == "timeout"
-            assert failed_url.retry_count == 1
-            mock_put.assert_called_once()
+            # Mock DynamoDB operations
+            with patch.object(manager.dynamodb, "get_item") as mock_get, patch.object(
+                manager.dynamodb, "put_item"
+            ) as mock_put:
+
+                # Simulate new failure
+                mock_get.return_value = {}
+
+                failed_url = await manager.record_failure(
+                    url="https://test.com",
+                    failure_reason="timeout",
+                    error_details="Connection timeout",
+                )
+
+                assert failed_url.url == "https://test.com"
+                assert failed_url.failure_reason == "timeout"
+                assert failed_url.retry_count == 1
+                mock_put.assert_called_once()
 
     @pytest.mark.asyncio
-    @mock_aws
     async def test_get_urls_ready_for_retry(self):
         """Test getting URLs ready for retry."""
-        manager = DynamoDBFailureManager(
-            table_name="test-failed-urls", region_name="us-east-1"
-        )
+        with mock_aws():
+            manager = DynamoDBFailureManager(
+                table_name="test-failed-urls", region_name="us-east-1"
+            )
 
-        # Mock DynamoDB scan response
-        mock_response = {
-            "Items": [
-                {
-                    "url": {"S": "https://test.com"},
-                    "failure_reason": {"S": "timeout"},
-                    "first_failure_time": {"N": str(time.time() - 3600)},
-                    "last_failure_time": {"N": str(time.time() - 600)},
-                    "retry_count": {"N": "2"},
-                    "max_retries": {"N": "5"},
-                    "next_retry_time": {"N": str(time.time() - 100)},
-                    "is_permanent_failure": {"BOOL": False},
-                }
-            ]
-        }
+            # Mock DynamoDB scan response
+            mock_response = {
+                "Items": [
+                    {
+                        "url": {"S": "https://test.com"},
+                        "failure_reason": {"S": "timeout"},
+                        "first_failure_time": {"N": str(time.time() - 3600)},
+                        "last_failure_time": {"N": str(time.time() - 600)},
+                        "retry_count": {"N": "2"},
+                        "max_retries": {"N": "5"},
+                        "next_retry_time": {"N": str(time.time() - 100)},
+                        "is_permanent_failure": {"BOOL": False},
+                    }
+                ]
+            }
 
-        with patch.object(manager.dynamodb, "scan", return_value=mock_response):
-            urls = await manager.get_urls_ready_for_retry(limit=10)
-            assert len(urls) == 1
-            assert urls[0].url == "https://test.com"
-            assert urls[0].retry_count == 2
+            with patch.object(manager.dynamodb, "scan", return_value=mock_response):
+                urls = await manager.get_urls_ready_for_retry(limit=10)
+                assert len(urls) == 1
+                assert urls[0].url == "https://test.com"
+                assert urls[0].retry_count == 2
 
 
 class TestSNSAlertManager:
@@ -179,7 +173,6 @@ class TestSNSAlertManager:
         assert manager.region_name == "us-east-1"
 
     @pytest.mark.asyncio
-    @mock_aws
     async def test_send_alert(self):
         """Test sending alerts."""
         manager = SNSAlertManager(
@@ -196,15 +189,16 @@ class TestSNSAlertManager:
             metadata={"test": True},
         )
 
-        with patch.object(manager.sns, "publish") as mock_publish:
-            mock_publish.return_value = {"MessageId": "test-123"}
-
+        # Alerts are now delivered locally via _deliver_alert (file + optional
+        # webhook); the deprecated AWS SNS publish call no longer exists.
+        with patch.object(
+            manager, "_deliver_alert", return_value="local-123"
+        ) as mock_deliver:
             result = await manager.send_alert(alert)
             assert result is True
-            mock_publish.assert_called_once()
+            mock_deliver.assert_called_once()
 
     @pytest.mark.asyncio
-    @mock_aws
     async def test_rate_limiting(self):
         """Test alert rate limiting."""
         manager = SNSAlertManager(
@@ -222,9 +216,8 @@ class TestSNSAlertManager:
             metadata={},
         )
 
-        with patch.object(manager.sns, "publish") as mock_publish:
-            mock_publish.return_value = {"MessageId": "test-123"}
-
+        # Delivery is local now; patch the delivery seam so no file/webhook I/O.
+        with patch.object(manager, "_deliver_alert", return_value="local-123"):
             # First two alerts should go through
             result1 = await manager.send_alert(alert)
             result2 = await manager.send_alert(alert)
@@ -322,53 +315,51 @@ class TestIntegration:
     """Integration tests for monitoring and error handling system."""
 
     @pytest.mark.asyncio
-    @mock_aws
-    @mock_aws
-    @mock_aws
     async def test_full_monitoring_workflow(self):
         """Test complete monitoring workflow."""
-        # Initialize all components
-        cloudwatch_logger = CloudWatchLogger(region_name="us-east-1")
-        failure_manager = DynamoDBFailureManager(
-            table_name="test-failed-urls", region_name="us-east-1"
-        )
-        alert_manager = SNSAlertManager(
-            topic_arn="arn:aws:sns:us-east-1:123456789012:test-topic",
-            region_name="us-east-1",
-        )
+        with mock_aws():
+            # Initialize all components
+            cloudwatch_logger = CloudWatchLogger(region_name="us-east-1")
+            failure_manager = DynamoDBFailureManager(
+                table_name="test-failed-urls", region_name="us-east-1"
+            )
+            alert_manager = SNSAlertManager(
+                topic_arn="arn:aws:sns:us-east-1:123456789012:test-topic",
+                region_name="us-east-1",
+            )
 
-        retry_manager = EnhancedRetryManager(
-            cloudwatch_logger=cloudwatch_logger,
-            failure_manager=failure_manager,
-            alert_manager=alert_manager,
-        )
+            retry_manager = EnhancedRetryManager(
+                cloudwatch_logger=cloudwatch_logger,
+                failure_manager=failure_manager,
+                alert_manager=alert_manager,
+            )
 
-        # Mock AWS services
-        with patch.object(
-            cloudwatch_logger, "log_scraping_attempt"
-        ) as mock_log, patch.object(
-            failure_manager, "record_failure"
-        ) as mock_failure, patch.object(
-            alert_manager, "send_alert"
-        ) as mock_alert:
+            # Mock monitoring components (async methods -> AsyncMock).
+            with patch.object(
+                cloudwatch_logger, "log_scraping_attempt", new_callable=AsyncMock
+            ) as mock_log, patch.object(
+                failure_manager, "record_failure", new_callable=AsyncMock
+            ) as mock_failure, patch.object(
+                alert_manager, "send_alert", new_callable=AsyncMock
+            ) as mock_alert:
 
-            # Test function that fails
+                # Test function that fails
 
-            async def failing_function():
-                raise Exception("Test failure")
+                async def failing_function():
+                    raise Exception("Test failure")
 
-            # Should record failure, log metrics, and send alert
-            with pytest.raises(Exception):
-                await retry_manager.retry_with_backoff(
-                    failing_function,
-                    url="https://test.com",
-                    retry_config=RetryConfig(max_retries=1, base_delay=0.1),
-                )
+                # Should record failure, log metrics, and send alert
+                with pytest.raises(Exception):
+                    await retry_manager.retry_with_backoff(
+                        failing_function,
+                        url="https://test.com",
+                        retry_config=RetryConfig(max_retries=1, base_delay=0.1),
+                    )
 
-            # Verify all monitoring components were called
-            mock_log.assert_called()
-            mock_failure.assert_called()
-            mock_alert.assert_called()
+                # Verify all monitoring components were called
+                mock_log.assert_called()
+                mock_failure.assert_called()
+                mock_alert.assert_called()
 
 
 class TestMonitoringConfiguration:
@@ -376,7 +367,9 @@ class TestMonitoringConfiguration:
 
     def test_config_file_loading(self):
         """Test loading monitoring configuration from file."""
-        config_path = "/workspaces/NeuroNews/src/scraper/config_monitoring.json"
+        # Resolve relative to the repo root (tests/monitoring/ -> repo root).
+        repo_root = Path(__file__).resolve().parents[2]
+        config_path = repo_root / "src" / "scraper" / "config_monitoring.json"
 
         # Check if config file exists and is valid JSON
         try:
