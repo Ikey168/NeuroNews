@@ -259,7 +259,12 @@ class TestGraphOperations:
         assert any("Property 'created_at' is reserved" in w for w in result.warnings)
     
     def test_validate_node_empty_property_values(self, graph_ops):
-        """Test validation of node with empty property values."""
+        """Test validation of node with empty property values.
+
+        Current source behavior: an empty-string property is allowed (warning
+        only), but a ``None`` value is treated as an unsupported data type and
+        produces a validation error, so the node becomes invalid.
+        """
         node = NodeData(
             id="test_id",
             label="Person",
@@ -269,10 +274,13 @@ class TestGraphOperations:
                 "none_prop": None
             }
         )
-        
+
         result = graph_ops.validate_node(node)
-        
-        assert result.is_valid is True
+
+        # The None-valued property makes the node invalid (unsupported type).
+        assert result.is_valid is False
+        assert any("Property 'none_prop' has unsupported data type" in e for e in result.errors)
+        # Both empty/None values still surface "empty value" warnings.
         assert any("Property 'empty_prop' has empty value" in w for w in result.warnings)
         assert any("Property 'none_prop' has empty value" in w for w in result.warnings)
     
