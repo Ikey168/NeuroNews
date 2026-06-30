@@ -273,8 +273,8 @@ class TestMissingLineCoverage:
         }
         
         result = analyzer.analyze_source(suspicious_article)
-        # Should have reputation flags for suspicious patterns - note the typo in source code "lags" vs "flags"
-        assert len(result.get("lags", [])) > 0
+        # Should have reputation flags for suspicious patterns
+        assert len(result.get("flags", [])) > 0
 
     def test_pipeline_statistics_comprehensive(self):
         """Test pipeline statistics tracking comprehensively"""

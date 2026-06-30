@@ -31,8 +31,8 @@ class TestUltimateEdgeCases:
         )
         analyzer = SourceReputationAnalyzer(config)
         
-        # Mock urlparse to raise BaseException (not just Exception)
-        with patch('urllib.parse.urlparse') as mock_parse:
+        # Mock urlparse where it is looked up to raise BaseException (not just Exception)
+        with patch('src.database.data_validation_pipeline.urlparse') as mock_parse:
             # BaseException is parent of Exception, SystemExit, KeyboardInterrupt
             mock_parse.side_effect = KeyboardInterrupt("Keyboard interrupt during parsing")
             article = {"url": "http://test.com", "title": "Test"}
@@ -77,7 +77,7 @@ class TestUltimateEdgeCases:
         }
         
         result = analyzer.analyze_source(article)
-        flags = result.get("lags", [])
+        flags = result.get("flags", [])
         # Should have excessive_caps but not thin_content
         assert "excessive_caps" in flags
         assert "thin_content" not in flags
