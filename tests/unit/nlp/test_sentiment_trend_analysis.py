@@ -72,13 +72,14 @@ from src.nlp.sentiment_trend_analyzer import (
 
 @pytest.fixture
 def mock_redshift_config():
-    """Mock Redshift configuration for testing."""
+    """Mock Snowflake configuration for testing (matches current constructor)."""
     return {
-        "snowflake_account": "test-redshift.amazonaws.com",
-        "redshift_port": 5439,
-        "redshift_database": "test_db",
+        "snowflake_account": "test-account.snowflakecomputing.com",
         "snowflake_user": "test_user",
         "snowflake_password": "test_password",
+        "snowflake_warehouse": "TEST_WH",
+        "snowflake_database": "test_db",
+        "snowflake_schema": "PUBLIC",
     }
 
 
