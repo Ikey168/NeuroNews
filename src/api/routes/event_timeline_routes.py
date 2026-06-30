@@ -774,9 +774,16 @@ async def health_check():
 # Helper functions
 
 
+# Issue #38: the catch-all GET "/{topic}" is declared before the static
+# "/analytics" and "/health" routes, so without this a request to those paths
+# would match "/{topic}" (topic="analytics"/"health"). Starlette matches routes
+# in list order, so move parameter-free paths ahead of parameterized ones.
+router.routes.sort(key=lambda r: "{" in getattr(r, "path", ""))
+
+
 def _generate_html_timeline(topic: str, timeline_data: Dict[str, Any]) -> str:
     """Generate HTML timeline visualization."""
-    html_template = """
+    html_template = f"""
     <!DOCTYPE html>
     <html>
     <head>
@@ -810,7 +817,7 @@ def _generate_html_timeline(topic: str, timeline_data: Dict[str, Any]) -> str:
 
     # Add events
     for event in timeline_data.get("events", []):
-        html_template += """
+        html_template += f"""
             <div class="event">
                 <div class="event-title">{event.get('title', 'Unknown Event')}</div>
                 <div>{event.get('description', '')[:200]}...</div>
