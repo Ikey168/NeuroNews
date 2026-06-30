@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 
 from src.api.auth.jwt_auth import auth_handler
 from src.api.middleware.auth_middleware import configure_auth_middleware
-from src.api.routes.auth_routes import router as auth_router
+from src.api.routes.auth_routes import get_db, router as auth_router
 
 # Test data
 TEST_USER = {
@@ -47,39 +47,49 @@ def client(app):
 
 
 @pytest.fixture
-def test_db(monkeypatch):
-    """Mock database with test users."""
+def test_db(app):
+    """Mock database with test users.
+
+    The auth routes resolve their database via the ``get_db`` dependency, which
+    now returns a local DuckDB connection. Override that dependency with an
+    in-memory store exposing an async ``execute_query`` matching the routes'
+    SQL (register: SELECT id / INSERT ... RETURNING id; login: SELECT id,
+    password_hash, role).
+    """
     users = {}
 
-    async def mock_execute_query(self, query, params=None):
-        if "SELECT" in query and params:
-            email = params[0]
-            return (
-                [
-                    (
-                        users[email]["id"],
-                        users[email]["password_hash"],
-                        users[email]["role"],
-                    )
-                ]
-                if email in users
-                else []
-            )
+    class MockDB:
+        async def execute_query(self, query, params=None):
+            if "SELECT" in query and params:
+                email = params[0]
+                return (
+                    [
+                        (
+                            users[email]["id"],
+                            users[email]["password_hash"],
+                            users[email]["role"],
+                        )
+                    ]
+                    if email in users
+                    else []
+                )
 
-        if "INSERT" in query and params:
-            email = params[0]
-            users[email] = {
-                "id": len(users) + 1,
-                "email": email,
-                "password_hash": params[1],
-                "role": params[4],
-            }
-            return [(users[email]["id"],)]
+            if "INSERT" in query and params:
+                email = params[0]
+                users[email] = {
+                    "id": len(users) + 1,
+                    "email": email,
+                    "password_hash": params[1],
+                    "role": params[4],
+                }
+                return [(users[email]["id"],)]
 
-    monkeypatch.setattr(
-        "src.database.snowflake_connector.SnowflakeAnalyticsConnector.execute_query", mock_execute_query
-    )
-    return users
+    async def override_get_db():
+        return MockDB()
+
+    app.dependency_overrides[get_db] = override_get_db
+    yield users
+    app.dependency_overrides.pop(get_db, None)
 
 
 def test_register_user(client, test_db):
