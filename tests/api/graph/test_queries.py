@@ -356,75 +356,85 @@ class TestGraphQueries:
     
     @pytest.mark.asyncio
     async def test_execute_complex_query(self, graph_queries):
-        """Test execution of complex queries."""
-        query = "g.V().hasLabel('Person').has('age', P.gt(25))"
-        
-        # Mock complex query execution
-        with patch.object(graph_queries.graph, 'g') if graph_queries.graph else patch('builtins.open'):
-            result = await graph_queries.execute_query(query)
-            
-            assert result is not None
-            assert isinstance(result, QueryResult)
-    
-    def test_query_validation(self, graph_queries):
-        """Test query syntax validation."""
-        valid_query = "g.V().hasLabel('Person').limit(10)"
-        invalid_query = "invalid gremlin syntax here"
-        
-        is_valid_1 = graph_queries.validate_query_syntax(valid_query)
-        is_valid_2 = graph_queries.validate_query_syntax(invalid_query)
-        
-        # Should handle validation gracefully
-        assert isinstance(is_valid_1, bool)
-        assert isinstance(is_valid_2, bool)
-    
-    def test_query_performance_analysis(self, graph_queries):
-        """Test query performance analysis."""
-        query = "g.V().hasLabel('Person').out().limit(50)"
-        
-        analysis = graph_queries.analyze_query_complexity(query)
-        
-        assert analysis is not None
-        assert isinstance(analysis, dict)
-        # Should include performance metrics
-        if 'complexity_score' in analysis:
-            assert isinstance(analysis['complexity_score'], (int, float))
-    
-    def test_advanced_filtering(self, graph_queries):
-        """Test advanced filtering capabilities."""
-        # Multiple filters
-        filters = [
-            QueryFilter(field="age", operator="gte", value=18),
-            QueryFilter(field="age", operator="lte", value=65),
-            QueryFilter(field="status", operator="eq", value="active")
-        ]
-        
-        params = QueryParams(filters=filters)
-        result = graph_queries.execute_node_query("Person", params, None)
-        
+        """Test execution of a node query via the current async API."""
+        # Filter on a property present in the mock node data ('value' is an int).
+        params = QueryParams(
+            node_labels=["Person"],
+            filters=[QueryFilter("value", "gt", 25)],
+            pagination=QueryPagination(0, 10),
+        )
+
+        result = await graph_queries.execute_node_query(params)
+
         assert result is not None
         assert isinstance(result, QueryResult)
-    
-    def test_complex_sorting(self, graph_queries):
+
+    @pytest.mark.asyncio
+    async def test_query_plan_explanation(self, graph_queries):
+        """Test the current explain_query_plan API for different query types."""
+        node_plan = await graph_queries.explain_query_plan(
+            "node_query", {"node_labels": ["Person"]}
+        )
+        rel_plan = await graph_queries.explain_query_plan(
+            "relationship_query", {"edge_labels": ["WORKS_FOR"]}
+        )
+
+        assert isinstance(node_plan, dict)
+        assert isinstance(rel_plan, dict)
+        assert node_plan["query_type"] == "node_query"
+        assert rel_plan["query_type"] == "relationship_query"
+        assert isinstance(node_plan["execution_steps"], list)
+
+    def test_query_optimization_recommendations(self, graph_queries):
+        """Test optimize_query returns performance recommendations."""
+        optimized = graph_queries.optimize_query(
+            "node_query", {"node_labels": ["Person"], "filters": [1, 2, 3, 4, 5, 6]}
+        )
+
+        assert optimized is not None
+        assert isinstance(optimized, dict)
+        assert "estimated_performance" in optimized
+        assert isinstance(optimized["recommendations"], list)
+
+    @pytest.mark.asyncio
+    async def test_advanced_filtering(self, graph_queries):
+        """Test advanced filtering capabilities."""
+        # Multiple filters over properties present in the mock node data
+        # ('value' is an int, 'category' is the string 'test').
+        filters = [
+            QueryFilter(property_name="value", operator="gte", value=0),
+            QueryFilter(property_name="value", operator="lte", value=1000),
+            QueryFilter(property_name="category", operator="eq", value="test")
+        ]
+
+        params = QueryParams(node_labels=["Person"], filters=filters)
+        result = await graph_queries.execute_node_query(params)
+
+        assert result is not None
+        assert isinstance(result, QueryResult)
+
+    @pytest.mark.asyncio
+    async def test_complex_sorting(self, graph_queries):
         """Test complex multi-field sorting."""
         sorts = [
-            QuerySort(field="created_date", direction="desc"),
-            QuerySort(field="name", direction="asc")
+            QuerySort(property_name="created_date", direction="desc"),
+            QuerySort(property_name="name", direction="asc")
         ]
-        
-        params = QueryParams(sorts=sorts)
-        result = graph_queries.execute_node_query("Person", params, None)
-        
+
+        params = QueryParams(node_labels=["Person"], sort=sorts)
+        result = await graph_queries.execute_node_query(params)
+
         assert result is not None
         assert isinstance(result, QueryResult)
-    
-    def test_nested_relationship_queries(self, graph_queries):
+
+    @pytest.mark.asyncio
+    async def test_nested_relationship_queries(self, graph_queries):
         """Test queries with nested relationships."""
         # Pattern: Person -> WORKS_FOR -> Organization -> LOCATED_IN -> City
         pattern = "Person->WORKS_FOR->Organization->LOCATED_IN->City"
-        
-        result = graph_queries.execute_pattern_query(pattern, None, None)
-        
+
+        result = await graph_queries.execute_pattern_query(pattern)
+
         assert result is not None
         assert isinstance(result, QueryResult)
     
@@ -432,30 +442,30 @@ class TestGraphQueries:
     
     def test_query_filter_edge_cases(self):
         """Test QueryFilter with edge cases."""
-        # Empty field
-        filter_empty = QueryFilter(field="", operator="eq", value="test")
-        assert filter_empty.field == ""
-        
+        # Empty property_name
+        filter_empty = QueryFilter(property_name="", operator="eq", value="test")
+        assert filter_empty.property_name == ""
+
         # None value
-        filter_none = QueryFilter(field="test", operator="eq", value=None)
+        filter_none = QueryFilter(property_name="test", operator="eq", value=None)
         assert filter_none.value is None
-        
+
         # Complex value
         filter_complex = QueryFilter(
-            field="metadata", 
-            operator="contains", 
+            property_name="metadata",
+            operator="contains",
             value={"nested": {"key": "value"}}
         )
         assert isinstance(filter_complex.value, dict)
-    
+
     def test_query_sort_edge_cases(self):
         """Test QuerySort with edge cases."""
-        # Empty field
-        sort_empty = QuerySort(field="", direction="asc")
-        assert sort_empty.field == ""
-        
+        # Empty property_name
+        sort_empty = QuerySort(property_name="", direction="asc")
+        assert sort_empty.property_name == ""
+
         # Invalid direction (should still work)
-        sort_invalid = QuerySort(field="name", direction="invalid")
+        sort_invalid = QuerySort(property_name="name", direction="invalid")
         assert sort_invalid.direction == "invalid"
     
     def test_query_pagination_edge_cases(self):
@@ -473,77 +483,65 @@ class TestGraphQueries:
     def test_query_params_complex(self):
         """Test QueryParams with complex configurations."""
         filters = [
-            QueryFilter(field="age", operator="gt", value=18),
-            QueryFilter(field="status", operator="eq", value="active"),
-            QueryFilter(field="skills", operator="contains", value="Python")
+            QueryFilter(property_name="age", operator="gt", value=18),
+            QueryFilter(property_name="status", operator="eq", value="active"),
+            QueryFilter(property_name="skills", operator="contains", value="Python")
         ]
         sorts = [
-            QuerySort(field="name", direction="asc"),
-            QuerySort(field="created_at", direction="desc")
+            QuerySort(property_name="name", direction="asc"),
+            QuerySort(property_name="created_at", direction="desc")
         ]
-        
+
         params = QueryParams(
             node_labels=["Person", "Developer"],
-            relationship_labels=["WORKS_FOR", "COLLABORATES_WITH"],
+            edge_labels=["WORKS_FOR", "COLLABORATES_WITH"],
             filters=filters,
             sort=sorts,
             pagination=QueryPagination(offset=100, limit=50),
             include_properties=False,
-            include_metadata=True
+            include_edges=True
         )
-        
+
         assert len(params.node_labels) == 2
-        assert len(params.relationship_labels) == 2
+        assert len(params.edge_labels) == 2
         assert len(params.filters) == 3
         assert len(params.sort) == 2
         assert params.pagination.offset == 100
         assert params.include_properties is False
-        assert params.include_metadata is True
+        assert params.include_edges is True
     
     def test_query_result_edge_cases(self):
-        """Test QueryResult with edge cases."""
+        """Test QueryResult with edge cases using the current field set."""
         # Empty results
         result_empty = QueryResult(
-            nodes=[],
-            relationships=[],
-            metadata={},
-            statistics=QueryStatistics(
-                query_time=0.001,
-                result_count=0,
-                nodes_scanned=0,
-                cache_hit=False
-            ),
             query_id="empty_query",
-            execution_time=0.001
+            execution_time=0.001,
+            total_results=0,
+            returned_results=0,
+            has_more=False,
+            data=[],
+            metadata={}
         )
-        
-        assert len(result_empty.nodes) == 0
-        assert len(result_empty.relationships) == 0
-        assert result_empty.statistics.result_count == 0
-    
+
+        assert len(result_empty.data) == 0
+        assert result_empty.total_results == 0
+        assert result_empty.returned_results == 0
+        assert result_empty.has_more is False
+        assert result_empty.metadata == {}
+
     def test_query_statistics_comprehensive(self):
-        """Test QueryStatistics with comprehensive data."""
+        """Test QueryStatistics with the current field set."""
         stats = QueryStatistics(
-            query_time=5.432,
-            result_count=1500,
-            nodes_scanned=10000,
-            relationships_traversed=25000,
-            cache_hit=True,
-            index_usage={"name_idx": 500, "age_idx": 300},
-            optimization_applied=True,
-            memory_usage=1048576,  # 1MB
-            network_calls=3
+            query_count=1500,
+            avg_execution_time=5.432,
+            cache_hit_rate=0.75,
+            most_frequent_queries=["node_query", "relationship_query"]
         )
-        
-        assert stats.query_time == 5.432
-        assert stats.result_count == 1500
-        assert stats.nodes_scanned == 10000
-        assert stats.relationships_traversed == 25000
-        assert stats.cache_hit is True
-        assert len(stats.index_usage) == 2
-        assert stats.optimization_applied is True
-        assert stats.memory_usage == 1048576
-        assert stats.network_calls == 3
+
+        assert stats.query_count == 1500
+        assert stats.avg_execution_time == 5.432
+        assert stats.cache_hit_rate == 0.75
+        assert len(stats.most_frequent_queries) == 2
     
     @pytest.mark.asyncio
     async def test_execute_complex_node_query(self, graph_queries):
@@ -551,18 +549,18 @@ class TestGraphQueries:
         params = QueryParams(
             node_labels=["Person", "Organization"],
             filters=[
-                QueryFilter(field="active", operator="eq", value=True),
-                QueryFilter(field="created_at", operator="gt", value="2020-01-01"),
-                QueryFilter(field="tags", operator="contains", value="tech")
+                QueryFilter(property_name="category", operator="eq", value="test"),
+                QueryFilter(property_name="value", operator="gt", value=-1),
+                QueryFilter(property_name="name", operator="contains", value="Node")
             ],
-            sort=[QuerySort(field="relevance_score", direction="desc")],
+            sort=[QuerySort(property_name="relevance_score", direction="desc")],
             pagination=QueryPagination(offset=0, limit=100),
             include_properties=True,
-            include_metadata=True
+            include_edges=True
         )
-        
+
         result = await graph_queries.execute_node_query(params)
-        
+
         assert isinstance(result, QueryResult)
         assert result.query_id is not None
         assert result.execution_time >= 0
@@ -571,42 +569,49 @@ class TestGraphQueries:
     async def test_execute_relationship_query_complex(self, graph_queries):
         """Test complex relationship query execution."""
         params = QueryParams(
-            relationship_labels=["WORKS_FOR", "COLLABORATES_WITH"],
+            edge_labels=["WORKS_FOR", "COLLABORATES_WITH"],
             filters=[
-                QueryFilter(field="strength", operator="gt", value=0.7),
-                QueryFilter(field="duration", operator="gte", value=365)  # Days
+                QueryFilter(property_name="strength", operator="gt", value=0.7),
+                QueryFilter(property_name="duration", operator="gte", value=365)  # Days
             ],
-            sort=[QuerySort(field="strength", direction="desc")],
+            sort=[QuerySort(property_name="strength", direction="desc")],
             pagination=QueryPagination(offset=0, limit=50)
         )
-        
+
         result = await graph_queries.execute_relationship_query(params)
-        
+
         assert isinstance(result, QueryResult)
-        assert len(result.relationships) >= 0
+        assert isinstance(result.data, list)
+        assert len(result.data) >= 0
     
     def test_apply_filter_comprehensive(self, graph_queries):
-        """Test all filter operators."""
-        operators = [
-            ("eq", "equals"),
-            ("ne", "not_equals"),
-            ("gt", "greater_than"), 
-            ("gte", "greater_than_equal"),
-            ("lt", "less_than"),
-            ("lte", "less_than_equal"),
-            ("contains", "substring"),
-            ("in", ["value1", "value2"]),
-            ("not_in", ["excluded1", "excluded2"]),
-            ("regex", r".*pattern.*"),
-            ("exists", True),
-            ("is_null", None)
+        """Test the filter operators implemented by _apply_filter(value, filter_item)."""
+        # (operator, filter_value, sample_value, expected_result)
+        cases = [
+            ("eq", "equals", "equals", True),
+            ("eq", "equals", "other", False),
+            ("ne", "not_equals", "different", True),
+            ("ne", "not_equals", "not_equals", False),
+            ("gt", 10, 20, True),
+            ("gt", 10, 5, False),
+            ("gte", 10, 10, True),
+            ("lt", 10, 5, True),
+            ("lte", 10, 10, True),
+            ("contains", "sub", "a substring", True),
+            ("contains", "missing", "a substring", False),
+            ("in", ["value1", "value2"], "value1", True),
+            ("in", ["value1", "value2"], "value3", False),
         ]
-        
-        for op, value in operators:
-            filter_obj = QueryFilter(field="test_field", operator=op, value=value)
-            result = graph_queries._apply_filter(filter_obj)
-            # Should return filter result or modified object
-            assert result is not None
+
+        for op, filter_value, sample_value, expected in cases:
+            filter_obj = QueryFilter(property_name="test_field", operator=op, value=filter_value)
+            result = graph_queries._apply_filter(sample_value, filter_obj)
+            assert isinstance(result, bool)
+            assert result is expected
+
+        # Unknown operators are treated as a pass-through (return True).
+        unknown_filter = QueryFilter(property_name="test_field", operator="regex", value=".*")
+        assert graph_queries._apply_filter("anything", unknown_filter) is True
     
     def test_cache_key_variations(self, graph_queries):
         """Test cache key generation with various parameters."""
@@ -652,52 +657,45 @@ class TestGraphQueries:
     @pytest.mark.asyncio
     async def test_aggregation_query_types(self, graph_queries):
         """Test different aggregation query types."""
-        aggregation_types = [
-            {"type": "count", "field": "id"},
-            {"type": "sum", "field": "value"},
-            {"type": "avg", "field": "score"},
-            {"type": "min", "field": "timestamp"},
-            {"type": "max", "field": "timestamp"},
-            {"type": "group_by", "field": "category"},
-            {"type": "distinct", "field": "type"}
-        ]
-        
-        for agg in aggregation_types:
-            result = await graph_queries.execute_aggregation_query(agg)
+        aggregation_types = ["count", "sum", "avg", "min", "max", "group_by", "distinct"]
+
+        params = QueryParams(
+            node_labels=["Person"],
+            filters=[QueryFilter(property_name="value", operator="gt", value=0)],
+        )
+
+        for agg_type in aggregation_types:
+            result = await graph_queries.execute_aggregation_query(agg_type, params)
             assert isinstance(result, QueryResult)
+            assert result.data[0]["aggregation_type"] == agg_type
     
     def test_query_statistics_tracking(self, graph_queries):
         """Test comprehensive query statistics tracking."""
-        # Simulate multiple query executions
-        query_types = ["node_query", "relationship_query", "pattern_query", "aggregation_query"]
-        
-        for i, query_type in enumerate(query_types):
-            stats = QueryStatistics(
-                query_time=0.1 * (i + 1),
-                result_count=100 * (i + 1), 
-                nodes_scanned=1000 * (i + 1),
-                cache_hit=i % 2 == 0
-            )
-            
-            graph_queries._update_query_stats(query_type, stats)
-        
+        # Simulate multiple query executions via the real _update_query_stats(float).
+        execution_times = [0.1, 0.2, 0.3, 0.4]
+
+        for execution_time in execution_times:
+            graph_queries._update_query_stats(execution_time)
+
         # Get overall statistics
         overall_stats = graph_queries.get_query_statistics()
         assert isinstance(overall_stats, dict)
-        assert len(overall_stats) > 0
+        assert overall_stats["total_queries"] == len(execution_times)
+        assert overall_stats["average_execution_time"] > 0
     
     def test_error_handling_scenarios(self, graph_queries):
         """Test error handling in various scenarios."""
-        # Invalid filter operator
-        invalid_filter = QueryFilter(field="test", operator="invalid_op", value="test")
-        result = graph_queries._apply_filter(invalid_filter)
-        # Should handle gracefully
-        assert result is not None or True
-        
-        # Empty query parameters
+        # Invalid/unknown filter operator should be handled gracefully (pass-through).
+        invalid_filter = QueryFilter(property_name="test", operator="invalid_op", value="test")
+        result = graph_queries._apply_filter("any_value", invalid_filter)
+        assert result is True
+
+        # Empty query parameters / cache key generation must not raise.
         empty_params = QueryParams()
+        assert empty_params.filters is None
         cache_key = graph_queries._generate_cache_key("empty", {})
         assert isinstance(cache_key, str)
+        assert cache_key.startswith("query_cache:")
     
     @pytest.mark.asyncio
     async def test_pattern_query_variations(self, graph_queries):
@@ -713,28 +711,28 @@ class TestGraphQueries:
         
         for pattern in patterns:
             try:
-                result = await graph_queries.execute_pattern_query(pattern, None, None)
+                result = await graph_queries.execute_pattern_query(pattern)
                 assert isinstance(result, QueryResult)
             except (ValueError, NotImplementedError):
                 # Some patterns might not be supported
                 pass
     
-    def test_performance_monitoring(self, graph_queries):
-        """Test performance monitoring features."""
-        # Test query timing
-        start_time = graph_queries._get_current_time()
-        assert isinstance(start_time, (int, float))
-        
-        # Test memory usage tracking
-        if hasattr(graph_queries, '_get_memory_usage'):
-            memory = graph_queries._get_memory_usage()
-            assert isinstance(memory, (int, float))
-        
-        # Test query plan explanation
+    @pytest.mark.asyncio
+    async def test_performance_monitoring(self, graph_queries):
+        """Test performance monitoring features via the current API."""
+        # Statistics are tracked through _update_query_stats / get_query_statistics.
+        graph_queries._update_query_stats(0.05)
+        stats = graph_queries.get_query_statistics()
+        assert isinstance(stats, dict)
+        assert stats["total_queries"] >= 1
+        assert isinstance(stats["average_execution_time"], (int, float))
+
+        # Query plan explanation is exposed via explain_query_plan (async).
         params = {"node_labels": ["Person"]}
-        if hasattr(graph_queries, 'explain_query'):
-            plan = graph_queries.explain_query("node_query", params)
-            assert isinstance(plan, (dict, str))
+        plan = await graph_queries.explain_query_plan("node_query", params)
+        assert isinstance(plan, dict)
+        assert "execution_steps" in plan
+        assert isinstance(plan["estimated_cost"], (int, float))
 
 
 if __name__ == "__main__":
