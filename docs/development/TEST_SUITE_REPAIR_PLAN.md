@@ -107,6 +107,10 @@ subsystem.
 - `src/scraper/async_scraper_engine.py`: `get_article_links_http` calls
   `self.extract_links_from_html(...)`, which is never defined anywhere — any
   real HTTP scrape reaching link extraction raises `AttributeError`.
+- `src/api/graph/optimized_api.py` (`get_event_timeline_optimized` ~L472,
+  `search_entities_optimized` ~L597): uses `P.containing(...)`, but `containing`
+  is a `TextP` method, not `P` — non-cached calls raise `AttributeError` (→ HTTP
+  500). Fix: `TextP.containing`.
 - `src/api/graph/queries.py:298` (`execute_relationship_query`): references the
   gremlin anonymous-traversal alias `__`, which is never imported at module
   scope, so the default `include_properties=True` path raises
