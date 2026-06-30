@@ -31,7 +31,7 @@ jobs:
           # file, so they install without upgrading the Airflow core (which
           # would otherwise break the airflow.providers namespace).
           pip install "apache-airflow[postgres,apache.spark]==${AIRFLOW_VERSION}" --constraint "${CONSTRAINT_URL}"
-          python -c "import airflow.providers.postgres, airflow.providers.spark; print('providers OK')"
+          python -c "import airflow.providers.postgres, airflow.providers.apache.spark; print('providers OK')"
       - name: Install project requirements
         run: |
           pip install -r airflow/requirements.txt || true
