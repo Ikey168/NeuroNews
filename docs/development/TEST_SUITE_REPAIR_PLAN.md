@@ -138,6 +138,22 @@ failing-file list as the target, since it excludes contamination phantoms),
 then move the CI gate to `--dist loadfile` so per-file fixes hold in the gate
 without weakening any test.
 
+## Known source bug: middleware default excluded_paths disables enforcement
+
+`EnhancedRBACMiddleware` (`src/api/rbac/rbac_middleware.py`) and
+`APIKeyAuthMiddleware` (`src/api/auth/api_key_middleware.py`) default
+`excluded_paths` to a list starting with `"/"`, and `_is_excluded_path` matches
+with `path.startswith(excluded)`. Since every path starts with `"/"`, **every**
+request is treated as excluded, so both middlewares no-op and never enforce
+RBAC / API-key auth on the prebuilt app. The correct fix is to match `"/"`
+exactly (and other entries as exact-or-subpath). That is a real security fix but
+turns on enforcement app-wide, which cascades into ~dozens of route tests that
+currently rely on the bypass — out of scope for the test-repair pass and left
+for a dedicated security change. The enforcement tests in
+`tests/security/test_rbac_system.py` instead pass an explicit non-root
+`excluded_paths` so they genuinely exercise the enforcement logic without
+changing global behavior.
+
 ## Progress log
 
 - **vector_services_comprehensive**: added missing source imports, made the
