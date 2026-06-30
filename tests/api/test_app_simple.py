@@ -43,9 +43,11 @@ class TestAppImportFunctions:
             'torch': Mock(),
         }):
             from src.api.app import try_import_error_handlers
-            
-            # Mock the import to fail
-            with patch('src.api.error_handlers.configure_error_handlers', side_effect=ImportError):
+
+            # Setting the module to None in sys.modules makes the function's
+            # `from src.api.error_handlers import configure_error_handlers`
+            # raise ImportError, exercising the failure branch.
+            with patch.dict(sys.modules, {'src.api.error_handlers': None}):
                 result = try_import_error_handlers()
                 assert result is False
 
@@ -79,8 +81,14 @@ class TestAppImportFunctions:
             'torch': Mock(),
         }):
             from src.api.app import try_import_enhanced_kg_routes
-            
-            with patch('src.api.routes.enhanced_kg_routes', side_effect=ImportError):
+
+            # Replace src.api.routes with a spec-restricted Mock that has no
+            # ``enhanced_kg_routes`` attribute, so the function's
+            # `from src.api.routes import enhanced_kg_routes` raises ImportError.
+            with patch.dict(sys.modules, {
+                'src.api.routes': Mock(spec=[]),
+                'src.api.routes.enhanced_kg_routes': None,
+            }):
                 result = try_import_enhanced_kg_routes()
                 assert result is False
 
@@ -119,8 +127,11 @@ class TestAppImportFunctions:
             'torch': Mock(),
         }):
             from src.api.app import try_import_rate_limiting
-            
-            with patch('src.api.middleware.rate_limit_middleware.RateLimitConfig', side_effect=ImportError):
+
+            # Setting the middleware module to None makes the function's
+            # `from src.api.middleware.rate_limit_middleware import ...` raise
+            # ImportError, exercising the failure branch.
+            with patch.dict(sys.modules, {'src.api.middleware.rate_limit_middleware': None}):
                 result = try_import_rate_limiting()
                 assert result is False
 

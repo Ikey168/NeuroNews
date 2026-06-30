@@ -18,6 +18,17 @@ import os
 from typing import Any, Optional
 
 import boto3
+from botocore.config import Config
+
+# Fail fast when a local emulator is not running instead of hanging on the
+# default 60s connect timeout with retries. Local emulators respond in ms; a
+# real-AWS fallback (no endpoint configured) should also surface quickly rather
+# than blocking test collection / app import.
+_FAILFAST_CONFIG = Config(
+    connect_timeout=int(os.getenv("LOCAL_CLOUD_CONNECT_TIMEOUT", "3")),
+    read_timeout=int(os.getenv("LOCAL_CLOUD_READ_TIMEOUT", "5")),
+    retries={"max_attempts": 1},
+)
 
 # Default local emulator endpoints (override per-service or globally via env).
 _DEFAULT_ENDPOINTS = {
@@ -64,7 +75,7 @@ def _credentials() -> dict:
 
 
 def _build_kwargs(service: str, region_name: Optional[str], overrides: dict) -> dict:
-    kwargs = {"region_name": get_region(region_name)}
+    kwargs = {"region_name": get_region(region_name), "config": _FAILFAST_CONFIG}
     endpoint = get_endpoint_url(service)
     if endpoint:
         kwargs["endpoint_url"] = endpoint
