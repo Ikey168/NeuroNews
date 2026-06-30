@@ -101,7 +101,10 @@ jobs:
             --ignore=tests/unit/rag/test_answer_extra.py \
             --ignore=tests/unit/scraper/extensions/connectors \
             --ignore=tests/unit/services/rag/test_answer_core.py \
-            --ignore=tests/unit/test_mlflow_setup.py
+            --ignore=tests/unit/test_mlflow_setup.py \
+            --ignore=tests/api/test_import_coverage.py \
+            --ignore=tests/api/test_phase_1_4_fastapi_app_core.py \
+            --ignore=tests/api/test_app_coverage_demo.py
         env:
           PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/src
 
