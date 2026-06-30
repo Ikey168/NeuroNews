@@ -26,7 +26,9 @@ import asyncio
 import json
 import logging
 import os
+import sys
 import tempfile
+import types
 import uuid
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, Mock, patch, AsyncMock
@@ -38,6 +40,20 @@ import pytest
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# ``src.database.setup`` does ``import asyncpg`` at module load time. asyncpg is
+# an optional dependency that may be absent in the test environment, so provide a
+# lightweight stub before that module is imported. This lets the setup tests run
+# (the connection is patched per-test) instead of skipping, without weakening any
+# assertion.
+if "asyncpg" not in sys.modules:
+    try:
+        import asyncpg  # noqa: F401
+    except ImportError:
+        _asyncpg_stub = types.ModuleType("asyncpg")
+        _asyncpg_stub.Connection = type("Connection", (), {})
+        _asyncpg_stub.connect = lambda *a, **k: None
+        sys.modules["asyncpg"] = _asyncpg_stub
 
 # Guard optional dependencies so collection never crashes when they are absent.
 try:  # boto3 backs S3 / DynamoDB mock fixtures
@@ -135,7 +151,11 @@ class MockCursor:
         
     def execute(self, query, params=None):
         self.current_query = query
-        if "SELECT" in query.upper():
+        if "information_schema.tables" in query:
+            # setup_test_database selects table_name and reads row[0] (the
+            # default psycopg2 cursor yields plain tuples, not dict rows).
+            self.results = [("articles",), ("api_keys",)]
+        elif "SELECT" in query.upper():
             self.results = [{"id": 1, "title": "Test Article", "content": "Test content"}]
         elif "INSERT" in query.upper() and "RETURNING" in query.upper():
             self.results = [{"id": 1}]
@@ -380,13 +400,17 @@ class TestDatabaseSetup:
             mock.connect = AsyncMock(return_value=MockAsyncConnection())
             yield mock
     
-    def test_get_db_config_production(self, mock_psycopg2):
+    def test_get_db_config_production(self, mock_psycopg2, monkeypatch):
         """Test production database configuration."""
         try:
             from src.database.setup import get_db_config
 
+            # The test conftest sets TESTING=true globally; clear it so the
+            # production (non-testing) branch is exercised.
+            monkeypatch.delenv("TESTING", raising=False)
+
             config = get_db_config(testing=False)
-            
+
             assert isinstance(config, dict)
             assert "host" in config
             assert "port" in config
@@ -471,13 +495,17 @@ class TestDatabaseSetup:
         """Test successful test database setup."""
         try:
             from src.database.setup import setup_test_database
-            
-            # Mock successful connection and table operations
-            mock_conn = MockPostgresConnection()
-            mock_psycopg2.connect.return_value = mock_conn
-            
+
+            # setup_test_database opens a readiness-probe connection (which it
+            # closes) and then a separate connection for the real work, so each
+            # call must yield a fresh connection rather than one shared (closed)
+            # instance.
+            mock_psycopg2.connect.side_effect = (
+                lambda *a, **k: MockPostgresConnection()
+            )
+
             await setup_test_database()
-            
+
             # Verify connection was attempted
             mock_psycopg2.connect.assert_called()
             
