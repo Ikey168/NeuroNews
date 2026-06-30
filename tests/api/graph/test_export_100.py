@@ -168,7 +168,7 @@ class TestGraphExporter:
     def sample_edges(self):
         """Sample edge data."""
         return [
-            {'id': 'edge1', 'from': 'node1', 'to': 'node2', 'label': 'WORKS_FOR'}
+            {'id': 'edge1', 'source': 'node1', 'target': 'node2', 'label': 'WORKS_FOR'}
         ]
     
     def test_exporter_initialization(self, exporter):
@@ -284,7 +284,7 @@ class TestGraphExporter:
     async def test_export_with_limits(self, exporter):
         """Test export with node and edge limits."""
         nodes = [{'id': f'node{i}', 'label': 'Test'} for i in range(10)]
-        edges = [{'from': f'node{i}', 'to': f'node{i+1}'} for i in range(9)]
+        edges = [{'source': f'node{i}', 'target': f'node{i+1}'} for i in range(9)]
         
         options = ExportOptions(
             format=ExportFormat.JSON,
@@ -382,28 +382,26 @@ class TestGraphExporter:
     @pytest.mark.asyncio
     async def test_estimate_export_size(self, exporter, sample_nodes, sample_edges):
         """Test export size estimation."""
-        options = ExportOptions(format=ExportFormat.JSON)
-        
-        estimate = await exporter.estimate_export_size(sample_nodes, sample_edges, options)
-        
-        assert isinstance(estimate, (int, dict))
-        # Should provide size estimate
-        if isinstance(estimate, dict):
-            assert 'estimated_size' in estimate or 'size' in estimate
+        estimate = await exporter.estimate_export_size(
+            sample_nodes, sample_edges, ExportFormat.JSON
+        )
+
+        assert isinstance(estimate, dict)
+        # Current API returns these keys
+        assert estimate['estimated_size_bytes'] > 0
+        assert estimate['node_count'] == len(sample_nodes)
+        assert estimate['edge_count'] == len(sample_edges)
+        assert estimate['format'] == 'json'
     
     @pytest.mark.asyncio
     async def test_unsupported_format_error(self, exporter, sample_nodes, sample_edges):
         """Test error handling for unsupported format."""
-        # Create a mock format that doesn't exist
-        with patch('api.graph.export.ExportFormat') as mock_format:
-            mock_format.INVALID = "invalid"
-            
-            # This should test the error handling path
-            options = ExportOptions(format=ExportFormat.JSON)
-            
-            # Test that normal formats work
-            result = await exporter.export_graph(sample_nodes, sample_edges, options)
-            assert isinstance(result, ExportResult)
+        options = ExportOptions(format=ExportFormat.JSON)
+        # Force an invalid format after construction to hit the error branch
+        options.format = "invalid"
+
+        with pytest.raises(ValueError):
+            await exporter.export_graph(sample_nodes, sample_edges, options)
     
     @pytest.mark.asyncio
     async def test_filter_visible_nodes(self, exporter):
