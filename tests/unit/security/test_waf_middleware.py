@@ -3,54 +3,45 @@ from unittest.mock import Mock, patch
 import asyncio
 import inspect
 
-@patch('src.api.security.waf_middleware.boto3.client')
 @patch('fastapi.Request')
-def test_waf_middleware_execution(mock_request, mock_boto):
-    """Exercise WAF middleware to boost from 18% coverage."""
-    # Mock AWS WAF client
-    mock_waf_client = Mock()
-    mock_boto.return_value = mock_waf_client
-    mock_waf_client.get_web_acl.return_value = {'WebACL': {'Rules': []}}
-    
-    # Mock request
+def test_waf_middleware_execution(mock_request):
+    """Exercise the local WAF security middleware dispatch path."""
+    # Mock request: a benign GET that should pass all security checks.
     mock_req = Mock()
     mock_req.client.host = '192.168.1.1'
     mock_req.method = 'GET'
     mock_req.url.path = '/api/test'
-    mock_req.headers = {'User-Agent': 'test-agent'}
-    
+    mock_req.url.query = ''
+    mock_req.headers = {'user-agent': 'Mozilla/5.0 (compatible; legit-browser)'}
+
+    from src.api.security.waf_middleware import WAFSecurityMiddleware
+
+    # Create and exercise the middleware against the mocked request.
+    middleware = WAFSecurityMiddleware(Mock())
+
+    # call_next returns a response object whose headers can be mutated by the
+    # middleware's _add_security_headers helper.
+    async def mock_call_next(request):
+        resp = Mock()
+        resp.status_code = 200
+        resp.headers = {}
+        return resp
+
+    assert hasattr(middleware, 'dispatch')
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     try:
-        from src.api.security.waf_middleware import WAFMiddleware
-        
-        # Try to create and exercise middleware
-        try:
-            middleware = WAFMiddleware(Mock())
-            
-            # Mock call method
-            async def mock_call_next(request):
-                return Mock(status_code=200)
-            
-            # Exercise middleware dispatch if possible
-            if hasattr(middleware, 'dispatch'):
-                try:
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    try:
-                        loop.run_until_complete(
-                            middleware.dispatch(mock_req, mock_call_next)
-                        )
-                    finally:
-                        loop.close()
-                except Exception:
-                    pass
-                    
-        except Exception:
-            pass
-            
-    except ImportError:
-        pass
-    
-    assert True
+        response = loop.run_until_complete(
+            middleware.dispatch(mock_req, mock_call_next)
+        )
+    finally:
+        loop.close()
+
+    # A benign request is passed through (not blocked) and gets the WAF
+    # protection header stamped on the response.
+    assert response.status_code == 200
+    assert response.headers["X-WAF-Protected"] == "true"
 
 def test_waf_middleware_maximum_boost():
     """Boost waf_middleware from 18% to as high as possible."""
