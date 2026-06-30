@@ -49,7 +49,7 @@ class TestCORSConfiguration:
         assert cors_middleware is not None
         
         # Check default configuration
-        options = cors_middleware.options
+        options = cors_middleware.kwargs
         assert "allow_origins" in options
         assert options["allow_credentials"] is True
         assert options["allow_methods"] == ["*"]
@@ -71,7 +71,7 @@ class TestCORSConfiguration:
                 break
         
         assert cors_middleware is not None
-        options = cors_middleware.options
+        options = cors_middleware.kwargs
         expected_origins = ["https://example.com", "https://api.example.com"]
         assert options["allow_origins"] == expected_origins
 
@@ -90,7 +90,7 @@ class TestCORSConfiguration:
                 break
         
         assert cors_middleware is not None
-        options = cors_middleware.options
+        options = cors_middleware.kwargs
         assert "http://localhost:3000" in options["allow_origins"]
 
     def test_cors_headers_exposed(self):
@@ -105,7 +105,7 @@ class TestCORSConfiguration:
                 cors_middleware = middleware
                 break
         
-        options = cors_middleware.options
+        options = cors_middleware.kwargs
         assert "X-Request-ID" in options["expose_headers"]
 
     def test_cors_credentials_allowed(self):
@@ -120,7 +120,7 @@ class TestCORSConfiguration:
                 cors_middleware = middleware
                 break
         
-        options = cors_middleware.options
+        options = cors_middleware.kwargs
         assert options["allow_credentials"] is True
 
 
@@ -147,8 +147,14 @@ class TestRoleBasedAccessMiddleware:
 
     @pytest.fixture
     def mock_auth_handler(self):
-        """Mock authentication handler."""
-        with patch('src.api.middleware.auth_middleware.auth_handler') as mock_handler:
+        """Mock authentication handler.
+
+        ``auth_handler`` is awaited in the middleware, so it must be patched
+        with an AsyncMock.
+        """
+        with patch(
+            'src.api.middleware.auth_middleware.auth_handler', new_callable=AsyncMock
+        ) as mock_handler:
             yield mock_handler
 
     @pytest.mark.asyncio
@@ -249,18 +255,22 @@ class TestRoleBasedAccessMiddleware:
         assert response.status_code == 200
 
     @pytest.mark.asyncio
-    async def test_user_without_role(self, rbac_middleware):
+    async def test_user_without_role(self, rbac_middleware, mock_auth_handler):
         """Test user without role field."""
         mock_request = MagicMock(spec=Request)
         mock_request.url.path = "/admin/users"
         mock_request.method = "GET"
         mock_request.state = MagicMock()
         mock_request.state.user = {"user_id": "user123"}  # No role field
-        
+
+        # State user lacks a "role" key, so the middleware falls back to the
+        # auth handler. Return a user whose role is not allowed for the route.
+        mock_auth_handler.return_value = {"user_id": "user123", "role": "free"}
+
         mock_call_next = AsyncMock()
-        
+
         response = await rbac_middleware.dispatch(mock_request, mock_call_next)
-        
+
         # Should deny access
         assert response.status_code == 403
         mock_call_next.assert_not_called()
@@ -327,7 +337,8 @@ class TestAuditLogMiddleware:
     async def test_successful_request_logging(self, audit_middleware, mock_security_logger):
         """Test logging of successful requests."""
         mock_request = MagicMock(spec=Request)
-        mock_request.url.path = "/api/users"
+        # AuditLogMiddleware only audits requests under the /auth prefix.
+        mock_request.url.path = "/auth/users"
         mock_request.method = "GET"
         mock_request.client.host = "192.168.1.100"
         mock_request.headers = {"user-agent": "TestAgent/1.0"}
@@ -347,7 +358,8 @@ class TestAuditLogMiddleware:
     async def test_failed_request_logging(self, audit_middleware, mock_security_logger):
         """Test logging of failed requests."""
         mock_request = MagicMock(spec=Request)
-        mock_request.url.path = "/api/admin"
+        # AuditLogMiddleware only audits requests under the /auth prefix.
+        mock_request.url.path = "/auth/admin"
         mock_request.method = "POST"
         mock_request.client.host = "10.0.0.1"
         mock_request.headers = {"user-agent": "BadActor/1.0"}
@@ -367,7 +379,8 @@ class TestAuditLogMiddleware:
     async def test_unauthenticated_request_logging(self, audit_middleware, mock_security_logger):
         """Test logging of unauthenticated requests."""
         mock_request = MagicMock(spec=Request)
-        mock_request.url.path = "/api/protected"
+        # AuditLogMiddleware only audits requests under the /auth prefix.
+        mock_request.url.path = "/auth/protected"
         mock_request.method = "GET"
         mock_request.client.host = "203.0.113.1"
         mock_request.headers = {}
@@ -389,7 +402,8 @@ class TestAuditLogMiddleware:
     async def test_exception_handling_in_logging(self, audit_middleware, mock_security_logger):
         """Test that exceptions in next handler are properly logged."""
         mock_request = MagicMock(spec=Request)
-        mock_request.url.path = "/api/error"
+        # AuditLogMiddleware only audits requests under the /auth prefix.
+        mock_request.url.path = "/auth/error"
         mock_request.method = "GET"
         mock_request.client.host = "192.168.1.100"
         mock_request.state = MagicMock()
@@ -408,7 +422,8 @@ class TestAuditLogMiddleware:
     async def test_sensitive_data_sanitization(self, audit_middleware, mock_security_logger):
         """Test that sensitive data is sanitized in logs."""
         mock_request = MagicMock(spec=Request)
-        mock_request.url.path = "/api/login"
+        # AuditLogMiddleware only audits requests under the /auth prefix.
+        mock_request.url.path = "/auth/login"
         mock_request.method = "POST"
         mock_request.client.host = "192.168.1.100"
         mock_request.headers = {
@@ -442,30 +457,31 @@ class TestSecurityMiddlewareIntegration:
         # Configure CORS
         configure_cors(app)
         
-        # Add RBAC middleware
+        # Add RBAC middleware. AuditLogMiddleware only audits requests under
+        # the /auth prefix, so protected/audited routes live under /auth.
         protected_routes = {
-            "GET /admin/users": ["admin"],
-            "POST /api/premium": ["premium", "admin"]
+            "GET /auth/admin/users": ["admin"],
+            "POST /auth/premium": ["premium", "admin"]
         }
         rbac_middleware = RoleBasedAccessMiddleware(app, protected_routes)
         app.add_middleware(BaseHTTPMiddleware, dispatch=rbac_middleware.dispatch)
-        
+
         # Add audit middleware
         audit_middleware = AuditLogMiddleware(app)
         app.add_middleware(BaseHTTPMiddleware, dispatch=audit_middleware.dispatch)
-        
-        @app.get("/public")
+
+        @app.get("/auth/public")
         async def public_endpoint():
             return {"message": "public"}
-        
-        @app.get("/admin/users")
+
+        @app.get("/auth/admin/users")
         async def admin_endpoint():
             return {"users": ["admin", "user1"]}
-            
-        @app.post("/api/premium")
+
+        @app.post("/auth/premium")
         async def premium_endpoint():
             return {"data": "premium content"}
-        
+
         return app
 
     def test_cors_integration(self, integrated_app):
@@ -474,7 +490,7 @@ class TestSecurityMiddlewareIntegration:
         
         # Test preflight request
         response = client.options(
-            "/admin/users",
+            "/auth/admin/users",
             headers={
                 "Origin": "http://localhost:3000",
                 "Access-Control-Request-Method": "GET"
@@ -490,8 +506,8 @@ class TestSecurityMiddlewareIntegration:
         
         with patch('src.api.middleware.auth_middleware.logger') as mock_logger:
             # Test unauthorized access (should be logged)
-            response = client.get("/admin/users")
-            
+            response = client.get("/auth/admin/users")
+
             # Should be blocked by RBAC
             assert response.status_code == 401
             
@@ -504,8 +520,8 @@ class TestSecurityMiddlewareIntegration:
         
         with patch('src.api.middleware.auth_middleware.logger') as mock_logger:
             # Make request that triggers multiple middlewares
-            response = client.get("/public")
-            
+            response = client.get("/auth/public")
+
             # Should succeed (public endpoint)
             assert response.status_code == 200
             
@@ -525,7 +541,7 @@ class TestSecurityMiddlewareIntegration:
         # Make concurrent requests
         with ThreadPoolExecutor(max_workers=10) as executor:
             futures = [
-                executor.submit(make_request, "/public")
+                executor.submit(make_request, "/auth/public")
                 for _ in range(20)
             ]
             responses = [future.result() for future in futures]
@@ -536,14 +552,14 @@ class TestSecurityMiddlewareIntegration:
     def test_error_propagation_through_middlewares(self, integrated_app):
         """Test error propagation through middleware stack."""
         # Add endpoint that raises exception
-        @integrated_app.get("/error")
+        @integrated_app.get("/auth/error")
         async def error_endpoint():
             raise HTTPException(status_code=500, detail="Internal error")
-        
+
         client = TestClient(integrated_app)
-        
+
         with patch('src.api.middleware.auth_middleware.logger') as mock_logger:
-            response = client.get("/error")
+            response = client.get("/auth/error")
             
             # Should return error
             assert response.status_code == 500
