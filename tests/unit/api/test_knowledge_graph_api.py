@@ -9,21 +9,50 @@ from unittest.mock import AsyncMock, patch
 import os
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.api.app import app  # Fixed import path
+from unittest.mock import MagicMock
+
+from src.api.routes.knowledge_graph_routes import (
+    router as knowledge_graph_router,
+    get_graph_populator,
+)
 from src.knowledge_graph.nlp_populator import KnowledgeGraphPopulator
+
 
 @pytest.fixture
 def client():
-    """FastAPI test client with WAF disabled."""
-    # Set environment variable to disable WAF for testing
-    os.environ["DISABLE_WAF_FOR_TESTS"] = "true"
+    """FastAPI test client wired only to the knowledge-graph router.
+
+    The module-level ``src.api.app.app`` is a minimal, router-less FastAPI
+    instance when the test-suite sets ``TESTING=true`` (see tests/conftest.py),
+    so the knowledge-graph endpoints are not registered on it. We therefore
+    build a dedicated app that includes the real knowledge_graph router (which
+    already carries its own ``/api/v1`` prefix), matching the pattern used by
+    the other API route test modules.
+
+    The ``get_graph_populator`` dependency is overridden so the real populator
+    is built without instantiating a live ``NERProcessor`` (which would try to
+    download a HuggingFace model over the network). The populator's data-access
+    methods are patched at the class level by the individual tests, so the
+    overridden dependency only needs to supply an instance whose construction is
+    side-effect free.
+    """
+
+    async def _override_get_graph_populator() -> KnowledgeGraphPopulator:
+        return KnowledgeGraphPopulator(
+            neptune_endpoint="mock://neptune",
+            ner_processor=MagicMock(),
+            force_websocket_mode=True,
+        )
+
+    app = FastAPI()
+    app.include_router(knowledge_graph_router)
+    app.dependency_overrides[get_graph_populator] = _override_get_graph_populator
     test_client = TestClient(app)
     yield test_client
-    # Clean up
-    if "DISABLE_WAF_FOR_TESTS" in os.environ:
-        del os.environ["DISABLE_WAF_FOR_TESTS"]
+    app.dependency_overrides.clear()
 
 
 class TestKnowledgeGraphAPIRoutes:
@@ -123,10 +152,9 @@ class TestKnowledgeGraphAPIRoutes:
     def test_get_related_entities_no_confidence(self, client):
         """Test related entities without confidence scores."""
         with patch(
-            "src.api.routes.knowledge_graph_routes.get_graph_populator"
-        ) as mock_get_populator:
-            mock_populator = AsyncMock()
-            mock_populator.get_related_entities.return_value = [
+            "src.knowledge_graph.nlp_populator.KnowledgeGraphPopulator.get_related_entities"
+        ) as mock_get_related_entities:
+            mock_get_related_entities.return_value = [
                 {
                     "entity_name": "Test Entity",
                     "entity_type": "ORG",
@@ -137,8 +165,6 @@ class TestKnowledgeGraphAPIRoutes:
                     "last_updated": "2024-01-02T00:00:00",
                 }
             ]
-            mock_populator.close = AsyncMock()
-            mock_get_populator.return_value = mock_populator
 
             response = client.get(
                 "/api/v1/related_entities" "?entity_name=Test Entity" "&include_confidence=false"
