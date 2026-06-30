@@ -7,6 +7,7 @@ Issue: #444 [PHASE-1.2] Optimized Graph API Foundation
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+import asyncio
 import json
 
 
@@ -28,8 +29,7 @@ class TestPhase1OptimizedGraphAPI:
             pytest.skip("OptimizedGraphAPI not available")
 
     @patch('redis.asyncio.from_url')
-    @patch('neo4j.GraphDatabase.driver')
-    def test_initialization(self, mock_neo4j, mock_redis):
+    def test_initialization(self, mock_redis):
         """Test OptimizedGraphAPI initialization."""
         try:
             from src.api.graph.optimized_api import OptimizedGraphAPI
@@ -38,7 +38,6 @@ class TestPhase1OptimizedGraphAPI:
             redis_mock = AsyncMock()
             neo4j_mock = MagicMock()
             mock_redis.return_value = redis_mock
-            mock_neo4j.return_value = neo4j_mock
             
             # Mock GraphBuilder
             graph_builder_mock = MagicMock()
@@ -81,8 +80,7 @@ class TestPhase1OptimizedGraphAPI:
 
     @pytest.mark.asyncio
     @patch('redis.asyncio.from_url')
-    @patch('neo4j.GraphDatabase.driver')
-    async def test_async_methods(self, mock_neo4j, mock_redis):
+    async def test_async_methods(self, mock_redis):
         """Test async methods."""
         try:
             from src.api.graph.optimized_api import OptimizedGraphAPI
@@ -101,7 +99,6 @@ class TestPhase1OptimizedGraphAPI:
             neo4j_mock.session.return_value = session_mock
             
             mock_redis.return_value = redis_mock
-            mock_neo4j.return_value = neo4j_mock
             
             # Mock GraphBuilder
             graph_builder_mock = MagicMock()
@@ -138,8 +135,7 @@ class TestPhase1OptimizedGraphAPI:
             pytest.skip("OptimizedGraphAPI not available")
 
     @patch('redis.asyncio.from_url') 
-    @patch('neo4j.GraphDatabase.driver')
-    def test_method_access(self, mock_neo4j, mock_redis):
+    def test_method_access(self, mock_redis):
         """Test accessing various methods and attributes."""
         try:
             from src.api.graph.optimized_api import OptimizedGraphAPI
@@ -148,7 +144,6 @@ class TestPhase1OptimizedGraphAPI:
             redis_mock = AsyncMock()
             neo4j_mock = MagicMock()
             mock_redis.return_value = redis_mock
-            mock_neo4j.return_value = neo4j_mock
             
             # Mock GraphBuilder
             graph_builder_mock = MagicMock()
@@ -193,8 +188,7 @@ class TestOptimizedGraphAPIAdvanced:
     """Advanced tests for additional coverage."""
     
     @patch('redis.asyncio.from_url')
-    @patch('neo4j.GraphDatabase.driver') 
-    def test_configuration_edge_cases(self, mock_neo4j, mock_redis):
+    def test_configuration_edge_cases(self, mock_redis):
         """Test configuration edge cases."""
         try:
             from src.api.graph.optimized_api import OptimizedGraphAPI, CacheConfig
@@ -220,8 +214,7 @@ class TestOptimizedGraphAPIAdvanced:
 
     @pytest.mark.asyncio 
     @patch('redis.asyncio.from_url')
-    @patch('neo4j.GraphDatabase.driver')
-    async def test_error_scenarios(self, mock_neo4j, mock_redis):
+    async def test_error_scenarios(self, mock_redis):
         """Test error handling scenarios."""
         try:
             from src.api.graph.optimized_api import OptimizedGraphAPI
@@ -236,7 +229,6 @@ class TestOptimizedGraphAPIAdvanced:
             neo4j_mock.session.return_value = session_mock
             
             mock_redis.return_value = redis_mock
-            mock_neo4j.return_value = neo4j_mock
             
             # Mock GraphBuilder
             graph_builder_mock = MagicMock()
@@ -289,8 +281,7 @@ class TestOptimizedGraphAPIComprehensive:
 
     @pytest.mark.asyncio
     @patch('redis.asyncio.from_url')
-    @patch('neo4j.GraphDatabase.driver')
-    async def test_cache_operations_detailed(self, mock_neo4j, mock_redis):
+    async def test_cache_operations_detailed(self, mock_redis):
         """Test detailed cache operations."""
         try:
             from src.api.graph.optimized_api import OptimizedGraphAPI
@@ -304,7 +295,6 @@ class TestOptimizedGraphAPIComprehensive:
             redis_mock.info.return_value = {'memory_usage': 1024, 'connected_clients': 5}
             
             mock_redis.return_value = redis_mock
-            mock_neo4j.return_value = MagicMock()
             
             graph_builder_mock = MagicMock()
             api = OptimizedGraphAPI(graph_builder=graph_builder_mock)
@@ -331,8 +321,7 @@ class TestOptimizedGraphAPIComprehensive:
 
     @pytest.mark.asyncio
     @patch('redis.asyncio.from_url')
-    @patch('neo4j.GraphDatabase.driver')
-    async def test_query_optimization_features(self, mock_neo4j, mock_redis):
+    async def test_query_optimization_features(self, mock_redis):
         """Test query optimization features."""
         try:
             from src.api.graph.optimized_api import OptimizedGraphAPI
@@ -347,11 +336,12 @@ class TestOptimizedGraphAPIComprehensive:
             neo4j_mock.session.return_value = session_mock
             
             mock_redis.return_value = redis_mock
-            mock_neo4j.return_value = neo4j_mock
-            
+
             graph_builder_mock = MagicMock()
+            # Source awaits graph._execute_traversal(...); make it awaitable.
+            graph_builder_mock._execute_traversal = AsyncMock(return_value=[])
             api = OptimizedGraphAPI(graph_builder=graph_builder_mock)
-            
+
             # Test query execution methods
             if hasattr(api, '_execute_optimized_query'):
                 result = await api._execute_optimized_query("MATCH (n) RETURN n")
@@ -371,8 +361,7 @@ class TestOptimizedGraphAPIComprehensive:
             pytest.skip("Query optimization not available")
 
     @patch('redis.asyncio.from_url')
-    @patch('neo4j.GraphDatabase.driver')
-    def test_connection_pooling(self, mock_neo4j, mock_redis):
+    def test_connection_pooling(self, mock_redis):
         """Test connection pooling functionality."""
         try:
             from src.api.graph.optimized_api import OptimizedGraphAPI
@@ -381,7 +370,6 @@ class TestOptimizedGraphAPIComprehensive:
             redis_mock = AsyncMock()
             neo4j_mock = MagicMock()
             mock_redis.return_value = redis_mock
-            mock_neo4j.return_value = neo4j_mock
             
             graph_builder_mock = MagicMock()
             api = OptimizedGraphAPI(graph_builder=graph_builder_mock)
@@ -407,8 +395,7 @@ class TestOptimizedGraphAPIComprehensive:
 
     @pytest.mark.asyncio
     @patch('redis.asyncio.from_url')
-    @patch('neo4j.GraphDatabase.driver')
-    async def test_graph_operations_comprehensive(self, mock_neo4j, mock_redis):
+    async def test_graph_operations_comprehensive(self, mock_redis):
         """Test comprehensive graph operations."""
         try:
             from src.api.graph.optimized_api import OptimizedGraphAPI
@@ -429,7 +416,6 @@ class TestOptimizedGraphAPIComprehensive:
             neo4j_mock.session.return_value = session_mock
             
             mock_redis.return_value = redis_mock
-            mock_neo4j.return_value = neo4j_mock
             
             graph_builder_mock = MagicMock()
             graph_builder_mock.get_entity_relationships.return_value = [
@@ -495,8 +481,7 @@ class TestOptimizedGraphAPIComprehensive:
 
     @pytest.mark.asyncio
     @patch('redis.asyncio.from_url')
-    @patch('neo4j.GraphDatabase.driver')
-    async def test_performance_monitoring_detailed(self, mock_neo4j, mock_redis):
+    async def test_performance_monitoring_detailed(self, mock_redis):
         """Test detailed performance monitoring."""
         try:
             from src.api.graph.optimized_api import OptimizedGraphAPI
@@ -505,7 +490,6 @@ class TestOptimizedGraphAPIComprehensive:
             redis_mock = AsyncMock()
             neo4j_mock = MagicMock()
             mock_redis.return_value = redis_mock
-            mock_neo4j.return_value = neo4j_mock
             
             graph_builder_mock = MagicMock()
             api = OptimizedGraphAPI(graph_builder=graph_builder_mock)

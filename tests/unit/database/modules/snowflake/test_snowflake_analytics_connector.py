@@ -20,20 +20,20 @@ class TestSnowflakeConfig:
     def test_config_initialization(self):
         """Test SnowflakeConfig initialization"""
         from src.database.snowflake_analytics_connector import SnowflakeConfig
-        
+
         # Test with all parameters
         config = SnowflakeConfig(
             account='test-account',
-            username='test_user',
+            user='test_user',
             password='test_password',
             database='TEST_DB',
             schema='TEST_SCHEMA',
             warehouse='TEST_WH',
             role='TEST_ROLE'
         )
-        
+
         assert config.account == 'test-account'
-        assert config.username == 'test_user'
+        assert config.user == 'test_user'
         assert config.password == 'test_password'
         assert config.database == 'TEST_DB'
         assert config.schema == 'TEST_SCHEMA'
@@ -64,7 +64,7 @@ class TestSnowflakeConfig:
                 # Manual configuration with environment variables
                 config = SnowflakeConfig(
                     account=os.getenv('SNOWFLAKE_ACCOUNT'),
-                    username=os.getenv('SNOWFLAKE_USERNAME'),
+                    user=os.getenv('SNOWFLAKE_USERNAME'),
                     password=os.getenv('SNOWFLAKE_PASSWORD'),
                     database=os.getenv('SNOWFLAKE_DATABASE'),
                     schema=os.getenv('SNOWFLAKE_SCHEMA'),
@@ -109,35 +109,38 @@ class TestSnowflakeAnalyticsConnector:
     
     @pytest.fixture(autouse=True)
     def setup_snowflake_mocking(self):
-        """Setup Snowflake mocking for all tests"""
-        # Mock snowflake-connector-python
-        with patch('snowflake.connector.connect') as mock_connect:
-            mock_connection = Mock()
-            mock_cursor = Mock()
-            
-            # Setup mock connection and cursor
-            mock_connect.return_value = mock_connection
-            mock_connection.cursor.return_value = mock_cursor
-            mock_connection.is_closed.return_value = False
-            
-            # Mock query results
-            mock_cursor.fetchall.return_value = [
-                ('row1_col1', 'row1_col2', 'row1_col3'),
-                ('row2_col1', 'row2_col2', 'row2_col3'),
-                ('row3_col1', 'row3_col2', 'row3_col3')
-            ]
-            mock_cursor.fetchone.return_value = ('single_result',)
-            mock_cursor.description = [
-                ('column1', 'VARCHAR', None, None, None, None, None),
-                ('column2', 'NUMBER', None, None, None, None, None),
-                ('column3', 'TIMESTAMP', None, None, None, None, None)
-            ]
-            
-            self.mock_connect = mock_connect
-            self.mock_connection = mock_connection
-            self.mock_cursor = mock_cursor
-            
-            yield
+        """Setup Snowflake mocking for all tests.
+
+        The current connector (src.database.snowflake_analytics_connector) is a
+        pure-Python implementation that does NOT import or use
+        snowflake-connector-python. These mocks exist so the survey-style tests
+        below can reference them without crashing; they are not wired into the
+        connector itself.
+        """
+        mock_connection = Mock()
+        mock_cursor = Mock()
+
+        # Setup mock connection and cursor
+        mock_connection.cursor.return_value = mock_cursor
+        mock_connection.is_closed.return_value = False
+
+        # Mock query results
+        mock_cursor.fetchall.return_value = [
+            ('row1_col1', 'row1_col2', 'row1_col3'),
+            ('row2_col1', 'row2_col2', 'row2_col3'),
+            ('row3_col1', 'row3_col2', 'row3_col3')
+        ]
+        mock_cursor.fetchone.return_value = ('single_result',)
+        mock_cursor.description = [
+            ('column1', 'VARCHAR', None, None, None, None, None),
+            ('column2', 'NUMBER', None, None, None, None, None),
+            ('column3', 'TIMESTAMP', None, None, None, None, None)
+        ]
+
+        self.mock_connection = mock_connection
+        self.mock_cursor = mock_cursor
+
+        yield
     
     def test_connector_initialization(self):
         """Test SnowflakeAnalyticsConnector initialization"""
@@ -145,28 +148,35 @@ class TestSnowflakeAnalyticsConnector:
         
         config = SnowflakeConfig(
             account='test-account',
-            username='test_user',
+            user='test_user',
             password='test_password',
-            database='TEST_DB'
+            warehouse='TEST_WH',
+            database='TEST_DB',
+            schema='TEST_SCHEMA'
         )
-        
+
         connector = SnowflakeAnalyticsConnector(config)
-        
+
         assert connector.config == config
         assert hasattr(connector, 'connection') or hasattr(connector, 'conn')
-        
-        # Verify connection attempt
-        self.mock_connect.assert_called()
-    
+
+        # The current connector lazily establishes a (mock) connection: it is
+        # not connected until connect() is called.
+        assert connector.is_connected() is False
+        assert connector.connect() is True
+        assert connector.is_connected() is True
+
     def test_basic_query_execution(self):
         """Test basic SQL query execution"""
         from src.database.snowflake_analytics_connector import SnowflakeAnalyticsConnector, SnowflakeConfig
         
         config = SnowflakeConfig(
             account='query-test-account',
-            username='query_user',
+            user='query_user',
             password='query_password',
-            database='QUERY_DB'
+            warehouse='QUERY_WH',
+            database='QUERY_DB',
+            schema='QUERY_SCHEMA'
         )
         
         connector = SnowflakeAnalyticsConnector(config)
@@ -203,9 +213,11 @@ class TestSnowflakeAnalyticsConnector:
         
         config = SnowflakeConfig(
             account='analytics-test-account',
-            username='analytics_user',
+            user='analytics_user',
             password='analytics_password',
-            database='ANALYTICS_DB'
+            warehouse='ANALYTICS_WH',
+            database='ANALYTICS_DB',
+            schema='ANALYTICS_SCHEMA'
         )
         
         connector = SnowflakeAnalyticsConnector(config)
@@ -258,10 +270,11 @@ class TestSnowflakeAnalyticsConnector:
         
         config = SnowflakeConfig(
             account='advanced-analytics-account',
-            username='advanced_user',
+            user='advanced_user',
             password='advanced_password',
             database='ADVANCED_DB',
-            warehouse='ANALYTICS_WH'
+            warehouse='ANALYTICS_WH',
+            schema='ADVANCED_SCHEMA'
         )
         
         connector = SnowflakeAnalyticsConnector(config)
@@ -314,9 +327,11 @@ class TestSnowflakeAnalyticsConnector:
         
         config = SnowflakeConfig(
             account='export-test-account',
-            username='export_user',
+            user='export_user',
             password='export_password',
-            database='EXPORT_DB'
+            warehouse='EXPORT_WH',
+            database='EXPORT_DB',
+            schema='EXPORT_SCHEMA'
         )
         
         connector = SnowflakeAnalyticsConnector(config)
@@ -372,9 +387,11 @@ class TestSnowflakeAnalyticsConnector:
         
         config = SnowflakeConfig(
             account='aggregation-test-account',
-            username='agg_user',
+            user='agg_user',
             password='agg_password',
-            database='AGGREGATION_DB'
+            warehouse='AGGREGATION_WH',
+            database='AGGREGATION_DB',
+            schema='AGGREGATION_SCHEMA'
         )
         
         connector = SnowflakeAnalyticsConnector(config)
@@ -428,9 +445,11 @@ class TestSnowflakeAnalyticsConnector:
         
         config = SnowflakeConfig(
             account='table-mgmt-account',
-            username='table_user',
+            user='table_user',
             password='table_password',
-            database='TABLE_DB'
+            warehouse='TABLE_WH',
+            database='TABLE_DB',
+            schema='TABLE_SCHEMA'
         )
         
         connector = SnowflakeAnalyticsConnector(config)
@@ -496,9 +515,11 @@ class TestSnowflakeAnalyticsConnector:
         
         config = SnowflakeConfig(
             account='connection-test-account',
-            username='conn_user',
+            user='conn_user',
             password='conn_password',
-            database='CONN_DB'
+            warehouse='CONN_WH',
+            database='CONN_DB',
+            schema='CONN_SCHEMA'
         )
         
         connector = SnowflakeAnalyticsConnector(config)
@@ -546,9 +567,11 @@ class TestSnowflakeAnalyticsConnector:
         
         config = SnowflakeConfig(
             account='batch-test-account',
-            username='batch_user',
+            user='batch_user',
             password='batch_password',
-            database='BATCH_DB'
+            warehouse='BATCH_WH',
+            database='BATCH_DB',
+            schema='BATCH_SCHEMA'
         )
         
         connector = SnowflakeAnalyticsConnector(config)
@@ -611,72 +634,63 @@ class TestSnowflakeErrorHandling:
     """Tests for Snowflake error handling and edge cases"""
     
     def test_connection_errors(self):
-        """Test handling of Snowflake connection errors"""
-        with patch('snowflake.connector.connect') as mock_connect:
-            # Mock connection errors
-            mock_connect.side_effect = Exception("Connection failed")
-            
-            from src.database.snowflake_analytics_connector import SnowflakeAnalyticsConnector, SnowflakeConfig
-            
-            config = SnowflakeConfig(
-                account='error-test-account',
-                username='error_user',
-                password='error_password',
-                database='ERROR_DB'
-            )
-            
-            try:
-                connector = SnowflakeAnalyticsConnector(config)
-                # Constructor might handle errors gracefully
-                assert connector is not None or True
-            except Exception:
-                # Constructor might raise exceptions for connection errors
-                pass
-    
+        """Test handling of Snowflake connection errors.
+
+        The current connector does not use snowflake-connector-python; it uses
+        a self-contained (mock) connection. Querying before connecting must
+        raise a ConnectionError, and an explicit connect() must succeed.
+        """
+        from src.database.snowflake_analytics_connector import SnowflakeAnalyticsConnector, SnowflakeConfig
+
+        config = SnowflakeConfig(
+            account='error-test-account',
+            user='error_user',
+            password='error_password',
+            warehouse='ERROR_WH',
+            database='ERROR_DB',
+            schema='ERROR_SCHEMA',
+        )
+
+        connector = SnowflakeAnalyticsConnector(config)
+        assert connector is not None
+
+        # Querying without a connection raises a ConnectionError.
+        with pytest.raises(ConnectionError):
+            connector.execute_query('SELECT 1')
+
+        # After connecting, the connector reports a healthy connection.
+        assert connector.connect() is True
+        assert connector.is_connected() is True
+
     def test_query_execution_errors(self):
-        """Test handling of query execution errors"""
-        with patch('snowflake.connector.connect') as mock_connect:
-            mock_connection = Mock()
-            mock_cursor = Mock()
-            mock_connect.return_value = mock_connection
-            mock_connection.cursor.return_value = mock_cursor
-            
-            # Mock query execution errors
-            mock_cursor.execute.side_effect = [
-                Exception("SQL compilation error"),
-                Exception("Table does not exist"),
-                Exception("Permission denied"),
-                None  # Successful execution
-            ]
-            
-            from src.database.snowflake_analytics_connector import SnowflakeAnalyticsConnector, SnowflakeConfig
-            
-            config = SnowflakeConfig(
-                account='query-error-account',
-                username='query_error_user',
-                password='query_error_password',
-                database='QUERY_ERROR_DB'
-            )
-            
-            connector = SnowflakeAnalyticsConnector(config)
-            
-            # Test queries that should handle errors
-            error_queries = [
-                'SELECT * FROM nonexistent_table',
-                'INVALID SQL SYNTAX',
-                'SELECT * FROM unauthorized_table',
-                'SELECT COUNT(*) FROM articles'  # This should succeed
-            ]
-            
-            for query in error_queries:
-                try:
-                    if hasattr(connector, 'execute_query'):
-                        result = connector.execute_query(query)
-                        # Should either handle error gracefully or raise exception
-                        assert result is not None or True
-                except Exception:
-                    # Expected to fail with query errors
-                    pass
+        """Test handling of query execution errors.
+
+        The current connector requires an active connection before queries can
+        run and returns structured mock data once connected.
+        """
+        from src.database.snowflake_analytics_connector import SnowflakeAnalyticsConnector, SnowflakeConfig
+
+        config = SnowflakeConfig(
+            account='query-error-account',
+            user='query_error_user',
+            password='query_error_password',
+            warehouse='QUERY_ERROR_WH',
+            database='QUERY_ERROR_DB',
+            schema='QUERY_ERROR_SCHEMA',
+        )
+
+        connector = SnowflakeAnalyticsConnector(config)
+
+        # Before connecting, every query raises a ConnectionError.
+        assert connector.is_connected() is False
+        with pytest.raises(ConnectionError):
+            connector.execute_query('SELECT COUNT(*) FROM articles')
+
+        # After connecting, queries return structured results.
+        connector.connect()
+        result = connector.execute_query('SELECT COUNT(*) FROM articles')
+        assert result is not None
+        assert isinstance(result, list)
     
     def test_invalid_configuration(self):
         """Test handling of invalid configurations"""
