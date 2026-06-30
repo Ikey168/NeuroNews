@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 import os
 import sys
 import tempfile
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
@@ -211,24 +211,43 @@ class TestFakeNewsAPI:
     """Test suite for fake news detection API endpoints."""
 
     @pytest.fixture
-
     def client(self):
-        """Create a test client for the FastAPI app."""
-        from src.api.app import app
+        """Create a test client with the veracity router mounted.
 
-        return TestClient(app)
+        The module-level ``src.api.app.app`` only mounts the veracity router
+        when the ``news`` domain pack is enabled at import time (#520); mount it
+        directly here so the endpoints are exercised regardless of pack state.
+        """
+        from fastapi import FastAPI
+
+        from src.api.routes import veracity_routes
+
+        app = FastAPI()
+        app.include_router(veracity_routes.router)
+        return TestClient(app, raise_server_exceptions=False)
 
     @pytest.fixture
-
     def mock_detector(self):
-        """Mock FakeNewsDetector for API tests."""
-        with patch("src.api.routes.veracity_routes.detector") as mock:
-            mock.predict_trustworthiness.return_value = {
-                "trustworthiness_score": 75.5,
-                "classification": "real",
-                "confidence": 80.2,
-                "trust_level": "medium",
-            }
+        """Patch get_detector so endpoints use a mocked FakeNewsDetector.
+
+        The endpoints resolve the detector via ``get_detector()`` (which lazily
+        builds a real transformer model), so patching that factory is what
+        actually injects the mock.
+        """
+        mock = MagicMock()
+        mock.model_name = "roberta-base"
+        mock.predict_trustworthiness.return_value = {
+            "trustworthiness_score": 75.5,
+            "classification": "real",
+            "confidence": 80.2,
+            "trust_level": "medium",
+            "fake_probability": 24.5,
+            "real_probability": 75.5,
+            "model_used": "roberta-base",
+        }
+        with patch(
+            "src.api.routes.veracity_routes.get_detector", return_value=mock
+        ):
             yield mock
 
 
@@ -297,17 +316,12 @@ class TestFakeNewsAPI:
         data = response.json()
         assert "error" in data
 
-    @patch("src.api.routes.veracity_routes.get_redshift_connection")
+    def test_veracity_stats_endpoint(self, client):
+        """Test /veracity_stats endpoint.
 
-    def test_veracity_stats_endpoint(self, mock_db, client):
-        """Test /veracity_stats endpoint."""
-        # Mock database response
-        mock_cursor = Mock()
-        mock_cursor.fetchone.return_value = (1250, 67.3, 823, 427)
-        mock_connection = Mock()
-        mock_connection.cursor.return_value = mock_cursor
-        mock_db.return_value = mock_connection
-
+        The current endpoint returns a computed statistics summary and does not
+        touch an external database connection, so no DB mock is needed.
+        """
         response = client.get("/api/veracity/veracity_stats", params={"days": 30})
 
         assert response.status_code == 200
@@ -347,7 +361,9 @@ class TestIntegration:
 
     def detector(self):
         """Create a detector for integration testing."""
-        return FakeNewsDetector(model_name="roberta-base")
+        # use_pretrained=False avoids a network download of the RoBERTa weights;
+        # these integration tests only exercise _preprocess_text and attribute checks.
+        return FakeNewsDetector(model_name="roberta-base", use_pretrained=False)
 
 
     def test_end_to_end_workflow(self, detector):
@@ -434,7 +450,9 @@ def test_fake_news_config_validation():
 
 def test_error_handling():
     """Test error handling in fake news detection."""
-    detector = FakeNewsDetector(model_name="roberta-base")
+    # use_pretrained=False avoids a network download; this test only exercises
+    # _preprocess_text, which needs no loaded model.
+    detector = FakeNewsDetector(model_name="roberta-base", use_pretrained=False)
 
     # Test empty text handling
     result = detector._preprocess_text("")
