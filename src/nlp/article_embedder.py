@@ -21,16 +21,17 @@ from nltk.corpus import stopwords
 from psycopg2.extras import RealDictCursor
 from sentence_transformers import SentenceTransformer
 
-# Download required NLTK data
-try:
-    nltk.data.find("tokenizers/punkt")
-except LookupError:
-    nltk.download("punkt", quiet=True)
-
-try:
-    nltk.data.find("corpora/stopwords")
-except LookupError:
-    nltk.download("stopwords", quiet=True)
+# Ensure required NLTK data is available without failing module import if it is
+# missing or corrupt (e.g. a partial download leaving a non-zip file).
+for _resource, _package in (("tokenizers/punkt", "punkt"),
+                            ("corpora/stopwords", "stopwords")):
+    try:
+        nltk.data.find(_resource)
+    except Exception:  # LookupError if absent, BadZipFile if corrupt, etc.
+        try:
+            nltk.download(_package, quiet=True)
+        except Exception:
+            pass
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
