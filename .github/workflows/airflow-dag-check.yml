@@ -18,11 +18,18 @@ jobs:
           python-version: '3.9'
       - name: Install Apache Airflow
         run: |
-          pip install apache-airflow==2.8.1
+          # Install Airflow with its official constraints file so transitive
+          # deps (e.g. google-re2) resolve to published wheels instead of
+          # building from source, which requires bazel and fails on CI.
+          AIRFLOW_VERSION=2.8.1
+          PYTHON_VERSION="$(python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+          CONSTRAINT_URL="https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-${PYTHON_VERSION}.txt"
+          pip install "apache-airflow==${AIRFLOW_VERSION}" --constraint "${CONSTRAINT_URL}"
       - name: Install project requirements
         run: |
           pip install -r airflow/requirements.txt || true
           pip install -r requirements.txt || true
-          pip install pytest
+          # Ensure the deps the news_pipeline DAG imports at parse time are present.
+          pip install pytest pandas pyyaml mlflow
       - name: Run DAG import/unit tests
         run: pytest -q tests/dags

@@ -13,15 +13,15 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy minimal requirements
-COPY requirements-test-minimal.txt .
+# Copy minimal requirements (build context is the repo root)
+COPY deploy/docker/requirements-test-minimal.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements-test-minimal.txt
 
 # Copy test files
-COPY tests/test_connectivity.py .
-COPY tests/test_comprehensive.py .
+COPY tests/functional/test_connectivity.py .
+COPY tests/functional/test_comprehensive.py .
 COPY src/ ./src/
 
 # Change ownership

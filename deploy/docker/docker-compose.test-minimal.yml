@@ -3,8 +3,9 @@ services:
   # Minimal test runner
   test-minimal:
     build:
-      context: .
-      dockerfile: Dockerfile.simple
+      # Context is the repo root so the image can COPY src/ and tests/.
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.simple
     environment:
       - PYTHONPATH=/home/neuronews/app
       - DB_HOST=test-postgres

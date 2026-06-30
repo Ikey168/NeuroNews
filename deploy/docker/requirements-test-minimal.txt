@@ -1,0 +1,6 @@
+# Minimal runtime deps for the containerized connectivity smoke tests
+# (Dockerfile.simple / docker-compose.test-minimal.yml). Kept intentionally
+# small so the test image builds fast and only exercises service connectivity.
+psycopg2-binary>=2.9
+redis>=5.0
+boto3>=1.34

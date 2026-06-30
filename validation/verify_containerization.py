@@ -41,7 +41,7 @@ def main():
          "Docker availability"),
         ("docker compose version",
          "Docker Compose availability"),
-        ("docker build -f Dockerfile.simple -t neuronews-test .",
+        ("docker build -f deploy/docker/Dockerfile.simple -t neuronews-test .",
             "Simple Docker build",
          ),
         ("docker images | grep neuronews",
