@@ -18,14 +18,17 @@ jobs:
           python-version: '3.9'
       - name: Install Apache Airflow
         run: |
-          # Install Airflow (and the postgres provider the iceberg_maintenance
-          # DAG imports) with the official constraints file so transitive deps
-          # (e.g. google-re2) resolve to published wheels instead of building
-          # from source, which requires bazel and fails on CI.
+          # Install Airflow (and the postgres + spark providers the
+          # iceberg_maintenance DAG imports) with the official constraints file
+          # so transitive deps (e.g. google-re2) resolve to published wheels
+          # instead of building from source, which requires bazel and fails.
           AIRFLOW_VERSION=2.8.1
           PYTHON_VERSION="$(python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
           CONSTRAINT_URL="https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-${PYTHON_VERSION}.txt"
-          pip install "apache-airflow==${AIRFLOW_VERSION}" apache-airflow-providers-postgres --constraint "${CONSTRAINT_URL}"
+          pip install "apache-airflow==${AIRFLOW_VERSION}" \
+            apache-airflow-providers-postgres \
+            apache-airflow-providers-apache-spark \
+            --constraint "${CONSTRAINT_URL}"
       - name: Install project requirements
         run: |
           pip install -r airflow/requirements.txt || true
