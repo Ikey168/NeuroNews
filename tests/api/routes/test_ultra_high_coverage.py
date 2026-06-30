@@ -437,129 +437,70 @@ class TestUltraHighCoverageHandler:
 class TestUltraHighCoverageOptimizedApi:
     """Ultra comprehensive tests for optimized API - targeting 80%+ coverage."""
     
-    @patch('src.database.connections.neo4j_connector.Neo4jConnector')
-    def test_optimized_api_comprehensive(self, mock_neo4j):
+    def test_optimized_api_comprehensive(self):
         """Comprehensive test of OptimizedGraphAPI."""
         try:
-            from src.api.graph.optimized_api import OptimizedGraphAPI, GraphOptimizer, QueryCache
-            
-            # Mock Neo4j connector
-            mock_connector = Mock()
-            mock_neo4j.return_value = mock_connector
-            
-            # Create API instance
-            api = OptimizedGraphAPI()
-            
-            # Mock query results
-            mock_results = [
-                {"entity": "Apple", "type": "ORGANIZATION", "confidence": 0.95},
-                {"entity": "iPhone", "type": "PRODUCT", "confidence": 0.90},
-                {"entity": "Tim Cook", "type": "PERSON", "confidence": 0.85}
+            from src.api.graph.optimized_api import (
+                OptimizedGraphAPI,
+                CacheConfig,
+                QueryOptimizationConfig,
+            )
+
+            # OptimizedGraphAPI wraps a graph builder (gremlin), not neo4j.
+            graph_builder = MagicMock()
+
+            # Create API instance with the real required constructor argument.
+            api = OptimizedGraphAPI(graph_builder=graph_builder)
+
+            # Real configuration objects are created with sensible defaults.
+            assert isinstance(api.cache_config, CacheConfig)
+            assert isinstance(api.optimization_config, QueryOptimizationConfig)
+            assert api.metrics["queries_total"] == 0
+
+            # Synchronous helpers that exist on the current API.
+            sync_methods = [
+                ("_generate_cache_key", ("related_entities", {"entity": "Apple"})),
+                ("_calculate_relevance", ("Apple", "App")),
+                ("_extract_entity_name", ({"name": ["Apple"]},)),
             ]
-            
-            mock_connector.run_query.return_value = mock_results
-            mock_connector.execute_query.return_value = mock_results
-            mock_connector.get_entities.return_value = mock_results
-            
-            # Test all API methods
-            api_methods = [
-                ("get_related_entities", ("Apple",)),
-                ("search_entities", ("technology",)),
-                ("get_shortest_path", ("Apple", "Google")),
-                ("get_entity_neighbors", ("Apple",)),
-                ("get_node_degree", ("Apple",)),
-                ("get_cluster_info", ("tech_cluster",)),
-                ("execute_cypher", ("MATCH (n) RETURN n LIMIT 10",)),
-                ("get_subgraph", (["Apple", "Google"], 2)),
-                ("analyze_centrality", ("Apple",)),
-                ("find_communities", ())
-            ]
-            
-            for method_name, args in api_methods:
-                if hasattr(api, method_name):
-                    method = getattr(api, method_name)
-                    try:
-                        if asyncio.iscoroutinefunction(method):
-                            # Handle async methods
-                            pass
-                        else:
-                            result = method(*args)
-                            assert result is not None
-                    except Exception:
-                        # Method might require specific setup
-                        pass
-            
-            # Test GraphOptimizer if available
-            try:
-                optimizer = GraphOptimizer()
-                
-                # Test optimization methods
-                queries = [
-                    "MATCH (n:PERSON) RETURN n LIMIT 10",
-                    "MATCH (a)-[r]->(b) WHERE a.name = 'Apple' RETURN b",
-                    "MATCH (n) WHERE n.type = 'ORGANIZATION' RETURN n"
-                ]
-                
-                for query in queries:
-                    try:
-                        optimized = optimizer.optimize_query(query)
-                        cached = optimizer.cache_result(query, mock_results)
-                        performance = optimizer.analyze_performance(query)
-                    except AttributeError:
-                        pass
-            except:
-                pass
-            
-            # Test QueryCache if available
-            try:
-                cache = QueryCache()
-                
-                # Test caching operations
-                cache.set("key1", mock_results)
-                cache.get("key1")
-                cache.delete("key1")
-                cache.clear()
-                cache.get_stats()
-            except:
-                pass
-            
+            for method_name, args in sync_methods:
+                assert hasattr(api, method_name)
+                method = getattr(api, method_name)
+                result = method(*args)
+                assert result is not None
+
+            # Cache stats is async on the current API.
+            assert asyncio.iscoroutinefunction(api.get_cache_stats)
+
         except ImportError:
             pytest.skip("Optimized API not available")
-    
-    def test_graph_api_edge_cases(self):
+
+    @pytest.mark.asyncio
+    async def test_graph_api_edge_cases(self):
         """Test edge cases for graph API."""
         try:
             from src.api.graph.optimized_api import OptimizedGraphAPI
-            
-            with patch('src.database.connections.neo4j_connector.Neo4jConnector') as mock_neo4j:
-                mock_connector = Mock()
-                mock_neo4j.return_value = mock_connector
-                
-                api = OptimizedGraphAPI()
-                
-                # Test with empty results
-                mock_connector.run_query.return_value = []
-                
-                # Test error handling
-                mock_connector.run_query.side_effect = Exception("Database error")
-                
-                edge_cases = [
-                    ("", ""),  # Empty strings
-                    (None, None),  # None values
-                    ("very-long-entity-name-that-might-cause-issues", "another-long-name"),
-                    ("entity with spaces", "entity/with/slashes"),
-                    ("entity@with!special#chars", "entity$with%symbols")
-                ]
-                
-                for entity1, entity2 in edge_cases:
-                    try:
-                        if hasattr(api, 'get_related_entities'):
-                            api.get_related_entities(entity1)
-                        if hasattr(api, 'get_shortest_path'):
-                            api.get_shortest_path(entity1, entity2)
-                    except:
-                        pass  # Should handle errors gracefully
-            
+
+            graph_builder = MagicMock()
+            api = OptimizedGraphAPI(graph_builder=graph_builder)
+            api.redis_client = None  # Force in-memory cache path
+
+            # Cache miss returns None and records a miss without raising.
+            result = await api._get_from_cache("missing_key")
+            assert result is None
+            assert api.metrics["cache_misses"] >= 1
+
+            # Storing then reading back round-trips through the memory cache.
+            stored = await api._store_in_cache("edge_key", {"v": 1})
+            assert stored is True
+            assert await api._get_from_cache("edge_key") == {"v": 1}
+
+            # Short search terms are rejected with a 400 by the current API.
+            from fastapi import HTTPException
+            with pytest.raises(HTTPException) as exc_info:
+                await api.search_entities_optimized("a")
+            assert exc_info.value.status_code == 400
+
         except ImportError:
             pytest.skip("Optimized API not available")
 
@@ -677,8 +618,10 @@ class TestUltraHighCoverageSpecificRoutes:
                 elif method == "PUT":
                     response = test_client.put(endpoint, json=data)
                 elif method == "DELETE":
-                    response = test_client.delete(endpoint, json=data)
-                
+                    # TestClient.delete() does not accept a json body in this
+                    # httpx/starlette version; use the generic request() API.
+                    response = test_client.request("DELETE", endpoint, json=data)
+
                 assert response.status_code < 600
     
     def test_rate_limit_routes_comprehensive(self, test_client):

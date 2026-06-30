@@ -35,101 +35,80 @@ class TestDirectLineCoverage:
         except ImportError:
             pytest.skip("Redis initialization not available")
 
-    def test_memory_cache_eviction_direct(self):
-        """Test memory cache eviction to cover lines 189-195."""
+    @pytest.mark.asyncio
+    async def test_memory_cache_eviction_direct(self):
+        """Test memory cache eviction in _store_in_cache (lines 187-199)."""
         try:
             from src.api.graph.optimized_api import OptimizedGraphAPI, CacheConfig
-            
+
             # Create config with small cache size to trigger eviction
             cache_config = CacheConfig()
             cache_config.max_cache_size = 10  # Small cache
-            
+
             graph_builder_mock = MagicMock()
             api = OptimizedGraphAPI(
                 graph_builder=graph_builder_mock,
                 cache_config=cache_config
             )
-            api.redis_client = None  # Force memory cache
-            
-            # Fill cache beyond limit to trigger eviction logic (lines 189-195)
-            for i in range(15):  # More than max_cache_size
+            api.redis_client = None  # Force memory cache path
+
+            # Fill cache up to the limit so the next store triggers eviction.
+            for i in range(cache_config.max_cache_size):
                 cache_key = f"test_key_{i}"
-                test_data = {"data": f"value_{i}"}
-                
-                # Manually set cache data
-                api.memory_cache[cache_key] = test_data
+                api.memory_cache[cache_key] = {"data": f"value_{i}"}
                 api.cache_timestamps[cache_key] = datetime.now() - timedelta(seconds=i)
-            
-            # Now add one more to trigger eviction
-            if hasattr(api, '_store_in_memory_cache'):
-                api._store_in_memory_cache("trigger_eviction", {"final": "data"})
-            else:
-                # Direct manipulation to trigger eviction logic
-                api.memory_cache["trigger_eviction"] = {"final": "data"}
-                api.cache_timestamps["trigger_eviction"] = datetime.now()
-                
-                # If we have more than max_cache_size items, eviction should happen
-                if len(api.memory_cache) > cache_config.max_cache_size:
-                    # Execute eviction logic manually (lines 189-195)
-                    oldest_keys = sorted(
-                        api.cache_timestamps.keys(), 
-                        key=lambda k: api.cache_timestamps[k]
-                    )[: cache_config.max_cache_size // 10]
-                    
-                    for key in oldest_keys:
-                        api.memory_cache.pop(key, None)
-                        api.cache_timestamps.pop(key, None)
-            
-            # Verify eviction happened
+
+            oldest_key = "test_key_9"  # largest offset == oldest timestamp
+            assert oldest_key in api.memory_cache
+
+            # Real store call: len == max_cache_size, so the oldest 10% are
+            # evicted (lines 187-195) before the new entry is added.
+            result = await api._store_in_cache("trigger_eviction", {"final": "data"})
+            assert result is True
+
+            # Eviction kept the cache within bounds and removed the oldest entry.
             assert len(api.memory_cache) <= cache_config.max_cache_size
-                
+            assert oldest_key not in api.memory_cache
+            assert api.memory_cache["trigger_eviction"] == {"final": "data"}
+
         except ImportError:
             pytest.skip("Memory cache eviction not available")
 
     @pytest.mark.asyncio
     @patch('redis.asyncio.from_url')
-    @patch('neo4j.GraphDatabase.driver')
-    async def test_query_execution_with_specific_errors(self, mock_neo4j, mock_redis):
-        """Test query execution with specific error scenarios."""
+    async def test_query_execution_with_specific_errors(self, mock_redis):
+        """Test query execution retry logic in _execute_optimized_query."""
         try:
             from src.api.graph.optimized_api import OptimizedGraphAPI
-            
+
             redis_mock = AsyncMock()
-            neo4j_mock = MagicMock()
-            session_mock = MagicMock()
-            
-            # Setup for retry logic testing
+            mock_redis.return_value = redis_mock
+
+            # Setup for retry logic testing: fail twice, succeed on third.
             call_count = 0
-            def mock_run_with_retries(*args, **kwargs):
+
+            async def traversal_with_retries(*args, **kwargs):
                 nonlocal call_count
                 call_count += 1
                 if call_count == 1:
                     raise Exception("First attempt failed")
                 elif call_count == 2:
-                    raise Exception("Second attempt failed") 
+                    raise Exception("Second attempt failed")
                 else:
                     # Third attempt succeeds
-                    result_mock = MagicMock()
-                    result_mock.data.return_value = {"success": True}
-                    return [result_mock]
-            
-            session_mock.run.side_effect = mock_run_with_retries
-            session_mock.__aenter__ = AsyncMock(return_value=session_mock)
-            session_mock.__aexit__ = AsyncMock(return_value=None)
-            
-            neo4j_mock.session.return_value = session_mock
-            mock_redis.return_value = redis_mock
-            mock_neo4j.return_value = neo4j_mock
-            
+                    return [{"success": True}]
+
             graph_builder_mock = MagicMock()
+            graph_builder_mock._execute_traversal = traversal_with_retries
+
             api = OptimizedGraphAPI(graph_builder=graph_builder_mock)
-            api.neo4j_driver = neo4j_mock
-            
-            # Test query that triggers retry logic
-            if hasattr(api, 'execute_query_with_retry'):
-                result = await api.execute_query_with_retry("MATCH (n) RETURN n")
-                assert call_count >= 3  # Verify retries happened
-                
+            api.redis_client = redis_mock
+
+            # _execute_optimized_query retries until the third attempt succeeds.
+            result = await api._execute_optimized_query(MagicMock(), "retry query")
+            assert call_count >= 3  # Verify retries happened
+            assert result == [{"success": True}]
+
         except ImportError:
             pytest.skip("Query retry logic not available")
 
@@ -161,9 +140,10 @@ class TestDirectLineCoverage:
                 assert api.cache_config is not None
                 assert api.optimization_config is not None
                 
-                # Test configuration access
+                # Test configuration access (use real CacheConfig /
+                # QueryOptimizationConfig fields from the current source API).
                 if cache_config is None:
-                    assert hasattr(api.cache_config, 'enabled')
+                    assert hasattr(api.cache_config, 'enable_compression')
                 if opt_config is None:
                     assert hasattr(api.optimization_config, 'retry_attempts')
                     
