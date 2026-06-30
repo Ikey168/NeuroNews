@@ -84,25 +84,29 @@ def sample_scrape_result(temp_data_dir):
 class TestScrapeTaskFunction:
     """Test the scrape task function."""
     
-    @patch('news_pipeline.LineageHelper')
-    def test_scrape_function_basic(self, mock_lineage_helper, mock_context, temp_data_dir):
+    def test_scrape_function_basic(self, mock_context, temp_data_dir):
         """Test basic scrape function functionality."""
-        # Setup mocks
-        mock_helper_instance = Mock()
-        mock_lineage_helper.return_value = mock_helper_instance
-        
+        # news_pipeline.py uses Airflow's TaskFlow API (`from airflow.decorators
+        # import dag, task`); skip when real Airflow is not installed. The patch
+        # target is applied inside the try block so importing the module (which
+        # triggers the Airflow import) is guarded by the ImportError handler.
+        pytest.importorskip("airflow.decorators")
+
         # Mock URI generation
         articles_uri = f"file://{temp_data_dir}/articles.json"
         metadata_uri = f"file://{temp_data_dir}/metadata.json"
-        
-        mock_helper_instance.create_dataset_uri.side_effect = [
-            articles_uri, metadata_uri
-        ]
-        
+
         # Import and test the function
         try:
-            from news_pipeline import scrape
-            result = scrape(**mock_context)
+            with patch('news_pipeline.LineageHelper') as mock_lineage_helper:
+                mock_helper_instance = Mock()
+                mock_lineage_helper.return_value = mock_helper_instance
+                mock_helper_instance.create_dataset_uri.side_effect = [
+                    articles_uri, metadata_uri
+                ]
+
+                from news_pipeline import scrape
+                result = scrape(**mock_context)
             
             # Verify return structure
             assert "articles_path" in result
@@ -149,25 +153,28 @@ class TestScrapeTaskFunction:
 class TestCleanTaskFunction:
     """Test the clean task function."""
     
-    @patch('news_pipeline.LineageHelper')
-    def test_clean_function_basic(self, mock_lineage_helper, sample_scrape_result, 
+    def test_clean_function_basic(self, sample_scrape_result,
                                  mock_context, temp_data_dir):
         """Test basic clean function functionality."""
-        # Setup mocks
-        mock_helper_instance = Mock()
-        mock_lineage_helper.return_value = mock_helper_instance
-        
+        # Skip when real Airflow (TaskFlow API) is not installed; patch the
+        # LineageHelper inside the guarded block so the module import is covered
+        # by the ImportError handler.
+        pytest.importorskip("airflow.decorators")
+
         # Mock URI generation for clean task outputs
         clean_articles_uri = f"file://{temp_data_dir}/clean_articles.parquet"
         metadata_uri = f"file://{temp_data_dir}/clean_metadata.parquet"
-        
-        mock_helper_instance.create_dataset_uri.side_effect = [
-            clean_articles_uri, metadata_uri
-        ]
-        
+
         try:
-            from news_pipeline import clean
-            result = clean(sample_scrape_result, **mock_context)
+            with patch('news_pipeline.LineageHelper') as mock_lineage_helper:
+                mock_helper_instance = Mock()
+                mock_lineage_helper.return_value = mock_helper_instance
+                mock_helper_instance.create_dataset_uri.side_effect = [
+                    clean_articles_uri, metadata_uri
+                ]
+
+                from news_pipeline import clean
+                result = clean(sample_scrape_result, **mock_context)
             
             # Verify return structure
             expected_keys = {
@@ -239,26 +246,30 @@ class TestNLPTaskFunction:
             "total_articles": 1
         }
     
-    @patch('news_pipeline.LineageHelper')
-    def test_nlp_function_basic(self, mock_lineage_helper, sample_clean_result,
+    def test_nlp_function_basic(self, sample_clean_result,
                                mock_context, temp_data_dir):
         """Test basic NLP function functionality."""
-        # Setup mocks
-        mock_helper_instance = Mock()
-        mock_lineage_helper.return_value = mock_helper_instance
-        
+        # Skip when real Airflow (TaskFlow API) is not installed; patch the
+        # LineageHelper inside the guarded block so the module import is covered
+        # by the ImportError handler.
+        pytest.importorskip("airflow.decorators")
+
         # Mock URI generation for NLP task outputs
         uris = [
             f"file://{temp_data_dir}/nlp_processed.parquet",
-            f"file://{temp_data_dir}/sentiment.parquet", 
+            f"file://{temp_data_dir}/sentiment.parquet",
             f"file://{temp_data_dir}/entities.parquet",
             f"file://{temp_data_dir}/keywords.parquet"
         ]
-        mock_helper_instance.create_dataset_uri.side_effect = uris
-        
+
         try:
-            from news_pipeline import nlp
-            result = nlp(sample_clean_result, **mock_context)
+            with patch('news_pipeline.LineageHelper') as mock_lineage_helper:
+                mock_helper_instance = Mock()
+                mock_lineage_helper.return_value = mock_helper_instance
+                mock_helper_instance.create_dataset_uri.side_effect = uris
+
+                from news_pipeline import nlp
+                result = nlp(sample_clean_result, **mock_context)
             
             # Verify return structure
             expected_keys = {
@@ -325,25 +336,29 @@ class TestPublishTaskFunction:
             "processed_article_count": 1
         }
     
-    @patch('news_pipeline.LineageHelper')
-    def test_publish_function_basic(self, mock_lineage_helper, sample_nlp_result,
+    def test_publish_function_basic(self, sample_nlp_result,
                                    mock_context, temp_data_dir):
         """Test basic publish function functionality."""
-        # Setup mocks
-        mock_helper_instance = Mock()
-        mock_lineage_helper.return_value = mock_helper_instance
-        
+        # Skip when real Airflow (TaskFlow API) is not installed; patch the
+        # LineageHelper inside the guarded block so the module import is covered
+        # by the ImportError handler.
+        pytest.importorskip("airflow.decorators")
+
         # Mock URI generation for publish task outputs
         uris = [
             f"file://{temp_data_dir}/daily_summary.json",
             f"file://{temp_data_dir}/trending_topics.json",
             f"file://{temp_data_dir}/sentiment_trends.json"
         ]
-        mock_helper_instance.create_dataset_uri.side_effect = uris
-        
+
         try:
-            from news_pipeline import publish
-            result = publish(sample_nlp_result, **mock_context)
+            with patch('news_pipeline.LineageHelper') as mock_lineage_helper:
+                mock_helper_instance = Mock()
+                mock_lineage_helper.return_value = mock_helper_instance
+                mock_helper_instance.create_dataset_uri.side_effect = uris
+
+                from news_pipeline import publish
+                result = publish(sample_nlp_result, **mock_context)
             
             # Verify return structure
             expected_keys = {
