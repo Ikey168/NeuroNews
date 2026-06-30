@@ -1,0 +1,7 @@
+# Trivy ignore file — CVEs explicitly accepted/triaged for the security gate.
+# The Security Scanning job fails only on FIXABLE critical/high vulnerabilities
+# (ignore-unfixed: true). Add specific CVE IDs here, one per line, with a short
+# justification, when a fixable finding is consciously accepted or deferred.
+#
+# Example:
+# CVE-2023-12345  # transitive via <pkg>; no compatible fixed release yet
