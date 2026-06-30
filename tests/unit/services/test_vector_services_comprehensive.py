@@ -20,6 +20,25 @@ from typing import List, Dict, Any
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'src'))
 
+from services.vector_service import (
+    UnifiedVectorService,
+    VectorBackend,
+    PgVectorBackend,
+    QdrantBackend,
+    get_vector_service,
+    vector_search,
+)
+from services.embeddings.provider import (
+    EmbeddingProvider,
+    EmbeddingBackend,
+    get_embedding_provider,
+)
+try:
+    from services.embeddings.backends.openai import OpenAIBackend
+except Exception:  # optional dependency 'openai' may be absent
+    OpenAIBackend = None
+from services.embeddings.backends.local_sentence_transformers import LocalSentenceTransformersBackend
+
 
 class TestUnifiedVectorService:
     """Comprehensive tests for UnifiedVectorService"""
@@ -172,14 +191,14 @@ class TestPgVectorBackend:
     
     def test_create_collection(self):
         """Test collection creation (always returns True for pgvector)"""
-        with patch('services.vector_service.VectorSearchService'):
+        with patch('services.rag.vector.VectorSearchService'):
             backend = PgVectorBackend()
             result = backend.create_collection()
             assert result is True
     
     def test_upsert_not_implemented_warning(self):
         """Test upsert method returns count with warning"""
-        with patch('services.vector_service.VectorSearchService'):
+        with patch('services.rag.vector.VectorSearchService'):
             backend = PgVectorBackend()
             points = [{'id': '1'}, {'id': '2'}]
             result = backend.upsert(points)
@@ -191,7 +210,7 @@ class TestPgVectorBackend:
         mock_results = [Mock(id='1', similarity_score=0.9, content='test')]
         mock_service_instance.search.return_value = mock_results
         
-        with patch('services.vector_service.VectorSearchService') as mock_service:
+        with patch('services.rag.vector.VectorSearchService') as mock_service:
             with patch('services.vector_service.VectorSearchFilters') as mock_filters:
                 backend = PgVectorBackend()
                 backend.service = mock_service_instance
@@ -208,7 +227,7 @@ class TestPgVectorBackend:
         """Test successful health check"""
         mock_service_instance = Mock()
         
-        with patch('services.vector_service.VectorSearchService'):
+        with patch('services.rag.vector.VectorSearchService'):
             backend = PgVectorBackend()
             backend.service = mock_service_instance
             
@@ -220,7 +239,7 @@ class TestPgVectorBackend:
         mock_service_instance = Mock()
         mock_service_instance.__enter__.side_effect = Exception('Connection failed')
         
-        with patch('services.vector_service.VectorSearchService'):
+        with patch('services.rag.vector.VectorSearchService'):
             backend = PgVectorBackend()
             backend.service = mock_service_instance
             
