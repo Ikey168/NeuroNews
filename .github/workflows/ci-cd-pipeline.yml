@@ -22,6 +22,9 @@ jobs:
   test:
     name: Test & Quality Checks
     runs-on: ubuntu-latest
+    # Backstop so a hanging test can never stall the job (and its dependents)
+    # the way an un-timed-out test did before.
+    timeout-minutes: 25
     strategy:
       matrix:
         python-version: ['3.11']
@@ -57,7 +60,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest pytest-cov pytest-asyncio bandit safety
+          pip install pytest pytest-cov pytest-asyncio pytest-timeout bandit safety
 
       # - name: Code formatting check
       #   run: |
@@ -86,6 +89,7 @@ jobs:
           pytest tests/ \
             --cov=src/ --cov-report=xml --cov-report=html \
             --cov-fail-under=20 \
+            --timeout=120 --timeout-method=thread \
             --ignore=tests/integration/ \
             --ignore=tests/e2e/consumer/test_consumer_validation_dlq.py \
             --ignore=tests/mlops/test_registry.py \
