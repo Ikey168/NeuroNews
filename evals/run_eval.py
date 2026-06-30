@@ -617,10 +617,14 @@ def _run_tiny_smoke_eval() -> None:
 
     logger.info("Running tiny offline smoke evaluation (%d examples)", len(examples))
 
+    # validate_tags=False: this is a CI smoke test, not a tracked experiment, so
+    # it should not require the full Issue #220 tag set (pipeline / data_version)
+    # or a non-"ci" environment to be configured.
     with mlrun(
         name="tiny_smoke",
         experiment=experiment,
         tags={"evaluation_type": "tiny_smoke", "mode": "ci", "issue": "235"},
+        validate_tags=False,
     ):
         mlflow.log_param("mode", "tiny")
         mlflow.log_param("dataset_size", len(examples))
