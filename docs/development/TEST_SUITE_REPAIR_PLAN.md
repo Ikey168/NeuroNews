@@ -122,6 +122,22 @@ subsystem.
   (or add a `GraphBasedSearchService` alias). The 5 `graph_search_routes`
   coverage tests were removed until the source is fixed.
 
+## Execution-mode finding: cross-file contamination
+
+Running the CI-scope suite single-process gives **491 failed / 220 errors**.
+Running the identical scope under **file-level process isolation**
+(`pytest -n auto --dist loadfile`, pytest-xdist) gives **393 failed / 74
+errors** in less than half the wall-clock (3:44 vs 8:15). The ~100 failures
+and ~146 errors that vanish under isolation are pure cross-file pollution —
+e.g. `test_s3_storage_comprehensive.py` (23), the dynamodb metadata files, and
+`test_domain_packs.py` (15) all pass cleanly alone and under `--dist loadfile`,
+but fail in one shared process (leaked boto3/moto global state, singletons,
+un-cleared FastAPI `dependency_overrides`). The remaining 393 are genuine
+per-file API drift. Plan: fix the genuine failures (use the `--dist loadfile`
+failing-file list as the target, since it excludes contamination phantoms),
+then move the CI gate to `--dist loadfile` so per-file fixes hold in the gate
+without weakening any test.
+
 ## Progress log
 
 - **vector_services_comprehensive**: added missing source imports, made the
