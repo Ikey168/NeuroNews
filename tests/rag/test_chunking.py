@@ -337,9 +337,14 @@ class TestChunkingWithRealWorldContent:
         chunks = chunk_text(article, max_chars=300, overlap_chars=50, split_on="paragraph")
         
         assert len(chunks) >= 2  # Should be split into multiple chunks
-        
-        # Check that important content is preserved
+
+        # Check that important content is preserved. The chunker preserves the
+        # original intra-paragraph whitespace (including newlines/indentation),
+        # so collapse runs of whitespace before checking for phrases that span
+        # the article's wrapped lines (e.g. "Journal of\n        Advanced Computing").
+        import re
         all_text = " ".join([chunk['text'] for chunk in chunks])
+        all_text = re.sub(r"\s+", " ", all_text)
         assert "Breaking News" in all_text
         assert "Dr. Jane Smith" in all_text
         assert "Journal of Advanced Computing" in all_text
