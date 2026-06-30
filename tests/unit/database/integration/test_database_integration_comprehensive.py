@@ -39,6 +39,29 @@ import pytest
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Guard optional dependencies so collection never crashes when they are absent.
+try:  # boto3 backs S3 / DynamoDB mock fixtures
+    import boto3  # noqa: F401
+    HAS_BOTO3 = True
+except ImportError:  # pragma: no cover - environment dependent
+    HAS_BOTO3 = False
+
+try:  # psycopg2 backs the sync connection paths
+    import psycopg2  # noqa: F401
+    HAS_PSYCOPG2 = True
+except ImportError:  # pragma: no cover - environment dependent
+    HAS_PSYCOPG2 = False
+
+# Reputation thresholds the current SourceReputationConfig expects. The analyzer
+# reads the "trusted"/"reliable"/"questionable"/"unreliable" keys, so every test
+# config must provide them.
+REPUTATION_THRESHOLDS = {
+    "trusted": 0.9,
+    "reliable": 0.7,
+    "questionable": 0.4,
+    "unreliable": 0.2,
+}
+
 
 # =============================================================================
 # Mock Classes for Database Modules
@@ -142,7 +165,22 @@ class MockS3Client:
     def create_bucket(self, Bucket, **kwargs):
         self.buckets[Bucket] = {"created": datetime.now()}
         return {"Location": f"/{Bucket}"}
-        
+
+    def head_bucket(self, Bucket, **kwargs):
+        # S3ArticleStorage calls head_bucket during initialization to verify the
+        # bucket is accessible. Returning successfully (rather than raising a
+        # ClientError) signals that the bucket exists.
+        return {"ResponseMetadata": {"HTTPStatusCode": 200}}
+
+    def put_bucket_versioning(self, Bucket, **kwargs):
+        return {"ResponseMetadata": {"HTTPStatusCode": 200}}
+
+    def put_bucket_lifecycle_configuration(self, Bucket, **kwargs):
+        return {"ResponseMetadata": {"HTTPStatusCode": 200}}
+
+    def put_bucket_encryption(self, Bucket, **kwargs):
+        return {"ResponseMetadata": {"HTTPStatusCode": 200}}
+
     def put_object(self, Bucket, Key, Body, **kwargs):
         if Bucket not in self.buckets:
             raise Exception(f"Bucket {Bucket} does not exist")
@@ -199,41 +237,73 @@ class MockS3Object:
         return self.content
 
 
+class MockDynamoDBBatchWriter:
+    """Mock DynamoDB batch writer context manager."""
+
+    def __init__(self, table):
+        self.table = table
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return False
+
+    def put_item(self, Item, **kwargs):
+        self.table.put_item(Item=Item)
+
+
 class MockDynamoDBTable:
-    """Mock DynamoDB table for testing."""
-    
+    """Mock DynamoDB table for testing.
+
+    Mirrors the boto3 resource Table surface the current
+    DynamoDBMetadataManager relies on, including ``meta.client`` access (used
+    during table initialization) and ``batch_writer`` (used for batch indexing).
+    """
+
     def __init__(self, table_name):
         self.table_name = table_name
         self.items = {}
         self.indexes = {}
-        
+        # Manager calls self.table.meta.client.describe_table(...) on init to
+        # detect whether the table already exists. A MagicMock returns a value
+        # (rather than raising ResourceNotFoundException), so the manager treats
+        # the table as existing and skips creation.
+        self.meta = MagicMock()
+        self.meta.client.describe_table.return_value = {
+            "Table": {"TableStatus": "ACTIVE"}
+        }
+
     def put_item(self, Item, **kwargs):
         item_id = Item.get("article_id") or Item.get("id") or str(uuid.uuid4())
         self.items[item_id] = Item
         return {"ResponseMetadata": {"HTTPStatusCode": 200}}
-        
+
     def get_item(self, Key, **kwargs):
         key_value = list(Key.values())[0]
         item = self.items.get(key_value)
         if item:
             return {"Item": item}
         return {}
-        
+
     def query(self, KeyConditionExpression=None, IndexName=None, **kwargs):
         # Simplified query simulation
         items = list(self.items.values())
         return {"Items": items[:10], "Count": len(items)}
-        
+
     def scan(self, FilterExpression=None, **kwargs):
         items = list(self.items.values())
         return {"Items": items, "Count": len(items)}
-        
+
     def delete_item(self, Key, **kwargs):
         key_value = list(Key.values())[0]
         if key_value in self.items:
             del self.items[key_value]
         return {"ResponseMetadata": {"HTTPStatusCode": 200}}
-        
+
+    def batch_writer(self, **kwargs):
+        return MockDynamoDBBatchWriter(self)
+
     def batch_write_item(self, RequestItems, **kwargs):
         return {"UnprocessedItems": {}}
 
@@ -287,23 +357,34 @@ class TestDatabaseSetup:
     
     @pytest.fixture
     def mock_psycopg2(self):
-        with patch('psycopg2') as mock:
+        # The setup module imports psycopg2/asyncpg at module scope, so patch the
+        # symbol where setup looks it up. If the module can't be imported (e.g.
+        # asyncpg is not installed), skip rather than erroring at fixture setup.
+        try:
+            import src.database.setup  # noqa: F401
+        except ImportError:
+            pytest.skip("Database setup module not available")
+        with patch('src.database.setup.psycopg2') as mock:
             mock.connect.return_value = MockPostgresConnection()
+            # OperationalError is referenced by the retry path in setup.
+            mock.OperationalError = Exception
             yield mock
-            
+
     @pytest.fixture
     def mock_asyncpg(self):
-        with patch('asyncpg') as mock:
-            mock.connect.return_value = MockAsyncConnection()
+        try:
+            import src.database.setup  # noqa: F401
+        except ImportError:
+            pytest.skip("Database setup module not available")
+        with patch('src.database.setup.asyncpg') as mock:
+            mock.connect = AsyncMock(return_value=MockAsyncConnection())
             yield mock
     
     def test_get_db_config_production(self, mock_psycopg2):
         """Test production database configuration."""
         try:
-            import sys
-            sys.path.insert(0, '/workspaces/NeuroNews/src')
-            from database.setup import get_db_config
-            
+            from src.database.setup import get_db_config
+
             config = get_db_config(testing=False)
             
             assert isinstance(config, dict)
@@ -480,160 +561,122 @@ class TestDatabaseSetup:
 # Test Classes for S3 Storage Module
 # =============================================================================
 
+@pytest.mark.skipif(not HAS_BOTO3, reason="boto3 not installed")
 class TestS3Storage:
-    """Test S3 storage operations and metadata management."""
-    
+    """Test S3 storage operations and metadata management.
+
+    The current S3Storage builds its client via
+    ``src.database.s3_storage.get_client`` and takes a bucket-name string (not a
+    config object). upload_article returns the generated S3 key string.
+    """
+
     @pytest.fixture
     def mock_s3_client(self):
-        with patch('boto3.client') as mock:
-            mock.return_value = MockS3Client()
-            yield mock.return_value
-    
+        client = MockS3Client()
+        # Patch the factory the storage module actually calls, so initialization
+        # (head_bucket) and uploads use our in-memory mock.
+        with patch('src.database.s3_storage.get_client', return_value=client):
+            yield client
+
     def test_s3_storage_initialization(self, mock_s3_client):
         """Test S3 storage class initialization."""
         try:
-            from src.database.s3_storage import S3Storage, S3StorageConfig
-            
-            config = S3StorageConfig(bucket_name="test-bucket")
-            storage = S3Storage(config)
-            
+            from src.database.s3_storage import S3Storage
+
+            storage = S3Storage(bucket_name="test-bucket")
+
             assert storage.config.bucket_name == "test-bucket"
             assert hasattr(storage, 's3_client')
-            
+            assert storage.s3_client is mock_s3_client
+
         except ImportError:
             pytest.skip("S3 storage module not available")
-    
-    def test_s3_bucket_creation(self, mock_s3_client):
-        """Test S3 bucket creation."""
-        try:
-            from src.database.s3_storage import S3Storage, S3StorageConfig
-            
-            config = S3StorageConfig(bucket_name="test-bucket")
-            storage = S3Storage(config)
-            
-            # Mock successful bucket creation
-            result = storage.create_bucket()
-            
-            assert result is not None
-            
-        except ImportError:
-            pytest.skip("S3 storage module not available")
-    
+
     def test_s3_article_upload(self, mock_s3_client):
         """Test article upload to S3."""
         try:
-            from src.database.s3_storage import S3Storage, S3StorageConfig, ArticleType
-            
-            config = S3StorageConfig(bucket_name="test-bucket")
-            storage = S3Storage(config)
-            
-            # Create test bucket first
+            from src.database.s3_storage import S3Storage
+
+            storage = S3Storage(bucket_name="test-bucket")
+
+            # Mock put_object requires the bucket to exist first.
             mock_s3_client.create_bucket(Bucket="test-bucket")
-            
+
             article_data = {
                 "id": "test-123",
                 "title": "Test Article",
                 "content": "Test content",
                 "url": "https://example.com/article",
                 "source": "test-source",
-                "published_date": "2024-01-01"
+                "published_date": "2024-01-01",
             }
-            
-            result = storage.upload_article(article_data, ArticleType.RAW)
-            
-            assert result is not None
-            assert "s3_key" in result
-            
+
+            s3_key = storage.upload_article(article_data)
+
+            assert isinstance(s3_key, str)
+            assert s3_key.endswith(".json")
+            # The object was actually written to the mock store.
+            assert f"test-bucket/{s3_key}" in mock_s3_client.objects
+
         except ImportError:
             pytest.skip("S3 storage module not available")
-    
-    def test_s3_article_download(self, mock_s3_client):
-        """Test article download from S3."""
-        try:
-            from src.database.s3_storage import S3Storage, S3StorageConfig, ArticleType
-            
-            config = S3StorageConfig(bucket_name="test-bucket")
-            storage = S3Storage(config)
-            
-            # Create test bucket and upload article first
-            mock_s3_client.create_bucket(Bucket="test-bucket")
-            
-            article_data = {
-                "id": "test-123",
-                "title": "Test Article",
-                "content": "Test content"
-            }
-            
-            # Mock upload
-            mock_s3_client.put_object(
-                Bucket="test-bucket",
-                Key="raw_articles/test-123.json",
-                Body=json.dumps(article_data)
-            )
-            
-            result = storage.download_article("raw_articles/test-123.json")
-            
-            assert result is not None
-            
-        except ImportError:
-            pytest.skip("S3 storage module not available")
-    
+
     def test_s3_article_deletion(self, mock_s3_client):
         """Test article deletion from S3."""
         try:
-            from src.database.s3_storage import S3Storage, S3StorageConfig
-            
-            config = S3StorageConfig(bucket_name="test-bucket")
-            storage = S3Storage(config)
-            
-            # Create test bucket first
-            mock_s3_client.create_bucket(Bucket="test-bucket")
-            
+            from src.database.s3_storage import S3Storage
+
+            storage = S3Storage(bucket_name="test-bucket")
+
+            # delete_article returns None on success and must not raise.
             result = storage.delete_article("raw_articles/test-123.json")
-            
-            assert result is not None
-            
+
+            assert result is None
+
         except ImportError:
             pytest.skip("S3 storage module not available")
-    
-    def test_s3_batch_upload(self, mock_s3_client):
-        """Test batch article upload to S3."""
+
+    def test_s3_upload_missing_required_fields(self, mock_s3_client):
+        """upload_article rejects articles missing required fields."""
         try:
-            from src.database.s3_storage import S3Storage, S3StorageConfig, ArticleType
-            
-            config = S3StorageConfig(bucket_name="test-bucket")
-            storage = S3Storage(config)
-            
-            # Create test bucket first
+            from src.database.s3_storage import S3Storage
+
+            storage = S3Storage(bucket_name="test-bucket")
             mock_s3_client.create_bucket(Bucket="test-bucket")
-            
-            articles = [
-                {"id": f"test-{i}", "title": f"Article {i}", "content": f"Content {i}"}
-                for i in range(5)
-            ]
-            
-            results = storage.batch_upload_articles(articles, ArticleType.RAW)
-            
-            assert len(results) == 5
-            assert all("s3_key" in result for result in results)
-            
+
+            # Missing title/content/source -> ValueError before any S3 call.
+            with pytest.raises(ValueError):
+                storage.upload_article({"id": "test", "url": "https://x/y"})
+
         except ImportError:
             pytest.skip("S3 storage module not available")
-    
-    def test_s3_error_handling(self, mock_s3_client):
-        """Test S3 error handling."""
+
+    def test_s3_error_handling_no_client(self):
+        """Operations fail clearly when the S3 client could not initialize."""
         try:
-            from src.database.s3_storage import S3Storage, S3StorageConfig
-            
-            config = S3StorageConfig(bucket_name="nonexistent-bucket")
-            storage = S3Storage(config)
-            
-            # Attempt operation on nonexistent bucket
-            article_data = {"id": "test", "title": "Test"}
-            
-            with pytest.raises(Exception):
+            from src.database.s3_storage import S3Storage
+
+            # head_bucket raising a generic exception leaves s3_client as None.
+            failing_client = MockS3Client()
+            failing_client.head_bucket = MagicMock(
+                side_effect=Exception("boom")
+            )
+
+            with patch(
+                'src.database.s3_storage.get_client', return_value=failing_client
+            ):
+                storage = S3Storage(bucket_name="nonexistent-bucket")
+
+            assert storage.s3_client is None
+
+            article_data = {
+                "title": "Test",
+                "content": "Test content",
+                "source": "test-source",
+            }
+            with pytest.raises(ValueError):
                 storage.upload_article(article_data)
-                
+
         except ImportError:
             pytest.skip("S3 storage module not available")
 
@@ -642,147 +685,194 @@ class TestS3Storage:
 # Test Classes for DynamoDB Metadata Manager
 # =============================================================================
 
+@pytest.mark.skipif(not HAS_BOTO3, reason="boto3 not installed")
 class TestDynamoDBMetadataManager:
-    """Test DynamoDB metadata indexing and search operations."""
-    
+    """Test DynamoDB metadata indexing and search operations.
+
+    The current manager builds clients via ``get_resource``/``get_client`` from
+    ``src.utils.local_cloud`` (imported into the manager module). Its index,
+    batch, search and delete methods are async and accept/return the current
+    types (article dicts in, ArticleMetadataIndex/QueryResult/bool out).
+    """
+
     @pytest.fixture
     def mock_dynamodb_resource(self):
-        with patch('boto3.resource') as mock:
-            mock_table = MockDynamoDBTable("test-table")
-            mock.return_value.Table.return_value = mock_table
+        mock_table = MockDynamoDBTable("test-table")
+        mock_resource = MagicMock()
+        mock_resource.Table.return_value = mock_table
+        with patch(
+            'src.database.dynamodb_metadata_manager.get_resource',
+            return_value=mock_resource,
+        ), patch(
+            'src.database.dynamodb_metadata_manager.get_client',
+            return_value=MagicMock(),
+        ):
             yield mock_table
-    
+
     def test_dynamodb_manager_initialization(self, mock_dynamodb_resource):
         """Test DynamoDB manager initialization."""
         try:
             from src.database.dynamodb_metadata_manager import DynamoDBMetadataManager
-            
+
             manager = DynamoDBMetadataManager("test-table")
-            
+
             assert manager.table_name == "test-table"
             assert hasattr(manager, 'table')
-            
+            assert manager.table is mock_dynamodb_resource
+
         except ImportError:
             pytest.skip("DynamoDB manager module not available")
-    
-    def test_dynamodb_article_indexing(self, mock_dynamodb_resource):
+
+    @pytest.mark.asyncio
+    async def test_dynamodb_article_indexing(self, mock_dynamodb_resource):
         """Test article metadata indexing in DynamoDB."""
         try:
-            from src.database.dynamodb_metadata_manager import DynamoDBMetadataManager, ArticleMetadataIndex
-            
-            manager = DynamoDBMetadataManager("test-table")
-            
-            metadata = ArticleMetadataIndex(
-                article_id="test-123",
-                title="Test Article",
-                source="test-source",
-                published_date="2024-01-01",
-                tags=["tech", "news"],
-                content_preview="Test content preview"
+            from src.database.dynamodb_metadata_manager import (
+                DynamoDBMetadataManager,
+                ArticleMetadataIndex,
             )
-            
-            result = manager.index_article_metadata(metadata)
-            
-            assert result is not None
-            
+
+            manager = DynamoDBMetadataManager("test-table")
+
+            article = {
+                "id": "test-123",
+                "title": "Test Article",
+                "source": "test-source",
+                "published_date": "2024-01-01",
+                "tags": ["tech", "news"],
+                "content": "Test content preview",
+            }
+
+            result = await manager.index_article_metadata(article)
+
+            assert isinstance(result, ArticleMetadataIndex)
+            assert result.article_id == "test-123"
+            # The item was persisted to the mock table.
+            assert "test-123" in mock_dynamodb_resource.items
+
         except ImportError:
             pytest.skip("DynamoDB manager module not available")
-    
-    def test_dynamodb_article_search_by_source(self, mock_dynamodb_resource):
+
+    @pytest.mark.asyncio
+    async def test_dynamodb_article_search_by_source(self, mock_dynamodb_resource):
         """Test article search by source in DynamoDB."""
         try:
-            from src.database.dynamodb_metadata_manager import DynamoDBMetadataManager
-            
+            from src.database.dynamodb_metadata_manager import (
+                DynamoDBMetadataManager,
+                QueryResult,
+            )
+
             manager = DynamoDBMetadataManager("test-table")
-            
-            results = manager.search_by_source("test-source")
-            
-            assert isinstance(results, list)
-            
+
+            result = await manager.get_articles_by_source("test-source")
+
+            assert isinstance(result, QueryResult)
+            assert isinstance(result.items, list)
+
         except ImportError:
             pytest.skip("DynamoDB manager module not available")
-    
-    def test_dynamodb_article_search_by_date_range(self, mock_dynamodb_resource):
+
+    @pytest.mark.asyncio
+    async def test_dynamodb_article_search_by_date_range(self, mock_dynamodb_resource):
         """Test article search by date range in DynamoDB."""
         try:
-            from src.database.dynamodb_metadata_manager import DynamoDBMetadataManager
-            
+            from src.database.dynamodb_metadata_manager import (
+                DynamoDBMetadataManager,
+                QueryResult,
+            )
+
             manager = DynamoDBMetadataManager("test-table")
-            
-            results = manager.search_by_date_range("2024-01-01", "2024-12-31")
-            
-            assert isinstance(results, list)
-            
+
+            result = await manager.get_articles_by_date_range(
+                "2024-01-01", "2024-12-31"
+            )
+
+            assert isinstance(result, QueryResult)
+            assert isinstance(result.items, list)
+
         except ImportError:
             pytest.skip("DynamoDB manager module not available")
-    
-    def test_dynamodb_fulltext_search(self, mock_dynamodb_resource):
+
+    @pytest.mark.asyncio
+    async def test_dynamodb_fulltext_search(self, mock_dynamodb_resource):
         """Test full-text search in DynamoDB."""
         try:
-            from src.database.dynamodb_metadata_manager import DynamoDBMetadataManager, SearchMode
-            
+            from src.database.dynamodb_metadata_manager import (
+                DynamoDBMetadataManager,
+                SearchQuery,
+                SearchMode,
+                QueryResult,
+            )
+
             manager = DynamoDBMetadataManager("test-table")
-            
-            results = manager.fulltext_search("test query", SearchMode.CONTAINS)
-            
-            assert isinstance(results, list)
-            
+
+            query = SearchQuery(query_text="test query", search_mode=SearchMode.CONTAINS)
+            result = await manager.search_articles(query)
+
+            assert isinstance(result, QueryResult)
+            assert isinstance(result.items, list)
+
         except ImportError:
             pytest.skip("DynamoDB manager module not available")
-    
-    def test_dynamodb_batch_indexing(self, mock_dynamodb_resource):
+
+    @pytest.mark.asyncio
+    async def test_dynamodb_batch_indexing(self, mock_dynamodb_resource):
         """Test batch article indexing in DynamoDB."""
         try:
-            from src.database.dynamodb_metadata_manager import DynamoDBMetadataManager, ArticleMetadataIndex
-            
+            from src.database.dynamodb_metadata_manager import DynamoDBMetadataManager
+
             manager = DynamoDBMetadataManager("test-table")
-            
-            metadata_list = [
-                ArticleMetadataIndex(
-                    article_id=f"test-{i}",
-                    title=f"Article {i}",
-                    source="test-source",
-                    published_date="2024-01-01",
-                    tags=["tech"],
-                    content_preview=f"Preview {i}"
-                )
+
+            articles = [
+                {
+                    "id": f"test-{i}",
+                    "title": f"Article {i}",
+                    "source": "test-source",
+                    "published_date": "2024-01-01",
+                    "tags": ["tech"],
+                    "content": f"Preview {i}",
+                }
                 for i in range(5)
             ]
-            
-            results = manager.batch_index_articles(metadata_list)
-            
-            assert results is not None
-            
+
+            result = await manager.batch_index_articles(articles)
+
+            assert result is not None
+            assert result["status"] == "completed"
+            assert result["indexed_count"] == 5
+            assert result["failed_count"] == 0
+
         except ImportError:
             pytest.skip("DynamoDB manager module not available")
-    
-    def test_dynamodb_article_deletion(self, mock_dynamodb_resource):
+
+    @pytest.mark.asyncio
+    async def test_dynamodb_article_deletion(self, mock_dynamodb_resource):
         """Test article metadata deletion from DynamoDB."""
         try:
             from src.database.dynamodb_metadata_manager import DynamoDBMetadataManager
-            
+
             manager = DynamoDBMetadataManager("test-table")
-            
-            result = manager.delete_article_metadata("test-123")
-            
-            assert result is not None
-            
+
+            result = await manager.delete_article_metadata("test-123")
+
+            assert result is True
+
         except ImportError:
             pytest.skip("DynamoDB manager module not available")
-    
-    def test_dynamodb_error_handling(self, mock_dynamodb_resource):
+
+    @pytest.mark.asyncio
+    async def test_dynamodb_error_handling(self, mock_dynamodb_resource):
         """Test DynamoDB error handling."""
         try:
             from src.database.dynamodb_metadata_manager import DynamoDBMetadataManager
-            
+
             manager = DynamoDBMetadataManager("test-table")
-            
-            # Mock table operation to raise exception
-            mock_dynamodb_resource.put_item.side_effect = Exception("DynamoDB error")
-            
+
+            # Indexing a non-dict article raises inside metadata creation and is
+            # re-raised by index_article_metadata.
             with pytest.raises(Exception):
-                manager.index_article_metadata(None)
-                
+                await manager.index_article_metadata(None)
+
         except ImportError:
             pytest.skip("DynamoDB manager module not available")
 
@@ -791,212 +881,226 @@ class TestDynamoDBMetadataManager:
 # Test Classes for Data Validation Pipeline
 # =============================================================================
 
+def _reputation_config(trusted=None, questionable=None, banned=None):
+    """Build a SourceReputationConfig with the keys the current analyzer reads."""
+    from src.database.data_validation_pipeline import SourceReputationConfig
+
+    return SourceReputationConfig(
+        trusted_domains=trusted or [],
+        questionable_domains=questionable or [],
+        banned_domains=banned or [],
+        reputation_thresholds=dict(REPUTATION_THRESHOLDS),
+    )
+
+
+# Distinct, non-fuzzy-similar titles so the duplicate detector does not reject
+# later articles in batch tests as near-duplicates of earlier ones.
+DISTINCT_TITLES = [
+    "Breaking technology news today",
+    "Economic policy shifts worldwide",
+    "Sports championship final results",
+    "Health research breakthrough announced",
+    "Climate summit reaches agreement",
+]
+
+
+def _valid_article_body(index: int) -> str:
+    """Content long enough (>=100 chars, >=20 words) to pass content validation."""
+    return (
+        f"Detailed coverage number {index} about the subject with enough words to "
+        "clear the validation threshold for word count and length requirements "
+        "set by the validator system."
+    )
+
+
 class TestDataValidationPipeline:
-    """Test data validation and cleaning operations."""
-    
+    """Test data validation and cleaning operations.
+
+    The current DataValidationPipeline composes helper components
+    (html_cleaner, duplicate_detector, source_analyzer, content_validator)
+    rather than exposing clean_content/is_duplicate/calculate_source_reputation
+    directly. Validation scores are on a 0-100 scale and reputation scores on a
+    0-1 scale.
+    """
+
     def test_validation_pipeline_initialization(self):
         """Test validation pipeline initialization."""
         try:
-            from src.database.data_validation_pipeline import DataValidationPipeline, SourceReputationConfig
-            
-            config = SourceReputationConfig(
-                trusted_domains=["trusted.com"],
-                questionable_domains=["questionable.com"],
-                banned_domains=["banned.com"],
-                reputation_thresholds={"high": 0.8, "medium": 0.5, "low": 0.2}
+            from src.database.data_validation_pipeline import DataValidationPipeline
+
+            config = _reputation_config(
+                trusted=["trusted.com"],
+                questionable=["questionable.com"],
+                banned=["banned.com"],
             )
-            
+
             pipeline = DataValidationPipeline(config)
-            
-            assert pipeline.config == config
+
+            # The config is held by the source reputation analyzer.
+            assert pipeline.source_analyzer.config == config
             assert hasattr(pipeline, 'duplicate_detector')
-            
+            assert hasattr(pipeline, 'html_cleaner')
+            assert hasattr(pipeline, 'content_validator')
+
         except ImportError:
             pytest.skip("Data validation module not available")
-    
+
     def test_article_validation_success(self):
         """Test successful article validation."""
         try:
-            from src.database.data_validation_pipeline import DataValidationPipeline, SourceReputationConfig
-            
-            config = SourceReputationConfig(
-                trusted_domains=["trusted.com"],
-                questionable_domains=[],
-                banned_domains=[],
-                reputation_thresholds={"high": 0.8, "medium": 0.5, "low": 0.2}
-            )
-            
-            pipeline = DataValidationPipeline(config)
-            
+            from src.database.data_validation_pipeline import DataValidationPipeline
+
+            pipeline = DataValidationPipeline(_reputation_config(trusted=["trusted.com"]))
+
             article = {
                 "title": "Test Article Title",
-                "content": "This is a test article with sufficient content length for validation.",
+                "content": _valid_article_body(1),
                 "url": "https://trusted.com/article",
                 "author": "Test Author",
                 "published_date": "2024-01-01T12:00:00Z",
-                "source": "trusted.com"
+                "source": "trusted.com",
             }
-            
+
             result = pipeline.validate_article(article)
-            
+
             assert result.is_valid
-            assert result.score > 0.5
+            # Validation scores are on a 0-100 scale; valid means score >= 50.
+            assert result.score >= 50
             assert isinstance(result.cleaned_data, dict)
-            
+
         except ImportError:
             pytest.skip("Data validation module not available")
-    
+
     def test_article_validation_failure(self):
         """Test article validation failure cases."""
         try:
-            from src.database.data_validation_pipeline import DataValidationPipeline, SourceReputationConfig
-            
-            config = SourceReputationConfig(
-                trusted_domains=[],
-                questionable_domains=[],
-                banned_domains=["banned.com"],
-                reputation_thresholds={"high": 0.8, "medium": 0.5, "low": 0.2}
-            )
-            
-            pipeline = DataValidationPipeline(config)
-            
-            # Article from banned domain
+            from src.database.data_validation_pipeline import DataValidationPipeline
+
+            pipeline = DataValidationPipeline(_reputation_config(banned=["banned.com"]))
+
+            # Article from banned domain with thin content and a bad date.
             article = {
                 "title": "Bad Article",
                 "content": "Short",
                 "url": "https://banned.com/article",
                 "author": "",
                 "published_date": "invalid-date",
-                "source": "banned.com"
+                "source": "banned.com",
             }
-            
+
             result = pipeline.validate_article(article)
-            
+
             assert not result.is_valid
             assert len(result.issues) > 0
-            
+            assert "banned_domain" in result.issues
+
         except ImportError:
             pytest.skip("Data validation module not available")
-    
+
     def test_duplicate_detection(self):
-        """Test duplicate article detection."""
+        """Test duplicate article detection via the duplicate detector."""
         try:
-            from src.database.data_validation_pipeline import DataValidationPipeline, SourceReputationConfig
-            
-            config = SourceReputationConfig(
-                trusted_domains=["trusted.com"],
-                questionable_domains=[],
-                banned_domains=[],
-                reputation_thresholds={"high": 0.8, "medium": 0.5, "low": 0.2}
-            )
-            
-            pipeline = DataValidationPipeline(config)
-            
+            from src.database.data_validation_pipeline import DataValidationPipeline
+
+            pipeline = DataValidationPipeline(_reputation_config(trusted=["trusted.com"]))
+
             article1 = {
                 "title": "Test Article",
                 "content": "This is test content for duplicate detection.",
-                "url": "https://trusted.com/article1"
+                "url": "https://trusted.com/article1",
             }
-            
+
             article2 = {
                 "title": "Test Article",
                 "content": "This is test content for duplicate detection.",
-                "url": "https://trusted.com/article2"
+                "url": "https://trusted.com/article2",
             }
-            
-            # First article should not be duplicate
-            is_duplicate1 = pipeline.is_duplicate(article1)
-            assert not is_duplicate1
-            
-            # Second article should be detected as duplicate
-            is_duplicate2 = pipeline.is_duplicate(article2)
-            assert is_duplicate2
-            
+
+            # is_duplicate returns a (bool, reason) tuple.
+            is_dup1, reason1 = pipeline.duplicate_detector.is_duplicate(article1)
+            assert not is_dup1
+            assert reason1 == "unique"
+
+            # Same title -> detected as a duplicate.
+            is_dup2, reason2 = pipeline.duplicate_detector.is_duplicate(article2)
+            assert is_dup2
+            assert reason2 == "duplicate_title"
+
         except ImportError:
             pytest.skip("Data validation module not available")
-    
+
     def test_content_cleaning(self):
-        """Test content cleaning and sanitization."""
+        """Test content cleaning and sanitization via the HTML cleaner."""
         try:
-            from src.database.data_validation_pipeline import DataValidationPipeline, SourceReputationConfig
-            
-            config = SourceReputationConfig(
-                trusted_domains=["trusted.com"],
-                questionable_domains=[],
-                banned_domains=[],
-                reputation_thresholds={"high": 0.8, "medium": 0.5, "low": 0.2}
-            )
-            
-            pipeline = DataValidationPipeline(config)
-            
+            from src.database.data_validation_pipeline import DataValidationPipeline
+
+            pipeline = DataValidationPipeline(_reputation_config(trusted=["trusted.com"]))
+
             dirty_content = "<script>alert('xss')</script><p>Clean content &amp; more</p>"
-            cleaned = pipeline.clean_content(dirty_content)
-            
+            cleaned = pipeline.html_cleaner.clean_content(dirty_content)
+
             assert "<script>" not in cleaned
             assert "Clean content" in cleaned
             assert "&amp;" not in cleaned  # HTML entities should be decoded
-            
+            assert "&" in cleaned          # ...to their literal character
+
         except ImportError:
             pytest.skip("Data validation module not available")
-    
+
     def test_source_reputation_scoring(self):
-        """Test source reputation scoring."""
+        """Test source reputation scoring via the source analyzer."""
         try:
-            from src.database.data_validation_pipeline import DataValidationPipeline, SourceReputationConfig
-            
-            config = SourceReputationConfig(
-                trusted_domains=["trusted.com"],
-                questionable_domains=["questionable.com"],
-                banned_domains=["banned.com"],
-                reputation_thresholds={"high": 0.8, "medium": 0.5, "low": 0.2}
+            from src.database.data_validation_pipeline import DataValidationPipeline
+
+            pipeline = DataValidationPipeline(
+                _reputation_config(
+                    trusted=["trusted.com"],
+                    questionable=["questionable.com"],
+                    banned=["banned.com"],
+                )
             )
-            
-            pipeline = DataValidationPipeline(config)
-            
-            # Test trusted domain
-            score_trusted = pipeline.calculate_source_reputation("trusted.com")
-            assert score_trusted >= 0.8
-            
-            # Test questionable domain
-            score_questionable = pipeline.calculate_source_reputation("questionable.com")
-            assert score_questionable < 0.8
-            
-            # Test banned domain
-            score_banned = pipeline.calculate_source_reputation("banned.com")
-            assert score_banned == 0.0
-            
+            analyzer = pipeline.source_analyzer
+
+            # Trusted domains score highest.
+            score_trusted = analyzer._calculate_reputation_score("trusted.com", "trusted.com")
+            assert score_trusted >= 0.9
+
+            # Questionable domains score lower than trusted.
+            score_questionable = analyzer._calculate_reputation_score(
+                "questionable.com", "questionable.com"
+            )
+            assert score_questionable < score_trusted
+
+            # Banned domains score the lowest.
+            score_banned = analyzer._calculate_reputation_score("banned.com", "banned.com")
+            assert score_banned < score_questionable
+
         except ImportError:
             pytest.skip("Data validation module not available")
-    
+
     def test_batch_validation(self):
         """Test batch article validation."""
         try:
-            from src.database.data_validation_pipeline import DataValidationPipeline, SourceReputationConfig
-            
-            config = SourceReputationConfig(
-                trusted_domains=["trusted.com"],
-                questionable_domains=[],
-                banned_domains=[],
-                reputation_thresholds={"high": 0.8, "medium": 0.5, "low": 0.2}
-            )
-            
-            pipeline = DataValidationPipeline(config)
-            
+            from src.database.data_validation_pipeline import DataValidationPipeline
+
+            pipeline = DataValidationPipeline(_reputation_config(trusted=["trusted.com"]))
+
             articles = [
                 {
-                    "title": f"Article {i}",
-                    "content": f"Content for article {i} with sufficient length.",
+                    "title": DISTINCT_TITLES[i],
+                    "content": _valid_article_body(i),
                     "url": f"https://trusted.com/article{i}",
-                    "source": "trusted.com"
+                    "source": "trusted.com",
+                    "published_date": "2024-01-01T12:00:00Z",
                 }
                 for i in range(5)
             ]
-            
+
             results = pipeline.batch_validate_articles(articles)
-            
+
             assert len(results) == 5
             assert all(result.is_valid for result in results)
-            
+
         except ImportError:
             pytest.skip("Data validation module not available")
 
@@ -1006,138 +1110,134 @@ class TestDataValidationPipeline:
 # =============================================================================
 
 class TestSnowflakeIntegration:
-    """Test Snowflake analytics connector and data loading."""
-    
-    @pytest.fixture
-    def mock_snowflake_connector(self):
-        with patch('snowflake.connector.connect') as mock:
-            mock.return_value = MockSnowflakeConnection()
-            yield mock
-    
-    def test_snowflake_connector_initialization(self, mock_snowflake_connector):
+    """Test Snowflake analytics connector.
+
+    The current implementation (``SnowflakeAnalyticsConnector``) is a pure-Python
+    mock connector that needs no Snowflake driver, so these tests exercise its
+    real API directly rather than patching ``snowflake.connector``.
+    """
+
+    @staticmethod
+    def _make_config():
+        from src.database.snowflake_analytics_connector import SnowflakeConfig
+
+        return SnowflakeConfig(
+            account="test-account",
+            user="test-user",
+            password="test-password",
+            warehouse="test-warehouse",
+            database="test-database",
+            schema="test-schema",
+        )
+
+    def test_snowflake_connector_initialization(self):
         """Test Snowflake connector initialization."""
         try:
-            from src.database.snowflake_analytics_connector import SnowflakeConnector
-            
-            config = {
-                "account": "test-account",
-                "user": "test-user",
-                "password": "test-password",
-                "warehouse": "test-warehouse",
-                "database": "test-database",
-                "schema": "test-schema"
-            }
-            
-            connector = SnowflakeConnector(config)
-            
+            from src.database.snowflake_analytics_connector import (
+                SnowflakeAnalyticsConnector,
+            )
+
+            config = self._make_config()
+            connector = SnowflakeAnalyticsConnector(config)
+
             assert connector.config == config
             assert hasattr(connector, 'connection')
-            
+            assert connector.is_connected() is False
+
         except ImportError:
             pytest.skip("Snowflake connector module not available")
-    
-    def test_snowflake_query_execution(self, mock_snowflake_connector):
+
+    def test_snowflake_query_execution(self):
         """Test Snowflake query execution."""
         try:
-            from src.database.snowflake_analytics_connector import SnowflakeConnector
-            
-            config = {
-                "account": "test-account",
-                "user": "test-user",
-                "password": "test-password",
-                "warehouse": "test-warehouse",
-                "database": "test-database",
-                "schema": "test-schema"
-            }
-            
-            connector = SnowflakeConnector(config)
-            
+            from src.database.snowflake_analytics_connector import (
+                SnowflakeAnalyticsConnector,
+            )
+
+            connector = SnowflakeAnalyticsConnector(self._make_config())
+            assert connector.connect() is True
+
             result = connector.execute_query("SELECT COUNT(*) FROM articles")
-            
+
             assert result is not None
-            
+            assert isinstance(result, list)
+            assert len(result) > 0
+
         except ImportError:
             pytest.skip("Snowflake connector module not available")
-    
-    def test_snowflake_data_loading(self, mock_snowflake_connector):
-        """Test Snowflake data loading operations."""
+
+    def test_snowflake_query_requires_connection(self):
+        """Executing a query before connecting raises ConnectionError."""
         try:
-            from src.database.snowflake_loader import SnowflakeLoader
-            
-            config = {
-                "account": "test-account",
-                "user": "test-user", 
-                "password": "test-password",
-                "warehouse": "test-warehouse",
-                "database": "test-database",
-                "schema": "test-schema"
-            }
-            
-            loader = SnowflakeLoader(config)
-            
-            # Test data loading
+            from src.database.snowflake_analytics_connector import (
+                SnowflakeAnalyticsConnector,
+            )
+
+            connector = SnowflakeAnalyticsConnector(self._make_config())
+
+            with pytest.raises(ConnectionError):
+                connector.execute_query("SELECT 1")
+
+        except ImportError:
+            pytest.skip("Snowflake connector module not available")
+
+    def test_snowflake_bulk_insert(self):
+        """Test Snowflake bulk insert operation."""
+        try:
+            from src.database.snowflake_analytics_connector import (
+                SnowflakeAnalyticsConnector,
+            )
+
+            connector = SnowflakeAnalyticsConnector(self._make_config())
+            connector.connect()
+
             test_data = [
                 {"id": 1, "title": "Article 1", "content": "Content 1"},
-                {"id": 2, "title": "Article 2", "content": "Content 2"}
+                {"id": 2, "title": "Article 2", "content": "Content 2"},
             ]
-            
-            result = loader.load_articles(test_data)
-            
-            assert result is not None
-            
-        except ImportError:
-            pytest.skip("Snowflake loader module not available")
-    
-    def test_snowflake_analytics_queries(self, mock_snowflake_connector):
-        """Test Snowflake analytics query operations."""
-        try:
-            from src.database.snowflake_analytics_connector import SnowflakeConnector
-            
-            config = {
-                "account": "test-account",
-                "user": "test-user",
-                "password": "test-password",
-                "warehouse": "test-warehouse",
-                "database": "test-database",
-                "schema": "test-schema"
-            }
-            
-            connector = SnowflakeConnector(config)
-            
-            # Test analytics queries
-            result1 = connector.get_article_counts_by_source()
-            result2 = connector.get_trending_topics()
-            result3 = connector.get_sentiment_analysis()
-            
-            assert result1 is not None
-            assert result2 is not None
-            assert result3 is not None
-            
+
+            inserted = connector.bulk_insert("articles", test_data)
+
+            assert inserted == len(test_data)
+
         except ImportError:
             pytest.skip("Snowflake connector module not available")
-    
-    def test_snowflake_error_handling(self, mock_snowflake_connector):
-        """Test Snowflake error handling."""
+
+    def test_snowflake_analytics_summary(self):
+        """Test Snowflake analytics summary and table info."""
         try:
-            from src.database.snowflake_analytics_connector import SnowflakeConnector
-            
-            config = {
-                "account": "test-account",
-                "user": "test-user",
-                "password": "test-password",
-                "warehouse": "test-warehouse",
-                "database": "test-database",
-                "schema": "test-schema"
-            }
-            
-            connector = SnowflakeConnector(config)
-            
-            # Mock connection failure
-            mock_snowflake_connector.side_effect = Exception("Connection failed")
-            
-            with pytest.raises(Exception):
-                connector.reconnect()
-                
+            from src.database.snowflake_analytics_connector import (
+                SnowflakeAnalyticsConnector,
+            )
+
+            connector = SnowflakeAnalyticsConnector(self._make_config())
+            connector.connect()
+
+            summary = connector.get_analytics_summary()
+            table_info = connector.get_table_info("articles")
+
+            assert summary["connection_status"] == "connected"
+            assert summary["database"] == "test-database"
+            assert table_info["table_name"] == "articles"
+            assert table_info["schema"] == "test-schema"
+
+        except ImportError:
+            pytest.skip("Snowflake connector module not available")
+
+    def test_snowflake_error_handling(self):
+        """Test Snowflake error handling for operations without a connection."""
+        try:
+            from src.database.snowflake_analytics_connector import (
+                SnowflakeAnalyticsConnector,
+            )
+
+            connector = SnowflakeAnalyticsConnector(self._make_config())
+
+            # Operations that require an active connection must raise when the
+            # connector has not connected yet.
+            with pytest.raises(ConnectionError):
+                connector.get_table_info("articles")
+
         except ImportError:
             pytest.skip("Snowflake connector module not available")
 
@@ -1146,192 +1246,177 @@ class TestSnowflakeIntegration:
 # Integration Tests for Database Pipeline
 # =============================================================================
 
+@pytest.mark.skipif(not HAS_BOTO3, reason="boto3 not installed")
 class TestDatabasePipelineIntegration:
-    """Test end-to-end database pipeline integration."""
-    
+    """Test end-to-end database pipeline integration.
+
+    Wires the validation pipeline, S3 storage and DynamoDB manager together
+    using their current APIs, with the S3/DynamoDB client factories mocked.
+    """
+
     @pytest.fixture
     def mock_all_services(self):
-        """Mock all external services for integration testing."""
-        with patch('boto3.client') as mock_s3, \
-             patch('boto3.resource') as mock_dynamodb, \
-             patch('src.database.setup.psycopg2') as mock_postgres, \
-             patch('snowflake.connector.connect') as mock_snowflake:
-            
-            # Set up mocks
-            mock_s3.return_value = MockS3Client()
-            mock_dynamodb.return_value.Table.return_value = MockDynamoDBTable("test-table")
-            mock_postgres.connect.return_value = MockPostgresConnection()
-            mock_snowflake.return_value = MockSnowflakeConnection()
-            
-            yield {
-                "s3": mock_s3.return_value,
-                "dynamodb": mock_dynamodb.return_value.Table.return_value,
-                "postgres": mock_postgres,
-                "snowflake": mock_snowflake.return_value
-            }
-    
-    def test_end_to_end_article_processing(self, mock_all_services):
+        """Mock the S3 and DynamoDB client factories for integration testing."""
+        s3_client = MockS3Client()
+        dynamo_table = MockDynamoDBTable("test-table")
+        dynamo_resource = MagicMock()
+        dynamo_resource.Table.return_value = dynamo_table
+
+        with patch(
+            'src.database.s3_storage.get_client', return_value=s3_client
+        ), patch(
+            'src.database.dynamodb_metadata_manager.get_resource',
+            return_value=dynamo_resource,
+        ), patch(
+            'src.database.dynamodb_metadata_manager.get_client',
+            return_value=MagicMock(),
+        ):
+            yield {"s3": s3_client, "dynamodb": dynamo_table}
+
+    @pytest.mark.asyncio
+    async def test_end_to_end_article_processing(self, mock_all_services):
         """Test complete article processing pipeline."""
         try:
-            from src.database.data_validation_pipeline import DataValidationPipeline, SourceReputationConfig
-            from src.database.s3_storage import S3Storage, S3StorageConfig, ArticleType
-            from src.database.dynamodb_metadata_manager import DynamoDBMetadataManager, ArticleMetadataIndex
-            
-            # Initialize components
-            validation_config = SourceReputationConfig(
-                trusted_domains=["trusted.com"],
-                questionable_domains=[],
-                banned_domains=[],
-                reputation_thresholds={"high": 0.8, "medium": 0.5, "low": 0.2}
+            from src.database.data_validation_pipeline import DataValidationPipeline
+            from src.database.s3_storage import S3Storage
+            from src.database.dynamodb_metadata_manager import (
+                DynamoDBMetadataManager,
+                ArticleMetadataIndex,
+                QueryResult,
             )
-            
-            validator = DataValidationPipeline(validation_config)
-            
-            s3_config = S3StorageConfig(bucket_name="test-bucket")
-            s3_storage = S3Storage(s3_config)
-            
+
+            validator = DataValidationPipeline(
+                _reputation_config(trusted=["trusted.com"])
+            )
+            s3_storage = S3Storage(bucket_name="test-bucket")
             dynamodb_manager = DynamoDBMetadataManager("test-table")
-            
-            # Create test bucket
+
+            # put_object requires the bucket to exist in the mock store.
             mock_all_services["s3"].create_bucket(Bucket="test-bucket")
-            
-            # Test article
+
             article = {
                 "id": "test-123",
                 "title": "Test Article for Integration",
-                "content": "This is a comprehensive test article with sufficient content for validation.",
+                "content": _valid_article_body(7),
                 "url": "https://trusted.com/test-article",
                 "author": "Test Author",
                 "source": "trusted.com",
                 "published_date": "2024-01-01T12:00:00Z",
-                "category": "technology"
+                "category": "technology",
             }
-            
+
             # Step 1: Validate article
             validation_result = validator.validate_article(article)
             assert validation_result.is_valid
-            
-            # Step 2: Store in S3
-            s3_result = s3_storage.upload_article(validation_result.cleaned_data, ArticleType.RAW)
-            assert s3_result is not None
-            
-            # Step 3: Index in DynamoDB
-            metadata = ArticleMetadataIndex(
-                article_id=article["id"],
-                title=article["title"],
-                source=article["source"],
-                published_date=article["published_date"],
-                tags=["technology"],
-                content_preview=article["content"][:200]
-            )
-            
-            index_result = dynamodb_manager.index_article_metadata(metadata)
-            assert index_result is not None
-            
+
+            # Step 2: Store cleaned data in S3 (returns the generated key string)
+            s3_key = s3_storage.upload_article(validation_result.cleaned_data)
+            assert isinstance(s3_key, str)
+
+            # Step 3: Index in DynamoDB (async, accepts an article dict)
+            index_result = await dynamodb_manager.index_article_metadata(article)
+            assert isinstance(index_result, ArticleMetadataIndex)
+            assert index_result.article_id == "test-123"
+
             # Step 4: Search and retrieve
-            search_results = dynamodb_manager.search_by_source("trusted.com")
-            assert len(search_results) >= 0
-            
+            search_results = await dynamodb_manager.get_articles_by_source("trusted.com")
+            assert isinstance(search_results, QueryResult)
+
         except ImportError:
             pytest.skip("Integration test modules not available")
-    
-    def test_batch_processing_performance(self, mock_all_services):
+
+    @pytest.mark.asyncio
+    async def test_batch_processing_performance(self, mock_all_services):
         """Test batch processing performance and reliability."""
         try:
-            from src.database.data_validation_pipeline import DataValidationPipeline, SourceReputationConfig
-            from src.database.s3_storage import S3Storage, S3StorageConfig, ArticleType
-            from src.database.dynamodb_metadata_manager import DynamoDBMetadataManager, ArticleMetadataIndex
-            
-            # Initialize components
-            validation_config = SourceReputationConfig(
-                trusted_domains=["trusted.com"],
-                questionable_domains=[],
-                banned_domains=[],
-                reputation_thresholds={"high": 0.8, "medium": 0.5, "low": 0.2}
+            from src.database.data_validation_pipeline import DataValidationPipeline
+            from src.database.s3_storage import S3Storage
+            from src.database.dynamodb_metadata_manager import DynamoDBMetadataManager
+
+            validator = DataValidationPipeline(
+                _reputation_config(trusted=["trusted.com"])
             )
-            
-            validator = DataValidationPipeline(validation_config)
-            s3_config = S3StorageConfig(bucket_name="test-bucket")
-            s3_storage = S3Storage(s3_config)
+            s3_storage = S3Storage(bucket_name="test-bucket")
             dynamodb_manager = DynamoDBMetadataManager("test-table")
-            
-            # Create test bucket
+
             mock_all_services["s3"].create_bucket(Bucket="test-bucket")
-            
-            # Generate batch of articles
-            articles = [
-                {
-                    "id": f"test-{i}",
-                    "title": f"Test Article {i}",
-                    "content": f"Content for test article {i} with sufficient length for validation.",
-                    "url": f"https://trusted.com/article-{i}",
-                    "source": "trusted.com",
-                    "published_date": "2024-01-01T12:00:00Z"
-                }
-                for i in range(10)
+
+            # Each article draws six unique words (shared with no other article)
+            # so neither fuzzy-title nor content-hash duplicate detection rejects
+            # later items in the batch.
+            vocab = [
+                f"{a}{b}{c}{d}"
+                for a in "bcdfghjk"
+                for b in "aeiou"
+                for c in "mnprs"
+                for d in "tkl"
             ]
-            
+            articles = []
+            for i in range(10):
+                words = vocab[i * 6:(i + 1) * 6]
+                articles.append(
+                    {
+                        "id": f"test-{i}",
+                        "title": " ".join(w.capitalize() for w in words[:5]),
+                        "content": " ".join(words * 6) + " completed.",
+                        "url": f"https://trusted.com/article-{i}",
+                        "source": "trusted.com",
+                        "published_date": "2024-01-01T12:00:00Z",
+                    }
+                )
+
             # Batch validation
             validation_results = validator.batch_validate_articles(articles)
             assert len(validation_results) == 10
             assert all(result.is_valid for result in validation_results)
-            
-            # Batch S3 upload
+
+            # Per-article S3 upload of cleaned data
             valid_articles = [result.cleaned_data for result in validation_results]
-            s3_results = s3_storage.batch_upload_articles(valid_articles, ArticleType.RAW)
-            assert len(s3_results) == 10
-            
-            # Batch DynamoDB indexing
-            metadata_list = [
-                ArticleMetadataIndex(
-                    article_id=article["id"],
-                    title=article["title"],
-                    source=article["source"],
-                    published_date=article["published_date"],
-                    tags=["technology"],
-                    content_preview=article["content"][:200]
-                )
-                for article in valid_articles
-            ]
-            
-            index_result = dynamodb_manager.batch_index_articles(metadata_list)
+            s3_keys = [s3_storage.upload_article(a) for a in valid_articles]
+            assert len(s3_keys) == 10
+            assert all(isinstance(k, str) for k in s3_keys)
+
+            # Batch DynamoDB indexing (async, accepts article dicts)
+            index_result = await dynamodb_manager.batch_index_articles(articles)
             assert index_result is not None
-            
+            assert index_result["indexed_count"] == 10
+
         except ImportError:
             pytest.skip("Integration test modules not available")
-    
+
     def test_error_recovery_and_resilience(self, mock_all_services):
         """Test error recovery and system resilience."""
         try:
-            from src.database.data_validation_pipeline import DataValidationPipeline, SourceReputationConfig
-            from src.database.s3_storage import S3Storage, S3StorageConfig
-            
-            # Initialize components
-            validation_config = SourceReputationConfig(
-                trusted_domains=["trusted.com"],
-                questionable_domains=[],
-                banned_domains=[],
-                reputation_thresholds={"high": 0.8, "medium": 0.5, "low": 0.2}
+            from src.database.data_validation_pipeline import DataValidationPipeline
+            from src.database.s3_storage import S3Storage
+
+            validator = DataValidationPipeline(
+                _reputation_config(trusted=["trusted.com"])
             )
-            
-            validator = DataValidationPipeline(validation_config)
-            s3_config = S3StorageConfig(bucket_name="nonexistent-bucket")
-            s3_storage = S3Storage(s3_config)
-            
-            # Test graceful handling of S3 errors
+            # Build a storage whose client fails to initialize (s3_client = None).
+            failing_client = MockS3Client()
+            failing_client.head_bucket = MagicMock(side_effect=Exception("boom"))
+            with patch(
+                'src.database.s3_storage.get_client', return_value=failing_client
+            ):
+                s3_storage = S3Storage(bucket_name="nonexistent-bucket")
+            assert s3_storage.s3_client is None
+
             article = {
-                "title": "Test Article",
-                "content": "Test content",
-                "url": "https://trusted.com/article"
+                "title": "Test Article Title",
+                "content": _valid_article_body(3),
+                "url": "https://trusted.com/article",
+                "source": "trusted.com",
+                "published_date": "2024-01-01T12:00:00Z",
             }
-            
+
             validation_result = validator.validate_article(article)
             assert validation_result.is_valid
-            
-            # Attempt S3 upload to nonexistent bucket (should handle gracefully)
-            with pytest.raises(Exception):
+
+            # Upload must fail clearly when no S3 client is available.
+            with pytest.raises(ValueError):
                 s3_storage.upload_article(validation_result.cleaned_data)
-                
+
         except ImportError:
             pytest.skip("Integration test modules not available")
 
@@ -1370,41 +1455,51 @@ class TestDatabasePerformance:
     def test_large_dataset_validation(self):
         """Test validation performance with large datasets."""
         try:
-            from src.database.data_validation_pipeline import DataValidationPipeline, SourceReputationConfig
-            
-            validation_config = SourceReputationConfig(
-                trusted_domains=["trusted.com"],
-                questionable_domains=[],
-                banned_domains=[],
-                reputation_thresholds={"high": 0.8, "medium": 0.5, "low": 0.2}
-            )
-            
-            validator = DataValidationPipeline(validation_config)
-            
-            # Generate large dataset
-            articles = [
-                {
-                    "title": f"Article {i}",
-                    "content": f"Content for article {i} " * 50,  # Longer content
-                    "url": f"https://trusted.com/article-{i}",
-                    "source": "trusted.com",
-                    "published_date": "2024-01-01T12:00:00Z"
-                }
-                for i in range(100)  # Large batch
+            from src.database.data_validation_pipeline import DataValidationPipeline
+
+            validator = DataValidationPipeline(_reputation_config(trusted=["trusted.com"]))
+
+            # A 600-word pseudo-vocabulary so each article draws six unique words
+            # that appear in no other article. This keeps every title and body
+            # distinct, so the duplicate detector (exact + fuzzy title + content
+            # hash) does not reject later items in the batch.
+            vocab = [
+                f"{a}{b}{c}{d}"
+                for a in "bcdfghjk"
+                for b in "aeiou"
+                for c in "mnprs"
+                for d in "tkl"
             ]
-            
+            assert len(vocab) >= 600
+
+            articles = []
+            for i in range(100):
+                words = vocab[i * 6:(i + 1) * 6]
+                articles.append(
+                    {
+                        # Five distinct words per title, none shared across titles.
+                        "title": " ".join(w.capitalize() for w in words[:5]),
+                        # Repeat the unique words to exceed the length/word-count
+                        # thresholds while staying unique per article.
+                        "content": " ".join(words * 6) + " completed.",
+                        "url": f"https://trusted.com/article-{i}",
+                        "source": "trusted.com",
+                        "published_date": "2024-01-01T12:00:00Z",
+                    }
+                )
+
             import time
             start_time = time.time()
-            
+
             results = validator.batch_validate_articles(articles)
-            
+
             end_time = time.time()
             processing_time = end_time - start_time
-            
+
             assert len(results) == 100
             assert processing_time < 30.0  # Should complete within 30 seconds
             assert all(result.is_valid for result in results)
-            
+
         except ImportError:
             pytest.skip("Data validation module not available")
     
