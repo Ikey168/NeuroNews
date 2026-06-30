@@ -72,7 +72,15 @@ class TestRunSpider:
             s3_storage=True, s3_bucket="b", s3_prefix="p",
             aws_access_key_id="k", aws_secret_access_key="s",
         )
-        settings.set.assert_any_call("S3_BUCKET", "b")
+        # The S3 branch registers the S3 storage pipeline and sets S3_PREFIX.
+        settings.set.assert_any_call("S3_PREFIX", "p")
+        pipelines_calls = [
+            c.args[1] for c in settings.set.call_args_list if c.args[0] == "ITEM_PIPELINES"
+        ]
+        assert any(
+            "src.scraper.pipelines.s3_pipeline.S3StoragePipeline" in p
+            for p in pipelines_calls
+        )
 
     def test_cloudwatch_branch(self, monkeypatch):
         settings = make_settings()
@@ -101,7 +109,9 @@ class TestRunSpider:
         monkeypatch.setattr(run_mod, "CrawlerProcess", MagicMock())
         run_mod.run_spider()
         assert os.environ.get("AWS_PROFILE") == "myprof"
-        settings.set.assert_any_call("S3_BUCKET", "cfgb")
+        # S3 storage is enabled from config; the prefix is resolved from config
+        # and pushed into settings as S3_PREFIX.
+        settings.set.assert_any_call("S3_PREFIX", "cfgp")
 
 
 class TestMainCLI:

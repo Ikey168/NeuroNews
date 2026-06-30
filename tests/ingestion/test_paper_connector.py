@@ -172,10 +172,29 @@ def test_split_sections_recognizes_headings():
     assert "references" in headings
 
 
-def test_parse_pdf_without_backend_degrades_gracefully():
-    # No PyMuPDF in this environment -> empty parse, no crash.
-    parsed = parse_pdf(b"%PDF-1.4 not really a pdf")
-    assert parsed.extractor in ("none", "pymupdf")
+def test_parse_pdf_extracts_text_or_degrades_gracefully():
+    # parse_pdf uses PyMuPDF (fitz) when installed and returns extractor="none"
+    # when it is not. Build a real, valid PDF so the installed backend has
+    # something parseable rather than malformed bytes (which fitz rejects).
+    try:
+        import fitz  # PyMuPDF
+    except ImportError:
+        # Backend absent -> graceful degradation to an empty, no-crash parse.
+        parsed = parse_pdf(b"%PDF-1.4 not really a pdf")
+        assert parsed.extractor == "none"
+        assert parsed.text == ""
+        return
+
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((72, 72), "Abstract\nwe present a method.\nReferences\n[1] foo")
+    pdf_bytes = doc.tobytes()
+    doc.close()
+
+    parsed = parse_pdf(pdf_bytes)
+    assert parsed.extractor == "pymupdf"
+    assert "Abstract" in parsed.text
+    assert "abstract" in [s.heading for s in parsed.sections]
 
 
 if __name__ == "__main__":

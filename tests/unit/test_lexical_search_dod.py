@@ -7,15 +7,41 @@ Demonstrates that lexical_topk function returns sensible titles with ranking and
 import sys
 from pathlib import Path
 
-# Add project root to path
-project_root = Path(__file__).parent
+# Add project root to path (repo root is three levels up: tests/unit/<file>)
+project_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(project_root))
+
+import pytest
 
 try:
     from services.rag.lexical import LexicalSearchService
 except ImportError as _e:  # stale or optional dependency
-    import pytest
     pytest.skip("module import failed: {0}".format(_e), allow_module_level=True)
+
+
+def _postgres_available() -> bool:
+    """These are integration tests that exercise a live Postgres FTS backend.
+
+    Probe the configured server; if it is genuinely unreachable, skip (an
+    external service is an absent dependency, like importorskip for a package).
+    """
+    import socket
+
+    service = LexicalSearchService()
+    params = service.connection_params
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(1.0)
+    try:
+        return sock.connect_ex((params["host"], int(params["port"]))) == 0
+    finally:
+        sock.close()
+
+
+if not _postgres_available():
+    pytest.skip(
+        "PostgreSQL FTS backend not reachable; lexical search integration tests require a live DB",
+        allow_module_level=True,
+    )
 
 def test_dod_requirement():
     """Test the specific DoD requirement."""
