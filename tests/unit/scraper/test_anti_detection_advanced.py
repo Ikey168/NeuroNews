@@ -3,6 +3,7 @@ Comprehensive tests for Anti-Detection mechanisms.
 Tests stealth mode, CAPTCHA handling, and detection avoidance strategies.
 """
 
+import asyncio
 import pytest
 import time
 import random
@@ -33,40 +34,46 @@ class TestAntiDetectionMechanisms:
     def test_captcha_solver_initialization(self, captcha_solver):
         """Test CaptchaSolver initialization."""
         assert captcha_solver.api_key == "test-api-key"
-        assert hasattr(captcha_solver, 'solve_captcha')
+        assert hasattr(captcha_solver, 'solve_recaptcha_v2')
 
-    @patch('requests.post')
-    def test_captcha_solving_success(self, mock_post, captcha_solver):
-        """Test successful CAPTCHA solving."""
-        mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "status": 1,
-            "request": "12345",
-            "solution": "test_solution"
-        }
-        mock_post.return_value = mock_response
-        
-        result = captcha_solver.solve_text_captcha("test_image_data")
-        
+    @patch('aiohttp.ClientSession.post')
+    @pytest.mark.asyncio
+    async def test_captcha_solving_success(self, mock_post, captcha_solver):
+        """Test successful CAPTCHA solving via solve_recaptcha_v2."""
+        mock_response = AsyncMock()
+        mock_response.json = AsyncMock(return_value={"status": 1, "request": "12345"})
+        mock_post.return_value.__aenter__.return_value = mock_response
+
+        # Short-circuit the polling loop by returning a solved token immediately.
+        with patch.object(
+            captcha_solver, "get_captcha_result", return_value="test_solution"
+        ):
+            result = await captcha_solver.solve_recaptcha_v2(
+                site_key="test_sitekey", url="https://example.com"
+            )
+
         assert result == "test_solution"
         mock_post.assert_called()
 
-    @patch('requests.post')
-    def test_captcha_solving_failure(self, mock_post, captcha_solver):
-        """Test CAPTCHA solving failure handling."""
-        mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "status": 0,
-            "error": "ERROR_WRONG_USER_KEY"
-        }
-        mock_post.return_value = mock_response
-        
-        result = captcha_solver.solve_text_captcha("test_image_data")
-        
+    @patch('aiohttp.ClientSession.post')
+    @pytest.mark.asyncio
+    async def test_captcha_solving_failure(self, mock_post, captcha_solver):
+        """Test CAPTCHA solving failure handling via solve_recaptcha_v2."""
+        mock_response = AsyncMock()
+        mock_response.json = AsyncMock(
+            return_value={"status": 0, "request": "ERROR_WRONG_USER_KEY"}
+        )
+        mock_post.return_value.__aenter__.return_value = mock_response
+
+        result = await captcha_solver.solve_recaptcha_v2(
+            site_key="test_sitekey", url="https://example.com"
+        )
+
         assert result is None
 
-    def test_recaptcha_v2_detection(self, captcha_solver):
-        """Test reCAPTCHA v2 detection."""
+    @pytest.mark.asyncio
+    async def test_recaptcha_v2_detection(self, captcha_solver):
+        """Test reCAPTCHA v2 detection via detect_captcha."""
         html_with_recaptcha = """
         <html>
             <body>
@@ -74,27 +81,30 @@ class TestAntiDetectionMechanisms:
             </body>
         </html>
         """
-        
-        has_recaptcha = captcha_solver.detect_recaptcha(html_with_recaptcha)
+
+        has_recaptcha = await captcha_solver.detect_captcha(html_with_recaptcha)
         assert has_recaptcha is True
-        
+
         html_without_recaptcha = "<html><body>No captcha here</body></html>"
-        has_recaptcha = captcha_solver.detect_recaptcha(html_without_recaptcha)
+        has_recaptcha = await captcha_solver.detect_captcha(html_without_recaptcha)
         assert has_recaptcha is False
 
+    @patch('aiohttp.ClientSession.post')
     @pytest.mark.asyncio
-    async def test_captcha_solving_async(self, captcha_solver):
-        """Test asynchronous CAPTCHA solving."""
-        with patch('aiohttp.ClientSession') as mock_session:
-            mock_response = AsyncMock()
-            mock_response.json.return_value = {
-                "status": 1,
-                "solution": "async_solution"
-            }
-            mock_session.return_value.post.return_value.__aenter__.return_value = mock_response
-            
-            result = await captcha_solver.solve_captcha_async("test_image")
-            assert result == "async_solution"
+    async def test_captcha_solving_async(self, mock_post, captcha_solver):
+        """Test asynchronous CAPTCHA solving via solve_recaptcha_v2."""
+        mock_response = AsyncMock()
+        mock_response.json = AsyncMock(return_value={"status": 1, "request": "12345"})
+        mock_post.return_value.__aenter__.return_value = mock_response
+
+        with patch.object(
+            captcha_solver, "get_captcha_result", return_value="async_solution"
+        ):
+            result = await captcha_solver.solve_recaptcha_v2(
+                site_key="test_sitekey", url="https://example.com"
+            )
+
+        assert result == "async_solution"
 
     def test_user_agent_fingerprint_randomization(self, user_agent_rotator):
         """Test user agent fingerprint randomization."""
@@ -325,9 +335,12 @@ class ScrollSimulator:
     def generate_reading_scroll(self, page_length):
         positions = []
         current = 0
-        while current < page_length * 0.9:
+        bottom = int(page_length * 0.9)
+        while current < bottom:
             positions.append({"position": current, "delay": random.uniform(0.5, 2.0)})
             current += random.randint(100, 500)
+        # Final scroll settles at the bottom of the readable area.
+        positions.append({"position": bottom, "delay": random.uniform(0.5, 2.0)})
         return positions
 
 class SessionManager:
