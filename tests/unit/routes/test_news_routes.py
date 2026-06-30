@@ -1,53 +1,38 @@
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, MagicMock
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 import inspect
 
-@patch('src.api.routes.news_routes.get_news_service')
-@patch('src.api.routes.news_routes.get_database_connection')
-def test_news_routes_endpoints_execution(mock_db, mock_news):
-    """Exercise news routes endpoints to boost from 19% coverage."""
-    # Mock dependencies
-    mock_news_service = Mock()
-    mock_news.return_value = mock_news_service
-    mock_news_service.get_articles.return_value = [
-        {'id': 1, 'title': 'Test Article', 'content': 'Test content'}
-    ]
-    
-    mock_db_conn = Mock()
-    mock_db.return_value = mock_db_conn
-    
-    try:
-        from src.api.routes.news_routes import router
-        
-        app = FastAPI()
-        app.include_router(router)
-        client = TestClient(app)
-        
-        # Test news endpoints
-        endpoints_to_test = [
-            "/news",
-            "/news/latest",
-            "/news/trending",
-            "/news/categories",
-            "/news/search"
-        ]
-        
-        for endpoint in endpoints_to_test:
-            try:
-                response = client.get(endpoint)
-            except Exception:
-                pass
-            try:
-                response = client.post(endpoint, json={'query': 'test'})
-            except Exception:
-                pass
-                
-    except ImportError:
-        pass
-    
-    assert True
+from src.api.auth.jwt_auth import require_auth
+from src.api.routes.news_routes import get_db, router
+
+
+def test_news_routes_endpoints_execution():
+    """Exercise the real news routes endpoints against a mock connector."""
+    # The news routes depend on ``get_db`` (a DuckDB analytics connector) and
+    # ``require_auth`` (JWT). Both are replaced via dependency overrides so the
+    # route handlers actually execute against a mock connector.
+    mock_db = MagicMock()
+    mock_db.execute_query = AsyncMock(return_value=[])
+
+    async def _override_get_db():
+        yield mock_db
+
+    app = FastAPI()
+    app.include_router(router)
+    app.dependency_overrides[get_db] = _override_get_db
+    app.dependency_overrides[require_auth] = lambda: {"sub": "test-user"}
+    client = TestClient(app, raise_server_exceptions=False)
+
+    # Real endpoints exposed by the news router (prefix ``/news``).
+    assert client.get("/news/articles").status_code == 200
+    assert client.get("/news/articles/topic/technology").status_code == 200
+    # Empty result set -> 404 from the article-by-id handler.
+    assert client.get("/news/articles/some-id").status_code == 404
+
+    # The connector was invoked for each query-backed endpoint.
+    assert mock_db.execute_query.await_count == 3
 
 def test_news_routes_maximum_boost():
     """Boost news_routes from 19% to as high as possible."""

@@ -6,22 +6,11 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from src.api.auth.jwt_auth import require_auth
+from src.api.routes import news_routes
+from src.api.routes.news_routes import get_db
 from src.api.routes.news_routes import router as news_api_router
 from src.database.local_analytics_connector import LocalAnalyticsConnector
-
-
-@pytest.fixture
-def app():
-    """Create test FastAPI app with news routes."""
-    app = FastAPI()
-    app.include_router(news_api_router)
-    return app
-
-
-@pytest.fixture
-def client(app):
-    """Create test client."""
-    return TestClient(app)
 
 
 @pytest.fixture
@@ -32,6 +21,32 @@ def mock_db():
     mock.disconnect = MagicMock()
     mock.execute_query = AsyncMock()
     return mock
+
+
+@pytest.fixture
+def app(mock_db):
+    """Create test FastAPI app with news routes.
+
+    The news router depends on ``get_db`` (a DuckDB analytics connector) and
+    ``require_auth`` (JWT). Both are replaced via FastAPI dependency overrides
+    so the tests exercise the route logic against the mock connector without a
+    real database or authentication.
+    """
+    app = FastAPI()
+    app.include_router(news_api_router)
+
+    async def _override_get_db():
+        yield mock_db
+
+    app.dependency_overrides[get_db] = _override_get_db
+    app.dependency_overrides[require_auth] = lambda: {"sub": "test-user"}
+    return app
+
+
+@pytest.fixture
+def client(app):
+    """Create test client."""
+    return TestClient(app, raise_server_exceptions=False)
 
 
 def test_get_articles_by_topic(client, mock_db):
@@ -51,8 +66,7 @@ def test_get_articles_by_topic(client, mock_db):
     ]
     mock_db.execute_query.return_value = mock_articles
 
-    with patch("src.api.routes.news_routes.LocalAnalyticsConnector", return_value=mock_db):
-        response = client.get("/news/articles/topic/AI", params={"limit": 10})
+    response = client.get("/news/articles/topic/AI", params={"limit": 10})
 
     assert response.status_code == 200
     data = response.json()
@@ -75,13 +89,12 @@ def test_get_articles_by_topic(client, mock_db):
 
 def test_get_articles_by_topic_validation(client, mock_db):
     """Test input validation for topic search."""
-    with patch("src.api.routes.news_routes.LocalAnalyticsConnector", return_value=mock_db):
-        # Test invalid limit
-        response = client.get("/news/articles/topic/AI", params={"limit": 0})
-        assert response.status_code == 422
+    # Test invalid limit
+    response = client.get("/news/articles/topic/AI", params={"limit": 0})
+    assert response.status_code == 422
 
-        response = client.get("/news/articles/topic/AI", params={"limit": 101})
-        assert response.status_code == 422
+    response = client.get("/news/articles/topic/AI", params={"limit": 101})
+    assert response.status_code == 422
 
 
 def test_get_articles(client, mock_db):
@@ -100,8 +113,7 @@ def test_get_articles(client, mock_db):
     ]
     mock_db.execute_query.return_value = mock_articles
 
-    with patch("src.api.routes.news_routes.LocalAnalyticsConnector", return_value=mock_db):
-        response = client.get("/news/articles")
+    response = client.get("/news/articles")
 
     assert response.status_code == 200
     data = response.json()
@@ -122,16 +134,15 @@ def test_get_articles_with_filters(client, mock_db):
     """Test retrieving articles with query filters."""
     mock_db.execute_query.return_value = []
 
-    with patch("src.api.routes.news_routes.LocalAnalyticsConnector", return_value=mock_db):
-        response = client.get(
-            "/news/articles",
-            params={
-                "start_date": "2024-01-01T00:00:00Z",
-                "end_date": "2024-01-31T23:59:59Z",
-                "source": "TestSource",
-                "category": "Technology",
-            },
-        )
+    response = client.get(
+        "/news/articles",
+        params={
+            "start_date": "2024-01-01T00:00:00Z",
+            "end_date": "2024-01-31T23:59:59Z",
+            "source": "TestSource",
+            "category": "Technology",
+        },
+    )
 
     assert response.status_code == 200
 
@@ -168,8 +179,7 @@ def test_get_article_by_id(client, mock_db):
     ]
     mock_db.execute_query.return_value = mock_article
 
-    with patch("src.api.routes.news_routes.LocalAnalyticsConnector", return_value=mock_db):
-        response = client.get("/news/articles/article1")
+    response = client.get("/news/articles/article1")
 
     assert response.status_code == 200
     article = response.json()
@@ -184,8 +194,7 @@ def test_get_article_not_found(client, mock_db):
     """Test 404 response for non-existent article."""
     mock_db.execute_query.return_value = []
 
-    with patch("src.api.routes.news_routes.LocalAnalyticsConnector", return_value=mock_db):
-        response = client.get("/news/articles/nonexistent")
+    response = client.get("/news/articles/nonexistent")
 
     assert response.status_code == 404
     assert "not found" in response.json()["detail"]
@@ -195,8 +204,7 @@ def test_database_error_handling(client, mock_db):
     """Test error handling for database failures."""
     mock_db.execute_query.side_effect = Exception("Database error")
 
-    with patch("src.api.routes.news_routes.LocalAnalyticsConnector", return_value=mock_db):
-        response = client.get("/news/articles")
+    response = client.get("/news/articles")
 
     assert response.status_code == 500
     assert "Database error" in response.json()["detail"]
@@ -206,9 +214,7 @@ def test_articles_require_no_snowflake_env(client, mock_db):
     """The local warehouse needs no Snowflake credentials to serve articles."""
     mock_db.execute_query.return_value = []
 
-    with patch("src.api.routes.news_routes.LocalAnalyticsConnector", return_value=mock_db), patch.dict(
-        os.environ, {}, clear=True
-    ):
+    with patch.dict(os.environ, {}, clear=True):
         response = client.get("/news/articles")
 
     assert response.status_code == 200
