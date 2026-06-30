@@ -228,6 +228,7 @@ by source type, article length, and per-class metrics.
 
 ## Documentation
 
+- [Documentation index](docs/index.md) — full doc map by topic
 - [Project structure](docs/PROJECT_STRUCTURE.md)
 - [Model benchmarks](docs/model_benchmarks.md)
 - [Exactly-once delivery design](docs/EXACTLY_ONCE_DESIGN.md)

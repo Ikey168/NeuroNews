@@ -1,117 +1,63 @@
 # Project Structure
 
-## Overview
-NeuroNews is organized into the following directories:
+How the Noesis repository is laid out. For setup and the tech stack, see the
+[root README](../README.md); for the documentation map, see
+[`docs/index.md`](index.md).
 
-```
-NeuroNews/
-├── .github/                    # GitHub Actions workflows and templates
-├── config/                     # Configuration files
-├── data/                      # Data storage and datasets
-├── demo/                      # Demo scripts and examples
-│   ├── results/              # Demo output and results
-├── deployment/               # Deployment configurations and scripts
-├── docs/                     # Documentation
-│   ├── guides/              # User and developer guides
-│   ├── implementation/      # Implementation documentation
-│   └── reports/             # Progress reports and summaries
-├── logs/                     # Application and system logs
-├── scripts/                  # Utility and automation scripts
-├── src/                      # Main source code
-├── tests/                    # Test suite
-├── validation/               # Validation scripts and utilities
-├── docker-compose*.yml       # Docker Compose configurations
-├── Dockerfile*               # Docker build configurations
-├── requirements*.txt         # Python dependencies
-└── pyproject.toml           # Python project configuration
-```
+## Application code
 
-## Directory Descriptions
+| Path | Contents |
+|---|---|
+| `src/` | Python backend. Notable packages: `api/` (FastAPI app and routes), `argument_mining/` (claim/stance/frame models), `nlp/`, `knowledge_graph/`, `ingestion/`, `scraper/`, `ml/`, `security/`, `monitoring/`, `reports/`, `dashboards/`, `domains/`. |
+| `apps/` | User-facing apps: `web/` (React 18 + Vite dashboard) and `streamlit/` (debug UI). |
+| `services/` | Standalone services: `api/`, `rag/`, `embeddings/`, `mlops/`, `ingest/`, `monitoring/`, `obs/`, `metrics-api/`. |
+| `tools/` | Token-efficient MCP stdio servers for development (`argument_mcp/`, `pipeline_mcp/`, `contract_mcp/`, `lineage_mcp/`, `kg_mcp/`, `blog_mcp/`, `schema_mcp/`, `dataset_mcp/`, `domain_packs_mcp/`, `sources_mcp/`, `security_mcp/`, `monitoring_mcp/`). |
+| `connectors/` | News/data source connector definitions. |
 
-### `/src/` - Source Code
-Main application source code including:
-- Core application logic
-- API endpoints
-- Data processing modules
-- Machine learning models
-- Database interactions
+## Data, contracts & pipelines
 
-### `/tests/` - Test Suite
-Comprehensive test suite including:
-- Unit tests
-- Integration tests
-- End-to-end tests
-- Test configurations and fixtures
+| Path | Contents |
+|---|---|
+| `contracts/` | Data contracts, schemas, evolution policies, and validation tooling. |
+| `dbt/` | dbt project for warehouse transformations. |
+| `spark/` | Spark jobs (streaming, Iceberg). |
+| `jobs/` | Batch/streaming job definitions. |
+| `data/`, `test_data/` | Local datasets and fixtures. |
+| `data_quality/` | Data-quality checks and expectations. |
+| `migrations/`, `db/` | Database migrations and schema. |
+| `models/` | Trained model checkpoints (gitignored when absent; heuristics used as fallback). |
+| `evals/` | Evaluation harnesses and results. |
 
-### `/demo/` - Demonstrations
-Example scripts and demonstrations:
-- Feature demonstrations
-- Usage examples
-- Sample data processing
-- Results and outputs in `/demo/results/`
+## Orchestration & infrastructure
 
-### `/validation/` - Validation Scripts
-Scripts for validating functionality:
-- Data validation
-- Model validation
-- System health checks
-- Environment verification
+| Path | Contents |
+|---|---|
+| `airflow/` | Airflow DAGs and operators. |
+| `marquez/` | OpenLineage / Marquez configuration. |
+| `deploy/`, `deployment/` | Deployment manifests and scripts. |
+| `infra/`, `infrastructure/` | Infrastructure as code. |
+| `k8s/` | Kubernetes manifests. |
+| `docker/` | Dockerfiles and compose configs. |
+| `monitoring/`, `grafana/` | Monitoring stack and Grafana dashboards. |
+| `config/`, `configs/` | Application and service configuration. |
+| `scripts/` | Automation and utility scripts. |
 
-### `/docs/` - Documentation
-Organized documentation:
-- `/guides/` - User and developer guides
-- `/implementation/` - Technical implementation details
-- `/reports/` - Progress reports and project summaries
+## Tests, docs & examples
 
-### `/scripts/` - Utility Scripts
-Automation and utility scripts:
-- Build scripts
-- Deployment helpers
-- CI/CD utilities
-- Data processing scripts
+| Path | Contents |
+|---|---|
+| `tests/` | Unit, integration, and end-to-end tests. |
+| `docs/` | Documentation (see [`docs/index.md`](index.md)). |
+| `docs/guides/` | Operational and integration guides. |
+| `docs/implementation/` | Per-feature implementation writeups. |
+| `docs/development/` | Development deep-dives. |
+| `docs/mlops/`, `docs/rag/`, `docs/lakehouse/`, `docs/architecture/` | Topic-specific reference docs. |
+| `docs/examples/`, `docs/demo/`, `docs/notebooks/` | Runnable examples and notebooks. |
+| `archive/`, `artifacts/` | Archived material and build artifacts. |
 
-### `/deployment/` - Deployment Configuration
-Infrastructure and deployment files:
-- Kubernetes manifests
-- Terraform configurations
-- Database schemas
-- Environment configurations
+## Root files
 
-### `/config/` - Configuration Files
-Application configuration:
-- Environment-specific settings
-- Service configurations
-- Feature flags
-
-### `/data/` - Data Storage
-Data files and datasets:
-- Sample datasets
-- Test data
-- Generated data
-
-### `/logs/` - Log Files
-Application and system logs:
-- Application logs
-- Error logs
-- Access logs
-- System logs
-
-## File Organization Guidelines
-
-1. **Source Code**: All application code goes in `/src/`
-2. **Tests**: All test files go in `/tests/`
-3. **Documentation**: Use the appropriate subdirectory in `/docs/`
-4. **Demo Scripts**: Place in `/demo/` with results in `/demo/results/`
-5. **Utilities**: Shell scripts and utilities go in `/scripts/`
-6. **Logs**: All log files should be written to `/logs/`
-
-## Development Workflow
-
-1. Source code development in `/src/`
-2. Write tests in `/tests/`
-3. Create demos in `/demo/`
-4. Document in `/docs/`
-5. Use validation scripts to verify functionality
-6. Deploy using configurations in `/deployment/`
-
-This structure ensures clean separation of concerns and makes the project easy to navigate and maintain.
+`README.md`, `Makefile`, `pytest.ini`, `requirements*.txt` (split by extra:
+`-dbt`, `-embeddings`, `-qdrant`, `-snowflake`, `-vector`), and
+`docker-compose.lineage.yml`.
+</content>
