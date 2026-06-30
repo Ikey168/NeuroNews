@@ -1,6 +1,19 @@
 """Tests for the API key management endpoints."""
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
+
+from src.api.routes import api_key_routes
+
+
+@pytest.fixture(scope="module")
+def test_app():
+    """Create a test app with the API key router mounted."""
+    app = FastAPI()
+    app.include_router(api_key_routes.router, prefix="/api/v1", tags=["API Keys"])
+
+    with TestClient(app) as client:
+        yield client
 
 
 def test_api_key_health_check(test_app):

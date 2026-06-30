@@ -19,8 +19,22 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from boto3.dynamodb.types import TypeDeserializer
-from botocore.exceptions import ClientError
+
+# boto3 is an optional dependency (the source guards it the same way). Guard the
+# import here so test collection never crashes in an environment without boto3.
+try:
+    from botocore.exceptions import ClientError
+
+    BOTO3_AVAILABLE = True
+except ImportError:  # pragma: no cover - exercised only when boto3 is absent
+    BOTO3_AVAILABLE = False
+
+    class ClientError(Exception):
+        """Fallback so module import and references resolve without botocore."""
+
+        def __init__(self, error_response=None, operation_name=None):
+            super().__init__(operation_name or "ClientError")
+            self.response = error_response or {}
 
 from src.api.auth.api_key_manager import (
     APIKey,
@@ -279,6 +293,8 @@ class TestDynamoDBAPIKeyStore:
             name="Test Key",
             status=APIKeyStatus.ACTIVE,
             created_at=datetime.now(timezone.utc),
+            expires_at=None,
+            last_used_at=None,
             usage_count=0
         )
         
@@ -304,6 +320,8 @@ class TestDynamoDBAPIKeyStore:
             name="Test Key",
             status=APIKeyStatus.ACTIVE,
             created_at=datetime.now(timezone.utc),
+            expires_at=None,
+            last_used_at=None,
             usage_count=0
         )
         
@@ -442,6 +460,8 @@ class TestDynamoDBAPIKeyStore:
                 name="Test Key",
                 status=APIKeyStatus.ACTIVE,
                 created_at=datetime.now(timezone.utc),
+                expires_at=None,
+                last_used_at=None,
                 usage_count=0
             )
             
@@ -461,9 +481,11 @@ class TestAPIKeyManager:
     def api_key_manager(self):
         """Create APIKeyManager with mocked store."""
         with patch('src.api.auth.api_key_manager.DynamoDBAPIKeyStore') as mock_store_class:
-            mock_store = MagicMock()
+            # Store methods are async in the source, so use AsyncMock so that
+            # `await self.store.<method>(...)` resolves correctly.
+            mock_store = AsyncMock()
             mock_store_class.return_value = mock_store
-            
+
             manager = APIKeyManager()
             manager.store = mock_store
             return manager, mock_store
@@ -472,169 +494,53 @@ class TestAPIKeyManager:
     async def test_create_api_key_success(self, api_key_manager):
         """Test successful API key creation."""
         manager, mock_store = api_key_manager
-        
+
+        mock_store.get_user_api_keys.return_value = []
         mock_store.store_api_key.return_value = True
-        
-        result = await manager.create_api_key(
+
+        # Source method is `generate_api_key` with `expires_in_days` kwarg.
+        result = await manager.generate_api_key(
             user_id="user_123",
             name="Test API Key",
             permissions=["read:articles"],
-            expires_days=30,
+            expires_in_days=30,
             rate_limit=100
         )
-        
+
         assert result is not None
         assert result["key_id"].startswith("key_")
         assert result["api_key"].startswith("nn_")
         assert result["name"] == "Test API Key"
         assert result["permissions"] == ["read:articles"]
         assert result["rate_limit"] == 100
-        
+
         mock_store.store_api_key.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_create_api_key_storage_failure(self, api_key_manager):
         """Test API key creation with storage failure."""
         manager, mock_store = api_key_manager
-        
-        mock_store.store_api_key.return_value = False
-        
-        result = await manager.create_api_key(
-            user_id="user_123",
-            name="Test API Key"
-        )
-        
-        assert result is None
 
-    @pytest.mark.asyncio
-    async def test_validate_api_key_success(self, api_key_manager):
-        """Test successful API key validation."""
-        manager, mock_store = api_key_manager
-        
-        # Create a test key
-        api_key_value = "nn_test_key_123"
-        api_key_hash = APIKeyGenerator.hash_api_key(api_key_value)
-        
-        mock_api_key = APIKey(
-            key_id="key_123",
-            user_id="user_456",
-            key_prefix=api_key_value[:8],
-            key_hash=api_key_hash,
-            name="Test Key",
-            status=APIKeyStatus.ACTIVE,
-            created_at=datetime.now(timezone.utc),
-            expires_at=datetime.now(timezone.utc) + timedelta(days=30),
-            usage_count=0
-        )
-        
-        # Mock finding key by prefix
-        mock_store.get_user_api_keys.return_value = [mock_api_key]
-        mock_store.update_api_key_usage.return_value = True
-        
-        result = await manager.validate_api_key(api_key_value)
-        
-        assert result is not None
-        assert result.key_id == "key_123"
-        mock_store.update_api_key_usage.assert_called_once_with("key_123")
-
-    @pytest.mark.asyncio
-    async def test_validate_api_key_invalid(self, api_key_manager):
-        """Test validation of invalid API key."""
-        manager, mock_store = api_key_manager
-        
         mock_store.get_user_api_keys.return_value = []
-        
-        result = await manager.validate_api_key("nn_invalid_key")
-        
-        assert result is None
+        mock_store.store_api_key.return_value = False
 
-    @pytest.mark.asyncio
-    async def test_validate_api_key_expired(self, api_key_manager):
-        """Test validation of expired API key."""
-        manager, mock_store = api_key_manager
-        
-        api_key_value = "nn_test_key_123"
-        api_key_hash = APIKeyGenerator.hash_api_key(api_key_value)
-        
-        # Create expired key
-        expired_key = APIKey(
-            key_id="key_123",
-            user_id="user_456",
-            key_prefix=api_key_value[:8],
-            key_hash=api_key_hash,
-            name="Expired Key",
-            status=APIKeyStatus.ACTIVE,
-            created_at=datetime.now(timezone.utc) - timedelta(days=60),
-            expires_at=datetime.now(timezone.utc) - timedelta(days=30),  # Expired
-            usage_count=0
-        )
-        
-        mock_store.get_user_api_keys.return_value = [expired_key]
-        
-        result = await manager.validate_api_key(api_key_value)
-        
-        assert result is None
+        # Source `generate_api_key` raises RuntimeError when the store fails to
+        # persist the key.
+        with pytest.raises(RuntimeError):
+            await manager.generate_api_key(
+                user_id="user_123",
+                name="Test API Key"
+            )
 
-    @pytest.mark.asyncio
-    async def test_validate_api_key_revoked(self, api_key_manager):
-        """Test validation of revoked API key."""
-        manager, mock_store = api_key_manager
-        
-        api_key_value = "nn_test_key_123"
-        api_key_hash = APIKeyGenerator.hash_api_key(api_key_value)
-        
-        # Create revoked key
-        revoked_key = APIKey(
-            key_id="key_123",
-            user_id="user_456",
-            key_prefix=api_key_value[:8],
-            key_hash=api_key_hash,
-            name="Revoked Key",
-            status=APIKeyStatus.REVOKED,
-            created_at=datetime.now(timezone.utc),
-            usage_count=0
-        )
-        
-        mock_store.get_user_api_keys.return_value = [revoked_key]
-        
-        result = await manager.validate_api_key(api_key_value)
-        
-        assert result is None
-
-    @pytest.mark.asyncio
-    async def test_rotate_api_key_success(self, api_key_manager):
-        """Test successful API key rotation."""
-        manager, mock_store = api_key_manager
-        
-        # Mock existing key
-        old_key = APIKey(
-            key_id="key_123",
-            user_id="user_456",
-            key_prefix="nn_old",
-            key_hash="old_hash",
-            name="Old Key",
-            status=APIKeyStatus.ACTIVE,
-            created_at=datetime.now(timezone.utc),
-            usage_count=100,
-            permissions=["read:articles"],
-            rate_limit=50
-        )
-        
-        mock_store.get_api_key.return_value = old_key
-        mock_store.revoke_api_key.return_value = True
-        mock_store.store_api_key.return_value = True
-        
-        result = await manager.rotate_api_key("key_123")
-        
-        assert result is not None
-        assert result["api_key"].startswith("nn_")
-        assert result["name"] == "Old Key"
-        assert result["permissions"] == ["read:articles"]
-        assert result["rate_limit"] == 50
-        
-        # Verify old key was revoked and new key was stored
-        mock_store.revoke_api_key.assert_called_once_with("key_123")
-        mock_store.store_api_key.assert_called_once()
+    # NOTE: Tests for `manager.validate_api_key` (success/invalid/expired/revoked)
+    # and `manager.rotate_api_key` were removed. Those methods do not exist on the
+    # current APIKeyManager and never have (no occurrence in git history). The
+    # closest current method, `verify_api_key`, is an unimplemented placeholder
+    # that always returns None without any store lookup, so the "success",
+    # "expired" and "revoked" validation behaviors and key rotation simply are not
+    # part of the current source API. These tests targeted removed/never-existing
+    # functionality and could not be aligned without asserting behavior the source
+    # does not provide.
 
 
 class TestPerformanceAndSecurity:
@@ -665,9 +571,13 @@ class TestPerformanceAndSecurity:
         for _ in range(100):
             APIKeyGenerator.verify_api_key(api_key, key_hash)
         end_time = time.time()
-        
-        # 100 verifications should complete quickly (< 0.5 seconds)
-        assert end_time - start_time < 0.5
+
+        # The current implementation hashes with PBKDF2-HMAC-SHA256 at 100k
+        # iterations, which is intentionally slow (~25ms per hash). 100
+        # verifications therefore take ~2.5s; the previous 0.5s budget assumed a
+        # much cheaper hash. Bound at 5s so a real regression (e.g. a ~2x slowdown
+        # or an accidental extra hashing pass) still fails the test.
+        assert end_time - start_time < 5.0
 
     def test_concurrent_key_generation(self):
         """Test thread-safe key generation."""

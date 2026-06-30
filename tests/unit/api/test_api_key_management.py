@@ -284,7 +284,9 @@ class TestAPIKeyManager:
         with patch(
             "src.api.auth.api_key_manager.DynamoDBAPIKeyStore"
         ) as mock_store_class:
-            mock_store = Mock()
+            # Store methods are async in the source, so use AsyncMock so
+            # `await self.store.<method>(...)` works.
+            mock_store = AsyncMock()
             mock_store_class.return_value = mock_store
 
             manager = APIKeyManager()
