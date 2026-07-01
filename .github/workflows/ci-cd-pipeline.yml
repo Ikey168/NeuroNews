@@ -120,7 +120,12 @@ jobs:
             echo "::group::$f"
             python -m pytest "$f" -p no:cacheprovider -o addopts="" \
               --timeout=90 --timeout-method=signal \
-              --cov=src --cov-append -q || FAILED+=("$f")
+              --cov=src --cov-append -q
+            rc=$?
+            # 0 = passed, 5 = no tests collected (a module fully importorskip'd
+            # for a genuinely-absent optional dep / documented un-importable
+            # source module). Anything else is a real failure.
+            [ "$rc" -eq 0 ] || [ "$rc" -eq 5 ] || FAILED+=("$f")
             echo "::endgroup::"
           done < <(find tests \( -name 'test_*.py' -o -name '*_test.py' \) -type f | sort)
           python -m coverage xml || true
