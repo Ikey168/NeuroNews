@@ -171,6 +171,22 @@ imports / make `api_key_manager` lazy):
 (`test_real_app_coverage.py` 31, `test_additional_coverage.py` 6,
 `test_app_simple.py` 8, `test_app_isolated.py` 25) were repaired and kept.
 
+## Gate execution: one file per process (the contamination fix)
+
+After the per-file repairs, a shared-process run still showed ~75 failures, but
+nearly all were files that **pass in isolation** and only fail when collected
+with others — cross-file state leakage (test modules install mocks for shared
+globals like `psycopg2`/`asyncpg` via `sys.modules`, boto3 default sessions, or
+un-cleared FastAPI `dependency_overrides`, and the next file inherits the dirty
+state). `pytest-forked` does not help because the leakage happens at
+import/collection, before the per-test fork. Running each file in its **own
+process** eliminates it (verified: a cluster with 24 shared-process errors is
+fully green one-file-per-process). The CI "Run unit tests" step now loops over
+test files and runs each in a fresh process with `--cov-append`, which keeps the
+gate correct without weakening any test. Fixing every file to be import-order
+robust individually is tracked as follow-up (e.g. the `psycopg2` autouse-fixture
+hardening already applied to `test_sentiment_trend_analysis.py`).
+
 ## Progress log
 
 - **vector_services_comprehensive**: added missing source imports, made the

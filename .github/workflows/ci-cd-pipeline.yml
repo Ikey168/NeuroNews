@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     # Backstop so a hanging test can never stall the job (and its dependents)
     # the way an un-timed-out test did before.
-    timeout-minutes: 25
+    timeout-minutes: 40
     strategy:
       matrix:
         python-version: ['3.11']
@@ -80,33 +80,63 @@ jobs:
 
       - name: Run unit tests
         run: |
-          # Coverage floor set to a realistic level for the current repo state
-          # (~30-40%); raising it toward 70% is tracked as separate work.
-          # The --ignore'd modules require optional feature dependencies
-          # (snowflake, qdrant/vector, AWS/quicksight, scraper connectors) that
-          # this lightweight gate does not install, so they fail at import-time
-          # collection; excluded here and tracked for a dedicated test-deps pass.
-          pytest tests/ \
-            --cov=src/ --cov-report=xml --cov-report=html \
-            --cov-fail-under=20 \
-            --timeout=90 --timeout-method=signal \
-            --ignore=tests/integration/ \
-            --ignore=tests/e2e/consumer/test_consumer_validation_dlq.py \
-            --ignore=tests/mlops/test_registry.py \
-            --ignore=tests/mlops/test_reproducibility.py \
-            --ignore=tests/mlops/test_tracking.py \
-            --ignore=tests/unit/api/routes/test_quicksight_routes_smoke.py \
-            --ignore=tests/unit/dashboards/test_local_dashboard_service.py \
-            --ignore=tests/unit/mlops/test_data_manifest.py \
-            --ignore=tests/unit/rag/test_answer_extra.py \
-            --ignore=tests/unit/scraper/extensions/connectors \
-            --ignore=tests/unit/services/rag/test_answer_core.py \
-            --ignore=tests/unit/test_mlflow_setup.py \
-            --ignore=tests/api/test_import_coverage.py \
-            --ignore=tests/api/test_phase_1_4_fastapi_app_core.py \
-            --ignore=tests/api/test_app_coverage_demo.py
+          # Tests run ONE FILE PER PROCESS. Many suites mock shared globals
+          # (psycopg2/asyncpg via sys.modules, boto3 default sessions, FastAPI
+          # dependency_overrides) and leak that state across files when the whole
+          # tree runs in a single process, so files that pass on their own fail
+          # when collected together. Per-file isolation keeps the gate correct
+          # without weakening any test. Coverage is accumulated with --cov-append
+          # across the per-file runs; the floor is a realistic level for the
+          # current repo state (~30-40%). The IGNORE_PREFIXES entries need
+          # optional feature deps (snowflake, qdrant/vector, AWS/quicksight,
+          # scraper connectors) or repeatedly reload the app (DynamoDB/torch
+          # re-import) and are tracked for a dedicated pass.
+          set -uo pipefail
+          IGNORE_PREFIXES=(
+            "tests/integration/"
+            "tests/e2e/consumer/test_consumer_validation_dlq.py"
+            "tests/mlops/test_registry.py"
+            "tests/mlops/test_reproducibility.py"
+            "tests/mlops/test_tracking.py"
+            "tests/unit/api/routes/test_quicksight_routes_smoke.py"
+            "tests/unit/dashboards/test_local_dashboard_service.py"
+            "tests/unit/mlops/test_data_manifest.py"
+            "tests/unit/rag/test_answer_extra.py"
+            "tests/unit/scraper/extensions/connectors"
+            "tests/unit/services/rag/test_answer_core.py"
+            "tests/unit/test_mlflow_setup.py"
+            "tests/api/test_import_coverage.py"
+            "tests/api/test_phase_1_4_fastapi_app_core.py"
+            "tests/api/test_app_coverage_demo.py"
+          )
+          rm -f .coverage .coverage.* coverage.xml
+          FAILED=()
+          while IFS= read -r f; do
+            skip=0
+            for ig in "${IGNORE_PREFIXES[@]}"; do
+              case "$f" in "$ig"*) skip=1; break;; esac
+            done
+            [ "$skip" -eq 1 ] && continue
+            echo "::group::$f"
+            python -m pytest "$f" -p no:cacheprovider -o addopts="" \
+              --timeout=90 --timeout-method=signal \
+              --cov=src --cov-append -q || FAILED+=("$f")
+            echo "::endgroup::"
+          done < <(find tests \( -name 'test_*.py' -o -name '*_test.py' \) -type f | sort)
+          python -m coverage xml || true
+          python -m coverage html || true
+          echo "===== Coverage summary ====="
+          python -m coverage report || true
+          if [ "${#FAILED[@]}" -gt 0 ]; then
+            echo "::error::${#FAILED[@]} test file(s) failed:"
+            printf '  %s\n' "${FAILED[@]}"
+            exit 1
+          fi
+          python -m coverage report --fail-under=20 >/dev/null || { echo "::error::coverage below 20%"; exit 1; }
         env:
           PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/src
+          NO_PROXY: localhost,127.0.0.1
+          LOCAL_CLOUD_CONNECT_TIMEOUT: "3"
 
       - name: Run integration tests
         run: |
