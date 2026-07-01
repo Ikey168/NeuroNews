@@ -168,7 +168,7 @@ class TestGraphExporter:
     def sample_edges(self):
         """Sample edge data."""
         return [
-            {'id': 'edge1', 'from': 'node1', 'to': 'node2', 'label': 'WORKS_FOR'}
+            {'id': 'edge1', 'source': 'node1', 'target': 'node2', 'label': 'WORKS_FOR'}
         ]
     
     def test_exporter_initialization(self, exporter):
@@ -384,41 +384,40 @@ class TestGraphExporter:
             assert result.node_count >= 0
             assert result.edge_count >= 0
     
-    @pytest.mark.asyncio
-    async def test_batch_export_creation(self, exporter):
-        """Test batch export job creation."""
+    def test_batch_export_job_creation(self, exporter):
+        """Test batch export job creation via BatchExportJob."""
         options = ExportOptions(format=ExportFormat.JSON)
-        
-        job = await exporter.create_batch_export(
+
+        job = BatchExportJob(
             job_id="batch123",
             formats=[ExportFormat.JSON, ExportFormat.DOT],
-            options=options
+            options=options,
         )
-        
+
         assert isinstance(job, BatchExportJob)
         assert job.job_id == "batch123"
         assert job.formats == [ExportFormat.JSON, ExportFormat.DOT]
         assert job.status == "pending"
-        assert "batch123" in exporter.batch_jobs
-    
+
     @pytest.mark.asyncio
     async def test_batch_export_execution(self, exporter, sample_nodes, sample_edges):
         """Test batch export execution."""
         options = ExportOptions(format=ExportFormat.JSON)
-        
-        job = await exporter.create_batch_export(
+
+        job = BatchExportJob(
             job_id="batch456",
             formats=[ExportFormat.JSON, ExportFormat.DOT],
-            options=options
+            options=options,
         )
-        
-        results = await exporter.execute_batch_export(job, sample_nodes, sample_edges)
-        
+
+        results = await exporter.batch_export(sample_nodes, sample_edges, job)
+
         assert isinstance(results, dict)
         assert len(results) == 2  # Two formats
         assert ExportFormat.JSON in results
         assert ExportFormat.DOT in results
-        
+        assert job.status == "completed"
+
         for result in results.values():
             assert isinstance(result, ExportResult)
     

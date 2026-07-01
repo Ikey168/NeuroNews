@@ -2,7 +2,6 @@
 
 import os
 import sys
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -54,7 +53,7 @@ class TestEnumsAndDataclasses:
 
 class TestInit:
     def test_default_config(self, waf):
-        assert waf.region == "us-east-1"
+        assert waf.region == "local"
         assert waf.web_acl_name == "NeuroNewsAPIProtection"
         assert "US" in waf.allowed_countries
         assert waf.rate_limit_requests == 2000
@@ -74,10 +73,10 @@ class TestWafRules:
         rules = waf._get_waf_rules()
         assert isinstance(rules, list)
         assert len(rules) > 0
-        # each rule has Name and Priority
+        # each rule has name and priority
         for rule in rules:
-            assert "Name" in rule
-            assert "Priority" in rule
+            assert "name" in rule
+            assert "priority" in rule
 
 
 class TestDetection:
@@ -113,25 +112,35 @@ class TestDetection:
 
 
 class TestHealthAndMetrics:
-    def test_health_check_no_clients(self, waf):
-        waf.wafv2_client = None
-        waf.cloudwatch_client = None
-        waf.logs_client = None
+    def test_health_check_no_web_acl(self, waf, tmp_path):
+        # Point local state at an empty dir so no web ACL config exists.
+        waf.web_acl_file = str(tmp_path / "waf_web_acl.json")
+        waf.web_acl_arn = None
         health = waf.health_check()
-        assert health["overall_status"] == "degraded"
-        assert health["components"]["waf_client"] == "unavailable"
+        # The local WAF engine is always operational; without a configured
+        # web ACL the web_acl component reports "not_configured".
+        assert health["overall_status"] == "healthy"
+        assert health["components"]["waf_engine"] == "operational"
+        assert health["components"]["web_acl"] == "not_configured"
 
-    def test_health_check_with_clients(self, waf):
-        waf.wafv2_client = MagicMock()
-        waf.cloudwatch_client = MagicMock()
-        waf.logs_client = MagicMock()
-        waf._get_existing_web_acl = MagicMock(return_value=True)
+    def test_health_check_with_web_acl(self, waf):
+        # An in-memory web ACL ARN marks the web_acl component operational.
+        waf.web_acl_arn = "local:waf:local:NeuroNewsAPIProtection"
         health = waf.health_check()
-        assert health["components"]["waf_client"] == "operational"
+        assert health["components"]["waf_engine"] == "operational"
         assert health["components"]["web_acl"] == "operational"
 
-    def test_create_web_acl_no_client(self, waf):
-        waf.wafv2_client = None
+    def test_create_web_acl_persists(self, waf, tmp_path):
+        # The local WAF writes its config to disk; creation succeeds and
+        # populates the web ACL ARN.
+        waf.web_acl_file = str(tmp_path / "waf_web_acl.json")
+        assert waf.create_web_acl() is True
+        assert waf.web_acl_arn is not None
+        assert os.path.exists(waf.web_acl_file)
+
+    def test_create_web_acl_failure(self, waf):
+        # Point the config file at a non-writable path to force OSError.
+        waf.web_acl_file = "/nonexistent_dir/waf_web_acl.json"
         assert waf.create_web_acl() is False
 
     def test_get_security_metrics_no_client(self, waf):
@@ -139,7 +148,5 @@ class TestHealthAndMetrics:
         assert isinstance(metrics, dict)
 
     def test_account_id_fallback(self, waf, monkeypatch):
-        import api.security.local_waf_manager as mod
-        if getattr(mod, "boto3", None) is not None:
-            monkeypatch.setattr(mod.boto3, "client", MagicMock(side_effect=Exception("no")))
-        assert waf._get_account_id() == "123456789012"
+        monkeypatch.delenv("LOCAL_ACCOUNT_ID", raising=False)
+        assert waf._get_account_id() == "000000000000"

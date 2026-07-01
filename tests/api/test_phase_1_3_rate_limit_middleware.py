@@ -139,9 +139,16 @@ class TestRateLimitStore:
     
     def test_redis_available_check(self):
         """Test Redis availability checking."""
-        store = RateLimitStore()
-        # Should return True since redis is importable
-        assert store._redis_available() is True
+        # _redis_available() builds a redis client and pings it, returning True
+        # only when Redis is reachable. Mock the client so the ping succeeds.
+        with patch('src.api.middleware.rate_limit_middleware.redis.Redis') as mock_redis:
+            mock_client = Mock()
+            mock_client.ping.return_value = True
+            mock_redis.return_value = mock_client
+
+            store = RateLimitStore(use_redis=False)  # avoid availability call in __init__
+            assert store._redis_available() is True
+            mock_client.ping.assert_called_once()
     
     def test_get_redis_client_success(self):
         """Test Redis client creation with environment variables."""

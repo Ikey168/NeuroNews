@@ -79,192 +79,216 @@ class TestGraphExporter:
     def test_exporter_initialization(self, exporter):
         """Test GraphExporter initialization."""
         assert exporter.graph is None
-        assert hasattr(exporter, 'supported_formats')
-        
-        # Check supported formats
-        expected_formats = {ExportFormat.JSON, ExportFormat.GRAPHML, ExportFormat.DOT}
-        assert len(expected_formats.intersection(exporter.supported_formats)) > 0
-    
-    def test_export_json_basic(self, exporter):
+        # Current API exposes these attributes
+        assert isinstance(exporter.export_templates, dict)
+        assert isinstance(exporter.batch_jobs, dict)
+        assert exporter.export_templates == {}
+        assert exporter.batch_jobs == {}
+
+    @pytest.mark.asyncio
+    async def test_export_json_basic(self, exporter):
         """Test basic JSON export."""
         sample_nodes = [
             {'id': 'node1', 'label': 'Person', 'properties': {'name': 'John'}},
             {'id': 'node2', 'label': 'Company', 'properties': {'name': 'TechCorp'}}
         ]
         sample_edges = [
-            {'id': 'edge1', 'from': 'node1', 'to': 'node2', 'label': 'WORKS_FOR'}
+            {'id': 'edge1', 'source': 'node1', 'target': 'node2', 'label': 'WORKS_FOR'}
         ]
-        
+
         options = ExportOptions(format=ExportFormat.JSON)
-        result = exporter.export_graph(sample_nodes, sample_edges, options)
-        
+        result = await exporter.export_graph(sample_nodes, sample_edges, options)
+
         assert result is not None
-        assert isinstance(result, str)
-        
+        assert isinstance(result.data, str)
+
         # Should be valid JSON
-        data = json.loads(result)
+        data = json.loads(result.data)
         assert 'nodes' in data or 'vertices' in data
         assert 'edges' in data or 'relationships' in data
-    
-    def test_export_json_with_properties(self, exporter):
+
+    @pytest.mark.asyncio
+    async def test_export_json_with_properties(self, exporter):
         """Test JSON export with properties."""
         nodes = [{'id': 'test', 'properties': {'name': 'Test', 'age': 25}}]
         edges = []
-        
+
         options = ExportOptions(format=ExportFormat.JSON, include_properties=True)
-        result = exporter.export_graph(nodes, edges, options)
-        
-        data = json.loads(result)
+        result = await exporter.export_graph(nodes, edges, options)
+
+        data = json.loads(result.data)
         assert data is not None
-    
-    def test_export_json_without_properties(self, exporter):
+
+    @pytest.mark.asyncio
+    async def test_export_json_without_properties(self, exporter):
         """Test JSON export without properties."""
         nodes = [{'id': 'test', 'properties': {'name': 'Test', 'age': 25}}]
         edges = []
-        
+
         options = ExportOptions(format=ExportFormat.JSON, include_properties=False)
-        result = exporter.export_graph(nodes, edges, options)
-        
+        result = await exporter.export_graph(nodes, edges, options)
+
         assert result is not None
-        data = json.loads(result)
+        data = json.loads(result.data)
         assert data is not None
-    
-    def test_export_graphml_basic(self, exporter):
+
+    @pytest.mark.asyncio
+    async def test_export_graphml_basic(self, exporter):
         """Test basic GraphML export."""
         nodes = [{'id': 'node1', 'label': 'Person'}]
         edges = []
-        
+
         options = ExportOptions(format=ExportFormat.GRAPHML)
-        result = exporter.export_graph(nodes, edges, options)
-        
+        result = await exporter.export_graph(nodes, edges, options)
+
         assert result is not None
-        assert isinstance(result, str)
-        assert '<?xml' in result or '<graphml' in result
-    
-    def test_export_dot_format(self, exporter):
+        assert isinstance(result.data, str)
+        assert '<?xml' in result.data or '<graphml' in result.data
+
+    @pytest.mark.asyncio
+    async def test_export_dot_format(self, exporter):
         """Test DOT format export."""
         nodes = [{'id': 'A'}, {'id': 'B'}]
-        edges = [{'from': 'A', 'to': 'B'}]
-        
+        edges = [{'source': 'A', 'target': 'B'}]
+
         options = ExportOptions(format=ExportFormat.DOT)
-        result = exporter.export_graph(nodes, edges, options)
-        
+        result = await exporter.export_graph(nodes, edges, options)
+
         assert result is not None
-        assert isinstance(result, str)
-        assert 'digraph' in result or 'graph' in result
-    
-    def test_export_empty_graph(self, exporter):
+        assert isinstance(result.data, str)
+        assert 'digraph' in result.data or 'graph' in result.data
+
+    @pytest.mark.asyncio
+    async def test_export_empty_graph(self, exporter):
         """Test exporting empty graph."""
         nodes = []
         edges = []
-        
+
         options = ExportOptions(format=ExportFormat.JSON)
-        result = exporter.export_graph(nodes, edges, options)
-        
+        result = await exporter.export_graph(nodes, edges, options)
+
         assert result is not None
-        data = json.loads(result)
+        data = json.loads(result.data)
         assert isinstance(data, dict)
-    
-    def test_export_with_node_limit(self, exporter):
-        """Test export with max_nodes limit.""" 
+
+    @pytest.mark.asyncio
+    async def test_export_with_node_limit(self, exporter):
+        """Test export with max_nodes limit."""
         nodes = [
-            {'id': f'node{i}', 'label': 'Test'} 
+            {'id': f'node{i}', 'label': 'Test'}
             for i in range(10)
         ]
         edges = []
-        
+
         options = ExportOptions(format=ExportFormat.JSON, max_nodes=5)
-        result = exporter.export_graph(nodes, edges, options)
-        
+        result = await exporter.export_graph(nodes, edges, options)
+
         assert result is not None
-        data = json.loads(result)
-        # Should limit nodes (implementation dependent)
-        assert data is not None
-    
-    def test_export_with_edge_limit(self, exporter):
+        # Source enforces the node limit
+        assert result.node_count == 5
+        data = json.loads(result.data)
+        assert len(data['nodes']) == 5
+
+    @pytest.mark.asyncio
+    async def test_export_with_edge_limit(self, exporter):
         """Test export with max_edges limit."""
         nodes = [{'id': 'A'}, {'id': 'B'}, {'id': 'C'}]
         edges = [
-            {'from': 'A', 'to': 'B'},
-            {'from': 'B', 'to': 'C'},
-            {'from': 'A', 'to': 'C'}
+            {'source': 'A', 'target': 'B'},
+            {'source': 'B', 'target': 'C'},
+            {'source': 'A', 'target': 'C'}
         ]
-        
+
         options = ExportOptions(format=ExportFormat.JSON, max_edges=2)
-        result = exporter.export_graph(nodes, edges, options)
-        
+        result = await exporter.export_graph(nodes, edges, options)
+
         assert result is not None
-        data = json.loads(result)
-        assert data is not None
-    
-    def test_validate_export_format(self, exporter):
-        """Test export format validation."""
-        # Test with supported format
-        assert exporter._validate_format(ExportFormat.JSON) is True
-        
-        # Test with another format
-        result = exporter._validate_format(ExportFormat.GRAPHML)
-        assert isinstance(result, bool)
-    
-    def test_export_metadata_inclusion(self, exporter):
+        # Source enforces the edge limit
+        assert result.edge_count == 2
+        data = json.loads(result.data)
+        assert len(data['edges']) == 2
+
+    @pytest.mark.asyncio
+    async def test_validate_export_format(self, exporter):
+        """Test export format handling: supported formats export, others raise."""
+        sample_nodes = [{'id': 'node1'}]
+        sample_edges = []
+
+        # A supported format produces an ExportResult
+        result = await exporter.export_graph(
+            sample_nodes, sample_edges, ExportOptions(format=ExportFormat.JSON)
+        )
+        assert result.format == ExportFormat.JSON
+
+        # An unsupported format raises ValueError
+        bad_options = ExportOptions(format=ExportFormat.JSON)
+        bad_options.format = "unsupported"
+        with pytest.raises(ValueError):
+            await exporter.export_graph(sample_nodes, sample_edges, bad_options)
+
+    @pytest.mark.asyncio
+    async def test_export_metadata_inclusion(self, exporter):
         """Test metadata inclusion in export."""
         nodes = [{'id': 'test'}]
         edges = []
-        
+
         options = ExportOptions(format=ExportFormat.JSON, include_metadata=True)
-        result = exporter.export_graph(nodes, edges, options)
-        
+        result = await exporter.export_graph(nodes, edges, options)
+
         assert result is not None
-        data = json.loads(result)
-        # Metadata might include timestamps, version, etc.
-        assert data is not None
-    
-    def test_export_compression_option(self, exporter):
+        data = json.loads(result.data)
+        # include_metadata adds a metadata block to the JSON payload
+        assert 'metadata' in data
+
+    @pytest.mark.asyncio
+    async def test_export_compression_option(self, exporter):
         """Test compression option."""
         nodes = [{'id': 'test'}]
         edges = []
-        
+
         options = ExportOptions(format=ExportFormat.JSON, compress=True)
-        result = exporter.export_graph(nodes, edges, options)
-        
-        # Should still return a string (compression is internal)
+        result = await exporter.export_graph(nodes, edges, options)
+
+        # Compressed output is raw gzip bytes
         assert result is not None
-        assert isinstance(result, str)
-    
-    def test_pretty_print_option(self, exporter):
+        assert isinstance(result.data, bytes)
+        assert result.metadata["compressed"] is True
+
+    @pytest.mark.asyncio
+    async def test_pretty_print_option(self, exporter):
         """Test pretty print option."""
         nodes = [{'id': 'test', 'properties': {'name': 'Test'}}]
         edges = []
-        
+
         # Pretty printed
         options_pretty = ExportOptions(format=ExportFormat.JSON, pretty_print=True)
-        result_pretty = exporter.export_graph(nodes, edges, options_pretty)
-        
-        # Compact 
+        result_pretty = await exporter.export_graph(nodes, edges, options_pretty)
+
+        # Compact
         options_compact = ExportOptions(format=ExportFormat.JSON, pretty_print=False)
-        result_compact = exporter.export_graph(nodes, edges, options_compact)
-        
+        result_compact = await exporter.export_graph(nodes, edges, options_compact)
+
         assert result_pretty is not None
         assert result_compact is not None
-        
-        # Pretty printed should typically be longer (more whitespace)
-        # But this depends on implementation
-        assert len(result_pretty) >= len(result_compact) - 10  # Allow some variance
-    
-    def test_export_error_handling(self, exporter):
-        """Test export error handling."""
-        # Test with invalid data
-        try:
-            invalid_nodes = [{'invalid': 'data'}]  # Missing required id
-            edges = []
-            options = ExportOptions(format=ExportFormat.JSON)
-            
-            result = exporter.export_graph(invalid_nodes, edges, options)
-            # Should handle gracefully or raise appropriate error
-            assert result is not None or True  # Accept either valid result or error
-        except (ValueError, KeyError, TypeError):
-            # Expected to raise an error with invalid data
-            pass
+
+        # Pretty printed output carries indentation whitespace and is longer
+        assert "\n  " in result_pretty.data
+        assert len(result_pretty.data) > len(result_compact.data)
+
+    @pytest.mark.asyncio
+    async def test_export_error_handling(self, exporter):
+        """Test export handles nodes missing an id without crashing."""
+        # Nodes missing the 'id' field are exported as-is (id defaults to "")
+        invalid_nodes = [{'invalid': 'data'}]  # Missing required id
+        edges = []
+        options = ExportOptions(format=ExportFormat.JSON)
+
+        result = await exporter.export_graph(invalid_nodes, edges, options)
+
+        # Export still succeeds and yields valid JSON
+        assert isinstance(result.data, str)
+        data = json.loads(result.data)
+        assert data['nodes'] == invalid_nodes
 
 
 if __name__ == "__main__":

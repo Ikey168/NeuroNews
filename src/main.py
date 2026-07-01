@@ -79,16 +79,19 @@ def main():
             os.environ["AWS_PROFILE"] = aws_profile
             print("Using AWS profile: {0}".format(aws_profile))
 
-        # Override S3 settings from config if not provided as arguments
-        s3_storage = args.s3
+        # Override S3 settings from config if not provided as arguments.
+        # The --s3/--s3-bucket/--s3-prefix CLI flags were removed in the offline
+        # migration; S3 is now opt-in via the AWS config file only. Use getattr
+        # so any leftover attribute access degrades to the former defaults.
+        s3_storage = getattr(args, "s3", False)
         if not s3_storage and aws_config.get("s3_storage", {}).get("enabled", False):
             s3_storage = True
 
-        s3_bucket = args.s3_bucket
+        s3_bucket = getattr(args, "s3_bucket", None)
         if s3_storage and s3_bucket is None and "s3_storage" in aws_config:
             s3_bucket = aws_config["s3_storage"].get("bucket")
 
-        s3_prefix = args.s3_prefix
+        s3_prefix = getattr(args, "s3_prefix", "news_articles")
         if s3_storage and s3_prefix == "news_articles" and "s3_storage" in aws_config:
             s3_prefix = aws_config["s3_storage"].get("prefix", s3_prefix)
 
@@ -147,8 +150,8 @@ def main():
             output_file=args.output,
             use_playwright=args.playwright,
             s3_storage=s3_storage,
-            aws_access_key_id=args.aws_key_id,
-            aws_secret_access_key=args.aws_secret_key,
+            aws_access_key_id=getattr(args, "aws_key_id", None),
+            aws_secret_access_key=getattr(args, "aws_secret_key", None),
             s3_bucket=s3_bucket,
             s3_prefix=s3_prefix,
             cloudwatch_logging=cloudwatch_logging,

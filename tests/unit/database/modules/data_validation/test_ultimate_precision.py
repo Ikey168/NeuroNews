@@ -30,11 +30,11 @@ class TestUltimatePrecision:
         gov_score = analyzer._calculate_reputation_score("agency.gov", "test")
         baseline_score = analyzer._calculate_reputation_score("regular.com", "test")
         
-        # Both .edu and .gov should get +0.2 bonus
+        # Both .edu and .gov should get +0.2 bonus (allow for float rounding error)
         assert edu_score > baseline_score
         assert gov_score > baseline_score
-        assert abs(edu_score - baseline_score) >= 0.2
-        assert abs(gov_score - baseline_score) >= 0.2
+        assert edu_score - baseline_score == pytest.approx(0.2)
+        assert gov_score - baseline_score == pytest.approx(0.2)
         
     def test_caps_detection_with_exact_conditions_line_430(self):
         """Test excessive caps with precise conditions - line 430"""

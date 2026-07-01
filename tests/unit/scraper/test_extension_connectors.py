@@ -125,9 +125,10 @@ class TestConnectorPatterns:
             rate_limiter.wait_if_needed()
         
         elapsed = (datetime.now() - start_time).total_seconds()
-        
-        # Should have taken at least 1.5 seconds due to rate limiting
-        assert elapsed >= 1.0
+
+        # RateLimiter sleeps 0.1s per throttled call. The first of 4 calls is
+        # not throttled, so the remaining 3 each add ~0.1s => >= 0.3s total.
+        assert elapsed >= 0.3
 
     def test_health_monitoring(self):
         """Test health monitoring in connectors."""

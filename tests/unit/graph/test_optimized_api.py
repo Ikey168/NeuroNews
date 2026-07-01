@@ -1,80 +1,56 @@
-import pytest
-from unittest.mock import Mock, patch
 import asyncio
 
-@patch('src.api.graph.optimized_api.networkx')
-@patch('src.api.graph.optimized_api.DatabaseConnection')
-def test_optimized_graph_api_methods(mock_db, mock_nx):
-    """Exercise OptimizedGraphAPI methods to boost from 19% coverage."""
-    # Mock NetworkX graph
-    mock_graph = Mock()
-    mock_nx.Graph.return_value = mock_graph
-    mock_graph.nodes.return_value = [1, 2, 3]
-    mock_graph.edges.return_value = [(1, 2), (2, 3)]
-    mock_graph.number_of_nodes.return_value = 3
-    mock_graph.number_of_edges.return_value = 2
-    
-    # Mock database
-    mock_db_conn = Mock()
-    mock_db.return_value = mock_db_conn
-    mock_db_conn.execute.return_value.fetchall.return_value = []
-    
-    try:
-        from src.api.graph.optimized_api import OptimizedGraphAPI
-        
-        try:
-            api = OptimizedGraphAPI()
-            
-            # Exercise graph API methods
-            graph_methods = [
-                'get_graph',
-                'add_node',
-                'add_edge',
-                'remove_node', 
-                'remove_edge',
-                'get_neighbors',
-                'get_shortest_path',
-                'get_centrality',
-                'get_clusters',
-                'search_nodes',
-                'get_statistics'
-            ]
-            
-            for method_name in graph_methods:
-                if hasattr(api, method_name):
-                    try:
-                        method = getattr(api, method_name)
-                        if callable(method):
-                            if asyncio.iscoroutinefunction(method):
-                                # Async method
-                                loop = asyncio.new_event_loop()
-                                asyncio.set_event_loop(loop)
-                                try:
-                                    if method_name in ['add_node', 'remove_node', 'get_neighbors']:
-                                        loop.run_until_complete(method('node_1'))
-                                    elif method_name in ['add_edge', 'remove_edge']:
-                                        loop.run_until_complete(method('node_1', 'node_2'))
-                                    elif method_name in ['get_shortest_path']:
-                                        loop.run_until_complete(method('node_1', 'node_2'))
-                                    else:
-                                        loop.run_until_complete(method())
-                                finally:
-                                    loop.close()
-                            else:
-                                # Sync method
-                                if method_name in ['add_node', 'remove_node', 'get_neighbors']:
-                                    method('node_1')
-                                elif method_name in ['add_edge', 'remove_edge']:
-                                    method('node_1', 'node_2')
-                                else:
-                                    method()
-                    except Exception:
-                        pass
-                        
-        except Exception:
-            pass
-            
-    except ImportError:
-        pass
-    
-    assert True
+from unittest.mock import MagicMock
+
+from src.api.graph.optimized_api import (
+    OptimizedGraphAPI,
+    CacheConfig,
+    QueryOptimizationConfig,
+)
+
+
+def test_optimized_graph_api_methods():
+    """Exercise the current OptimizedGraphAPI methods to boost coverage.
+
+    The current source is a gremlin/Redis-backed API (not networkx/Neo4j). It
+    requires a ``graph_builder`` and exposes caching helpers plus a handful of
+    async stats/cache methods. This test drives the methods that do not depend
+    on a live graph backend and asserts their real return shapes.
+    """
+    graph_builder = MagicMock()
+    api = OptimizedGraphAPI(graph_builder=graph_builder)
+
+    # Construction wiring.
+    assert api.graph is graph_builder
+    assert isinstance(api.cache_config, CacheConfig)
+    assert isinstance(api.optimization_config, QueryOptimizationConfig)
+
+    # Deterministic cache key generation (sync).
+    key1 = api._generate_cache_key("query", {"param": "value"})
+    key2 = api._generate_cache_key("query", {"param": "value"})
+    key3 = api._generate_cache_key("query", {"param": "other"})
+    assert key1 == key2
+    assert key1 != key3
+    assert key1.startswith("graph_api:")
+
+    async def _exercise_async():
+        # Force the in-memory cache path (no Redis).
+        api.redis_client = None
+
+        # Store then retrieve from the memory cache.
+        stored = await api._store_in_cache("k", {"v": 1})
+        assert stored is True
+        assert await api._get_from_cache("k") == {"v": 1}
+
+        # Cache stats report the structured metrics dict.
+        stats = await api.get_cache_stats()
+        assert isinstance(stats, dict)
+        assert "cache" in stats
+        assert "performance" in stats
+
+        # Clearing the cache returns a success status and empties memory cache.
+        cleared = await api.clear_cache()
+        assert cleared["status"] == "success"
+        assert api.memory_cache == {}
+
+    asyncio.run(_exercise_async())

@@ -108,13 +108,23 @@ print("All tests passed!")
         temp_script = f.name
     
     try:
-        # Run the script as a subprocess
+        # Run the script as a subprocess. Compute the project root from this
+        # file's location (tests/api/test_100_coverage_isolated.py -> repo root)
+        # instead of a hardcoded absolute path.
+        project_root = os.path.dirname(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        )
         env = os.environ.copy()
-        env['PYTHONPATH'] = '/workspaces/NeuroNews'
-        
+        # Ensure both the repo root and its ``src`` dir are importable so the
+        # subprocess can ``import src.api.app`` regardless of the parent env.
+        src_dir = os.path.join(project_root, "src")
+        env['PYTHONPATH'] = os.pathsep.join(
+            [project_root, src_dir, env.get('PYTHONPATH', '')]
+        ).rstrip(os.pathsep)
+
         result = subprocess.run([
             sys.executable, temp_script
-        ], capture_output=True, text=True, env=env, cwd='/workspaces/NeuroNews')
+        ], capture_output=True, text=True, env=env, cwd=project_root)
         
         # Check if the script ran successfully
         assert result.returncode == 0, f"Script failed: {result.stderr}"
@@ -134,7 +144,10 @@ def test_direct_import_manipulation():
     
     # Create a custom importer that raises ImportError for optional modules
     class ControlledImporter:
-        def __init__(self):
+        def __init__(self, original_import):
+            # Capture the real ``__import__`` so the fallback branch does not
+            # recurse into this (reinstalled) importer.
+            self._original_import = original_import
             self.fail_modules = {
                 'src.api.error_handlers',
                 'src.api.routes.enhanced_kg_routes',
@@ -184,12 +197,13 @@ def test_direct_import_manipulation():
                     setattr(routes_mock, route_name, route_mock)
                 return routes_mock
             
-            # Use original import for everything else
-            return __import__(name, *args, **kwargs)
-    
+            # Use the captured original import for everything else (calling the
+            # reinstalled global ``__import__`` here would recurse infinitely).
+            return self._original_import(name, *args, **kwargs)
+
     # Install our controlled importer
     original_import = __builtins__['__import__']
-    controlled_importer = ControlledImporter()
+    controlled_importer = ControlledImporter(original_import)
     
     try:
         __builtins__['__import__'] = controlled_importer

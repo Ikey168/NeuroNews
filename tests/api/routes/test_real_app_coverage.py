@@ -5,17 +5,44 @@ Uses the real app configuration and focuses on routes that are actually included
 
 import pytest
 from unittest.mock import Mock, patch, AsyncMock
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 import json
 
-# Import the actual app
-from src.api.app import app
+from src.api.auth.jwt_auth import require_auth
+from src.api.routes import (
+    event_routes,
+    graph_routes,
+    knowledge_graph_routes,
+    news_routes,
+    veracity_routes,
+)
 
 
 @pytest.fixture
 def real_app_client():
-    """Test client for the real application."""
-    return TestClient(app)
+    """Test client for an app wired with the core routers.
+
+    The module-level ``src.api.app.app`` runs in TESTING mode (a bare app with
+    no routers mounted), so the route-coverage assertions below need the core
+    routers mounted explicitly. This mirrors ``include_versioned_routers`` /
+    ``include_core_routers``: every router carries its own prefix and the
+    versioned news/graph/kg/event routes are mounted under ``/api/v1``.
+    ``require_auth`` (JWT) is overridden so requests reach the route logic.
+    """
+    from src.api.app import health_check, root
+
+    app = FastAPI()
+    app.add_api_route("/", root, methods=["GET"])
+    app.add_api_route("/health", health_check, methods=["GET"])
+    app.include_router(news_routes.router, prefix="/api/v1")
+    app.include_router(graph_routes.router, prefix="/api/v1")
+    app.include_router(knowledge_graph_routes.router)
+    app.include_router(event_routes.router)
+    app.include_router(veracity_routes.router)
+    app.dependency_overrides[require_auth] = lambda: {"sub": "test-user"}
+    with TestClient(app, raise_server_exceptions=False) as client:
+        yield client
 
 
 class TestActualAppRoutes:
@@ -48,20 +75,17 @@ class TestActualAppRoutes:
         mock_get_db.return_value.__exit__.return_value = None
         
         # Test the routes with the correct prefixes
-        response = real_app_client.get("/api/v1/news/")
+        response = real_app_client.get("/api/v1/news/articles")
         assert response.status_code in [200, 500, 422]  # Route exists, may fail due to DB
-        
+
         response = real_app_client.get("/api/v1/news/articles/topic/technology?limit=10")
         assert response.status_code in [200, 500, 422]
 
-    @patch('src.api.routes.graph_routes.get_db')
-    def test_graph_routes_coverage(self, mock_get_db, real_app_client):
+    @patch('src.api.routes.graph_routes.get_graph')
+    def test_graph_routes_coverage(self, mock_get_graph, real_app_client):
         """Test graph routes that are included in the app."""
-        mock_db = Mock()
-        mock_db.fetch_all.return_value = []
-        mock_get_db.return_value.__enter__.return_value = mock_db
-        mock_get_db.return_value.__exit__.return_value = None
-        
+        mock_get_graph.return_value = Mock()
+
         response = real_app_client.get("/api/v1/graph/")
         assert response.status_code in [200, 404, 500]
 
@@ -81,37 +105,28 @@ class TestActualAppRoutes:
         # Auth routes may or may not be available depending on dependencies
         assert response.status_code in [200, 400, 401, 404, 422, 500]
 
-    @patch('src.api.routes.knowledge_graph_routes.get_db')
-    def test_knowledge_graph_routes_coverage(self, mock_get_db, real_app_client):
+    @patch('src.api.routes.knowledge_graph_routes.get_graph_populator')
+    def test_knowledge_graph_routes_coverage(self, mock_get_populator, real_app_client):
         """Test knowledge graph routes."""
-        mock_db = Mock()
-        mock_db.fetch_all.return_value = []
-        mock_get_db.return_value.__enter__.return_value = mock_db
-        mock_get_db.return_value.__exit__.return_value = None
-        
+        mock_get_populator.return_value = Mock()
+
         # Try various knowledge graph endpoints
         response = real_app_client.get("/kg/")
         assert response.status_code in [200, 404, 500]
 
-    @patch('src.api.routes.event_routes.get_db')
-    def test_event_routes_coverage(self, mock_get_db, real_app_client):
+    @patch('src.api.routes.event_routes.get_embedder')
+    def test_event_routes_coverage(self, mock_get_embedder, real_app_client):
         """Test event routes."""
-        mock_db = Mock()
-        mock_db.fetch_all.return_value = []
-        mock_get_db.return_value.__enter__.return_value = mock_db
-        mock_get_db.return_value.__exit__.return_value = None
-        
+        mock_get_embedder.return_value = Mock()
+
         response = real_app_client.get("/events/")
         assert response.status_code in [200, 404, 500]
 
-    @patch('src.api.routes.veracity_routes.get_db')
-    def test_veracity_routes_coverage(self, mock_get_db, real_app_client):
+    @patch('src.api.routes.veracity_routes.get_detector')
+    def test_veracity_routes_coverage(self, mock_get_detector, real_app_client):
         """Test veracity routes."""
-        mock_db = Mock()
-        mock_db.fetch_all.return_value = []
-        mock_get_db.return_value.__enter__.return_value = mock_db
-        mock_get_db.return_value.__exit__.return_value = None
-        
+        mock_get_detector.return_value = Mock()
+
         response = real_app_client.get("/veracity/")
         assert response.status_code in [200, 404, 500]
 
@@ -180,7 +195,7 @@ class TestCoverageImprovementTargeted:
         
         # Test various endpoints to improve coverage
         endpoints_to_test = [
-            "/api/v1/news/",
+            "/api/v1/news/articles",
             "/api/v1/news/articles/topic/AI",
             "/api/v1/news/articles/topic/AI?limit=5",
             "/api/v1/news/articles/topic/AI?limit=50",
@@ -190,16 +205,26 @@ class TestCoverageImprovementTargeted:
             response = real_app_client.get(endpoint)
             assert response.status_code in [200, 422, 500]
     
-    @patch('src.api.routes.news_routes.get_db')
-    def test_news_routes_error_conditions(self, mock_get_db, real_app_client):
+    def test_news_routes_error_conditions(self, real_app_client):
         """Test news routes error conditions."""
-        # Mock database error
-        mock_db = Mock()
-        mock_db.fetch_all.side_effect = Exception("Database connection failed")
-        mock_get_db.return_value.__enter__.return_value = mock_db
-        mock_get_db.return_value.__exit__.return_value = None
-        
-        response = real_app_client.get("/api/v1/news/")
+        # FastAPI binds ``Depends(get_db)`` to the function object at route
+        # registration, so ``unittest.mock.patch`` on the module attribute is
+        # inert. Override the dependency on the app to inject a connector whose
+        # query raises, which the route turns into a 500.
+        from src.api.routes import news_routes
+
+        class FailingConnector:
+            async def execute_query(self, *args, **kwargs):
+                raise Exception("Database connection failed")
+
+        async def failing_db():
+            yield FailingConnector()
+
+        real_app_client.app.dependency_overrides[news_routes.get_db] = failing_db
+        try:
+            response = real_app_client.get("/api/v1/news/articles")
+        finally:
+            real_app_client.app.dependency_overrides.pop(news_routes.get_db, None)
         assert response.status_code in [500, 422]
     
     @patch('src.api.routes.news_routes.get_db')

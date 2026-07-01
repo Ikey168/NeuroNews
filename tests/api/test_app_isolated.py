@@ -85,16 +85,19 @@ def test_app_configuration():
 
 @patch('src.api.app.FastAPI')
 def test_app_initialization_with_mocked_fastapi(mock_fastapi):
-    """Test app initialization process"""
+    """Test app initialization process via create_app()."""
     mock_app_instance = MagicMock()
     mock_fastapi.return_value = mock_app_instance
-    
-    # Reload the module to trigger initialization
-    import importlib
+
     import src.api.app
-    importlib.reload(src.api.app)
-    
-    # Verify FastAPI was called
+
+    # create_app() is the factory that constructs the FastAPI instance with
+    # title/description/version. Skip the heavy import side-effects.
+    with patch('src.api.app.check_all_imports'), \
+         patch('src.api.app.try_import_core_routes', return_value=True):
+        src.api.app.create_app()
+
+    # Verify FastAPI was called with the expected metadata kwargs
     mock_fastapi.assert_called_once()
     call_kwargs = mock_fastapi.call_args[1]
     assert 'title' in call_kwargs
@@ -251,12 +254,16 @@ def test_app_routes_registration():
 def test_middleware_configuration():
     """Test middleware is properly configured"""
     import src.api.app as app_module
-    
-    app_instance = app_module.app
-    
+    from fastapi import FastAPI
+
+    # CORS is wired up by add_cors_middleware(); the bare module-level ``app``
+    # used under TESTING has no middleware.
+    app_instance = FastAPI()
+    app_module.add_cors_middleware(app_instance)
+
     # Test middleware exists
     assert hasattr(app_instance, 'user_middleware')
-    
+
     # Should have CORS middleware at minimum
     assert len(app_instance.user_middleware) >= 1
 
@@ -264,9 +271,13 @@ def test_middleware_configuration():
 def test_app_versioning():
     """Test app version and metadata"""
     import src.api.app as app_module
-    
-    app_instance = app_module.app
-    
+
+    # The full description is set by the create_app() factory; the bare
+    # module-level ``app`` under TESTING omits it.
+    with patch('src.api.app.check_all_imports'), \
+         patch('src.api.app.try_import_core_routes', return_value=True):
+        app_instance = app_module.create_app()
+
     # Test basic app metadata
     assert app_instance.title == "NeuroNews API"
     assert app_instance.version == "0.1.0"
@@ -344,12 +355,15 @@ def test_health_endpoint_async():
 def test_cors_configuration():
     """Test CORS middleware configuration"""
     import src.api.app as app_module
-    
-    app_instance = app_module.app
-    
+    from fastapi import FastAPI
+
+    # add_cors_middleware() installs the CORS middleware on a given app.
+    app_instance = FastAPI()
+    app_module.add_cors_middleware(app_instance)
+
     # Check that CORS middleware is configured
     middleware_stack = app_instance.user_middleware
-    
+
     # Should have at least one middleware (CORS)
     assert len(middleware_stack) >= 1
 
@@ -434,11 +448,14 @@ def test_all_import_blocks_covered():
 def test_middleware_order_and_configuration():
     """Test that middleware is added in correct order"""
     import src.api.app as app_module
-    
-    # App should have middleware registered
-    app_instance = app_module.app
+    from fastapi import FastAPI
+
+    # CORS is always added via add_cors_middleware(); the bare module-level
+    # ``app`` under TESTING has no middleware.
+    app_instance = FastAPI()
+    app_module.add_cors_middleware(app_instance)
     assert hasattr(app_instance, 'user_middleware')
-    
+
     # CORS middleware should be present (always added)
     middleware_names = [middleware.cls.__name__ for middleware in app_instance.user_middleware]
     assert 'CORSMiddleware' in middleware_names
@@ -464,8 +481,11 @@ def test_conditional_route_inclusion():
 def test_app_metadata_configuration():
     """Test FastAPI app metadata"""
     import src.api.app as app_module
-    
-    app_instance = app_module.app
+
+    # The full description is set by the create_app() factory.
+    with patch('src.api.app.check_all_imports'), \
+         patch('src.api.app.try_import_core_routes', return_value=True):
+        app_instance = app_module.create_app()
     assert app_instance.title == "NeuroNews API"
     assert "0.1.0" in app_instance.version
     assert "API for accessing news articles" in app_instance.description

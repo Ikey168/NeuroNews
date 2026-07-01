@@ -2,18 +2,14 @@ import pytest
 from unittest.mock import Mock, patch
 import asyncio
 
-@patch('src.api.event_timeline_service.DatabaseConnection')
 @patch('redis.Redis')
 @patch('pandas.DataFrame')
-def test_event_timeline_service_methods(mock_pd, mock_redis, mock_db):
+def test_event_timeline_service_methods(mock_pd, mock_redis):
     """Exercise EventTimelineService methods to boost from 21% coverage."""
     # Mock dependencies
-    mock_db_conn = Mock()
-    mock_db.return_value = mock_db_conn
-    mock_db_conn.execute.return_value.fetchall.return_value = [
-        {'event_id': 1, 'timestamp': '2023-01-01', 'topic': 'politics'}
-    ]
-    
+    # NOTE: The current EventTimelineService no longer depends on a
+    # DatabaseConnection symbol in src.api.event_timeline_service, so that
+    # patch target has been removed to match the current source API.
     mock_redis_client = Mock()
     mock_redis.return_value = mock_redis_client
     mock_redis_client.get.return_value = None

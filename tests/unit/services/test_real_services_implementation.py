@@ -123,12 +123,15 @@ class TestRealVectorService:
             assert callable(get_vector_service)
             assert callable(vector_search)
             
-            # Test that we can create a service (with mocked dependencies)
+            # Test that we can create a service (with mocked dependencies).
+            # The pgvector backend lazily imports services.rag.vector inside
+            # PgVectorBackend.__init__, so that is the only dependency to mock.
+            # (The qdrant backend module is an optional dependency that does not
+            # import for the pgvector path, so it must not be touched here.)
             with patch('services.rag.vector.VectorSearchService'):
-                with patch('services.embeddings.backends.qdrant_store.QdrantVectorStore'):
-                    # This should not raise an exception
-                    service = get_vector_service('pgvector')
-                    assert service is not None
+                # This should not raise an exception
+                service = get_vector_service('pgvector')
+                assert service is not None
                     
         except ImportError as e:
             pytest.skip(f"Vector service not available: {e}")

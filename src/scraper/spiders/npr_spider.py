@@ -20,14 +20,21 @@ class NPRSpider(scrapy.Spider):
         """Parse the main NPR page to find article links."""
         # Extract article links
         article_links = response.css(
-            'a[href*="/2024/"], a[href*="/2025/"]::attr(href)'
+            'a[href*="/2024/"]::attr(href), a[href*="/2025/"]::attr(href)'
         ).getall()
 
         for link in article_links:
             if link.startswith("/"):
                 link = response.urljoin(link)
-            # Filter for actual story URLs
-            if "/sections/" in link or "/story/" in link:
+            # Filter for actual story URLs. The CSS selector above already
+            # restricts to dated (/2024/, /2025/) links, which are articles;
+            # also accept the explicit /sections/ and /story/ paths.
+            if (
+                "/2024/" in link
+                or "/2025/" in link
+                or "/sections/" in link
+                or "/story/" in link
+            ):
                 yield scrapy.Request(url=link, callback=self.parse_article)
 
     def parse_article(self, response):

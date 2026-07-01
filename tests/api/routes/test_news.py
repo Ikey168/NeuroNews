@@ -1,9 +1,29 @@
 """Tests for the news API endpoints."""
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from src.api.app import app  # Replace with your actual application import
 
-client = TestClient(app)
+from src.api.auth.jwt_auth import require_auth
+from src.api.routes import news_routes
+
+
+@pytest.fixture
+def test_app():
+    """Mount the news router on a fresh app.
+
+    The news routes are gated behind the "news" domain pack on the prebuilt
+    ``src.api.app.app`` and are not mounted unless that pack is enabled, so the
+    router is included directly here. The router carries its own ``/news``
+    prefix and is mounted under ``/api/v1`` to match the request paths below.
+    ``require_auth`` (JWT) is overridden so requests reach the route logic; the
+    real ``get_db`` connector is used, so endpoints return 200 with data or 500
+    when the underlying analytics tables are unavailable.
+    """
+    app = FastAPI()
+    app.include_router(news_routes.router, prefix="/api/v1", tags=["News"])
+    app.dependency_overrides[require_auth] = lambda: {"sub": "test-user"}
+    with TestClient(app, raise_server_exceptions=False) as client:
+        yield client
 
 
 def test_get_all_news_success(test_app):

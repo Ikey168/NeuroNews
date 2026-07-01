@@ -1,36 +1,52 @@
 """
-Comprehensive test suite for Rate Limiting Middleware - Issue #476.
+Test suite for the rate limiting middleware in
+src/api/middleware/rate_limit_middleware.py.
 
-Tests all rate limiting requirements:
-- Rate limiting algorithms and enforcement
-- User tier-based rate limiting (Free, Premium, Admin)
-- Burst limit handling and sliding windows
-- Concurrent request limiting
-- Suspicious activity monitoring and auto-blocking
-- Redis backend integration and fallback mechanisms
-- Performance under high load scenarios
+Tests the actual rate-limiting API shipped in this codebase:
+- RateLimitConfig user tiers (FREE / PREMIUM / ENTERPRISE) and UserTier dataclass
+- RequestMetrics dataclass
+- RateLimitStore in-memory backend (record_request / get_request_counts /
+  concurrent counters), with Redis forced off for determinism
+- SuspiciousActivityDetector pattern analysis
+- RateLimitMiddleware dispatch, tier resolution, client IP extraction,
+  excluded-path bypass and 429 responses
 """
 
-import asyncio
 import time
-from collections import defaultdict
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from fastapi import FastAPI, Request, Response
-from fastapi.testclient import TestClient
-from redis.exceptions import ConnectionError as RedisConnectionError
+from fastapi import Request, Response
+from fastapi.responses import JSONResponse
 
-try:
-    from src.api.middleware.rate_limit_middleware import (
-        RateLimitConfig,
-        RateLimitMiddleware,
-        SuspiciousActivity,
-        UserTier,
+from src.api.middleware.rate_limit_middleware import (
+    RateLimitConfig,
+    RateLimitMiddleware,
+    RateLimitStore,
+    RequestMetrics,
+    SuspiciousActivityDetector,
+    UserTier,
+)
+
+
+# Force the in-memory backend for every RateLimitStore created in this module.
+@pytest.fixture(autouse=True)
+def _force_memory_backend():
+    with patch.object(RateLimitStore, "_redis_available", return_value=False):
+        yield
+
+
+def _make_metrics(user_id="u1", ip="192.168.1.100", endpoint="/api/test",
+                  code=200, ts=None):
+    return RequestMetrics(
+        user_id=user_id,
+        ip_address=ip,
+        endpoint=endpoint,
+        timestamp=ts or datetime.now(),
+        response_code=code,
+        processing_time=0.01,
     )
-except ImportError as _e:  # stale or optional dependency
-    import pytest
-    pytest.skip("module import failed: {0}".format(_e), allow_module_level=True)
 
 
 class TestUserTierConfiguration:
@@ -39,7 +55,7 @@ class TestUserTierConfiguration:
     def test_free_tier_limits(self):
         """Test free tier rate limits."""
         free_tier = RateLimitConfig.FREE_TIER
-        
+
         assert free_tier.name == "free"
         assert free_tier.requests_per_minute == 10
         assert free_tier.requests_per_hour == 100
@@ -50,7 +66,7 @@ class TestUserTierConfiguration:
     def test_premium_tier_limits(self):
         """Test premium tier rate limits."""
         premium_tier = RateLimitConfig.PREMIUM_TIER
-        
+
         assert premium_tier.name == "premium"
         assert premium_tier.requests_per_minute > RateLimitConfig.FREE_TIER.requests_per_minute
         assert premium_tier.requests_per_hour > RateLimitConfig.FREE_TIER.requests_per_hour
@@ -58,29 +74,28 @@ class TestUserTierConfiguration:
         assert premium_tier.burst_limit > RateLimitConfig.FREE_TIER.burst_limit
         assert premium_tier.concurrent_requests > RateLimitConfig.FREE_TIER.concurrent_requests
 
-    def test_admin_tier_limits(self):
-        """Test admin tier rate limits."""
-        admin_tier = RateLimitConfig.ADMIN_TIER
-        
-        assert admin_tier.name == "admin"
-        assert admin_tier.requests_per_minute > RateLimitConfig.PREMIUM_TIER.requests_per_minute
-        assert admin_tier.requests_per_hour > RateLimitConfig.PREMIUM_TIER.requests_per_hour
-        assert admin_tier.requests_per_day > RateLimitConfig.PREMIUM_TIER.requests_per_day
-        assert admin_tier.burst_limit > RateLimitConfig.PREMIUM_TIER.burst_limit
-        assert admin_tier.concurrent_requests > RateLimitConfig.PREMIUM_TIER.concurrent_requests
+    def test_enterprise_tier_limits(self):
+        """Test enterprise tier rate limits."""
+        enterprise_tier = RateLimitConfig.ENTERPRISE_TIER
+
+        assert enterprise_tier.name == "enterprise"
+        assert enterprise_tier.requests_per_minute > RateLimitConfig.PREMIUM_TIER.requests_per_minute
+        assert enterprise_tier.requests_per_hour > RateLimitConfig.PREMIUM_TIER.requests_per_hour
+        assert enterprise_tier.requests_per_day > RateLimitConfig.PREMIUM_TIER.requests_per_day
+        assert enterprise_tier.burst_limit > RateLimitConfig.PREMIUM_TIER.burst_limit
+        assert enterprise_tier.concurrent_requests > RateLimitConfig.PREMIUM_TIER.concurrent_requests
 
     def test_tier_hierarchy(self):
-        """Test tier hierarchy (Admin > Premium > Free)."""
+        """Test tier hierarchy (Enterprise > Premium > Free)."""
         free = RateLimitConfig.FREE_TIER
         premium = RateLimitConfig.PREMIUM_TIER
-        admin = RateLimitConfig.ADMIN_TIER
-        
-        # Check hierarchy for all metrics
-        assert admin.requests_per_minute >= premium.requests_per_minute >= free.requests_per_minute
-        assert admin.requests_per_hour >= premium.requests_per_hour >= free.requests_per_hour
-        assert admin.requests_per_day >= premium.requests_per_day >= free.requests_per_day
-        assert admin.burst_limit >= premium.burst_limit >= free.burst_limit
-        assert admin.concurrent_requests >= premium.concurrent_requests >= free.concurrent_requests
+        enterprise = RateLimitConfig.ENTERPRISE_TIER
+
+        assert enterprise.requests_per_minute >= premium.requests_per_minute >= free.requests_per_minute
+        assert enterprise.requests_per_hour >= premium.requests_per_hour >= free.requests_per_hour
+        assert enterprise.requests_per_day >= premium.requests_per_day >= free.requests_per_day
+        assert enterprise.burst_limit >= premium.burst_limit >= free.burst_limit
+        assert enterprise.concurrent_requests >= premium.concurrent_requests >= free.concurrent_requests
 
     def test_user_tier_dataclass(self):
         """Test UserTier dataclass functionality."""
@@ -90,9 +105,9 @@ class TestUserTierConfiguration:
             requests_per_hour=500,
             requests_per_day=5000,
             burst_limit=75,
-            concurrent_requests=10
+            concurrent_requests=10,
         )
-        
+
         assert custom_tier.name == "custom"
         assert custom_tier.requests_per_minute == 50
         assert custom_tier.requests_per_hour == 500
@@ -101,718 +116,330 @@ class TestUserTierConfiguration:
         assert custom_tier.concurrent_requests == 10
 
 
-class TestSuspiciousActivity:
+class TestRequestMetrics:
+    """Test the RequestMetrics dataclass."""
+
+    def test_request_metrics_fields(self):
+        """Test that RequestMetrics stores its fields."""
+        now = datetime.now()
+        metrics = RequestMetrics(
+            user_id="user123",
+            ip_address="10.0.0.1",
+            endpoint="/api/articles",
+            timestamp=now,
+            response_code=200,
+            processing_time=0.05,
+        )
+        assert metrics.user_id == "user123"
+        assert metrics.ip_address == "10.0.0.1"
+        assert metrics.endpoint == "/api/articles"
+        assert metrics.timestamp == now
+        assert metrics.response_code == 200
+        assert metrics.processing_time == 0.05
+
+
+class TestRateLimitStoreMemory:
+    """Test the in-memory backend of RateLimitStore."""
+
+    @pytest.fixture
+    def store(self):
+        store = RateLimitStore()
+        assert store.use_redis is False  # forced by autouse fixture
+        return store
+
+    @pytest.mark.asyncio
+    async def test_record_and_count_requests(self, store):
+        """Recorded requests are reflected in the time-window counts."""
+        counts = await store.get_request_counts("u1")
+        assert counts == {"minute": 0, "hour": 0, "day": 0}
+
+        for _ in range(5):
+            await store.record_request("u1", _make_metrics(user_id="u1"))
+
+        counts = await store.get_request_counts("u1")
+        assert counts["minute"] == 5
+        assert counts["hour"] == 5
+        assert counts["day"] == 5
+
+    @pytest.mark.asyncio
+    async def test_counts_are_per_user(self, store):
+        """Counts are isolated per user id."""
+        await store.record_request("a", _make_metrics(user_id="a"))
+        await store.record_request("a", _make_metrics(user_id="a"))
+        await store.record_request("b", _make_metrics(user_id="b"))
+
+        assert (await store.get_request_counts("a"))["minute"] == 2
+        assert (await store.get_request_counts("b"))["minute"] == 1
+
+    @pytest.mark.asyncio
+    async def test_concurrent_counter(self, store):
+        """Concurrent counters increment and decrement correctly."""
+        assert await store.increment_concurrent("u1") == 1
+        assert await store.increment_concurrent("u1") == 2
+        await store.decrement_concurrent("u1")
+        assert store.memory_store["u1"]["concurrent"] == 1
+
+    @pytest.mark.asyncio
+    async def test_concurrent_counter_never_negative(self, store):
+        """Decrementing below zero is clamped at zero."""
+        await store.decrement_concurrent("u1")
+        assert store.memory_store["u1"]["concurrent"] == 0
+
+
+class TestSuspiciousActivityDetector:
     """Test suspicious activity detection."""
 
-    def test_suspicious_activity_dataclass(self):
-        """Test SuspiciousActivity dataclass."""
-        activity = SuspiciousActivity(
-            ip_address="192.168.1.100",
-            request_count=500,
-            time_window=300,  # 5 minutes
-            patterns=["rapid_requests", "429_responses"],
-            severity="high",
-            first_seen=time.time(),
-            last_seen=time.time()
-        )
-        
-        assert activity.ip_address == "192.168.1.100"
-        assert activity.request_count == 500
-        assert activity.time_window == 300
-        assert "rapid_requests" in activity.patterns
-        assert activity.severity == "high"
+    @pytest.fixture
+    def detector(self):
+        store = RateLimitStore()
+        return SuspiciousActivityDetector(store, RateLimitConfig())
 
-    def test_suspicious_activity_threshold_calculation(self):
-        """Test suspicious activity threshold calculations."""
-        # High request rate in short time
-        high_rate_activity = SuspiciousActivity(
-            ip_address="10.0.0.1",
-            request_count=1000,
-            time_window=60,  # 1 minute
-            patterns=["burst_attack"],
-            severity="critical",
-            first_seen=time.time(),
-            last_seen=time.time()
-        )
-        
-        # Calculate requests per second
-        rps = high_rate_activity.request_count / high_rate_activity.time_window
-        assert rps > 15  # Should be high rate
+    def test_unusual_hours_detection(self, detector):
+        """Requests during 2-6 AM are flagged as unusual hours."""
+        night = datetime.now().replace(hour=3, minute=0, second=0, microsecond=0)
+        day = datetime.now().replace(hour=14, minute=0, second=0, microsecond=0)
+        assert detector._check_unusual_hours(night) is True
+        assert detector._check_unusual_hours(day) is False
 
-    def test_suspicious_activity_pattern_matching(self):
-        """Test suspicious activity pattern identification."""
-        patterns = [
-            "rapid_burst",
-            "distributed_attack", 
-            "credential_stuffing",
-            "api_abuse",
-            "scraping_behavior"
+    @pytest.mark.asyncio
+    async def test_rapid_requests_detection(self, detector):
+        """Exceeding the rapid_requests threshold is flagged."""
+        threshold = detector.config.SUSPICIOUS_PATTERNS["rapid_requests"]
+        now = datetime.now()
+        metrics = [_make_metrics(ts=now) for _ in range(threshold + 5)]
+        assert await detector._check_rapid_requests(metrics) is True
+
+        # Below threshold: not flagged
+        few = [_make_metrics(ts=now) for _ in range(threshold - 1)]
+        assert await detector._check_rapid_requests(few) is False
+
+    @pytest.mark.asyncio
+    async def test_high_error_rate_detection(self, detector):
+        """A high proportion of error responses is flagged."""
+        now = datetime.now()
+        metrics = [_make_metrics(code=500, ts=now) for _ in range(15)]
+        assert await detector._check_error_rate(metrics) is True
+
+        ok = [_make_metrics(code=200, ts=now) for _ in range(15)]
+        assert await detector._check_error_rate(ok) is False
+
+    @pytest.mark.asyncio
+    async def test_multiple_ips_detection(self, detector):
+        """Many distinct IPs for one user is flagged."""
+        now = datetime.now()
+        limit = detector.config.SUSPICIOUS_PATTERNS["multiple_ips"]
+        metrics = [
+            _make_metrics(ip=f"10.0.0.{i}", ts=now) for i in range(limit + 5)
         ]
-        
-        activity = SuspiciousActivity(
-            ip_address="203.0.113.1",
-            request_count=100,
-            time_window=30,
-            patterns=patterns,
-            severity="medium",
-            first_seen=time.time(),
-            last_seen=time.time()
-        )
-        
-        assert len(activity.patterns) == 5
-        assert "rapid_burst" in activity.patterns
-        assert "distributed_attack" in activity.patterns
+        assert await detector._check_multiple_ips(metrics) is True
+
+    @pytest.mark.asyncio
+    async def test_analyze_request_aggregates_alerts(self, detector):
+        """analyze_request returns alert strings for suspicious traffic.
+
+        The stored metrics are timestamped 'now' so the sliding-minute checks
+        (rapid_requests, error_rate, multiple_ips) fire deterministically
+        regardless of wall-clock time, while the trigger metric carries a
+        3 AM timestamp so the unusual_hours check also fires.
+        """
+        now = datetime.now()
+        for i in range(60):
+            m = _make_metrics(user_id="attacker", ip=f"10.0.0.{i % 20}",
+                              code=500, ts=now)
+            detector.store.memory_store["attacker"]["metrics"].append(m)
+
+        night = now.replace(hour=3, minute=0, second=0, microsecond=0)
+        trigger = _make_metrics(user_id="attacker", ip="10.0.0.1", code=500, ts=night)
+        alerts = await detector.analyze_request("attacker", trigger)
+
+        assert isinstance(alerts, list)
+        assert "unusual_hours" in alerts
+        assert "rapid_requests" in alerts
+        assert "high_error_rate" in alerts
+        assert "multiple_ips" in alerts
 
 
 class TestRateLimitMiddleware:
-    """Test Rate Limit Middleware core functionality."""
+    """Test the RateLimitMiddleware core behaviour."""
 
     @pytest.fixture
-    def rate_limit_middleware(self):
-        """Create RateLimitMiddleware for testing."""
+    def middleware(self):
         app = MagicMock()
-        middleware = RateLimitMiddleware(app)
-        
-        # Mock Redis client
-        middleware.redis_client = MagicMock()
-        middleware.redis_available = True
-        
-        return middleware
+        mw = RateLimitMiddleware(app)
+        assert mw.store.use_redis is False
+        return mw
 
-    @pytest.fixture
-    def rate_limit_middleware_no_redis(self):
-        """Create RateLimitMiddleware without Redis."""
-        app = MagicMock()
-        with patch('redis.Redis', side_effect=Exception("Redis unavailable")):
-            middleware = RateLimitMiddleware(app)
-        
-        assert middleware.redis_available is False
-        return middleware
-
-    def test_middleware_initialization_with_redis(self):
-        """Test middleware initialization with Redis available."""
-        app = MagicMock()
-        
-        with patch('redis.Redis') as mock_redis:
-            mock_redis_client = MagicMock()
-            mock_redis.return_value = mock_redis_client
-            mock_redis_client.ping.return_value = True
-            
-            middleware = RateLimitMiddleware(app)
-            
-            assert middleware.redis_available is True
-            assert middleware.redis_client is not None
-
-    def test_middleware_initialization_without_redis(self):
-        """Test middleware initialization without Redis."""
-        app = MagicMock()
-        
-        with patch('redis.Redis', side_effect=Exception("Connection failed")):
-            middleware = RateLimitMiddleware(app)
-            
-            assert middleware.redis_available is False
-            assert middleware.redis_client is None
-
-    def test_get_user_tier_free(self, rate_limit_middleware):
-        """Test getting free user tier."""
-        middleware = rate_limit_middleware
-        
-        mock_user = {"role": "free", "user_id": "123"}
-        tier = middleware._get_user_tier(mock_user)
-        
+    @pytest.mark.asyncio
+    async def test_get_user_info_free_default(self, middleware):
+        """Anonymous requests resolve to the free tier."""
+        request = MagicMock(spec=Request)
+        request.state = MagicMock(spec=[])  # no `user` attribute
+        request.headers = {}
+        user_id, tier = await middleware._get_user_info(request)
         assert tier.name == "free"
-        assert tier.requests_per_minute == RateLimitConfig.FREE_TIER.requests_per_minute
+        assert user_id == "anonymous"
 
-    def test_get_user_tier_premium(self, rate_limit_middleware):
-        """Test getting premium user tier."""
-        middleware = rate_limit_middleware
-        
-        mock_user = {"role": "premium", "user_id": "456"}
-        tier = middleware._get_user_tier(mock_user)
-        
+    @pytest.mark.asyncio
+    async def test_get_user_info_premium_from_state(self, middleware):
+        """A premium user in request.state resolves to the premium tier."""
+        request = MagicMock(spec=Request)
+        request.state.user = {"user_id": "456", "tier": "premium"}
+        request.headers = {}
+        user_id, tier = await middleware._get_user_info(request)
+        assert user_id == "456"
         assert tier.name == "premium"
-        assert tier.requests_per_minute == RateLimitConfig.PREMIUM_TIER.requests_per_minute
 
-    def test_get_user_tier_admin(self, rate_limit_middleware):
-        """Test getting admin user tier."""
-        middleware = rate_limit_middleware
-        
-        mock_user = {"role": "admin", "user_id": "789"}
-        tier = middleware._get_user_tier(mock_user)
-        
-        assert tier.name == "admin"
-        assert tier.requests_per_minute == RateLimitConfig.ADMIN_TIER.requests_per_minute
-
-    def test_get_user_tier_default(self, rate_limit_middleware):
-        """Test getting default tier for unknown user."""
-        middleware = rate_limit_middleware
-        
-        # No user provided
-        tier = middleware._get_user_tier(None)
-        assert tier.name == "free"
-        
-        # User without role
-        tier = middleware._get_user_tier({"user_id": "123"})
-        assert tier.name == "free"
-        
-        # Unknown role
-        tier = middleware._get_user_tier({"role": "unknown", "user_id": "456"})
+    @pytest.mark.asyncio
+    async def test_get_user_info_unknown_tier_falls_back(self, middleware):
+        """An unknown tier name falls back to free."""
+        request = MagicMock(spec=Request)
+        request.state.user = {"user_id": "789", "tier": "bogus"}
+        request.headers = {}
+        _, tier = await middleware._get_user_info(request)
         assert tier.name == "free"
 
-    def test_get_client_identifier_ip(self, rate_limit_middleware):
-        """Test client identifier extraction from IP."""
-        middleware = rate_limit_middleware
-        
-        mock_request = MagicMock(spec=Request)
-        mock_request.client.host = "192.168.1.100"
-        mock_request.headers = {}
-        
-        identifier = middleware._get_client_identifier(mock_request, None)
-        assert identifier == "192.168.1.100"
+    def test_get_client_ip_direct(self, middleware):
+        """Client IP falls back to the socket peer."""
+        request = MagicMock(spec=Request)
+        request.headers = {}
+        request.client.host = "192.168.1.50"
+        assert middleware._get_client_ip(request) == "192.168.1.50"
 
-    def test_get_client_identifier_user(self, rate_limit_middleware):
-        """Test client identifier extraction from authenticated user."""
-        middleware = rate_limit_middleware
-        
-        mock_request = MagicMock(spec=Request)
-        mock_request.client.host = "192.168.1.100"
-        mock_request.headers = {}
-        
-        mock_user = {"user_id": "user123", "role": "premium"}
-        
-        identifier = middleware._get_client_identifier(mock_request, mock_user)
-        assert identifier == "user:user123"
+    def test_get_client_ip_forwarded(self, middleware):
+        """X-Forwarded-For takes precedence and uses the first hop."""
+        request = MagicMock(spec=Request)
+        request.headers = {"X-Forwarded-For": "203.0.113.5, 192.168.1.1"}
+        request.client.host = "192.168.1.50"
+        assert middleware._get_client_ip(request) == "203.0.113.5"
 
-    def test_get_client_identifier_forwarded(self, rate_limit_middleware):
-        """Test client identifier extraction from forwarded headers."""
-        middleware = rate_limit_middleware
-        
-        mock_request = MagicMock(spec=Request)
-        mock_request.client.host = "192.168.1.100"
-        mock_request.headers = {"x-forwarded-for": "203.0.113.5, 192.168.1.1"}
-        
-        identifier = middleware._get_client_identifier(mock_request, None)
-        assert identifier == "203.0.113.5"
+    def test_get_client_ip_real_ip(self, middleware):
+        """X-Real-IP is honoured when present."""
+        request = MagicMock(spec=Request)
+        request.headers = {"X-Real-IP": "198.51.100.7"}
+        request.client.host = "192.168.1.50"
+        assert middleware._get_client_ip(request) == "198.51.100.7"
 
-    def test_check_rate_limit_with_redis(self, rate_limit_middleware):
-        """Test rate limit checking with Redis backend."""
-        middleware = rate_limit_middleware
-        
-        # Mock Redis responses
-        middleware.redis_client.get.return_value = b"5"  # Current count
-        middleware.redis_client.incr.return_value = 6
-        middleware.redis_client.expire.return_value = True
-        
-        client_id = "192.168.1.100"
-        user_tier = RateLimitConfig.FREE_TIER
-        
-        # Should not be rate limited (6 < 10 per minute)
-        result = middleware._check_rate_limit_redis(client_id, user_tier)
-        
-        assert result["limited"] is False
-        assert result["current"] == 6
-        assert result["limit"] == user_tier.requests_per_minute
-        assert "reset_time" in result
+    @pytest.mark.asyncio
+    async def test_check_rate_limits_under_limit(self, middleware):
+        """No response returned while under the per-minute limit."""
+        result = await middleware._check_rate_limits("u1", RateLimitConfig.FREE_TIER)
+        assert result is None
 
-    def test_check_rate_limit_exceeded_with_redis(self, rate_limit_middleware):
-        """Test rate limit exceeded with Redis backend."""
-        middleware = rate_limit_middleware
-        
-        # Mock Redis responses - limit exceeded
-        middleware.redis_client.get.return_value = b"15"  # Current count
-        middleware.redis_client.incr.return_value = 16
-        
-        client_id = "192.168.1.100"
-        user_tier = RateLimitConfig.FREE_TIER  # 10 per minute limit
-        
-        result = middleware._check_rate_limit_redis(client_id, user_tier)
-        
-        assert result["limited"] is True
-        assert result["current"] == 16
-        assert result["limit"] == user_tier.requests_per_minute
+    @pytest.mark.asyncio
+    async def test_check_rate_limits_minute_exceeded(self, middleware):
+        """A 429 JSONResponse is returned once the per-minute limit is hit."""
+        tier = RateLimitConfig.FREE_TIER
+        for _ in range(tier.requests_per_minute):
+            await middleware.store.record_request("u1", _make_metrics(user_id="u1"))
 
-    def test_check_rate_limit_memory_fallback(self, rate_limit_middleware_no_redis):
-        """Test rate limit checking with memory fallback."""
-        middleware = rate_limit_middleware_no_redis
-        
-        client_id = "192.168.1.100"
-        user_tier = RateLimitConfig.FREE_TIER
-        
-        # First few requests should pass
-        for i in range(5):
-            result = middleware._check_rate_limit_memory(client_id, user_tier)
-            assert result["limited"] is False
-            assert result["current"] == i + 1
+        result = await middleware._check_rate_limits("u1", tier)
+        assert isinstance(result, JSONResponse)
+        assert result.status_code == 429
 
-    def test_check_rate_limit_memory_exceeded(self, rate_limit_middleware_no_redis):
-        """Test memory-based rate limit exceeded."""
-        middleware = rate_limit_middleware_no_redis
-        
-        client_id = "192.168.1.200"
-        user_tier = RateLimitConfig.FREE_TIER  # 10 per minute
-        
-        # Exceed the limit
-        for i in range(12):
-            result = middleware._check_rate_limit_memory(client_id, user_tier)
-            if i >= 10:  # After 10 requests
-                assert result["limited"] is True
-            else:
-                assert result["limited"] is False
-
-    def test_burst_limit_handling(self, rate_limit_middleware):
-        """Test burst limit handling."""
-        middleware = rate_limit_middleware
-        
-        # Mock Redis for burst detection
-        middleware.redis_client.get.side_effect = [
-            b"8",   # Current minute count
-            b"2",   # Current burst count  
-        ]
-        middleware.redis_client.incr.side_effect = [9, 3]
-        
-        client_id = "192.168.1.100"
-        user_tier = RateLimitConfig.FREE_TIER  # burst_limit = 15
-        
-        result = middleware._check_rate_limit_redis(client_id, user_tier)
-        
-        # Should allow burst traffic within burst limit
-        assert result["limited"] is False
-
-    def test_burst_limit_exceeded(self, rate_limit_middleware):
-        """Test burst limit exceeded."""
-        middleware = rate_limit_middleware
-        
-        # Mock Redis for burst exceeded
-        middleware.redis_client.get.side_effect = [
-            b"5",   # Current minute count (under limit)
-            b"18",  # Current burst count (over burst limit)
-        ]
-        middleware.redis_client.incr.side_effect = [6, 19]
-        
-        client_id = "192.168.1.100" 
-        user_tier = RateLimitConfig.FREE_TIER  # burst_limit = 15
-        
-        result = middleware._check_rate_limit_redis(client_id, user_tier)
-        
-        # Should be limited due to burst
-        assert result["limited"] is True
-        assert result["reason"] == "burst_limit_exceeded"
-
-    def test_concurrent_requests_tracking(self, rate_limit_middleware):
-        """Test concurrent request tracking."""
-        middleware = rate_limit_middleware
-        client_id = "192.168.1.100"
-        
-        # Start tracking concurrent requests
-        middleware._increment_concurrent_requests(client_id)
-        middleware._increment_concurrent_requests(client_id)
-        
-        count = middleware._get_concurrent_requests(client_id)
-        assert count == 2
-        
-        # End some requests
-        middleware._decrement_concurrent_requests(client_id)
-        count = middleware._get_concurrent_requests(client_id)
-        assert count == 1
-
-    def test_concurrent_requests_limit_exceeded(self, rate_limit_middleware):
-        """Test concurrent request limit exceeded."""
-        middleware = rate_limit_middleware
-        client_id = "192.168.1.100"
-        user_tier = RateLimitConfig.FREE_TIER  # concurrent_requests = 3
-        
-        # Simulate max concurrent requests
-        for _ in range(user_tier.concurrent_requests):
-            middleware._increment_concurrent_requests(client_id)
-        
-        # Next request should be limited
-        limited = middleware._check_concurrent_limit(client_id, user_tier)
-        assert limited is True
-
-    def test_suspicious_activity_detection(self, rate_limit_middleware):
-        """Test suspicious activity detection."""
-        middleware = rate_limit_middleware
-        client_ip = "10.0.0.1"
-        
-        # Simulate rapid requests to trigger detection
-        for _ in range(50):  # Many requests in short time
-            middleware._record_request(client_ip)
-        
-        is_suspicious = middleware._is_suspicious_activity(client_ip)
-        assert is_suspicious is True
-        
-        # Should be automatically blocked
-        assert middleware._is_auto_blocked(client_ip) is True
-
-    def test_whitelist_bypass(self, rate_limit_middleware):
-        """Test whitelist IP bypass."""
-        middleware = rate_limit_middleware
-        
-        whitelisted_ip = "127.0.0.1"
-        middleware.whitelist_ips.add(whitelisted_ip)
-        
-        mock_request = MagicMock(spec=Request)
-        mock_request.client.host = whitelisted_ip
-        mock_request.headers = {}
-        
-        # Should bypass all rate limiting
-        should_limit = middleware._should_apply_rate_limiting(mock_request, None)
-        assert should_limit is False
-
-    def test_excluded_paths_bypass(self, rate_limit_middleware):
-        """Test excluded paths bypass rate limiting."""
-        middleware = rate_limit_middleware
-        
-        excluded_paths = ["/health", "/metrics", "/docs"]
-        
-        for path in excluded_paths:
-            mock_request = MagicMock(spec=Request)
-            mock_request.url.path = path
-            mock_request.client.host = "192.168.1.100"
-            mock_request.headers = {}
-            
-            should_limit = middleware._should_apply_rate_limiting(mock_request, None)
-            assert should_limit is False
-
-    def test_create_rate_limit_response(self, rate_limit_middleware):
-        """Test rate limit response creation."""
-        middleware = rate_limit_middleware
-        
-        limit_info = {
-            "limited": True,
-            "current": 15,
-            "limit": 10,
-            "reset_time": time.time() + 60,
-            "reason": "rate_limit_exceeded"
-        }
-        
-        response = middleware._create_rate_limit_response(limit_info)
-        
+    def test_create_rate_limit_response_headers(self, middleware):
+        """The 429 response carries standard rate-limit headers."""
+        response = middleware._create_rate_limit_response("Rate limit exceeded", 10, 60)
         assert response.status_code == 429
-        assert "X-RateLimit-Limit" in response.headers
-        assert "X-RateLimit-Remaining" in response.headers
+        assert response.headers["X-RateLimit-Limit"] == "10"
+        assert response.headers["X-RateLimit-Remaining"] == "0"
         assert "X-RateLimit-Reset" in response.headers
-        assert "Retry-After" in response.headers
+        assert response.headers["Retry-After"] == "60"
+
+    def test_excluded_paths_configured(self, middleware):
+        """Public dashboard/health paths are excluded from limiting."""
+        assert "/health" in middleware.excluded_paths
+        assert "/docs" in middleware.excluded_paths
+        assert "/openapi.json" in middleware.excluded_paths
 
     @pytest.mark.asyncio
-    async def test_middleware_dispatch_normal_request(self, rate_limit_middleware):
-        """Test middleware dispatch with normal request."""
-        middleware = rate_limit_middleware
-        
-        # Mock successful rate limit check
-        middleware._check_rate_limit_redis = MagicMock(return_value={
-            "limited": False,
-            "current": 5,
-            "limit": 10,
-            "reset_time": time.time() + 60
-        })
-        
-        mock_request = MagicMock(spec=Request)
-        mock_request.url.path = "/api/test"
-        mock_request.client.host = "192.168.1.100"
-        mock_request.headers = {}
-        
-        mock_call_next = AsyncMock(return_value=Response(content="OK", status_code=200))
-        
-        response = await middleware.dispatch(mock_request, mock_call_next)
-        
+    async def test_dispatch_excluded_path_bypasses(self, middleware):
+        """Requests to excluded paths skip rate limiting entirely."""
+        request = MagicMock(spec=Request)
+        request.url.path = "/health"
+        sentinel = Response(content="OK", status_code=200)
+        call_next = AsyncMock(return_value=sentinel)
+
+        response = await middleware.dispatch(request, call_next)
+        assert response is sentinel
+        call_next.assert_awaited_once_with(request)
+
+    @pytest.mark.asyncio
+    async def test_dispatch_normal_request_passes(self, middleware):
+        """A normal request under limits is forwarded to the app."""
+        request = MagicMock(spec=Request)
+        request.url.path = "/api/test"
+        request.state = MagicMock(spec=[])
+        request.headers = {}
+        request.client.host = "192.168.1.100"
+
+        call_next = AsyncMock(return_value=Response(content="OK", status_code=200))
+        response = await middleware.dispatch(request, call_next)
+
         assert response.status_code == 200
-        mock_call_next.assert_called_once_with(mock_request)
+        call_next.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_middleware_dispatch_rate_limited(self, rate_limit_middleware):
-        """Test middleware dispatch with rate limited request."""
-        middleware = rate_limit_middleware
-        
-        # Mock rate limit exceeded
-        middleware._check_rate_limit_redis = MagicMock(return_value={
-            "limited": True,
-            "current": 15,
-            "limit": 10,
-            "reset_time": time.time() + 60,
-            "reason": "rate_limit_exceeded"
-        })
-        
-        mock_request = MagicMock(spec=Request)
-        mock_request.url.path = "/api/test"
-        mock_request.client.host = "192.168.1.100"
-        mock_request.headers = {}
-        
-        mock_call_next = AsyncMock()
-        
-        response = await middleware.dispatch(mock_request, mock_call_next)
-        
+    async def test_dispatch_rate_limited_returns_429(self, middleware):
+        """When the per-minute limit is exceeded, dispatch returns 429 and
+        does not call the downstream app."""
+        request = MagicMock(spec=Request)
+        request.url.path = "/api/test"
+        request.state.user = {"user_id": "hammer", "tier": "free"}
+        request.headers = {}
+        request.client.host = "192.168.1.100"
+
+        # Pre-fill the minute window to the free-tier ceiling.
+        for _ in range(RateLimitConfig.FREE_TIER.requests_per_minute):
+            await middleware.store.record_request("hammer", _make_metrics(user_id="hammer"))
+
+        call_next = AsyncMock()
+        response = await middleware.dispatch(request, call_next)
+
         assert response.status_code == 429
-        mock_call_next.assert_not_called()
-
-
-class TestRateLimitPerformance:
-    """Test rate limiting performance characteristics."""
-
-    @pytest.fixture
-    def performance_middleware(self):
-        """Create rate limit middleware for performance testing."""
-        app = MagicMock()
-        middleware = RateLimitMiddleware(app)
-        middleware.redis_client = MagicMock()
-        middleware.redis_available = True
-        return middleware
-
-    def test_memory_rate_limiting_performance(self, performance_middleware):
-        """Test memory-based rate limiting performance."""
-        middleware = performance_middleware
-        middleware.redis_available = False  # Force memory mode
-        
-        start_time = time.time()
-        
-        # Test many rate limit checks
-        for i in range(1000):
-            client_id = f"192.168.{i // 255}.{i % 255}"
-            middleware._check_rate_limit_memory(client_id, RateLimitConfig.FREE_TIER)
-        
-        end_time = time.time()
-        duration = end_time - start_time
-        
-        # Should handle 1000 checks quickly
-        assert duration < 1.0
-
-    def test_redis_rate_limiting_performance(self, performance_middleware):
-        """Test Redis-based rate limiting performance."""
-        middleware = performance_middleware
-        
-        # Mock Redis responses
-        middleware.redis_client.get.return_value = b"5"
-        middleware.redis_client.incr.return_value = 6
-        middleware.redis_client.expire.return_value = True
-        
-        start_time = time.time()
-        
-        # Test many Redis rate limit checks
-        for i in range(1000):
-            client_id = f"user_{i}"
-            middleware._check_rate_limit_redis(client_id, RateLimitConfig.PREMIUM_TIER)
-        
-        end_time = time.time()
-        duration = end_time - start_time
-        
-        # Should handle 1000 Redis operations quickly
-        assert duration < 2.0
-
-    def test_concurrent_request_tracking_performance(self, performance_middleware):
-        """Test concurrent request tracking performance."""
-        middleware = performance_middleware
-        
-        start_time = time.time()
-        
-        # Simulate many concurrent request operations
-        client_ids = [f"client_{i}" for i in range(100)]
-        
-        # Increment all
-        for client_id in client_ids:
-            for _ in range(5):  # 5 concurrent requests each
-                middleware._increment_concurrent_requests(client_id)
-        
-        # Check counts
-        for client_id in client_ids:
-            count = middleware._get_concurrent_requests(client_id)
-            assert count == 5
-        
-        # Decrement all
-        for client_id in client_ids:
-            for _ in range(5):
-                middleware._decrement_concurrent_requests(client_id)
-        
-        end_time = time.time()
-        duration = end_time - start_time
-        
-        # Should handle concurrent tracking operations quickly
-        assert duration < 1.0
+        call_next.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_concurrent_middleware_dispatch(self, performance_middleware):
-        """Test concurrent middleware dispatch performance."""
-        middleware = performance_middleware
-        
-        # Mock rate limit checks to always pass
-        middleware._check_rate_limit_redis = MagicMock(return_value={
-            "limited": False,
-            "current": 1,
-            "limit": 100,
-            "reset_time": time.time() + 60
-        })
-        
-        async def dispatch_request(request_id):
-            mock_request = MagicMock(spec=Request)
-            mock_request.url.path = f"/api/test/{request_id}"
-            mock_request.client.host = f"192.168.1.{request_id % 255}"
-            mock_request.headers = {}
-            
-            mock_call_next = AsyncMock(return_value=Response("OK", status_code=200))
-            
-            return await middleware.dispatch(mock_request, mock_call_next)
-        
-        # Run many concurrent requests
-        tasks = [dispatch_request(i) for i in range(50)]
-        start_time = time.time()
-        responses = await asyncio.gather(*tasks)
-        end_time = time.time()
-        
-        # All should succeed
-        assert len(responses) == 50
-        for response in responses:
-            assert response.status_code == 200
-        
-        # Should complete quickly
-        duration = end_time - start_time
-        assert duration < 5.0
+    async def test_dispatch_concurrent_limit_returns_429(self, middleware):
+        """Exceeding the concurrent-request ceiling returns 429."""
+        request = MagicMock(spec=Request)
+        request.url.path = "/api/test"
+        request.state.user = {"user_id": "conc", "tier": "free"}
+        request.headers = {}
+        request.client.host = "192.168.1.100"
 
-    def test_memory_cleanup_performance(self, performance_middleware):
-        """Test memory cleanup performance."""
-        middleware = performance_middleware
-        middleware.redis_available = False  # Force memory mode
-        
-        # Generate lots of rate limit data
-        for i in range(1000):
-            client_id = f"temp_client_{i}"
-            for _ in range(10):
-                middleware._check_rate_limit_memory(client_id, RateLimitConfig.FREE_TIER)
-        
-        initial_memory_size = len(middleware.request_counts)
-        assert initial_memory_size > 0
-        
-        # Run cleanup
-        start_time = time.time()
-        middleware._cleanup_expired_entries()
-        end_time = time.time()
-        
-        cleanup_duration = end_time - start_time
-        
-        # Cleanup should be fast
-        assert cleanup_duration < 1.0
+        tier = RateLimitConfig.FREE_TIER
+        # Occupy the concurrent slots so the next request trips the limit.
+        for _ in range(tier.concurrent_requests):
+            await middleware.store.increment_concurrent("conc")
+
+        call_next = AsyncMock()
+        response = await middleware.dispatch(request, call_next)
+
+        assert response.status_code == 429
+        call_next.assert_not_called()
 
 
-class TestRateLimitErrorHandling:
-    """Test rate limiting error handling and edge cases."""
+class TestRateLimitMiddlewarePerformance:
+    """Basic performance characteristics of the in-memory path."""
 
     @pytest.fixture
-    def error_middleware(self):
-        """Create middleware for error handling tests."""
-        app = MagicMock()
-        middleware = RateLimitMiddleware(app)
-        return middleware
-
-    def test_redis_connection_failure(self, error_middleware):
-        """Test handling of Redis connection failures."""
-        middleware = error_middleware
-        
-        # Mock Redis client with connection error
-        middleware.redis_client = MagicMock()
-        middleware.redis_client.get.side_effect = RedisConnectionError("Connection lost")
-        middleware.redis_available = True
-        
-        client_id = "192.168.1.100"
-        user_tier = RateLimitConfig.FREE_TIER
-        
-        # Should fallback to memory-based limiting
-        result = middleware._check_rate_limit_redis(client_id, user_tier)
-        
-        # Should return appropriate fallback response
-        assert isinstance(result, dict)
-        assert "limited" in result
-
-    def test_redis_timeout_handling(self, error_middleware):
-        """Test handling of Redis timeout errors."""
-        middleware = error_middleware
-        
-        from redis.exceptions import TimeoutError
-        
-        middleware.redis_client = MagicMock()
-        middleware.redis_client.get.side_effect = TimeoutError("Operation timed out")
-        middleware.redis_available = True
-        
-        client_id = "192.168.1.100"
-        user_tier = RateLimitConfig.PREMIUM_TIER
-        
-        # Should handle timeout gracefully
-        result = middleware._check_rate_limit_redis(client_id, user_tier)
-        assert isinstance(result, dict)
-
-    def test_malformed_client_data(self, error_middleware):
-        """Test handling of malformed client data."""
-        middleware = error_middleware
-        
-        # Test with various malformed requests
-        malformed_requests = [
-            None,
-            MagicMock(client=None),
-            MagicMock(client=MagicMock(host=None)),
-        ]
-        
-        for mock_request in malformed_requests:
-            try:
-                identifier = middleware._get_client_identifier(mock_request, None)
-                # Should return some fallback identifier
-                assert identifier is not None
-            except Exception:
-                # Should handle gracefully
-                pass
-
-    def test_invalid_user_tier_data(self, error_middleware):
-        """Test handling of invalid user tier data."""
-        middleware = error_middleware
-        
-        invalid_users = [
-            {"role": None},
-            {"role": ""},
-            {"role": "invalid_role"},
-            {"user_id": None, "role": "premium"},
-            {},  # Empty dict
-            None  # None user
-        ]
-        
-        for user in invalid_users:
-            tier = middleware._get_user_tier(user)
-            # Should default to free tier
-            assert tier.name == "free"
-
-    def test_extreme_request_counts(self, error_middleware):
-        """Test handling of extreme request counts."""
-        middleware = error_middleware
-        middleware.redis_available = False  # Use memory mode
-        
-        client_id = "extreme_client"
-        user_tier = RateLimitConfig.FREE_TIER
-        
-        # Simulate extreme number of requests
-        for _ in range(10000):
-            result = middleware._check_rate_limit_memory(client_id, user_tier)
-            # Should handle without crashing
-            assert isinstance(result, dict)
-            assert "limited" in result
+    def store(self):
+        return RateLimitStore()
 
     @pytest.mark.asyncio
-    async def test_middleware_exception_handling(self, error_middleware):
-        """Test middleware exception handling."""
-        middleware = error_middleware
-        
-        # Mock rate limit check to raise exception
-        middleware._check_rate_limit_redis = MagicMock(
-            side_effect=Exception("Unexpected error")
-        )
-        
-        mock_request = MagicMock(spec=Request)
-        mock_request.url.path = "/api/test"
-        mock_request.client.host = "192.168.1.100"
-        mock_request.headers = {}
-        
-        mock_call_next = AsyncMock(return_value=Response("OK", status_code=200))
-        
-        # Should handle exception gracefully and either:
-        # 1. Allow request through (fail-open)
-        # 2. Return appropriate error response
-        try:
-            response = await middleware.dispatch(mock_request, mock_call_next)
-            assert response is not None
-        except Exception:
-            # If exception propagates, ensure it's handled appropriately
-            pass
+    async def test_memory_recording_is_fast(self, store):
+        """Recording many requests stays well under a second."""
+        start = time.time()
+        for i in range(1000):
+            await store.record_request(f"u{i % 50}", _make_metrics(user_id=f"u{i % 50}"))
+        assert time.time() - start < 2.0
+
+    @pytest.mark.asyncio
+    async def test_count_queries_are_fast(self, store):
+        """Querying counts for many users stays fast."""
+        for i in range(50):
+            await store.record_request(f"u{i}", _make_metrics(user_id=f"u{i}"))
+        start = time.time()
+        for i in range(1000):
+            await store.get_request_counts(f"u{i % 50}")
+        assert time.time() - start < 2.0

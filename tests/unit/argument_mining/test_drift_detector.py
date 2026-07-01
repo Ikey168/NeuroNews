@@ -5,9 +5,26 @@ All DB interactions are mocked so these run offline.
 """
 from __future__ import annotations
 
+import sys
 import threading
+import types
 import unittest
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock, call, patch
+
+
+def _fake_apscheduler_modules():
+    """Build stub apscheduler modules so the lazy `from apscheduler.triggers.cron
+    import CronTrigger` inside schedule_drift_job resolves without the real
+    (uninstalled) dependency. Patched into sys.modules at the import location."""
+    cron_mod = types.ModuleType("apscheduler.triggers.cron")
+    cron_mod.CronTrigger = MagicMock(name="CronTrigger")
+    triggers_mod = types.ModuleType("apscheduler.triggers")
+    apscheduler_mod = types.ModuleType("apscheduler")
+    return {
+        "apscheduler": apscheduler_mod,
+        "apscheduler.triggers": triggers_mod,
+        "apscheduler.triggers.cron": cron_mod,
+    }
 
 
 def _make_conn(rows=None):
@@ -149,7 +166,8 @@ class TestScheduleDriftJob(unittest.TestCase):
         from src.argument_mining.drift_detector import schedule_drift_job
 
         scheduler = MagicMock()
-        schedule_drift_job(scheduler, hour=4)
+        with patch.dict(sys.modules, _fake_apscheduler_modules()):
+            schedule_drift_job(scheduler, hour=4)
         scheduler.add_job.assert_called_once()
         kwargs = scheduler.add_job.call_args[1]
         self.assertEqual(kwargs.get("id"), "stance_drift_detection")
@@ -158,7 +176,8 @@ class TestScheduleDriftJob(unittest.TestCase):
         from src.argument_mining.drift_detector import schedule_drift_job
 
         scheduler = MagicMock()
-        schedule_drift_job(scheduler)
+        with patch.dict(sys.modules, _fake_apscheduler_modules()):
+            schedule_drift_job(scheduler)
         kwargs = scheduler.add_job.call_args[1]
         self.assertTrue(kwargs.get("replace_existing"))
 

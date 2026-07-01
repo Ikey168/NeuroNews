@@ -31,11 +31,11 @@ EDGE_CASE_TEXTS_FOR_DEFAULT_ANALYZER = [
     ("   ", "ERROR", 0.0),
     (
         "!@#$%^",
-        "NEGATIVE",
+        "NEUTRAL",
         0.0,
-    ),  # Special characters are interpreted as negative by the model
-    # Model interprets this as slightly negative
-    ("This is a test.", "NEGATIVE", 0.0),
+    ),  # Special chars have no sentiment words -> rule-based analyzer returns NEUTRAL
+    # No positive/negative keywords -> rule-based analyzer returns NEUTRAL
+    ("This is a test.", "NEUTRAL", 0.0),
     ("I love this product, it's amazing!", "POSITIVE", 0.0),
 ]
 

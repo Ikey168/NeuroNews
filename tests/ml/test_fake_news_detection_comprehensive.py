@@ -238,7 +238,11 @@ class TestFakeNewsDetectorNLP:
         from src.nlp.fake_news_detector import FakeNewsDetector
         
         detector = FakeNewsDetector(use_pretrained=False)
-        
+        # use_pretrained=False leaves model/tokenizer unset; train() does not
+        # lazy-load them, so supply mocks (the real Trainer/Dataset are patched).
+        detector.model = Mock()
+        detector.tokenizer = Mock()
+
         # Mock the training components
         with patch('src.nlp.fake_news_detector.Trainer') as mock_trainer_class:
             mock_trainer = Mock()

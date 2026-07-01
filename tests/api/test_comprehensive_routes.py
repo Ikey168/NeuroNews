@@ -16,6 +16,11 @@ from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
 # Import all route modules
+from src.api.routes import news_routes
+from src.api.routes import search_routes
+from src.api.routes import sentiment_routes
+from src.api.routes import admin_routes
+from src.api.routes import event_routes
 from src.api.routes.news_routes import router as news_router
 from src.api.routes.search_routes import router as search_router
 from src.api.routes.graph_routes import router as graph_router
@@ -26,6 +31,7 @@ from src.api.routes.admin_routes import router as admin_router
 # Import dependencies
 from src.database.snowflake_analytics_connector import SnowflakeAnalyticsConnector
 from src.knowledge_graph.graph_builder import GraphBuilder
+from src.api.auth.jwt_auth import require_auth
 
 
 # Test Fixtures
@@ -48,10 +54,15 @@ def mock_env_vars():
 
 
 @pytest.fixture
-def app():
-    """Create comprehensive test FastAPI app with all routes."""
+def app(mock_db, mock_admin_user):
+    """Create comprehensive test FastAPI app with all routes.
+
+    Route ``db`` connections and authentication are provided through FastAPI
+    dependency overrides so the suite never touches a real warehouse. The
+    ``mock_db`` is injected wherever a route declares ``Depends(get_db)``.
+    """
     app = FastAPI(title="NeuroNews API Test", version="1.0.0")
-    
+
     # Include all routers
     app.include_router(news_router)
     app.include_router(search_router)
@@ -59,7 +70,27 @@ def app():
     app.include_router(sentiment_router)
     app.include_router(event_router)
     app.include_router(admin_router)
-    
+
+    # Inject the mock database wherever a route resolves its connection. Each
+    # route module defines its own ``get_db`` dependency, so every one must be
+    # overridden individually.
+    app.dependency_overrides[news_routes.get_db] = lambda: mock_db
+    app.dependency_overrides[search_routes.get_db] = lambda: mock_db
+    app.dependency_overrides[sentiment_routes.get_db] = lambda: mock_db
+    app.dependency_overrides[admin_routes.get_db] = lambda: mock_db
+
+    # Authenticated routes depend on ``require_auth`` (and admin routes on
+    # ``require_admin``). Override both so protected endpoints resolve to the
+    # mock admin user without a real JWT.
+    app.dependency_overrides[require_auth] = lambda: mock_admin_user
+    app.dependency_overrides[admin_routes.require_admin] = lambda: mock_admin_user
+
+    # Event-detection routes construct heavy ML components (embedder/clusterer)
+    # in their dependencies; override them so request validation can run without
+    # downloading models.
+    app.dependency_overrides[event_routes.get_embedder] = lambda: MagicMock()
+    app.dependency_overrides[event_routes.get_clusterer] = lambda: MagicMock()
+
     return app
 
 
@@ -142,6 +173,42 @@ def sample_articles():
 
 
 @pytest.fixture
+def sample_search_rows():
+    """Sample rows shaped for the /search/articles SELECT.
+
+    The search query returns 10 columns:
+    id, title, url, publish_date, source, category, snippet,
+    sentiment_score, sentiment_label, relevance_score.
+    """
+    return [
+        (
+            "article1",
+            "AI Revolution in Healthcare",
+            "https://example.com/ai-healthcare",
+            datetime(2024, 1, 1, tzinfo=timezone.utc),
+            "TechNews",
+            "Technology",
+            "Artificial intelligence is transforming healthcare...",
+            0.8,
+            "POSITIVE",
+            2,
+        ),
+        (
+            "article2",
+            "Climate Change Impact on Agriculture",
+            "https://example.com/climate-agriculture",
+            datetime(2024, 1, 2, tzinfo=timezone.utc),
+            "EnvironmentDaily",
+            "Environment",
+            "Climate change is affecting global agriculture...",
+            -0.3,
+            "NEGATIVE",
+            1,
+        ),
+    ]
+
+
+@pytest.fixture
 def sample_detailed_article():
     """Sample detailed article with content and entities."""
     return [
@@ -170,10 +237,9 @@ class TestNewsRoutes:
     def test_get_articles_by_topic_success(self, client, mock_db, sample_articles):
         """Test successful article retrieval by topic."""
         mock_db.execute_query.return_value = sample_articles
-        
-        with patch("src.api.routes.news_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            response = client.get("/news/articles/topic/AI", params={"limit": 10})
-        
+
+        response = client.get("/news/articles/topic/AI", params={"limit": 10})
+
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 2
@@ -182,29 +248,27 @@ class TestNewsRoutes:
 
     def test_get_articles_by_topic_validation_error(self, client, mock_db):
         """Test input validation for topic search."""
-        with patch("src.api.routes.news_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            # Invalid limit values
-            response = client.get("/news/articles/topic/AI", params={"limit": 0})
-            assert response.status_code == 422
-            
-            response = client.get("/news/articles/topic/AI", params={"limit": 101}) 
-            assert response.status_code == 422
+        # Invalid limit values
+        response = client.get("/news/articles/topic/AI", params={"limit": 0})
+        assert response.status_code == 422
+
+        response = client.get("/news/articles/topic/AI", params={"limit": 101})
+        assert response.status_code == 422
 
     def test_get_articles_with_filters(self, client, mock_db, sample_articles):
         """Test article retrieval with multiple filters."""
         mock_db.execute_query.return_value = sample_articles
-        
-        with patch("src.api.routes.news_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            response = client.get(
-                "/news/articles",
-                params={
-                    "start_date": "2024-01-01T00:00:00Z",
-                    "end_date": "2024-01-31T23:59:59Z", 
-                    "source": "TechNews",
-                    "category": "Technology"
-                }
-            )
-        
+
+        response = client.get(
+            "/news/articles",
+            params={
+                "start_date": "2024-01-01T00:00:00Z",
+                "end_date": "2024-01-31T23:59:59Z",
+                "source": "TechNews",
+                "category": "Technology"
+            }
+        )
+
         assert response.status_code == 200
         # Verify query parameters were used correctly
         call_args = mock_db.execute_query.call_args
@@ -213,10 +277,9 @@ class TestNewsRoutes:
     def test_get_article_by_id_success(self, client, mock_db, sample_detailed_article):
         """Test successful retrieval of specific article."""
         mock_db.execute_query.return_value = sample_detailed_article
-        
-        with patch("src.api.routes.news_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            response = client.get("/news/articles/article1")
-        
+
+        response = client.get("/news/articles/article1")
+
         assert response.status_code == 200
         article = response.json()
         assert article["id"] == "article1"
@@ -226,20 +289,18 @@ class TestNewsRoutes:
     def test_get_article_by_id_not_found(self, client, mock_db):
         """Test 404 response for non-existent article."""
         mock_db.execute_query.return_value = []
-        
-        with patch("src.api.routes.news_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            response = client.get("/news/articles/nonexistent")
-        
+
+        response = client.get("/news/articles/nonexistent")
+
         assert response.status_code == 404
         assert "not found" in response.json()["detail"]
 
     def test_database_connection_error(self, client, mock_db):
         """Test handling of database connection errors."""
         mock_db.execute_query.side_effect = Exception("Connection failed")
-        
-        with patch("src.api.routes.news_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            response = client.get("/news/articles")
-        
+
+        response = client.get("/news/articles")
+
         assert response.status_code == 500
         assert "Database error" in response.json()["detail"]
 
@@ -251,34 +312,32 @@ class TestNewsRoutes:
 class TestSearchRoutes:
     """Test suite for Search Routes functionality."""
 
-    def test_search_articles_basic(self, client, mock_db, sample_articles):
+    def test_search_articles_basic(self, client, mock_db, sample_search_rows):
         """Test basic article search functionality."""
-        mock_db.execute_query.side_effect = [sample_articles, [(2,)]]  # Results + count
-        
-        with patch("src.api.routes.search_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            response = client.get("/search/articles", params={"q": "AI"})
-        
+        mock_db.execute_query.side_effect = [sample_search_rows, [(2,)]]  # Results + count
+
+        response = client.get("/search/articles", params={"q": "AI"})
+
         assert response.status_code == 200
         data = response.json()
         assert data["query"] == "AI"
         assert len(data["results"]) == 2
         assert data["total_results"] == 2
 
-    def test_search_articles_with_filters(self, client, mock_db, sample_articles):
+    def test_search_articles_with_filters(self, client, mock_db, sample_search_rows):
         """Test search with multiple filters."""
-        mock_db.execute_query.side_effect = [sample_articles, [(1,)]]
-        
-        with patch("src.api.routes.search_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            response = client.get(
-                "/search/articles", 
-                params={
-                    "q": "AI",
-                    "category": "Technology",
-                    "source": "TechNews",
-                    "sort_by": "date"
-                }
-            )
-        
+        mock_db.execute_query.side_effect = [sample_search_rows, [(1,)]]
+
+        response = client.get(
+            "/search/articles",
+            params={
+                "q": "AI",
+                "category": "Technology",
+                "source": "TechNews",
+                "sort_by": "date"
+            }
+        )
+
         assert response.status_code == 200
         data = response.json()
         assert data["filters"]["category"] == "Technology"
@@ -286,10 +345,9 @@ class TestSearchRoutes:
 
     def test_search_query_validation(self, client, mock_db):
         """Test search query validation."""
-        with patch("src.api.routes.search_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            # Empty query should fail
-            response = client.get("/search/articles", params={"q": ""})
-            assert response.status_code == 422
+        # Empty query should fail
+        response = client.get("/search/articles", params={"q": ""})
+        assert response.status_code == 422
 
     def test_get_search_facets(self, client, mock_db):
         """Test search facets retrieval."""
@@ -297,10 +355,9 @@ class TestSearchRoutes:
             [("Technology", 10), ("Health", 5)],  # Categories
             [("TechNews", 8), ("HealthDaily", 7)]  # Sources
         ]
-        
-        with patch("src.api.routes.search_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            response = client.get("/search/facets")
-        
+
+        response = client.get("/search/facets")
+
         assert response.status_code == 200
         data = response.json()
         assert "categories" in data
@@ -313,10 +370,9 @@ class TestSearchRoutes:
             ("AI Revolution", "TechNews", "Technology", 3),
             ("AI Healthcare", "MedNews", "Health", 2)
         ]
-        
-        with patch("src.api.routes.search_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            response = client.get("/search/suggestions", params={"q": "AI"})
-        
+
+        response = client.get("/search/suggestions", params={"q": "AI"})
+
         assert response.status_code == 200
         suggestions = response.json()
         assert len(suggestions) == 2
@@ -325,10 +381,9 @@ class TestSearchRoutes:
     def test_search_error_handling(self, client, mock_db):
         """Test search error handling."""
         mock_db.execute_query.side_effect = Exception("Database error")
-        
-        with patch("src.api.routes.search_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            response = client.get("/search/articles", params={"q": "test"})
-        
+
+        response = client.get("/search/articles", params={"q": "test"})
+
         assert response.status_code == 500
         assert "Search error" in response.json()["detail"]
 
@@ -449,9 +504,8 @@ class TestSentimentRoutes:
             [(15,)]  # Total count
         ]
         
-        with patch("src.api.routes.sentiment_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            response = client.get("/news_sentiment")
-        
+        response = client.get("/news_sentiment")
+
         assert response.status_code == 200
         data = response.json()
         assert "sentiment_trends" in data
@@ -461,18 +515,17 @@ class TestSentimentRoutes:
     def test_get_sentiment_trends_with_filters(self, client, mock_db):
         """Test sentiment trends with topic and date filters."""
         mock_db.execute_query.side_effect = [[], [], [(0,)]]
-        
-        with patch("src.api.routes.sentiment_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            response = client.get(
-                "/news_sentiment",
-                params={
-                    "topic": "AI",
-                    "start_date": "2024-01-01T00:00:00Z",
-                    "end_date": "2024-01-31T23:59:59Z",
-                    "group_by": "week"
-                }
-            )
-        
+
+        response = client.get(
+            "/news_sentiment",
+            params={
+                "topic": "AI",
+                "start_date": "2024-01-01T00:00:00Z",
+                "end_date": "2024-01-31T23:59:59Z",
+                "group_by": "week"
+            }
+        )
+
         assert response.status_code == 200
         data = response.json()
         assert data["topic_filter"] == "AI"
@@ -486,9 +539,8 @@ class TestSentimentRoutes:
             ("NEUTRAL", 5, 0.0, 0.1)
         ]
         
-        with patch("src.api.routes.sentiment_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            response = client.get("/news_sentiment/summary", params={"days": 7})
-        
+        response = client.get("/news_sentiment/summary", params={"days": 7})
+
         assert response.status_code == 200
         data = response.json()
         assert data["total_articles"] == 35
@@ -496,31 +548,53 @@ class TestSentimentRoutes:
         assert "negative" in data["summary"]
 
     def test_get_topic_sentiment_analysis(self, client, mock_db):
-        """Test topic-based sentiment analysis."""
-        mock_db.execute_query.return_value = [
-            ("TECHNOLOGY", "POSITIVE", 15, 0.6),
-            ("TECHNOLOGY", "NEGATIVE", 5, -0.3),
-            ("HEALTH", "POSITIVE", 10, 0.8)
+        """Test topic-based sentiment analysis.
+
+        The route delegates to ``local_warehouse_views.get_topic_sentiment`` for
+        the per-keyword breakdown, then augments each sentiment bucket with a
+        ``percentage`` field. Patch the warehouse view to return the shaped data
+        it produces and assert the route's post-processing.
+        """
+        warehouse_topics = [
+            {
+                "topic": "Technology",
+                "total_articles": 20,
+                "sentiments": {
+                    "positive": {"count": 15, "avg_score": 0.6},
+                    "negative": {"count": 5, "avg_score": -0.3},
+                },
+            },
+            {
+                "topic": "Health",
+                "total_articles": 10,
+                "sentiments": {
+                    "positive": {"count": 10, "avg_score": 0.8},
+                },
+            },
         ]
-        
-        with patch("src.api.routes.sentiment_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
+
+        with patch(
+            "src.database.local_warehouse_views.get_topic_sentiment",
+            new=AsyncMock(return_value=warehouse_topics),
+        ):
             response = client.get(
                 "/news_sentiment/topics",
                 params={"days": 7, "min_articles": 3}
             )
-        
+
         assert response.status_code == 200
         topics = response.json()
         assert len(topics) == 2
-        assert topics[0]["topic"] == "TECHNOLOGY"
+        assert topics[0]["topic"] == "Technology"
+        # The route adds a percentage breakdown per sentiment label.
+        assert topics[0]["sentiments"]["positive"]["percentage"] == 75.0
 
     def test_sentiment_database_error(self, client, mock_db):
         """Test sentiment routes database error handling."""
         mock_db.execute_query.side_effect = Exception("Database connection failed")
-        
-        with patch("src.api.routes.sentiment_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            response = client.get("/news_sentiment")
-        
+
+        response = client.get("/news_sentiment")
+
         assert response.status_code == 500
         assert "Error retrieving sentiment trends" in response.json()["detail"]
 
@@ -532,11 +606,14 @@ class TestSentimentRoutes:
 class TestEventRoutes:
     """Test suite for Event Routes functionality."""
     
-    @patch("src.api.routes.event_routes.get_clusterer")
-    def test_get_breaking_news_success(self, mock_get_clusterer, client):
-        """Test successful breaking news retrieval."""
-        mock_clusterer = AsyncMock()
-        mock_clusterer.get_breaking_news.return_value = [
+    def test_get_breaking_news_success(self, client):
+        """Test successful breaking news retrieval.
+
+        The route derives breaking news from the local warehouse view
+        ``local_warehouse_views.get_breaking_news`` (imported lazily inside the
+        handler), so patch that symbol to return the warehouse-shaped events.
+        """
+        warehouse_events = [
             {
                 "cluster_id": "cluster-1",
                 "cluster_name": "Tech Event",
@@ -548,58 +625,68 @@ class TestEventRoutes:
                 "cluster_size": 15,
                 "first_article_date": "2024-01-01T00:00:00Z",
                 "last_article_date": "2024-01-01T12:00:00Z",
+                "peak_activity_date": "2024-01-01T06:00:00Z",
                 "event_duration_hours": 12.0,
+                "sample_headlines": "Headline A | Headline B",
                 "source_count": 5,
                 "avg_confidence": 0.85
             }
         ]
-        mock_get_clusterer.return_value = mock_clusterer
-        
-        response = client.get("/api/v1/breaking_news")
-        
+
+        with patch(
+            "src.database.local_warehouse_views.get_breaking_news",
+            new=AsyncMock(return_value=warehouse_events),
+        ):
+            response = client.get("/api/v1/breaking_news")
+
         assert response.status_code == 200
         events = response.json()
         assert len(events) == 1
         assert events[0]["cluster_name"] == "Tech Event"
 
-    @patch("src.api.routes.event_routes.get_duckdb_path")
-    def test_get_event_clusters_success(self, mock_conn_params, client):
-        """Test successful event clusters retrieval."""
-        mock_conn_params.return_value = "data/test.duckdb"
-        
-        with patch("psycopg2.connect") as mock_connect:
-            mock_cursor = MagicMock()
-            mock_cursor.fetchall.return_value = [
-                {
-                    "cluster_id": "cluster-1",
-                    "cluster_name": "Event Cluster",
-                    "event_type": "trending", 
-                    "category": "Technology",
-                    "cluster_size": 10,
-                    "silhouette_score": 0.7,
-                    "cohesion_score": 0.8,
-                    "separation_score": 0.6,
-                    "trending_score": 0.9,
-                    "impact_score": 0.8,
-                    "velocity_score": 0.7,
-                    "first_article_date": datetime(2024, 1, 1),
-                    "last_article_date": datetime(2024, 1, 2),
-                    "event_duration_hours": 24.0,
-                    "primary_sources": '["Source1", "Source2"]',
-                    "geographic_focus": '["US", "Europe"]',
-                    "key_entities": '["Entity1", "Entity2"]',
-                    "status": "active",
-                    "created_at": datetime(2024, 1, 1)
-                }
-            ]
-            
-            mock_connect.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value = mock_cursor
-            
+    def test_get_event_clusters_success(self, client):
+        """Test successful event clusters retrieval.
+
+        The route derives clusters from
+        ``local_warehouse_views.get_event_clusters`` (imported lazily inside the
+        handler), so patch that symbol to return warehouse-shaped rows.
+        """
+        warehouse_clusters = [
+            {
+                "cluster_id": "cluster-1",
+                "cluster_name": "Event Cluster",
+                "event_type": "trending",
+                "category": "Technology",
+                "cluster_size": 10,
+                "silhouette_score": 0.7,
+                "cohesion_score": 0.8,
+                "separation_score": 0.6,
+                "trending_score": 0.9,
+                "impact_score": 0.8,
+                "velocity_score": 0.7,
+                "significance_score": 0.65,
+                "first_article_date": datetime(2024, 1, 1).isoformat(),
+                "last_article_date": datetime(2024, 1, 2).isoformat(),
+                "event_duration_hours": 24.0,
+                "primary_sources": ["Source1", "Source2"],
+                "geographic_focus": ["US", "Europe"],
+                "key_entities": ["Entity1", "Entity2"],
+                "status": "active",
+                "created_at": datetime(2024, 1, 1).isoformat(),
+                "avg_sentiment": 0.4,
+                "sample_headlines": ["Headline 1", "Headline 2"],
+            }
+        ]
+
+        with patch(
+            "src.database.local_warehouse_views.get_event_clusters",
+            new=AsyncMock(return_value=warehouse_clusters),
+        ):
             response = client.get("/api/v1/events/clusters")
-            
-            assert response.status_code == 200
-            clusters = response.json()
-            assert len(clusters) == 1
+
+        assert response.status_code == 200
+        clusters = response.json()
+        assert len(clusters) == 1
 
     def test_event_detection_request_validation(self, client):
         """Test event detection request validation."""
@@ -611,18 +698,17 @@ class TestEventRoutes:
             "clustering_method": "invalid_method",
             "min_cluster_size": 3
         })
-        
+
         assert response.status_code == 422
 
     def test_event_routes_error_handling(self, client):
         """Test error handling in event routes."""
-        with patch("src.api.routes.event_routes.get_clusterer") as mock_get_clusterer:
-            mock_clusterer = AsyncMock()
-            mock_clusterer.get_breaking_news.side_effect = Exception("Service unavailable")
-            mock_get_clusterer.return_value = mock_clusterer
-            
+        with patch(
+            "src.database.local_warehouse_views.get_breaking_news",
+            new=AsyncMock(side_effect=Exception("Service unavailable")),
+        ):
             response = client.get("/api/v1/breaking_news")
-            
+
             assert response.status_code == 500
             assert "Error retrieving breaking news" in response.json()["detail"]
 
@@ -634,140 +720,120 @@ class TestEventRoutes:
 class TestAdminRoutes:
     """Test suite for Admin Routes functionality."""
 
-    @patch("src.api.routes.admin_routes.require_admin")
-    def test_get_system_health_success(self, mock_require_admin, client, mock_db, mock_admin_user):
+    def test_get_system_health_success(self, client, mock_db, mock_admin_user):
         """Test successful system health check."""
-        mock_require_admin.return_value = mock_admin_user
         mock_db.execute_query.return_value = [(100, 5, 3, datetime.now())]
-        
-        with patch("src.api.routes.admin_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            response = client.get("/admin/health")
-        
+
+        response = client.get("/admin/health")
+
         assert response.status_code == 200
         data = response.json()
         assert data["status"] in ["healthy", "degraded"]
         assert "services" in data
         assert "metrics" in data
 
-    @patch("src.api.routes.admin_routes.require_admin")
-    def test_get_user_list(self, mock_require_admin, client, mock_db, mock_admin_user):
+    def test_get_user_list(self, client, mock_db, mock_admin_user):
         """Test user list retrieval."""
-        mock_require_admin.return_value = mock_admin_user
-        
-        with patch("src.api.routes.admin_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            response = client.get("/admin/users", params={"limit": 50})
-        
+        response = client.get("/admin/users", params={"limit": 50})
+
         assert response.status_code == 200
         data = response.json()
         assert "users" in data
         assert "total_count" in data
 
-    @patch("src.api.routes.admin_routes.require_admin")
-    def test_manage_user_success(self, mock_require_admin, client, mock_admin_user):
+    def test_manage_user_success(self, client, mock_admin_user):
         """Test successful user management operation."""
-        mock_require_admin.return_value = mock_admin_user
-        
         response = client.post("/admin/users/manage", json={
             "user_id": "user-123",
             "action": "deactivate",
             "reason": "Policy violation"
         })
-        
+
         assert response.status_code == 200
         data = response.json()
         assert "successfully" in data["message"]
         assert data["action"] == "deactivate"
 
-    @patch("src.api.routes.admin_routes.require_admin")
-    def test_manage_user_invalid_action(self, mock_require_admin, client, mock_admin_user):
+    def test_manage_user_invalid_action(self, client, mock_admin_user):
         """Test user management with invalid action."""
-        mock_require_admin.return_value = mock_admin_user
-        
         response = client.post("/admin/users/manage", json={
             "user_id": "user-123",
             "action": "invalid_action"
         })
-        
+
         assert response.status_code == 400
         assert "Invalid action" in response.json()["detail"]
 
-    @patch("src.api.routes.admin_routes.require_admin")
-    def test_get_system_statistics(self, mock_require_admin, client, mock_db, mock_admin_user):
+    def test_get_system_statistics(self, client, mock_db, mock_admin_user):
         """Test system statistics retrieval."""
-        mock_require_admin.return_value = mock_admin_user
         mock_db.execute_query.side_effect = [
             [(500, 25, 8, 0.6)],  # Article stats
             [("Technology", 100), ("Health", 80)],  # Categories
             [("Source1", 150), ("Source2", 120)]  # Sources
         ]
-        
-        with patch("src.api.routes.admin_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            response = client.get("/admin/system/stats", params={"days_back": 30})
-        
+
+        response = client.get("/admin/system/stats", params={"days_back": 30})
+
         assert response.status_code == 200
         data = response.json()
         assert "article_stats" in data
         assert "top_categories" in data
         assert "top_sources" in data
 
-    @patch("src.api.routes.admin_routes.require_admin")
-    def test_update_system_config(self, mock_require_admin, client, mock_admin_user):
+    def test_update_system_config(self, client, mock_admin_user):
         """Test system configuration update."""
-        mock_require_admin.return_value = mock_admin_user
-        
         response = client.post("/admin/system/config", json={
             "setting_key": "api.rate_limit",
             "setting_value": 2000,
             "category": "api"
         })
-        
+
         assert response.status_code == 200
         data = response.json()
         assert "updated successfully" in data["message"]
 
-    @patch("src.api.routes.admin_routes.require_admin")  
-    def test_get_system_config(self, mock_require_admin, client, mock_admin_user):
+    def test_get_system_config(self, client, mock_admin_user):
         """Test system configuration retrieval."""
-        mock_require_admin.return_value = mock_admin_user
-        
         response = client.get("/admin/system/config")
-        
+
         assert response.status_code == 200
         data = response.json()
         assert "configuration" in data
 
-    @patch("src.api.routes.admin_routes.require_admin")
-    def test_toggle_maintenance_mode(self, mock_require_admin, client, mock_admin_user):
+    def test_toggle_maintenance_mode(self, client, mock_admin_user):
         """Test maintenance mode toggle."""
-        mock_require_admin.return_value = mock_admin_user
-        
         response = client.post(
             "/admin/system/maintenance",
             params={"enabled": True, "message": "Scheduled maintenance"}
         )
-        
+
         assert response.status_code == 200
         data = response.json()
         assert data["maintenance_enabled"] == True
 
-    @patch("src.api.routes.admin_routes.require_admin")
-    def test_get_system_logs(self, mock_require_admin, client, mock_admin_user):
+    def test_get_system_logs(self, client, mock_admin_user):
         """Test system logs retrieval."""
-        mock_require_admin.return_value = mock_admin_user
-        
         response = client.get(
             "/admin/logs",
             params={"level": "ERROR", "hours": 24, "limit": 100}
         )
-        
+
         assert response.status_code == 200
         data = response.json()
         assert "logs" in data
         assert "time_range" in data
 
-    def test_admin_authentication_required(self, client):
-        """Test that admin endpoints require authentication."""
-        response = client.get("/admin/health")
+    def test_admin_authentication_required(self, app):
+        """Test that admin endpoints require authentication.
+
+        This test bypasses the auth dependency overrides so the real
+        ``require_auth``/``require_admin`` guards run and reject the
+        unauthenticated request.
+        """
+        app.dependency_overrides.pop(require_auth, None)
+        app.dependency_overrides.pop(admin_routes.require_admin, None)
+        unauth_client = TestClient(app)
+        response = unauth_client.get("/admin/health")
         assert response.status_code in [401, 403]  # Depends on auth implementation
 
 
@@ -790,23 +856,20 @@ class TestAPIIntegration:
         ]
         
         mock_db.execute_query.side_effect = [search_results, [(1,)], article_details]
-        
-        with patch("src.api.routes.search_routes.SnowflakeAnalyticsConnector", return_value=mock_db), \
-             patch("src.api.routes.news_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            
-            # Step 1: Search for articles
-            search_response = client.get("/search/articles", params={"q": "AI"})
-            assert search_response.status_code == 200
-            
-            search_data = search_response.json()
-            article_id = search_data["results"][0]["id"]
-            
-            # Step 2: Get detailed article
-            detail_response = client.get(f"/news/articles/{article_id}")
-            assert detail_response.status_code == 200
-            
-            detail_data = detail_response.json()
-            assert detail_data["content"] == "Full content..."
+
+        # Step 1: Search for articles
+        search_response = client.get("/search/articles", params={"q": "AI"})
+        assert search_response.status_code == 200
+
+        search_data = search_response.json()
+        article_id = search_data["results"][0]["id"]
+
+        # Step 2: Get detailed article
+        detail_response = client.get(f"/news/articles/{article_id}")
+        assert detail_response.status_code == 200
+
+        detail_data = detail_response.json()
+        assert detail_data["content"] == "Full content..."
 
     def test_sentiment_analysis_workflow(self, client, mock_db):
         """Test sentiment analysis workflow."""
@@ -822,14 +885,13 @@ class TestAPIIntegration:
             [("POSITIVE", 10, 0.8, 0.2)]
         ]
         
-        with patch("src.api.routes.sentiment_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            # Get sentiment trends
-            trends_response = client.get("/news_sentiment", params={"topic": "AI"})
-            assert trends_response.status_code == 200
-            
-            # Get sentiment summary
-            summary_response = client.get("/news_sentiment/summary")
-            assert summary_response.status_code == 200
+        # Get sentiment trends
+        trends_response = client.get("/news_sentiment", params={"topic": "AI"})
+        assert trends_response.status_code == 200
+
+        # Get sentiment summary
+        summary_response = client.get("/news_sentiment/summary")
+        assert summary_response.status_code == 200
 
 
 class TestAPIErrorHandling:
@@ -838,38 +900,38 @@ class TestAPIErrorHandling:
     def test_database_failure_handling(self, client, mock_db):
         """Test handling of database failures across routes."""
         mock_db.execute_query.side_effect = Exception("Database connection lost")
-        
+
         routes_to_test = [
             ("/news/articles", "GET"),
             ("/search/articles?q=test", "GET"),
             ("/news_sentiment", "GET")
         ]
-        
-        with patch("src.api.routes.news_routes.SnowflakeAnalyticsConnector", return_value=mock_db), \
-             patch("src.api.routes.search_routes.SnowflakeAnalyticsConnector", return_value=mock_db), \
-             patch("src.api.routes.sentiment_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            
-            for route, method in routes_to_test:
-                if method == "GET":
-                    response = client.get(route)
-                assert response.status_code == 500
+
+        for route, method in routes_to_test:
+            if method == "GET":
+                response = client.get(route)
+            assert response.status_code == 500
 
     def test_invalid_parameters_handling(self, client, mock_db):
         """Test handling of invalid parameters across routes."""
-        with patch("src.api.routes.news_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            # Invalid limit values
-            response = client.get("/news/articles/topic/test", params={"limit": -1})
-            assert response.status_code == 422
-            
-            response = client.get("/news/articles/topic/test", params={"limit": 1001})
-            assert response.status_code == 422
+        # Invalid limit values
+        response = client.get("/news/articles/topic/test", params={"limit": -1})
+        assert response.status_code == 422
 
-    def test_missing_environment_variables(self, client):
-        """Test handling of missing environment variables."""
-        with patch.dict(os.environ, {}, clear=True):
-            response = client.get("/news/articles")
-            assert response.status_code == 500
-            assert "SNOWFLAKE_ACCOUNT" in response.json()["detail"]
+        response = client.get("/news/articles/topic/test", params={"limit": 1001})
+        assert response.status_code == 422
+
+    def test_database_error_surfaced_as_500(self, client, mock_db):
+        """Test that an underlying database failure surfaces as a 500 error.
+
+        The news route now uses the local DuckDB analytics connector (no
+        Snowflake env vars), and maps any query failure to an HTTP 500 with a
+        ``Database error`` detail.
+        """
+        mock_db.execute_query.side_effect = RuntimeError("warehouse unavailable")
+        response = client.get("/news/articles")
+        assert response.status_code == 500
+        assert "Database error" in response.json()["detail"]
 
 
 class TestAPIPerformance:
@@ -885,30 +947,28 @@ class TestAPIPerformance:
         ]
         
         mock_db.execute_query.return_value = large_dataset
-        
-        with patch("src.api.routes.news_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            response = client.get("/news/articles/topic/test", params={"limit": 100})
-            
-            assert response.status_code == 200
-            data = response.json()
-            assert len(data) == 100
+
+        response = client.get("/news/articles/topic/test", params={"limit": 100})
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 100
 
     def test_concurrent_request_simulation(self, client, mock_db):
         """Simulate handling of concurrent requests."""
         mock_db.execute_query.return_value = [
             ("article1", "Title", "url", datetime.now(), "Source", "Category", 0.5, "NEUTRAL")
         ]
-        
-        with patch("src.api.routes.news_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            # Simulate multiple requests
-            responses = []
-            for i in range(10):
-                response = client.get(f"/news/articles/topic/test{i}")
-                responses.append(response)
-            
-            # All should succeed
-            for response in responses:
-                assert response.status_code == 200
+
+        # Simulate multiple requests
+        responses = []
+        for i in range(10):
+            response = client.get(f"/news/articles/topic/test{i}")
+            responses.append(response)
+
+        # All should succeed
+        for response in responses:
+            assert response.status_code == 200
 
 
 # ============================================================================
@@ -921,13 +981,12 @@ class TestAPIContracts:
     def test_news_article_response_schema(self, client, mock_db, sample_articles):
         """Test news article response follows expected schema."""
         mock_db.execute_query.return_value = sample_articles
-        
-        with patch("src.api.routes.news_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            response = client.get("/news/articles/topic/AI")
-        
+
+        response = client.get("/news/articles/topic/AI")
+
         assert response.status_code == 200
         articles = response.json()
-        
+
         # Validate response structure
         for article in articles:
             required_fields = ["id", "title", "url", "publish_date", "source", "category", "sentiment"]
@@ -939,16 +998,15 @@ class TestAPIContracts:
             assert "score" in sentiment
             assert "label" in sentiment
 
-    def test_search_response_schema(self, client, mock_db, sample_articles):
+    def test_search_response_schema(self, client, mock_db, sample_search_rows):
         """Test search response follows expected schema."""
-        mock_db.execute_query.side_effect = [sample_articles, [(2,)]]
-        
-        with patch("src.api.routes.search_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            response = client.get("/search/articles", params={"q": "test"})
-        
+        mock_db.execute_query.side_effect = [sample_search_rows, [(2,)]]
+
+        response = client.get("/search/articles", params={"q": "test"})
+
         assert response.status_code == 200
         data = response.json()
-        
+
         # Validate top-level structure
         required_fields = ["query", "results", "total_results", "returned_results", "filters"]
         for field in required_fields:
@@ -964,17 +1022,15 @@ class TestAPIContracts:
         """Test correct HTTP status codes are returned."""
         # Test successful responses
         mock_db.execute_query.return_value = []
-        
-        with patch("src.api.routes.news_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            response = client.get("/news/articles")
-            assert response.status_code == 200
-        
+
+        response = client.get("/news/articles")
+        assert response.status_code == 200
+
         # Test not found
         mock_db.execute_query.return_value = []
-        with patch("src.api.routes.news_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            response = client.get("/news/articles/nonexistent")
-            assert response.status_code == 404
-        
+        response = client.get("/news/articles/nonexistent")
+        assert response.status_code == 404
+
         # Test validation errors
         response = client.get("/news/articles/topic/test", params={"limit": 0})
         assert response.status_code == 422
@@ -982,10 +1038,9 @@ class TestAPIContracts:
     def test_content_type_headers(self, client, mock_db):
         """Test correct content type headers."""
         mock_db.execute_query.return_value = []
-        
-        with patch("src.api.routes.news_routes.SnowflakeAnalyticsConnector", return_value=mock_db):
-            response = client.get("/news/articles")
-        
+
+        response = client.get("/news/articles")
+
         assert response.headers["content-type"] == "application/json"
 
 

@@ -9,7 +9,7 @@ import pytest
 import os
 import sys
 import numpy as np
-from unittest.mock import Mock, patch, MagicMock, call
+from unittest.mock import Mock, patch, MagicMock, call, DEFAULT
 from datetime import datetime
 
 # Add src to path
@@ -24,17 +24,29 @@ class TestArticleEmbedder:
         """Mock sentence transformer model"""
         with patch('src.nlp.article_embedder.SentenceTransformer') as mock_transformer:
             mock_model = Mock()
-            mock_model.encode.return_value = np.random.rand(5, 384)  # Mock embeddings
+
+            # Return embeddings whose first dimension matches the number of
+            # input texts so shape-based assertions stay meaningful.
+            def fake_encode(texts, *args, **kwargs):
+                n = len(texts) if isinstance(texts, (list, tuple)) else 1
+                return np.random.rand(n, 384)
+
+            mock_model.encode.side_effect = fake_encode
+            mock_model.get_sentence_embedding_dimension.return_value = 384
             mock_transformer.return_value = mock_model
             yield mock_transformer
     
     @pytest.fixture
     def mock_nltk(self):
         """Mock NLTK dependencies"""
+        mock_stopwords = Mock()
+        # ArticleEmbedder calls stopwords.words("english") and wraps it in set();
+        # the result must be iterable.
+        mock_stopwords.words.return_value = ["the", "a", "an", "and", "or"]
         with patch.multiple(
             'src.nlp.article_embedder',
             nltk=Mock(),
-            stopwords=Mock()
+            stopwords=mock_stopwords
         ):
             yield
     
@@ -58,7 +70,7 @@ class TestArticleEmbedder:
         
         assert hasattr(embedder, 'model')
         assert hasattr(embedder, 'model_name')
-        assert hasattr(embedder, 'embedding_dim')
+        assert hasattr(embedder, 'embedding_dimension')
         mock_sentence_transformer.assert_called_once()
     
     def test_article_embedder_with_custom_model(self, mock_sentence_transformer, mock_nltk):
@@ -75,14 +87,15 @@ class TestArticleEmbedder:
         from src.nlp.article_embedder import ArticleEmbedder
         
         embedder = ArticleEmbedder()
-        
-        # Mock the preprocessing method if it exists
-        if hasattr(embedder, '_preprocess_text'):
-            test_text = "This is a test article with HTML tags <p>content</p> and URLs http://example.com"
-            processed = embedder._preprocess_text(test_text)
-            
-            assert isinstance(processed, str)
-            assert len(processed) > 0
+
+        # The current API exposes a public ``preprocess_text`` method.
+        test_text = "This is a test article with HTML tags <p>content</p> and URLs http://example.com"
+        processed = embedder.preprocess_text(test_text)
+
+        assert isinstance(processed, str)
+        assert len(processed) > 0
+        # URLs should be stripped during preprocessing.
+        assert "http://example.com" not in processed
     
     def test_embed_articles(self, mock_sentence_transformer, mock_nltk):
         """Test article embedding generation"""
@@ -153,13 +166,15 @@ class TestEventClusterer:
     @pytest.fixture
     def mock_sklearn(self):
         """Mock scikit-learn dependencies"""
+        # Use DEFAULT so patch.multiple yields a dict of the created mocks
+        # keyed by attribute name.
         with patch.multiple(
             'src.nlp.event_clusterer',
-            KMeans=Mock(),
-            DBSCAN=Mock(),
-            StandardScaler=Mock(),
-            silhouette_score=Mock(),
-            calinski_harabasz_score=Mock()
+            KMeans=DEFAULT,
+            DBSCAN=DEFAULT,
+            StandardScaler=DEFAULT,
+            silhouette_score=DEFAULT,
+            calinski_harabasz_score=DEFAULT
         ) as mocks:
             # Configure KMeans mock
             kmeans_instance = Mock()

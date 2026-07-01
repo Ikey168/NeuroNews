@@ -97,227 +97,182 @@ class TestOptimizedGraphAPI:
     @pytest.fixture
     def api(self, mock_graph_builder):
         """Create OptimizedGraphAPI instance with mocks."""
-        with patch('api.graph.optimized_api.redis.from_url'):
-            return OptimizedGraphAPI(
-                graph_builder=mock_graph_builder,
-                cache_config=CacheConfig(),
-                optimization_config=QueryOptimizationConfig()
-            )
-    
+        return OptimizedGraphAPI(
+            graph_builder=mock_graph_builder,
+            cache_config=CacheConfig(),
+            optimization_config=QueryOptimizationConfig()
+        )
+
     def test_api_initialization(self, api):
         """Test OptimizedGraphAPI initialization."""
-        assert api.graph_builder is not None
+        assert api.graph is not None
         assert api.cache_config is not None
         assert api.optimization_config is not None
-        assert hasattr(api, 'redis')
-        assert hasattr(api, 'query_cache')
-    
+        # Redis client starts unset until initialize() runs
+        assert hasattr(api, 'redis_client')
+        # In-memory cache fallback is always present
+        assert hasattr(api, 'memory_cache')
+
     def test_generate_cache_key(self, api):
         """Test cache key generation."""
-        query = "g.V().has('name', 'test')"
+        query_type = "search_entities"
         params = {"limit": 10}
-        
-        cache_key = api._generate_cache_key(query, params)
-        
+
+        cache_key = api._generate_cache_key(query_type, params)
+
         assert cache_key is not None
         assert isinstance(cache_key, str)
         assert len(cache_key) > 0
-        
-        # Same query and params should generate same key
-        cache_key2 = api._generate_cache_key(query, params)
+
+        # Same query type and params should generate same key
+        cache_key2 = api._generate_cache_key(query_type, params)
         assert cache_key == cache_key2
-        
+
         # Different params should generate different key
         different_params = {"limit": 20}
-        cache_key3 = api._generate_cache_key(query, different_params)
+        cache_key3 = api._generate_cache_key(query_type, different_params)
         assert cache_key != cache_key3
-    
+
     @pytest.mark.asyncio
-    async def test_get_cached_result(self, api):
-        """Test getting cached results."""
+    async def test_get_from_cache_redis(self, api):
+        """Test getting cached results from Redis."""
         cache_key = "test_key"
-        
-        # Mock redis get to return None (cache miss)
-        with patch.object(api.redis, 'get', return_value=None):
-            result = await api._get_cached_result(cache_key)
-            assert result is None
-        
-        # Mock redis get to return cached data
+
+        # Mock redis client; get returns None (cache miss)
+        api.redis_client = AsyncMock()
+        api.redis_client.get = AsyncMock(return_value=None)
+        result = await api._get_from_cache(cache_key)
+        assert result is None
+
+        # Mock redis get to return cached JSON data (stored as JSON string)
         cached_data = '{"nodes": [], "edges": []}'
-        with patch.object(api.redis, 'get', return_value=cached_data):
-            result = await api._get_cached_result(cache_key)
-            assert result is not None
-            assert "nodes" in result
-            assert "edges" in result
-    
+        api.redis_client.get = AsyncMock(return_value=cached_data)
+        result = await api._get_from_cache(cache_key)
+        assert result is not None
+        assert "nodes" in result
+        assert "edges" in result
+
     @pytest.mark.asyncio
-    async def test_cache_result(self, api):
-        """Test caching query results."""
+    async def test_store_in_cache_redis(self, api):
+        """Test caching query results via Redis."""
         cache_key = "test_key"
         data = {"nodes": [{"id": "1"}], "edges": []}
-        
-        # Mock redis set
-        with patch.object(api.redis, 'setex', return_value=True) as mock_setex:
-            await api._cache_result(cache_key, data)
-            
-            # Should have called setex with ttl
-            mock_setex.assert_called_once()
-            args = mock_setex.call_args
-            assert args[0][0] == cache_key
-            assert args[0][1] == api.cache_config.default_ttl
-    
-    def test_optimize_query_basic(self, api):
-        """Test basic query optimization."""
-        query = "g.V().hasLabel('Person').limit(10)"
-        
-        optimized = api._optimize_query(query)
-        
-        assert optimized is not None
-        assert isinstance(optimized, str)
-        # Should return some form of optimized query
-        assert len(optimized) > 0
-    
-    def test_optimize_query_with_limits(self, api):
-        """Test query optimization with result limits."""
-        # Query without limit
-        query = "g.V().hasLabel('Person')"
-        optimized = api._optimize_query(query)
-        
-        # Should add limit based on config
-        assert optimized is not None
-        
-        # Query with existing limit
-        query_with_limit = "g.V().hasLabel('Person').limit(5)"
-        optimized_limited = api._optimize_query(query_with_limit)
-        
-        assert optimized_limited is not None
-    
+
+        # Mock redis client with setex
+        api.redis_client = AsyncMock()
+        api.redis_client.setex = AsyncMock(return_value=True)
+        stored = await api._store_in_cache(cache_key, data)
+
+        assert stored is True
+        # Should have called setex with key, ttl, then serialized payload
+        api.redis_client.setex.assert_called_once()
+        args = api.redis_client.setex.call_args
+        assert args[0][0] == cache_key
+        assert args[0][1] == api.cache_config.default_ttl
+
+    @pytest.mark.asyncio
+    async def test_store_in_cache_memory_fallback(self, api):
+        """Test caching falls back to in-memory store when Redis is absent."""
+        cache_key = "mem_key"
+        data = {"value": 123}
+
+        # No redis_client -> memory cache fallback
+        api.redis_client = None
+        stored = await api._store_in_cache(cache_key, data)
+
+        assert stored is True
+        assert api.memory_cache[cache_key] == data
+        assert cache_key in api.cache_timestamps
+
+    @pytest.mark.asyncio
+    async def test_get_from_cache_memory_fallback(self, api):
+        """Test retrieving from in-memory cache when Redis is absent."""
+        cache_key = "mem_key2"
+        data = {"value": 456}
+
+        api.redis_client = None
+        await api._store_in_cache(cache_key, data)
+        result = await api._get_from_cache(cache_key)
+        assert result == data
+
     @pytest.mark.asyncio
     async def test_execute_optimized_query_basic(self, api):
         """Test basic optimized query execution."""
-        query = "g.V().limit(1)"
-        
-        # Mock graph builder execution
+        traversal = Mock()
+
+        # Source delegates to graph._execute_traversal (awaited)
         mock_result = [{"id": "test_node", "label": "Person"}]
-        api.graph_builder.execute_query = AsyncMock(return_value=mock_result)
-        
-        # Mock redis operations
-        with patch.object(api, '_get_cached_result', return_value=None), \
-             patch.object(api, '_cache_result', return_value=None):
-            
-            result = await api.execute_optimized_query(query)
-            
-            assert result is not None
-            assert isinstance(result, list)
-    
-    @pytest.mark.asyncio  
-    async def test_execute_optimized_query_with_cache(self, api):
-        """Test optimized query execution with cache hit."""
-        query = "g.V().limit(1)"
-        cached_result = [{"id": "cached_node", "label": "Person"}]
-        
-        # Mock cache hit
-        with patch.object(api, '_get_cached_result', return_value=cached_result):
-            result = await api.execute_optimized_query(query)
-            
-            assert result == cached_result
-            # Should not call graph builder since we have cache hit
-            api.graph_builder.execute_query.assert_not_called()
-    
+        api.graph._execute_traversal = AsyncMock(return_value=mock_result)
+
+        result = await api._execute_optimized_query(traversal, "test query")
+
+        assert result is not None
+        assert isinstance(result, list)
+        assert result == mock_result
+
     @pytest.mark.asyncio
-    async def test_execute_optimized_query_with_params(self, api):
-        """Test optimized query execution with parameters."""
-        query = "g.V().has('name', name)"
-        params = {"name": "John"}
-        
-        # Mock graph builder
-        mock_result = [{"id": "john_node"}]
-        api.graph_builder.execute_query = AsyncMock(return_value=mock_result)
-        
-        with patch.object(api, '_get_cached_result', return_value=None), \
-             patch.object(api, '_cache_result', return_value=None):
-            
-            result = await api.execute_optimized_query(query, params)
-            assert result is not None
-    
-    @pytest.mark.asyncio
-    async def test_execute_batch_queries(self, api):
-        """Test batch query execution."""
-        queries = [
-            "g.V().limit(1)",
-            "g.E().limit(1)",
-            "g.V().count()"
-        ]
-        
-        # Mock individual query executions
-        api.execute_optimized_query = AsyncMock(side_effect=[
-            [{"id": "node1"}],
-            [{"id": "edge1"}],
-            [{"count": 5}]
-        ])
-        
-        results = await api.execute_batch_queries(queries)
-        
-        assert len(results) == 3
-        assert results[0] == [{"id": "node1"}]
-        assert results[1] == [{"id": "edge1"}]
-        assert results[2] == [{"count": 5}]
-    
+    async def test_execute_optimized_query_limits_results(self, api):
+        """Test optimized query execution truncates oversized result sets."""
+        traversal = Mock()
+        api.optimization_config.max_results_per_query = 2
+
+        oversized = [{"id": str(i)} for i in range(5)]
+        api.graph._execute_traversal = AsyncMock(return_value=oversized)
+
+        result = await api._execute_optimized_query(traversal, "test query")
+
+        assert len(result) == 2
+
     @pytest.mark.asyncio
     async def test_clear_cache(self, api):
-        """Test cache clearing."""
-        # Mock redis flushdb
-        with patch.object(api.redis, 'flushdb', return_value=True) as mock_flush:
-            await api.clear_cache()
-            mock_flush.assert_called_once()
-    
+        """Test cache clearing returns a structured result."""
+        # Without redis_client, clear_cache empties the in-memory cache
+        api.redis_client = None
+        api.memory_cache = {"graph_api:abc": {"x": 1}}
+        api.cache_timestamps = {"graph_api:abc": None}
+
+        result = await api.clear_cache()
+
+        assert result["status"] == "success"
+        assert result["cleared_entries"] >= 1
+        assert api.memory_cache == {}
+
     @pytest.mark.asyncio
     async def test_get_cache_stats(self, api):
         """Test cache statistics retrieval."""
-        # Mock redis info
-        mock_info = {
-            'used_memory': 1024000,
-            'keyspace_hits': 100,
-            'keyspace_misses': 20
-        }
-        
-        with patch.object(api.redis, 'info', return_value=mock_info):
-            stats = await api.get_cache_stats()
-            
-            assert stats is not None
-            assert 'used_memory' in stats
-            assert 'keyspace_hits' in stats
-            assert 'keyspace_misses' in stats
-    
-    def test_validate_query_basic(self, api):
-        """Test basic query validation."""
-        valid_query = "g.V().hasLabel('Person').limit(10)"
-        
-        is_valid, message = api._validate_query(valid_query)
-        
-        assert is_valid is True
-        assert message is None or isinstance(message, str)
-    
-    def test_validate_query_empty(self, api):
-        """Test validation of empty query."""
-        empty_query = ""
-        
-        is_valid, message = api._validate_query(empty_query)
-        
-        assert is_valid is False
-        assert message is not None
-        assert isinstance(message, str)
-    
-    def test_validate_query_invalid(self, api):
-        """Test validation of invalid query.""" 
-        invalid_query = "invalid gremlin syntax"
-        
-        is_valid, message = api._validate_query(invalid_query)
-        
-        # Should handle validation gracefully
-        assert isinstance(is_valid, bool)
-        if not is_valid:
-            assert message is not None
+        # No redis_client -> stats come purely from in-memory metrics
+        api.redis_client = None
+        api.metrics["cache_hits"] = 100
+        api.metrics["cache_misses"] = 20
+
+        stats = await api.get_cache_stats()
+
+        assert stats is not None
+        assert "cache" in stats
+        assert "performance" in stats
+        assert "configuration" in stats
+        assert stats["cache"]["hits"] == 100
+        assert stats["cache"]["misses"] == 20
+
+    def test_extract_entity_name(self, api):
+        """Test entity name extraction from a value map result."""
+        # 'name' field given as a list (Gremlin valueMap style)
+        assert api._extract_entity_name({"name": ["Acme"]}) == "Acme"
+        # Falls back to alternate name fields
+        assert api._extract_entity_name({"orgName": "OrgCo"}) == "OrgCo"
+        # Unknown when no name-like field present
+        assert api._extract_entity_name({"foo": "bar"}) == "Unknown"
+
+    def test_calculate_relevance(self, api):
+        """Test relevance scoring for search results."""
+        # Exact match scores highest
+        assert api._calculate_relevance("Tesla", "tesla") == 1.0
+        # Prefix match scores high
+        assert api._calculate_relevance("Tesla Motors", "tesla") == 0.8
+        # Substring match scores medium
+        assert api._calculate_relevance("The Tesla", "tesla") == 0.6
+        # No match scores low default
+        assert api._calculate_relevance("Apple", "tesla") == 0.1
 
 
 class TestCreateOptimizedGraphAPI:
@@ -326,15 +281,16 @@ class TestCreateOptimizedGraphAPI:
     def test_create_optimized_graph_api(self):
         """Test creating OptimizedGraphAPI instance."""
         neptune_endpoint = "ws://localhost:8182/gremlin"
-        
-        with patch('api.graph.optimized_api.GraphBuilder'), \
-             patch('api.graph.optimized_api.redis.from_url'):
-            
+
+        # GraphBuilder is imported into the optimized_api module namespace,
+        # so patch it where it is looked up.
+        with patch('api.graph.optimized_api.GraphBuilder'):
             api = create_optimized_graph_api(neptune_endpoint)
-            
+
             assert api is not None
             assert isinstance(api, OptimizedGraphAPI)
-            assert api.graph_builder is not None
+            # Source stores the builder on the `graph` attribute
+            assert api.graph is not None
             assert api.cache_config is not None
             assert api.optimization_config is not None
 

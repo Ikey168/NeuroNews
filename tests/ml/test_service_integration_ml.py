@@ -47,7 +47,11 @@ class TestNLPServiceIntegration:
                 """Process text through specified NLP service"""
                 if service_name not in self.active_models:
                     raise ValueError(f"Service {service_name} is not active")
-                
+
+                # Count every processed item regardless of which service branch
+                # handles it.
+                self.services[service_name]["processed_items"] += 1
+
                 # Simulate different NLP services
                 if service_name == "sentiment_analyzer":
                     return {
@@ -76,7 +80,6 @@ class TestNLPServiceIntegration:
                         "service": service_name
                     }
                 
-                self.services[service_name]["processed_items"] += 1
                 return {"message": "processed", "service": service_name}
             
             def batch_process(self, service_name: str, texts: list, batch_size: int = 10):

@@ -26,6 +26,21 @@ from src.ingestion.connectors.blog.digest import match_watchlist, run_watchlists
 from src.ingestion.connectors.blog.models import DigestMatch, FeedSubscription, WatchlistEntry
 from src.ingestion.connectors.blog.subscriptions import SubscriptionStore
 
+# ``BlogConnector.parse`` imports ``feedparser`` lazily; it is an optional
+# dependency that is not always installed.  Tests that exercise feed parsing
+# are skipped when it is unavailable so they don't fail on a missing optional
+# package rather than on a real regression.
+try:
+    import feedparser  # noqa: F401
+
+    _HAS_FEEDPARSER = True
+except ImportError:
+    _HAS_FEEDPARSER = False
+
+_requires_feedparser = pytest.mark.skipif(
+    not _HAS_FEEDPARSER, reason="feedparser not installed (optional dependency)"
+)
+
 
 # --------------------------------------------------------------------------- #
 # Minimal RSS and Atom feed bytes
@@ -275,6 +290,7 @@ class TestBlogConnectorFetch:
 # BlogConnector — parse (RSS)
 # --------------------------------------------------------------------------- #
 
+@_requires_feedparser
 class TestBlogConnectorParseRSS:
     def _parse_rss(self, tmp_path, full_text="", fetch_full_text=True):
         connector, http_get, _ = _make_connector(tmp_path, _RSS, full_text, fetch_full_text)
@@ -374,6 +390,7 @@ class TestBlogConnectorParseRSS:
 # BlogConnector — parse (Atom)
 # --------------------------------------------------------------------------- #
 
+@_requires_feedparser
 class TestBlogConnectorParseAtom:
     def test_atom_feed_parsed(self, tmp_path):
         connector, _, _ = _make_connector(tmp_path, _ATOM, "")
@@ -399,6 +416,7 @@ class TestBlogConnectorParseAtom:
 # BlogConnector — harvest (integration)
 # --------------------------------------------------------------------------- #
 
+@_requires_feedparser
 class TestBlogConnectorHarvest:
     def test_harvest_yields_documents(self, tmp_path):
         connector, _, _ = _make_connector(tmp_path)

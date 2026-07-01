@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from src.api.auth.jwt_auth import auth_handler
 from src.api.middleware.auth_middleware import configure_auth_middleware
+from src.api.routes.article_routes import get_db
 from src.api.routes.article_routes import router as article_router
 
 # Test data
@@ -35,11 +36,18 @@ def client(app):
 
 
 @pytest.fixture
-def test_db(monkeypatch):
-    """Mock database with test articles."""
+def test_db(app):
+    """Provide an in-memory article store via the get_db dependency override.
+
+    The article routes resolve their database handle through the ``get_db``
+    dependency and call ``await db.execute_query(query, params)``, returning
+    rows as dict-like records. We override that dependency on the app with a
+    fake connector backed by an in-memory dict so the routes run without a real
+    DuckDB/Snowflake warehouse.
+    """
     articles = {}
 
-    async def mock_execute_query(self, query, params=None):
+    async def mock_execute_query(query, params=None):
         if "SELECT" in query:
             if "WHERE id = " in query:
                 article_id = params[0]
@@ -85,10 +93,16 @@ def test_db(monkeypatch):
 
         return []
 
-    monkeypatch.setattr(
-        "src.database.snowflake_connector.SnowflakeAnalyticsConnector.execute_query", mock_execute_query
-    )
-    return articles
+    class FakeConnector:
+        """Minimal stand-in exposing the async execute_query the routes use."""
+
+        execute_query = staticmethod(mock_execute_query)
+
+    app.dependency_overrides[get_db] = lambda: FakeConnector()
+    try:
+        yield articles
+    finally:
+        app.dependency_overrides.pop(get_db, None)
 
 
 def create_token(role: str = "user", user_id: str = "test_user"):

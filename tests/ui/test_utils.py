@@ -325,7 +325,226 @@ class UITestConstants:
 __all__ = [
     'MockStreamlit',
     'UITestFixtures',
-    'UITestHelpers', 
+    'UITestHelpers',
     'UITestValidators',
     'UITestConstants'
 ]
+
+
+# ---------------------------------------------------------------------------
+# Tests exercising the UI test utilities defined above.
+#
+# The classes above are helper/fixture utilities. Without any test functions
+# pytest collects zero items from this module, so it silently "passes" while
+# testing nothing. The tests below give the utilities real coverage. Each test
+# constructs its own objects and does not depend on state from other modules.
+# ---------------------------------------------------------------------------
+
+
+class TestMockStreamlit:
+    """Verify the MockStreamlit stand-in behaves as expected."""
+
+    def test_initial_state_is_empty(self):
+        mock = MockStreamlit()
+        assert mock.session_state == {}
+        assert mock._cached_functions == {}
+
+    def test_layout_methods_return_none(self):
+        mock = MockStreamlit()
+        assert mock.set_page_config(page_title="X") is None
+        assert mock.title("hello") is None
+        assert mock.markdown("**bold**") is None
+
+    def test_columns_with_int_spec(self):
+        mock = MockStreamlit()
+        cols = mock.columns(3)
+        assert len(cols) == 3
+
+    def test_columns_with_iterable_spec(self):
+        mock = MockStreamlit()
+        cols = mock.columns([1, 2, 3, 4])
+        assert len(cols) == 4
+
+    def test_cache_data_returns_working_function(self):
+        mock = MockStreamlit()
+
+        @mock.cache_data(ttl=60)
+        def add(a, b):
+            return a + b
+
+        # Decorated function still works and was registered.
+        assert add(2, 3) == 5
+        assert "add" in mock._cached_functions
+
+    def test_cache_data_direct_application(self):
+        mock = MockStreamlit()
+
+        def square(x):
+            return x * x
+
+        wrapped = mock.cache_data(square)
+        assert wrapped(4) == 16
+        assert "square" in mock._cached_functions
+
+    def test_cache_resource_returns_working_function(self):
+        mock = MockStreamlit()
+
+        @mock.cache_resource()
+        def make_client():
+            return {"client": True}
+
+        assert make_client() == {"client": True}
+        assert "make_client" in mock._cached_functions
+
+
+class TestUITestHelpers:
+    """Verify the helper data/factory functions produce correct structures."""
+
+    def test_create_test_articles_count_and_shape(self):
+        articles = UITestHelpers.create_test_articles(4)
+        assert len(articles) == 4
+        first = articles[0]
+        for field in ("id", "title", "content", "source", "sentiment_score", "category"):
+            assert field in first
+        assert first["id"] == "article_0"
+        assert first["category"] == "technology"
+
+    def test_create_test_events_count_and_shape(self):
+        events = UITestHelpers.create_test_events(2)
+        assert len(events) == 2
+        assert events[0]["event_type"] == "breaking"
+        assert events[1]["cluster_name"] == "Test Event Cluster 1"
+
+    def test_create_test_entities_types_cycle(self):
+        entities = UITestHelpers.create_test_entities(8)
+        assert len(entities) == 8
+        types = {e["type"] for e in entities}
+        # 8 entities cycle through all four entity types.
+        assert types == {"PERSON", "ORG", "GPE", "EVENT"}
+
+    def test_simulate_api_response_status_and_json(self):
+        resp = UITestHelpers.simulate_api_response({"key": "value"}, status_code=201)
+        assert resp.status_code == 201
+        assert resp.json() == {"key": "value"}
+        # raise_for_status is mocked to be a no-op.
+        assert resp.raise_for_status() is None
+
+    def test_create_mock_dataframe_length(self):
+        data = [{"a": 1}, {"a": 2}, {"a": 3}]
+        df = UITestHelpers.create_mock_dataframe(data)
+        assert len(df) == 3
+        assert df.to_dict() == data
+
+
+class TestUITestValidators:
+    """Verify the validation helpers actually enforce their contracts."""
+
+    def test_validate_chart_data_passes_with_all_fields(self):
+        assert UITestValidators.validate_chart_data(
+            {"x": [1], "y": [2]}, ["x", "y"]
+        ) is True
+
+    def test_validate_chart_data_raises_on_missing_field(self):
+        with pytest.raises(AssertionError):
+            UITestValidators.validate_chart_data({"x": [1]}, ["x", "y"])
+
+    def test_validate_api_response_type_mismatch_raises(self):
+        with pytest.raises(AssertionError):
+            UITestValidators.validate_api_response(
+                {"count": "not-an-int"}, {"count": int}
+            )
+
+    def test_validate_api_response_type_match_passes(self):
+        assert UITestValidators.validate_api_response(
+            {"count": 5, "name": "x"}, {"count": int, "name": str}
+        ) is True
+
+    def test_validate_performance_metrics_over_threshold_raises(self):
+        with pytest.raises(AssertionError):
+            UITestValidators.validate_performance_metrics(
+                {"page_load_time": 10.0}, {"page_load_time": 3.0}
+            )
+
+    def test_validate_performance_metrics_within_threshold_passes(self):
+        assert UITestValidators.validate_performance_metrics(
+            {"page_load_time": 1.0}, {"page_load_time": 3.0}
+        ) is True
+
+
+class TestUITestConstants:
+    """Verify the shared testing constants are well formed."""
+
+    def test_performance_thresholds_present(self):
+        thresholds = UITestConstants.PERFORMANCE_THRESHOLDS
+        assert thresholds["page_load_time"] == 3.0
+        assert thresholds["api_response_time"] == 1.0
+
+    def test_navigation_entries(self):
+        nav = UITestConstants.MAIN_NAVIGATION
+        assert nav["ask_news"] == "Ask the News"
+        assert set(nav) == {"home", "ask_news", "analytics", "admin"}
+
+    def test_wcag_requirements(self):
+        wcag = UITestConstants.WCAG_REQUIREMENTS
+        assert wcag["contrast_ratio_normal"] == 4.5
+        assert wcag["min_touch_target_size"] == 44
+
+
+# The fixtures on UITestFixtures are declared as @staticmethod-wrapped
+# @pytest.fixture, which pytest cannot bind when re-exposed on a class. Define
+# equivalent module-level fixtures (mirroring the utility implementations) so
+# the mocking behaviour they provide is still exercised with real assertions.
+@pytest.fixture
+def mock_streamlit_fixture():
+    with patch.dict(sys.modules, {'streamlit': MockStreamlit()}):
+        import streamlit as st
+        yield st
+
+
+@pytest.fixture
+def mock_requests_fixture():
+    requests_mock = MagicMock()
+    response_mock = MagicMock()
+    response_mock.status_code = 200
+    response_mock.json.return_value = {'data': 'test'}
+    requests_mock.get.return_value = response_mock
+    requests_mock.post.return_value = response_mock
+    with patch.dict(sys.modules, {'requests': requests_mock}):
+        yield requests_mock
+
+
+@pytest.fixture
+def mock_api_client_fixture():
+    mock_instance = MagicMock()
+    mock_instance.get_articles_by_topic.return_value = []
+    mock_instance.get_breaking_news.return_value = []
+    mock_instance.get_entities.return_value = []
+    mock_instance.get_dashboard_summary.return_value = {}
+    mock_instance.health_check.return_value = True
+    yield mock_instance
+
+
+class TestUITestFixtures:
+    """Exercise the mocking behaviour the UITestFixtures fixtures provide."""
+
+    def test_mock_streamlit_fixture_replaces_module(self, mock_streamlit_fixture):
+        # The patched module is our MockStreamlit instance.
+        assert isinstance(mock_streamlit_fixture, MockStreamlit)
+        import streamlit as st
+
+        assert st is mock_streamlit_fixture
+
+    def test_mock_requests_fixture(self, mock_requests_fixture):
+        resp = mock_requests_fixture.get("http://example.com")
+        assert resp.status_code == 200
+        assert resp.json() == {"data": "test"}
+
+    def test_mock_api_client_fixture(self, mock_api_client_fixture):
+        assert mock_api_client_fixture.health_check() is True
+        assert mock_api_client_fixture.get_articles_by_topic() == []
+        assert mock_api_client_fixture.get_dashboard_summary() == {}
+
+    def test_utility_fixture_declarations_present(self):
+        # The UITestFixtures utility class still exposes the documented fixtures.
+        for name in ("mock_streamlit", "mock_requests", "mock_api_client"):
+            assert hasattr(UITestFixtures, name)

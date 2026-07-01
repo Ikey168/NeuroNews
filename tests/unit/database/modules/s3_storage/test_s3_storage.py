@@ -20,21 +20,23 @@ class TestS3StorageConfig:
     def test_config_initialization(self):
         """Test S3StorageConfig initialization"""
         from src.database.s3_storage import S3StorageConfig
-        
-        # Test with all parameters
+
+        # Test with the fields the current dataclass exposes. Credentials and
+        # endpoint are no longer config fields (they are passed to
+        # S3ArticleStorage.__init__ / resolved from the environment).
         config = S3StorageConfig(
             bucket_name='test-bucket',
             region='us-east-1',
-            access_key_id='test_access_key',
-            secret_access_key='test_secret_key',
-            endpoint_url='http://localhost:9000'
+            raw_prefix='raw',
+            processed_prefix='processed',
+            storage_class='STANDARD_IA',
         )
-        
+
         assert config.bucket_name == 'test-bucket'
         assert config.region == 'us-east-1'
-        assert config.access_key_id == 'test_access_key'
-        assert config.secret_access_key == 'test_secret_key'
-        assert config.endpoint_url == 'http://localhost:9000'
+        assert config.raw_prefix == 'raw'
+        assert config.processed_prefix == 'processed'
+        assert config.storage_class == 'STANDARD_IA'
     
     def test_config_minimal(self):
         """Test S3StorageConfig with minimal parameters"""

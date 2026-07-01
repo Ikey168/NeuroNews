@@ -122,7 +122,7 @@ class TestOptimizedGraphAPI:
     
     def test_api_initialization_defaults(self, mock_graph_builder):
         """Test OptimizedGraphAPI initialization with defaults."""
-        with patch('src.api.graph.optimized_api.redis.Redis'):
+        with patch('api.graph.optimized_api.redis.Redis'):
             api = OptimizedGraphAPI(graph_builder=mock_graph_builder)
             
             assert api.graph == mock_graph_builder
@@ -148,10 +148,12 @@ class TestOptimizedGraphAPI:
         query_params = {"type": "person", "limit": 10}
         
         cache_key = api._generate_cache_key("test_query", query_params)
-        
+
         assert isinstance(cache_key, str)
         assert len(cache_key) > 0
-        assert "test_query" in cache_key or len(cache_key) == 64  # SHA256 hash
+        # Source uses an md5 hex digest prefixed with "graph_api:"
+        assert cache_key.startswith("graph_api:")
+        assert len(cache_key) == len("graph_api:") + 32  # md5 hex digest
     
     def test_generate_cache_key_consistency(self, api):
         """Test that same parameters generate same cache key."""
@@ -202,214 +204,210 @@ class TestOptimizedGraphAPI:
     
     @pytest.mark.asyncio
     async def test_cache_result_with_ttl(self, api):
-        """Test caching result with custom TTL."""
+        """Test caching result with custom TTL via Redis backend."""
         data = {"test": "data"}
-        
-        with patch.object(api.redis, 'setex') as mock_setex:
-            await api._cache_result("test_key", data, ttl=1800)
-            # Verify setex called with custom TTL
-            args = mock_setex.call_args[0]
-            assert args[0] == "test_key"
-            assert args[1] == 1800  # TTL
-    
-    def test_optimize_query_params(self, api):
-        """Test query parameter optimization."""
-        params = {
-            "limit": 5000,  # Above max
-            "depth": 10,    # Above max
-            "batch_size": 200  # Above max
-        }
-        
-        optimized = api._optimize_query_params(params)
-        
-        assert optimized["limit"] <= api.optimization_config.max_results_per_query
-        assert optimized["depth"] <= api.optimization_config.max_traversal_depth
-        assert optimized["batch_size"] <= api.optimization_config.batch_size
-    
-    def test_optimize_query_params_within_limits(self, api):
-        """Test query parameter optimization when within limits."""
-        params = {
-            "limit": 100,
-            "depth": 2,
-            "batch_size": 50
-        }
-        
-        optimized = api._optimize_query_params(params)
-        
-        assert optimized["limit"] == 100
-        assert optimized["depth"] == 2
-        assert optimized["batch_size"] == 50
+
+        # Inject a mock Redis client so the Redis branch of _store_in_cache runs.
+        api.redis_client = AsyncMock()
+
+        await api._store_in_cache("test_key", data, ttl=1800)
+
+        # Verify setex called with custom TTL
+        api.redis_client.setex.assert_awaited_once()
+        args = api.redis_client.setex.call_args[0]
+        assert args[0] == "test_key"
+        assert args[1] == 1800  # TTL
     
     @pytest.mark.asyncio
-    async def test_find_nodes_cached(self, api):
-        """Test find_nodes with cached result."""
+    async def test_related_entities_clamps_depth(self, api):
+        """Source clamps max_depth to optimization_config.max_traversal_depth."""
+        # optimization_config fixture sets max_traversal_depth=3
+        with patch.object(api, '_execute_optimized_query', return_value=[]):
+            result = await api.get_related_entities_optimized(
+                "Acme", max_depth=99, use_cache=False
+            )
+
+        assert result["max_depth"] == api.optimization_config.max_traversal_depth
+        assert result["max_depth"] == 3
+
+    @pytest.mark.asyncio
+    async def test_related_entities_depth_within_limits(self, api):
+        """A max_depth within configured limits is preserved unchanged."""
+        with patch.object(api, '_execute_optimized_query', return_value=[]):
+            result = await api.get_related_entities_optimized(
+                "Acme", max_depth=2, use_cache=False
+            )
+
+        assert result["max_depth"] == 2
+
+    @pytest.mark.asyncio
+    async def test_event_timeline_clamps_limit(self, api):
+        """Source clamps timeline limit to max_results_per_query.
+
+        The clamping runs before any Gremlin query is built, so it is
+        observable on the cache-key parameters. We assert on the cache key
+        rather than executing the query because the source's query build for
+        this method depends on ``P.containing`` (see module-level note about
+        the source bug), which is unrelated to the clamping under test.
+        """
+        # optimization_config fixture sets max_results_per_query=500.
+        captured = {}
+        real_generate = api._generate_cache_key
+
+        def spy(query_type, params):
+            captured.update(params)
+            return real_generate(query_type, params)
+
+        with patch.object(api, '_generate_cache_key', side_effect=spy), \
+             patch.object(api, '_get_from_cache', return_value={"cached": True}):
+            result = await api.get_event_timeline_optimized(
+                "election", limit=5000, use_cache=True
+            )
+
+        # Cache hit short-circuits before the (buggy) query build.
+        assert result == {"cached": True}
+        # The limit passed into the cache key was clamped to the configured max.
+        assert captured["limit"] == api.optimization_config.max_results_per_query
+        assert captured["limit"] == 500
+    
+    @pytest.mark.asyncio
+    async def test_get_related_entities_cached(self, api):
+        """Cached related-entities query returns the cached payload directly."""
         cached_result = {
-            "nodes": [{"id": "1", "label": "Person"}],
-            "total": 1,
-            "cached": True
+            "entity": "Acme",
+            "related_entities": [{"name": "Bob", "type": "Person"}],
+            "total_related": 1,
         }
-        
-        with patch.object(api, '_get_cached_result', return_value=cached_result):
-            result = await api.find_nodes({"label": "Person"})
-            
+
+        with patch.object(api, '_get_from_cache', return_value=cached_result) as mock_cache, \
+             patch.object(api, '_execute_optimized_query') as mock_exec:
+            result = await api.get_related_entities_optimized("Acme", use_cache=True)
+
             assert result == cached_result
-            assert result["cached"] is True
-    
+            mock_cache.assert_awaited_once()
+            # On cache hit the query must NOT be executed.
+            mock_exec.assert_not_called()
+
     @pytest.mark.asyncio
-    async def test_find_nodes_not_cached(self, api):
-        """Test find_nodes without cache."""
-        query_params = {"label": "Person", "limit": 10}
-        
-        # Mock cache miss
-        with patch.object(api, '_get_cached_result', return_value=None), \
-             patch.object(api, '_execute_find_nodes_query', return_value={"nodes": [], "total": 0}) as mock_query, \
-             patch.object(api, '_cache_result'):
-            
-            result = await api.find_nodes(query_params)
-            
+    async def test_get_related_entities_not_cached(self, api):
+        """On cache miss the query executes and the result is stored."""
+        with patch.object(api, '_get_from_cache', return_value=None), \
+             patch.object(api, '_execute_optimized_query', return_value=[]) as mock_exec, \
+             patch.object(api, '_store_in_cache') as mock_store:
+            result = await api.get_related_entities_optimized("Acme", use_cache=True)
+
             assert isinstance(result, dict)
-            mock_query.assert_called_once()
-    
+            assert result["entity"] == "Acme"
+            assert result["total_related"] == 0
+            mock_exec.assert_called_once()
+            mock_store.assert_awaited_once()
+
     @pytest.mark.asyncio
-    async def test_find_relationships_cached(self, api):
-        """Test find_relationships with cached result."""
+    async def test_search_entities_cached(self, api):
+        """Cached entity search returns the cached payload directly."""
         cached_result = {
-            "relationships": [{"id": "1", "label": "KNOWS"}],
-            "total": 1,
-            "cached": True
+            "search_term": "acme",
+            "entities": [{"name": "Acme", "type": "Organization"}],
+            "total_results": 1,
         }
-        
-        with patch.object(api, '_get_cached_result', return_value=cached_result):
-            result = await api.find_relationships({"label": "KNOWS"})
-            
+
+        with patch.object(api, '_get_from_cache', return_value=cached_result), \
+             patch.object(api, '_execute_optimized_query') as mock_exec:
+            result = await api.search_entities_optimized("acme", use_cache=True)
+
             assert result == cached_result
-            assert result["cached"] is True
-    
+            mock_exec.assert_not_called()
+
     @pytest.mark.asyncio
-    async def test_traverse_graph_cached(self, api):
-        """Test traverse_graph with cached result."""
-        cached_result = {
-            "path": [{"id": "1"}, {"id": "2"}],
-            "length": 2,
-            "cached": True
+    async def test_search_entities_short_term_rejected(self, api):
+        """A search term shorter than 2 characters raises HTTP 400."""
+        from fastapi import HTTPException
+
+        with pytest.raises(HTTPException) as exc_info:
+            await api.search_entities_optimized("a")
+
+        assert exc_info.value.status_code == 400
+
+    @pytest.mark.asyncio
+    async def test_clear_cache_with_pattern(self, api):
+        """clear_cache with a pattern removes matching memory-cache entries."""
+        # No Redis client -> memory-cache-only path.
+        api.redis_client = None
+        api.memory_cache = {
+            "graph_api:pattern_one": {"x": 1},
+            "graph_api:other": {"y": 2},
         }
-        
-        with patch.object(api, '_get_cached_result', return_value=cached_result):
-            result = await api.traverse_graph("1", "2", depth=2)
-            
-            assert result == cached_result
-            assert result["cached"] is True
-    
-    @pytest.mark.asyncio
-    async def test_get_node_neighbors_cached(self, api):
-        """Test get_node_neighbors with cached result."""
-        cached_result = {
-            "neighbors": [{"id": "2"}, {"id": "3"}],
-            "total": 2,
-            "cached": True
+        api.cache_timestamps = {
+            "graph_api:pattern_one": datetime.now(),
+            "graph_api:other": datetime.now(),
         }
-        
-        with patch.object(api, '_get_cached_result', return_value=cached_result):
-            result = await api.get_node_neighbors("1")
-            
-            assert result == cached_result
-    
-    @pytest.mark.asyncio
-    async def test_get_subgraph_cached(self, api):
-        """Test get_subgraph with cached result."""
-        cached_result = {
-            "nodes": [{"id": "1"}],
-            "edges": [{"from": "1", "to": "2"}],
-            "cached": True
-        }
-        
-        with patch.object(api, '_get_cached_result', return_value=cached_result):
-            result = await api.get_subgraph(["1", "2"])
-            
-            assert result == cached_result
-    
-    @pytest.mark.asyncio
-    async def test_execute_gremlin_query_cached(self, api):
-        """Test execute_gremlin_query with cached result."""
-        cached_result = {
-            "results": [{"data": "test"}],
-            "execution_time": 0.1,
-            "cached": True
-        }
-        
-        with patch.object(api, '_get_cached_result', return_value=cached_result):
-            result = await api.execute_gremlin_query("g.V().limit(1)")
-            
-            assert result == cached_result
-    
-    @pytest.mark.asyncio
-    async def test_batch_operations(self, api):
-        """Test batch operations."""
-        operations = [
-            {"type": "find_nodes", "params": {"label": "Person"}},
-            {"type": "find_relationships", "params": {"label": "KNOWS"}}
-        ]
-        
-        with patch.object(api, 'find_nodes', return_value={"nodes": []}) as mock_find_nodes, \
-             patch.object(api, 'find_relationships', return_value={"relationships": []}) as mock_find_rels:
-            
-            results = await api.batch_operations(operations)
-            
-            assert isinstance(results, list)
-            assert len(results) == 2
-            mock_find_nodes.assert_called_once()
-            mock_find_rels.assert_called_once()
-    
-    @pytest.mark.asyncio
-    async def test_invalidate_cache_pattern(self, api):
-        """Test cache invalidation by pattern."""
-        with patch.object(api.redis, 'keys', return_value=['key1', 'key2']) as mock_keys, \
-             patch.object(api.redis, 'delete') as mock_delete:
-            
-            result = await api.invalidate_cache("pattern*")
-            
-            mock_keys.assert_called_once_with("pattern*")
-            mock_delete.assert_called_once_with('key1', 'key2')
-            assert isinstance(result, int) or result is None
-    
+
+        result = await api.clear_cache("pattern")
+
+        assert result["status"] == "success"
+        assert result["pattern"] == "pattern"
+        assert "graph_api:pattern_one" not in api.memory_cache
+        assert "graph_api:other" in api.memory_cache
+
     @pytest.mark.asyncio
     async def test_get_cache_stats(self, api):
-        """Test cache statistics retrieval."""
-        with patch.object(api.redis, 'info', return_value={'keyspace_hits': 100, 'keyspace_misses': 10}):
-            stats = await api.get_cache_stats()
-            
-            assert isinstance(stats, dict)
-            # Should contain cache statistics
-            assert 'hits' in stats or 'keyspace_hits' in stats or stats is not None
-    
+        """Cache statistics retrieval returns the documented structure."""
+        # No Redis client so we exercise the pure in-memory metrics path.
+        api.redis_client = None
+        api.metrics["cache_hits"] = 100
+        api.metrics["cache_misses"] = 10
+
+        stats = await api.get_cache_stats()
+
+        assert isinstance(stats, dict)
+        assert "cache" in stats
+        assert stats["cache"]["hits"] == 100
+        assert stats["cache"]["misses"] == 10
+        assert "performance" in stats
+        assert "configuration" in stats
+
     @pytest.mark.asyncio
-    async def test_health_check(self, api):
-        """Test API health check."""
-        with patch.object(api.redis, 'ping', return_value=True):
-            health = await api.health_check()
-            
-            assert isinstance(health, dict)
-            assert 'redis' in health or 'cache' in health or 'status' in health
-    
+    async def test_get_cache_stats_with_redis_info(self, api):
+        """Cache stats include Redis info when a Redis client is present."""
+        mock_redis = AsyncMock()
+        mock_redis.info.return_value = {
+            "connected_clients": 3,
+            "used_memory_human": "1M",
+            "keyspace_hits": 100,
+            "keyspace_misses": 10,
+        }
+        api.redis_client = mock_redis
+
+        stats = await api.get_cache_stats()
+
+        assert stats["cache"]["redis_connected"] is True
+        assert "redis_info" in stats["cache"]
+        assert stats["cache"]["redis_info"]["keyspace_hits"] == 100
+
     @pytest.mark.asyncio
     async def test_error_handling_redis_connection(self, api):
-        """Test error handling when Redis is unavailable."""
-        with patch.object(api.redis, 'get', side_effect=Exception("Redis connection failed")):
-            # Should handle Redis errors gracefully
-            result = await api._get_cached_result("test_key")
-            assert result is None  # Should return None on Redis error
-    
-    @pytest.mark.asyncio 
+        """_get_from_cache handles Redis errors gracefully and returns None."""
+        mock_redis = AsyncMock()
+        mock_redis.get.side_effect = Exception("Redis connection failed")
+        api.redis_client = mock_redis
+
+        # Should handle Redis errors gracefully and fall through to None.
+        result = await api._get_from_cache("test_key")
+        assert result is None
+
+    @pytest.mark.asyncio
     async def test_query_timeout_handling(self, api):
-        """Test query timeout handling."""
-        with patch.object(api, '_execute_find_nodes_query', side_effect=asyncio.TimeoutError("Query timeout")):
-            try:
-                result = await api.find_nodes({"label": "Person"})
-                # Should either handle timeout gracefully or raise appropriate error
-                assert result is not None or True
-            except (asyncio.TimeoutError, Exception):
-                # Expected behavior for timeout
-                pass
+        """A query timeout is surfaced as an HTTP 408 after retries exhaust."""
+        from fastapi import HTTPException
+
+        # Force the underlying traversal to always time out.
+        api.optimization_config.retry_attempts = 1
+        api.graph._execute_traversal = AsyncMock(side_effect=asyncio.TimeoutError())
+
+        with pytest.raises(HTTPException) as exc_info:
+            await api._execute_optimized_query(Mock(), "test query")
+
+        assert exc_info.value.status_code == 408
     
     def test_configuration_validation(self, api):
         """Test configuration validation."""

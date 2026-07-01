@@ -20,6 +20,53 @@ from typing import List, Dict, Any
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'src'))
 
+from services.vector_service import (
+    UnifiedVectorService,
+    VectorBackend,
+    PgVectorBackend,
+    QdrantBackend,
+    get_vector_service,
+    vector_search,
+)
+from services.embeddings.provider import (
+    EmbeddingProvider,
+    EmbeddingBackend,
+    get_embedding_provider,
+)
+try:
+    from services.embeddings.backends.openai import OpenAIBackend
+except Exception:  # optional dependency 'openai' may be absent
+    OpenAIBackend = None
+from services.embeddings.backends.local_sentence_transformers import LocalSentenceTransformersBackend
+
+import types
+from contextlib import contextmanager
+
+
+@contextmanager
+def fake_module(module_name, **attrs):
+    """Temporarily inject a stub module into sys.modules.
+
+    The real backend modules (qdrant_store, openai) require optional
+    third-party packages that may be absent, so they cannot be imported
+    in this environment. QdrantBackend / EmbeddingProvider import their
+    backend classes lazily via ``from <module> import <Class>``, so we
+    inject a stub module exposing the desired (mock) symbols. This lets
+    the lazy import succeed and lets us assert on the delegation logic.
+    """
+    module = types.ModuleType(module_name)
+    for key, value in attrs.items():
+        setattr(module, key, value)
+    saved = sys.modules.get(module_name)
+    sys.modules[module_name] = module
+    try:
+        yield module
+    finally:
+        if saved is not None:
+            sys.modules[module_name] = saved
+        else:
+            sys.modules.pop(module_name, None)
+
 
 class TestUnifiedVectorService:
     """Comprehensive tests for UnifiedVectorService"""
@@ -172,14 +219,14 @@ class TestPgVectorBackend:
     
     def test_create_collection(self):
         """Test collection creation (always returns True for pgvector)"""
-        with patch('services.vector_service.VectorSearchService'):
+        with patch('services.rag.vector.VectorSearchService'):
             backend = PgVectorBackend()
             result = backend.create_collection()
             assert result is True
     
     def test_upsert_not_implemented_warning(self):
         """Test upsert method returns count with warning"""
-        with patch('services.vector_service.VectorSearchService'):
+        with patch('services.rag.vector.VectorSearchService'):
             backend = PgVectorBackend()
             points = [{'id': '1'}, {'id': '2'}]
             result = backend.upsert(points)
@@ -187,28 +234,41 @@ class TestPgVectorBackend:
     
     def test_search_with_filters(self):
         """Test search with filter conversion"""
-        mock_service_instance = Mock()
+        mock_service_instance = MagicMock()
         mock_results = [Mock(id='1', similarity_score=0.9, content='test')]
         mock_service_instance.search.return_value = mock_results
-        
-        with patch('services.vector_service.VectorSearchService') as mock_service:
-            with patch('services.vector_service.VectorSearchFilters') as mock_filters:
+
+        # The backend uses ``isinstance(filters, self.VectorSearchFilters)``,
+        # so the patched class must be a real type (a Mock is not a valid
+        # isinstance() argument). Use a stub class that records construction.
+        class StubVectorSearchFilters:
+            instances = []
+
+            def __init__(self, **kwargs):
+                self.kwargs = kwargs
+                StubVectorSearchFilters.instances.append(self)
+
+        with patch('services.rag.vector.VectorSearchService'):
+            with patch('services.rag.vector.VectorSearchFilters', StubVectorSearchFilters):
                 backend = PgVectorBackend()
                 backend.service = mock_service_instance
-                
+
                 query_vector = [0.1, 0.2, 0.3]
                 filters = {'source': 'test', 'min_similarity': 0.8}
-                
+
                 results = backend.search(query_vector, k=10, filters=filters)
-                
+
                 assert len(results) == 1
                 mock_service_instance.search.assert_called_once()
+                # Dict filters should have been converted to the filter type.
+                assert len(StubVectorSearchFilters.instances) == 1
+                assert StubVectorSearchFilters.instances[0].kwargs['source'] == 'test'
     
     def test_health_check_success(self):
         """Test successful health check"""
-        mock_service_instance = Mock()
-        
-        with patch('services.vector_service.VectorSearchService'):
+        mock_service_instance = MagicMock()
+
+        with patch('services.rag.vector.VectorSearchService'):
             backend = PgVectorBackend()
             backend.service = mock_service_instance
             
@@ -217,10 +277,10 @@ class TestPgVectorBackend:
     
     def test_health_check_failure(self):
         """Test health check failure"""
-        mock_service_instance = Mock()
+        mock_service_instance = MagicMock()
         mock_service_instance.__enter__.side_effect = Exception('Connection failed')
         
-        with patch('services.vector_service.VectorSearchService'):
+        with patch('services.rag.vector.VectorSearchService'):
             backend = PgVectorBackend()
             backend.service = mock_service_instance
             
@@ -231,86 +291,116 @@ class TestPgVectorBackend:
 class TestQdrantBackend:
     """Tests for Qdrant vector backend"""
     
+    QDRANT_MODULE = 'services.embeddings.backends.qdrant_store'
+
     def test_initialization_success(self):
         """Test successful QdrantBackend initialization"""
-        with patch('services.vector_service.QdrantVectorStore') as mock_store:
+        mock_store_cls = Mock()
+        with fake_module(self.QDRANT_MODULE,
+                         QdrantVectorStore=mock_store_cls,
+                         QdrantSearchFilters=Mock()):
             backend = QdrantBackend()
             assert backend.store is not None
-            mock_store.assert_called_once()
-    
+            mock_store_cls.assert_called_once()
+
     def test_initialization_import_error(self):
         """Test QdrantBackend initialization with import error"""
-        with patch('services.vector_service.QdrantVectorStore', side_effect=ImportError('Qdrant not found')):
+        mock_store_cls = Mock(side_effect=ImportError('Qdrant not found'))
+        with fake_module(self.QDRANT_MODULE,
+                         QdrantVectorStore=mock_store_cls,
+                         QdrantSearchFilters=Mock()):
             with pytest.raises(ImportError, match="Qdrant backend requires"):
                 QdrantBackend()
-    
+
     def test_create_collection_delegation(self):
         """Test collection creation delegation to Qdrant store"""
         mock_store = Mock()
         mock_store.create_collection.return_value = True
-        
-        with patch('services.vector_service.QdrantVectorStore', return_value=mock_store):
+
+        with fake_module(self.QDRANT_MODULE,
+                         QdrantVectorStore=Mock(return_value=mock_store),
+                         QdrantSearchFilters=Mock()):
             backend = QdrantBackend()
             result = backend.create_collection(name='test', size=384)
-            
+
             assert result is True
             mock_store.create_collection.assert_called_once_with(name='test', size=384)
-    
+
     def test_upsert_delegation(self):
         """Test upsert delegation to Qdrant store"""
         mock_store = Mock()
         mock_store.upsert.return_value = 10
-        
+
         points = [{'id': '1', 'vector': [0.1, 0.2]}]
-        
-        with patch('services.vector_service.QdrantVectorStore', return_value=mock_store):
+
+        with fake_module(self.QDRANT_MODULE,
+                         QdrantVectorStore=Mock(return_value=mock_store),
+                         QdrantSearchFilters=Mock()):
             backend = QdrantBackend()
             result = backend.upsert(points)
-            
+
             assert result == 10
             mock_store.upsert.assert_called_once_with(points)
-    
+
     def test_search_with_filter_conversion(self):
         """Test search with filter conversion"""
         mock_store = Mock()
         mock_results = [Mock(id='1', similarity_score=0.95)]
         mock_store.search.return_value = mock_results
-        
-        with patch('services.vector_service.QdrantVectorStore', return_value=mock_store):
-            with patch('services.vector_service.QdrantSearchFilters'):
-                backend = QdrantBackend()
-                
-                query_vector = [0.1, 0.2, 0.3]
-                filters = {'source': 'test'}
-                
-                results = backend.search(query_vector, k=5, filters=filters)
-                
-                assert len(results) == 1
-                mock_store.search.assert_called_once()
-    
+
+        # The backend uses ``isinstance(filters, self.QdrantSearchFilters)``,
+        # so the injected class must be a real type (a Mock is not a valid
+        # isinstance() argument). Use a stub class that records construction.
+        class StubQdrantSearchFilters:
+            instances = []
+
+            def __init__(self, **kwargs):
+                self.kwargs = kwargs
+                StubQdrantSearchFilters.instances.append(self)
+
+        with fake_module(self.QDRANT_MODULE,
+                         QdrantVectorStore=Mock(return_value=mock_store),
+                         QdrantSearchFilters=StubQdrantSearchFilters):
+            backend = QdrantBackend()
+
+            query_vector = [0.1, 0.2, 0.3]
+            filters = {'source': 'test'}
+
+            results = backend.search(query_vector, k=5, filters=filters)
+
+            assert len(results) == 1
+            mock_store.search.assert_called_once()
+            # Dict filters should have been converted to the filter type.
+            assert len(StubQdrantSearchFilters.instances) == 1
+            assert StubQdrantSearchFilters.instances[0].kwargs['source'] == 'test'
+
     def test_delete_by_filter_delegation(self):
         """Test delete by filter delegation"""
         mock_store = Mock()
         mock_store.delete_by_filter.return_value = 3
-        
+
         filters = {'source': 'old_data'}
-        
-        with patch('services.vector_service.QdrantVectorStore', return_value=mock_store):
+
+        with fake_module(self.QDRANT_MODULE,
+                         QdrantVectorStore=Mock(return_value=mock_store),
+                         QdrantSearchFilters=Mock()):
             backend = QdrantBackend()
             result = backend.delete_by_filter(filters)
-            
+
             assert result == 3
             mock_store.delete_by_filter.assert_called_once_with(filters)
-    
+
     def test_health_check_delegation(self):
         """Test health check delegation"""
         mock_store = Mock()
         mock_store.health_check.return_value = True
-        
-        with patch('services.vector_service.QdrantVectorStore', return_value=mock_store):
+
+        with fake_module(self.QDRANT_MODULE,
+                         QdrantVectorStore=Mock(return_value=mock_store),
+                         QdrantSearchFilters=Mock()):
             backend = QdrantBackend()
             result = backend.health_check()
-            
+
             assert result is True
             mock_store.health_check.assert_called_once()
 
@@ -320,7 +410,7 @@ class TestEmbeddingProvider:
     
     def test_initialization_local_provider(self):
         """Test EmbeddingProvider initialization with local backend"""
-        with patch('services.embeddings.provider.LocalSentenceTransformersBackend') as mock_backend:
+        with patch('services.embeddings.backends.local_sentence_transformers.LocalSentenceTransformersBackend') as mock_backend:
             provider = EmbeddingProvider(provider='local')
             assert provider.provider_name == 'local'
             assert provider.backend is not None
@@ -328,7 +418,11 @@ class TestEmbeddingProvider:
     
     def test_initialization_openai_provider(self):
         """Test EmbeddingProvider initialization with OpenAI backend"""
-        with patch('services.embeddings.provider.OpenAIBackend') as mock_backend:
+        mock_backend = Mock()
+        # The real openai backend module requires the optional 'openai'
+        # package; inject a stub so the lazy import succeeds.
+        with fake_module('services.embeddings.backends.openai',
+                         OpenAIBackend=mock_backend):
             provider = EmbeddingProvider(provider='openai')
             assert provider.provider_name == 'openai'
             assert provider.backend is not None
@@ -341,7 +435,7 @@ class TestEmbeddingProvider:
     
     def test_deterministic_seed_setting(self):
         """Test deterministic seed is set correctly"""
-        with patch('services.embeddings.provider.LocalSentenceTransformersBackend'):
+        with patch('services.embeddings.backends.local_sentence_transformers.LocalSentenceTransformersBackend'):
             with patch('numpy.random.seed') as mock_seed:
                 EmbeddingProvider(provider='local', deterministic_seed=42)
                 mock_seed.assert_called_once_with(42)
@@ -351,7 +445,7 @@ class TestEmbeddingProvider:
         mock_backend = Mock()
         mock_backend.dim.return_value = 384
         
-        with patch('services.embeddings.provider.LocalSentenceTransformersBackend', return_value=mock_backend):
+        with patch('services.embeddings.backends.local_sentence_transformers.LocalSentenceTransformersBackend', return_value=mock_backend):
             provider = EmbeddingProvider(provider='local')
             result = provider.embed_texts([])
             
@@ -364,7 +458,7 @@ class TestEmbeddingProvider:
         mock_backend.embed_texts.return_value = mock_embeddings
         mock_backend.dim.return_value = 2
         
-        with patch('services.embeddings.provider.LocalSentenceTransformersBackend', return_value=mock_backend):
+        with patch('services.embeddings.backends.local_sentence_transformers.LocalSentenceTransformersBackend', return_value=mock_backend):
             provider = EmbeddingProvider(provider='local', batch_size=32)
             texts = ['text1', 'text2']
             result = provider.embed_texts(texts)
@@ -380,7 +474,7 @@ class TestEmbeddingProvider:
         mock_backend.embed_texts.side_effect = [batch1, batch2]
         mock_backend.dim.return_value = 2
         
-        with patch('services.embeddings.provider.LocalSentenceTransformersBackend', return_value=mock_backend):
+        with patch('services.embeddings.backends.local_sentence_transformers.LocalSentenceTransformersBackend', return_value=mock_backend):
             provider = EmbeddingProvider(provider='local', batch_size=1)
             texts = ['text1', 'text2']
             result = provider.embed_texts(texts)
@@ -398,7 +492,7 @@ class TestEmbeddingProvider:
         ]
         mock_backend.dim.return_value = 2
         
-        with patch('services.embeddings.provider.LocalSentenceTransformersBackend', return_value=mock_backend):
+        with patch('services.embeddings.backends.local_sentence_transformers.LocalSentenceTransformersBackend', return_value=mock_backend):
             provider = EmbeddingProvider(provider='local', max_retries=3)
             texts = ['text1']
             result = provider.embed_texts(texts)
@@ -412,7 +506,7 @@ class TestEmbeddingProvider:
         mock_backend = Mock()
         mock_backend.embed_texts.side_effect = Exception('Persistent failure')
         
-        with patch('services.embeddings.provider.LocalSentenceTransformersBackend', return_value=mock_backend):
+        with patch('services.embeddings.backends.local_sentence_transformers.LocalSentenceTransformersBackend', return_value=mock_backend):
             provider = EmbeddingProvider(provider='local', max_retries=2)
             texts = ['text1']
             
@@ -426,7 +520,7 @@ class TestEmbeddingProvider:
         mock_backend = Mock()
         mock_backend.dim.return_value = 768
         
-        with patch('services.embeddings.provider.LocalSentenceTransformersBackend', return_value=mock_backend):
+        with patch('services.embeddings.backends.local_sentence_transformers.LocalSentenceTransformersBackend', return_value=mock_backend):
             provider = EmbeddingProvider(provider='local')
             dim = provider.dim()
             
@@ -438,7 +532,7 @@ class TestEmbeddingProvider:
         mock_backend = Mock()
         mock_backend.name.return_value = 'all-MiniLM-L6-v2'
         
-        with patch('services.embeddings.provider.LocalSentenceTransformersBackend', return_value=mock_backend):
+        with patch('services.embeddings.backends.local_sentence_transformers.LocalSentenceTransformersBackend', return_value=mock_backend):
             provider = EmbeddingProvider(provider='local')
             name = provider.name()
             
@@ -516,7 +610,7 @@ class TestEdgeCasesAndErrorHandling:
         mock_backend.embed_texts.return_value = np.array([[0.1, 0.2]])
         mock_backend.dim.return_value = 2
         
-        with patch('services.embeddings.provider.LocalSentenceTransformersBackend', return_value=mock_backend):
+        with patch('services.embeddings.backends.local_sentence_transformers.LocalSentenceTransformersBackend', return_value=mock_backend):
             # Test with batch size larger than text count
             provider = EmbeddingProvider(provider='local', batch_size=100)
             result = provider.embed_texts(['single_text'])

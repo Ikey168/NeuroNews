@@ -428,7 +428,7 @@ class TestEventTimelineAPI:
             return mock_service
 
         # Override dependency
-        router.dependency_overrides[get_event_timeline_service] = mock_get_service
+        client.app.dependency_overrides[get_event_timeline_service] = mock_get_service
 
         try:
             response = client.get(
@@ -458,7 +458,7 @@ class TestEventTimelineAPI:
             assert data["visualization_included"] is True
 
         finally:
-            router.dependency_overrides.clear()
+            client.app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(
@@ -472,7 +472,7 @@ class TestEventTimelineAPI:
         async def mock_get_service():
             return mock_service
 
-        router.dependency_overrides[get_event_timeline_service] = mock_get_service
+        client.app.dependency_overrides[get_event_timeline_service] = mock_get_service
 
         try:
             # Test with invalid date format
@@ -495,7 +495,7 @@ class TestEventTimelineAPI:
                                                                          "detail"]
 
         finally:
-            router.dependency_overrides.clear()
+            client.app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(
@@ -507,7 +507,7 @@ class TestEventTimelineAPI:
         async def mock_get_service():
             return mock_service
 
-        router.dependency_overrides[get_event_timeline_service] = mock_get_service
+        client.app.dependency_overrides[get_event_timeline_service] = mock_get_service
 
         try:
             request_data = {
@@ -539,7 +539,7 @@ class TestEventTimelineAPI:
             assert isinstance(data["processing_time"], float)
 
         finally:
-            router.dependency_overrides.clear()
+            client.app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(
@@ -551,7 +551,7 @@ class TestEventTimelineAPI:
         async def mock_get_service():
             return mock_service
 
-        router.dependency_overrides[get_event_timeline_service] = mock_get_service
+        client.app.dependency_overrides[get_event_timeline_service] = mock_get_service
 
         try:
             response = client.get(
@@ -577,7 +577,7 @@ class TestEventTimelineAPI:
             assert data["visualization_type"] == "timeline"
 
         finally:
-            router.dependency_overrides.clear()
+            client.app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(
@@ -589,7 +589,7 @@ class TestEventTimelineAPI:
         async def mock_get_service():
             return mock_service
 
-        router.dependency_overrides[get_event_timeline_service] = mock_get_service
+        client.app.dependency_overrides[get_event_timeline_service] = mock_get_service
 
         try:
             response = client.get(
@@ -606,7 +606,7 @@ class TestEventTimelineAPI:
             assert "events" in data
 
         finally:
-            router.dependency_overrides.clear()
+            client.app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(
@@ -618,7 +618,7 @@ class TestEventTimelineAPI:
         async def mock_get_service():
             return mock_service
 
-        router.dependency_overrides[get_event_timeline_service] = mock_get_service
+        client.app.dependency_overrides[get_event_timeline_service] = mock_get_service
 
         try:
             response = client.get(
@@ -630,7 +630,7 @@ class TestEventTimelineAPI:
             assert "attachment" in response.headers["content-disposition"]
 
         finally:
-            router.dependency_overrides.clear()
+            client.app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(
@@ -642,7 +642,7 @@ class TestEventTimelineAPI:
         async def mock_get_service():
             return mock_service
 
-        router.dependency_overrides[get_event_timeline_service] = mock_get_service
+        client.app.dependency_overrides[get_event_timeline_service] = mock_get_service
 
         try:
             response = client.get(
@@ -659,7 +659,7 @@ class TestEventTimelineAPI:
             assert "Test Topic" in html_content
 
         finally:
-            router.dependency_overrides.clear()
+            client.app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(
@@ -671,7 +671,7 @@ class TestEventTimelineAPI:
         async def mock_get_service():
             return mock_service
 
-        router.dependency_overrides[get_event_timeline_service] = mock_get_service
+        client.app.dependency_overrides[get_event_timeline_service] = mock_get_service
 
         try:
             response = client.get(
@@ -683,7 +683,7 @@ class TestEventTimelineAPI:
             assert "Format must be one o" in response.json()["detail"]
 
         finally:
-            router.dependency_overrides.clear()
+            client.app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(
@@ -695,7 +695,7 @@ class TestEventTimelineAPI:
         async def mock_get_service():
             return mock_service
 
-        router.dependency_overrides[get_event_timeline_service] = mock_get_service
+        client.app.dependency_overrides[get_event_timeline_service] = mock_get_service
 
         try:
             response = client.get(
@@ -715,7 +715,7 @@ class TestEventTimelineAPI:
             assert "insights" in data
 
         finally:
-            router.dependency_overrides.clear()
+            client.app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(

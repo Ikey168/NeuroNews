@@ -267,7 +267,9 @@ def _make_conn():
             document_id VARCHAR NOT NULL,
             source_type VARCHAR NOT NULL,
             confidence DOUBLE,
-            extracted_at VARCHAR
+            extracted_at VARCHAR,
+            attributed BOOLEAN,
+            attribution_text VARCHAR
         )
     """)
     conn.execute("""

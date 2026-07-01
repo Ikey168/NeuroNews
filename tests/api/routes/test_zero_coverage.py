@@ -4,16 +4,31 @@ Focus on improving test coverage for real, accessible endpoints.
 """
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-# Import the actual app
+# Under the test harness ``conftest.py`` sets ``TESTING=true`` which makes the
+# module-level ``src.api.app.app`` a minimal app that only serves ``/`` and
+# ``/health`` (every other path -> 404). Tests that need a specific real route
+# mount its router on a fresh app via ``_client_with_router``.
 from src.api.app import app
 
 
 @pytest.fixture
 def test_client():
-    """Create a test client using the actual app."""
+    """Create a test client using the actual (minimal, test-mode) app."""
     return TestClient(app)
+
+
+def _client_with_router(router):
+    """Return a TestClient for a fresh app with a single real router mounted.
+
+    No security middleware is added, so the router returns its real
+    business-logic status (its own auth ``Depends`` may still yield 401).
+    """
+    fresh = FastAPI()
+    fresh.include_router(router)
+    return TestClient(fresh, raise_server_exceptions=False)
 
 
 class TestRoutesForMaximumCoverage:
@@ -34,9 +49,14 @@ class TestRoutesForMaximumCoverage:
         # Test non-existent route
         response = test_client.get("/api/v1/nonexistent")
         assert response.status_code == 404
-        
-        # Test malformed requests
-        response = test_client.post("/api/keys/generate", json={"invalid": "data"})
+
+        # Test malformed request against the real api-key router mounted on a
+        # fresh app. ``/api/keys/generate`` requires auth, so an unauthenticated
+        # request returns 401 (or 422 for a malformed body / 500 on backend
+        # error).
+        from src.api.routes import api_key_routes
+        client = _client_with_router(api_key_routes.router)
+        response = client.post("/api/keys/generate", json={"invalid": "data"})
         assert response.status_code in [400, 401, 422, 500]
 
     def test_route_coverage_improvements(self, test_client):
@@ -91,8 +111,11 @@ class TestSecurityAndErrorPaths:
 
     def test_authentication_paths(self, test_client):
         """Test authentication-related paths."""
-        # Test protected endpoints without auth
-        response = test_client.get("/api/keys/")
+        # Test the protected api-key listing endpoint on a fresh app with the
+        # real router mounted. Without credentials it returns 401.
+        from src.api.routes import api_key_routes
+        client = _client_with_router(api_key_routes.router)
+        response = client.get("/api/keys/")
         assert response.status_code in [200, 401, 403, 500]
 
     def test_error_handler_coverage(self, test_client):

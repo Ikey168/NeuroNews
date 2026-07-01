@@ -111,9 +111,10 @@ class TestSurgicalPrecision:
             }
             
             result = pipeline.process_article(test_content)
-            
-            # Should handle the exception and continue
-            assert result is not None
+
+            # The exception is caught in process_article, which rejects the
+            # article and returns None.
+            assert result is None
 
     def test_date_validation_boundary_conditions_lines_634_636(self):
         """Test specific date validation boundary conditions."""

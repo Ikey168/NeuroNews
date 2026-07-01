@@ -13,7 +13,7 @@ import os
 import sys
 import tempfile
 from datetime import datetime, timezone
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
@@ -82,7 +82,16 @@ class TestS3ArticleStorage:
 
         assert storage.config == s3_config
         assert storage.bucket_name == s3_config.bucket_name
-        mock_boto3.assert_called_once_with("s3", region_name=s3_config.region)
+        # The storage layer creates clients via src.utils.local_cloud.get_client,
+        # which injects local emulator credentials and resolves the region. It
+        # also passes a fail-fast botocore Config object we deliberately do not
+        # pin here, so assert on the meaningful kwargs instead of the exact set.
+        mock_boto3.assert_called_once()
+        call_args, call_kwargs = mock_boto3.call_args
+        assert call_args == ("s3",)
+        assert call_kwargs["region_name"] == s3_config.region
+        assert call_kwargs["aws_access_key_id"] == "local"
+        assert call_kwargs["aws_secret_access_key"] == "local"
 
     @patch("boto3.client")
     def test_generate_s3_key_raw_article(
@@ -122,6 +131,7 @@ class TestS3ArticleStorage:
 
         assert hash_result == expected_hash
 
+    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_store_raw_article_success(
         self, mock_boto3, s3_config, mock_s3_client, sample_article
@@ -141,6 +151,7 @@ class TestS3ArticleStorage:
 
         mock_s3_client.put_object.assert_called_once()
 
+    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_store_raw_article_missing_fields(
         self, mock_boto3, s3_config, mock_s3_client
@@ -154,6 +165,7 @@ class TestS3ArticleStorage:
         with pytest.raises(ValueError, match="Missing required fields"):
             await storage.store_raw_article(incomplete_article)
 
+    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_store_processed_article_success(
         self, mock_boto3, s3_config, mock_s3_client, sample_article
@@ -179,6 +191,7 @@ class TestS3ArticleStorage:
 
         mock_s3_client.put_object.assert_called_once()
 
+    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_retrieve_article_success(
         self, mock_boto3, s3_config, mock_s3_client
@@ -199,6 +212,7 @@ class TestS3ArticleStorage:
             Bucket=s3_config.bucket_name, Key="test/key.json"
         )
 
+    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_verify_article_integrity_success(
         self, mock_boto3, s3_config, mock_s3_client
@@ -219,6 +233,7 @@ class TestS3ArticleStorage:
 
         assert is_valid is True
 
+    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_verify_article_integrity_failure(
         self, mock_boto3, s3_config, mock_s3_client
@@ -237,6 +252,7 @@ class TestS3ArticleStorage:
 
         assert is_valid is False
 
+    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_list_articles_by_date(self, mock_boto3, s3_config, mock_s3_client):
         """Test listing articles by date."""
@@ -259,6 +275,7 @@ class TestS3ArticleStorage:
         assert len(articles) == 2
         assert all("2025/8/13" in key for key in articles)
 
+    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_batch_store_raw_articles(
         self, mock_boto3, s3_config, mock_s3_client
@@ -283,6 +300,7 @@ class TestS3ArticleStorage:
         assert all(isinstance(r, ArticleMetadata) for r in results)
         assert mock_s3_client.put_object.call_count == 3
 
+    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_get_storage_statistics(self, mock_boto3, s3_config, mock_s3_client):
         """Test getting storage statistics."""
@@ -307,6 +325,7 @@ class TestS3ArticleStorage:
         assert "total_count" in stats
         assert isinstance(stats["raw_articles"]["count"], int)
 
+    @pytest.mark.asyncio
     @patch("boto3.client")
     async def test_s3_client_unavailable(self, mock_boto3, s3_config):
         """Test behavior when S3 client is unavailable."""
@@ -322,6 +341,7 @@ class TestS3ArticleStorage:
             )
 
 
+@pytest.mark.asyncio
 class TestS3IngestionFunctions:
     """Test suite for S3 ingestion functions."""
 
@@ -351,26 +371,30 @@ class TestS3IngestionFunctions:
         """Test successful article ingestion."""
         # Mock storage instance
         mock_storage = Mock()
-        mock_storage.batch_store_raw_articles.return_value = [
-            ArticleMetadata(
-                article_id="id{0}".format(i),
-                source="test-source",
-                url="https://example.com/article{0}".format(i),
-                title="Article {0}".format(i),
-                published_date="2025-8-13",
-                scraped_date="2025-8-13T10:0:00Z",
-                content_hash="hash",
-                file_size=1000,
-                s3_key="raw_articles/2025/8/13/id{0].json".format(i),
-                article_type=ArticleType.RAW,
-                processing_status="stored",
-            )
-            for i in range(5)
-        ]
-        mock_storage.get_storage_statistics.return_value = {
-            "total_count": 5,
-            "raw_articles": {"count": 5},
-        }
+        mock_storage.batch_store_raw_articles = AsyncMock(
+            return_value=[
+                ArticleMetadata(
+                    article_id="id{0}".format(i),
+                    source="test-source",
+                    url="https://example.com/article{0}".format(i),
+                    title="Article {0}".format(i),
+                    published_date="2025-8-13",
+                    scraped_date="2025-8-13T10:0:00Z",
+                    content_hash="hash",
+                    file_size=1000,
+                    s3_key="raw_articles/2025/8/13/id{0}.json".format(i),
+                    article_type=ArticleType.RAW,
+                    processing_status="stored",
+                )
+                for i in range(5)
+            ]
+        )
+        mock_storage.get_storage_statistics = AsyncMock(
+            return_value={
+                "total_count": 5,
+                "raw_articles": {"count": 5},
+            }
+        )
         mock_storage_class.return_value = mock_storage
 
         result = await ingest_scraped_articles_to_s3(sample_articles, s3_config)
@@ -397,12 +421,16 @@ class TestS3IngestionFunctions:
         """Test successful data consistency verification."""
         # Mock storage instance
         mock_storage = Mock()
-        mock_storage.list_articles_by_prefix.return_value = [
-            "raw_articles/2025/8/13/article1.json",
-            "raw_articles/2025/8/13/article2.json",
-        ]
-        mock_storage.verify_article_integrity.return_value = True
-        mock_storage.get_storage_statistics.return_value = {"total_count": 2}
+        mock_storage.list_articles_by_prefix = AsyncMock(
+            return_value=[
+                "raw_articles/2025/8/13/article1.json",
+                "raw_articles/2025/8/13/article2.json",
+            ]
+        )
+        mock_storage.verify_article_integrity = AsyncMock(return_value=True)
+        mock_storage.get_storage_statistics = AsyncMock(
+            return_value={"total_count": 2}
+        )
         mock_storage_class.return_value = mock_storage
 
         result = await verify_s3_data_consistency(s3_config, sample_size=10)
@@ -420,18 +448,22 @@ class TestS3IngestionFunctions:
         """Test data consistency verification with some failures."""
         # Mock storage instance
         mock_storage = Mock()
-        mock_storage.list_articles_by_prefix.return_value = [
-            "raw_articles/2025/8/13/article1.json",
-            "raw_articles/2025/8/13/article2.json",
-        ]
+        mock_storage.list_articles_by_prefix = AsyncMock(
+            return_value=[
+                "raw_articles/2025/8/13/article1.json",
+                "raw_articles/2025/8/13/article2.json",
+            ]
+        )
 
         # Mock integrity check to return False for one article
 
         def mock_verify(key):
             return "article1" in key
 
-        mock_storage.verify_article_integrity.side_effect = mock_verify
-        mock_storage.get_storage_statistics.return_value = {"total_count": 2}
+        mock_storage.verify_article_integrity = AsyncMock(side_effect=mock_verify)
+        mock_storage.get_storage_statistics = AsyncMock(
+            return_value={"total_count": 2}
+        )
         mock_storage_class.return_value = mock_storage
 
         result = await verify_s3_data_consistency(s3_config, sample_size=10)

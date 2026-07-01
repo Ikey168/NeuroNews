@@ -16,8 +16,7 @@ class TestSurgicalCoverage:
 
     @pytest.mark.asyncio
     @patch('redis.asyncio.from_url')
-    @patch('neo4j.GraphDatabase.driver')
-    async def test_specific_line_coverage_121_123(self, mock_neo4j, mock_redis):
+    async def test_specific_line_coverage_121_123(self, mock_redis):
         """Target lines 121-123."""
         try:
             from src.api.graph.optimized_api import OptimizedGraphAPI
@@ -40,78 +39,61 @@ class TestSurgicalCoverage:
 
     @pytest.mark.asyncio
     @patch('redis.asyncio.from_url')
-    @patch('neo4j.GraphDatabase.driver')
-    async def test_specific_line_coverage_189_195(self, mock_neo4j, mock_redis):
+    async def test_specific_line_coverage_189_195(self, mock_redis):
         """Target lines 189-195."""
         try:
             from src.api.graph.optimized_api import OptimizedGraphAPI
-            
+
+            # Setup to trigger cache storage error handling: redis setex fails.
             redis_mock = AsyncMock()
-            neo4j_mock = MagicMock()
-            session_mock = MagicMock()
-            
-            # Setup to trigger lines 189-195 (cache storage error handling)
             redis_mock.get.return_value = None
             redis_mock.setex.side_effect = Exception("Redis storage failed")
-            session_mock.run.return_value = [MagicMock()]
-            session_mock.__aenter__ = AsyncMock(return_value=session_mock)
-            session_mock.__aexit__ = AsyncMock(return_value=None)
-            
-            neo4j_mock.session.return_value = session_mock
             mock_redis.return_value = redis_mock
-            mock_neo4j.return_value = neo4j_mock
-            
+
             graph_builder_mock = MagicMock()
             api = OptimizedGraphAPI(graph_builder=graph_builder_mock)
             api.redis_client = redis_mock
-            api.neo4j_driver = neo4j_mock
-            
-            # This should trigger cache storage error in lines 189-195
-            if hasattr(api, 'get_related_entities_optimized'):
-                result = await api.get_related_entities_optimized("test_entity")
-                # Should still work despite cache error
-                
+
+            # _store_in_cache must catch the redis error and return False.
+            result = await api._store_in_cache("test_key", {"data": "test"})
+            assert result is False
+
         except ImportError:
             pytest.skip("Lines 189-195 not available")
 
     @pytest.mark.asyncio
     @patch('redis.asyncio.from_url')
-    @patch('neo4j.GraphDatabase.driver')
-    async def test_specific_line_coverage_229_247(self, mock_neo4j, mock_redis):
+    async def test_specific_line_coverage_229_247(self, mock_redis):
         """Target lines 229-247 (retry logic)."""
         try:
             from src.api.graph.optimized_api import OptimizedGraphAPI
-            
+
             redis_mock = AsyncMock()
-            neo4j_mock = MagicMock()
-            session_mock = MagicMock()
-            
-            # Setup retry scenario for lines 229-247
+            redis_mock.get.return_value = None
+            mock_redis.return_value = redis_mock
+
+            # Setup retry scenario: the graph traversal fails twice, then
+            # succeeds on the third attempt (retry_attempts defaults to 3).
             attempt_count = 0
-            def failing_run(*args, **kwargs):
+
+            async def failing_traversal(*args, **kwargs):
                 nonlocal attempt_count
                 attempt_count += 1
                 if attempt_count < 3:
                     raise Exception("Temporary failure")
-                return [MagicMock()]
-            
-            session_mock.run.side_effect = failing_run
-            session_mock.__aenter__ = AsyncMock(return_value=session_mock)
-            session_mock.__aexit__ = AsyncMock(return_value=None)
-            
-            neo4j_mock.session.return_value = session_mock
-            mock_redis.return_value = redis_mock
-            mock_neo4j.return_value = neo4j_mock
-            
+                return []
+
             graph_builder_mock = MagicMock()
+            graph_builder_mock._execute_traversal = failing_traversal
+
             api = OptimizedGraphAPI(graph_builder=graph_builder_mock)
-            api.neo4j_driver = neo4j_mock
-            
-            # This should trigger retry logic in lines 229-247
-            if hasattr(api, 'search_entities_optimized'):
-                result = await api.search_entities_optimized("test query")
-                assert attempt_count >= 3  # Confirms retry happened
-                
+            api.redis_client = redis_mock
+
+            # This should trigger retry logic in _execute_optimized_query.
+            result = await api._execute_optimized_query(MagicMock(), "retry test")
+            assert attempt_count >= 3  # Confirms retry happened
+            assert result == []
+
         except ImportError:
             pytest.skip("Lines 229-247 not available")
 
@@ -253,29 +235,17 @@ class TestSurgicalCoverage:
 
     @pytest.mark.asyncio
     @patch('redis.asyncio.from_url')
-    @patch('neo4j.GraphDatabase.driver')
-    async def test_specific_line_coverage_449_540(self, mock_neo4j, mock_redis):
+    async def test_specific_line_coverage_449_540(self, mock_redis):
         """Target lines 449-540 (advanced operations)."""
         try:
             from src.api.graph.optimized_api import OptimizedGraphAPI
-            
+
             redis_mock = AsyncMock()
-            neo4j_mock = MagicMock()
-            session_mock = MagicMock()
-            
-            # Setup comprehensive mocks for lines 449-540
-            session_mock.run.return_value = [MagicMock() for _ in range(5)]
-            session_mock.__aenter__ = AsyncMock(return_value=session_mock)
-            session_mock.__aexit__ = AsyncMock(return_value=None)
-            
-            neo4j_mock.session.return_value = session_mock
             mock_redis.return_value = redis_mock
-            mock_neo4j.return_value = neo4j_mock
-            
+
             graph_builder_mock = MagicMock()
             api = OptimizedGraphAPI(graph_builder=graph_builder_mock)
-            api.neo4j_driver = neo4j_mock
-            
+
             # Test methods that cover lines 449-540
             advanced_methods = [
                 ('get_entity_subgraph', ['entity_123', 2]),  # depth parameter

@@ -1,45 +1,52 @@
 #!/usr/bin/env python3
+"""Import smoke tests for the evaluation-framework modules (Issue #235).
+
+Each test asserts that a public entry point imports and resolves to a real
+object under its current module path. Modules whose hard dependency (mlflow)
+is not installed are skipped via ``pytest.importorskip`` -- an absent package
+is treated the same way an absent external service would be.
+"""
+
 import sys
-import os
-import traceback
+from pathlib import Path
 
-# Add the project root to Python path
-sys.path.insert(0, '/workspaces/NeuroNews')
+import pytest
 
-print("Testing imports for Issue #235 evaluation framework...")
-print("=" * 60)
+# Repo root is two levels up from this file: <repo>/tests/unit/<file>
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-try:
-    print("1. Testing embeddings provider import...")
+
+def test_embedding_provider_import():
+    """services.embeddings.provider.EmbeddingProvider imports."""
     from services.embeddings.provider import EmbeddingProvider
-    print("✅ EmbeddingProvider import successful")
-except Exception as e:
-    print(f"❌ EmbeddingProvider import failed: {e}")
-    traceback.print_exc()
 
-try:
-    print("\\n2. Testing RAG answer service import...")
+    assert isinstance(EmbeddingProvider, type)
+
+
+def test_rag_answer_service_import():
+    """services.rag.answer.RAGAnswerService imports (requires mlflow)."""
+    pytest.importorskip("mlflow", reason="RAG answer service requires mlflow")
+
     from services.rag.answer import RAGAnswerService
-    print("✅ RAGAnswerService import successful")
-except Exception as e:
-    print(f"❌ RAGAnswerService import failed: {e}")
-    traceback.print_exc()
 
-try:
-    print("\\n3. Testing MLflow tracking import...")
+    assert isinstance(RAGAnswerService, type)
+
+
+def test_mlflow_tracking_import():
+    """services.mlops.tracking.mlrun imports (requires mlflow)."""
+    pytest.importorskip("mlflow", reason="mlops tracking requires mlflow")
+
     from services.mlops.tracking import mlrun
-    print("✅ MLflow tracking import successful")
-except Exception as e:
-    print(f"❌ MLflow tracking import failed: {e}")
-    traceback.print_exc()
 
-try:
-    print("\\n4. Testing API routes import...")
+    assert callable(mlrun)
+
+
+def test_api_ask_routes_import():
+    """services.api.routes.ask public symbols import."""
     from services.api.routes.ask import AskRequest, ask_question, get_rag_service
-    print("✅ API routes import successful")
-except Exception as e:
-    print(f"❌ API routes import failed: {e}")
-    traceback.print_exc()
 
-print("\\n" + "=" * 60)
-print("Import testing complete!")
+    assert isinstance(AskRequest, type)
+    assert callable(ask_question)
+    assert callable(get_rag_service)

@@ -3,6 +3,7 @@
 import json
 import os
 import sys
+import types
 from pathlib import Path
 
 import pytest
@@ -11,7 +12,15 @@ ROOT = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-pytest.importorskip("mlflow")
+# services.mlops.data_manifest does ``import mlflow`` at module import time, but
+# mlflow is only used inside log_to_mlflow (not exercised by these tests, which
+# cover hashing / scanning / manifest generation / validation only). Provide a
+# lightweight stub so the module imports even when mlflow isn't installed. If a
+# real mlflow is present, prefer it and don't shadow it.
+try:  # pragma: no cover - depends on environment
+    import mlflow  # noqa: F401
+except ImportError:
+    sys.modules.setdefault("mlflow", types.ModuleType("mlflow"))
 
 from services.mlops.data_manifest import DataManifestGenerator  # noqa: E402
 

@@ -35,18 +35,15 @@ class TestPhase1OptimizedGraphAPIComplete:
             pytest.skip("OptimizedGraphAPI not available")
 
     @patch('redis.asyncio.from_url')
-    @patch('neo4j.GraphDatabase.driver')
-    def test_initialization_comprehensive(self, mock_neo4j, mock_redis):
+    def test_initialization_comprehensive(self, mock_redis):
         """Test comprehensive initialization scenarios."""
         try:
             from src.api.graph.optimized_api import OptimizedGraphAPI, CacheConfig, QueryOptimizationConfig
-            
+
             # Setup mocks
             redis_mock = AsyncMock()
-            neo4j_mock = MagicMock()
             mock_redis.return_value = redis_mock
-            mock_neo4j.return_value = neo4j_mock
-            
+
             # Test 1: Default initialization
             graph_builder_mock = MagicMock()
             api1 = OptimizedGraphAPI(graph_builder=graph_builder_mock)
@@ -308,17 +305,14 @@ class TestPhase1OptimizedGraphAPIComplete:
 
     @pytest.mark.asyncio
     @patch('redis.asyncio.from_url')
-    @patch('neo4j.GraphDatabase.driver')
-    async def test_performance_monitoring(self, mock_neo4j, mock_redis):
+    async def test_performance_monitoring(self, mock_redis):
         """Test performance monitoring functionality."""
         try:
             from src.api.graph.optimized_api import OptimizedGraphAPI
-            
+
             redis_mock = AsyncMock()
-            neo4j_mock = MagicMock()
             mock_redis.return_value = redis_mock
-            mock_neo4j.return_value = neo4j_mock
-            
+
             graph_builder_mock = MagicMock()
             api = OptimizedGraphAPI(graph_builder=graph_builder_mock)
             
@@ -342,35 +336,27 @@ class TestPhase1OptimizedGraphAPIComplete:
     
     @pytest.mark.asyncio
     @patch('redis.asyncio.from_url')
-    @patch('neo4j.GraphDatabase.driver')
-    async def test_async_operations_comprehensive(self, mock_neo4j, mock_redis):
+    async def test_async_operations_comprehensive(self, mock_redis):
         """Test comprehensive async operations."""
         try:
             from src.api.graph.optimized_api import OptimizedGraphAPI
-            
+
             # Setup mocks
             redis_mock = AsyncMock()
             redis_mock.get.return_value = None
             redis_mock.set.return_value = True
             redis_mock.ping.return_value = True
-            
-            neo4j_mock = MagicMock()
-            session_mock = MagicMock()
-            session_mock.__aenter__ = AsyncMock(return_value=session_mock)
-            session_mock.__aexit__ = AsyncMock(return_value=None)
-            session_mock.run.return_value = [MagicMock()]
-            neo4j_mock.session.return_value = session_mock
-            
+
             mock_redis.return_value = redis_mock
-            mock_neo4j.return_value = neo4j_mock
-            
+
             graph_builder_mock = MagicMock()
             api = OptimizedGraphAPI(graph_builder=graph_builder_mock)
             
-            # Test async initialization
+            # Test async initialization. The current source returns a bool:
+            # True when Redis connects, False when it falls back to memory cache.
             if hasattr(api, 'initialize'):
                 result = await api.initialize()
-                assert result is None or result is True
+                assert isinstance(result, bool)
                 
             # Test async graph operations
             async_methods = [
@@ -401,29 +387,15 @@ class TestPhase1OptimizedGraphAPIComplete:
     
     @pytest.mark.asyncio
     @patch('redis.asyncio.from_url')
-    @patch('neo4j.GraphDatabase.driver')
-    async def test_graph_operations_detailed(self, mock_neo4j, mock_redis):
+    async def test_graph_operations_detailed(self, mock_redis):
         """Test detailed graph operations."""
         try:
             from src.api.graph.optimized_api import OptimizedGraphAPI
-            
+
             # Setup mocks
             redis_mock = AsyncMock()
-            neo4j_mock = MagicMock()
-            session_mock = MagicMock()
-            
-            # Mock realistic results
-            record_mock = MagicMock()
-            record_mock.data.return_value = {'node': {'id': 1, 'properties': {}}}
-            record_mock.get.return_value = {'id': 1, 'properties': {}}
-            session_mock.run.return_value = [record_mock]
-            session_mock.__aenter__ = AsyncMock(return_value=session_mock)
-            session_mock.__aexit__ = AsyncMock(return_value=None)
-            
-            neo4j_mock.session.return_value = session_mock
             mock_redis.return_value = redis_mock
-            mock_neo4j.return_value = neo4j_mock
-            
+
             # Setup graph builder with relationships
             graph_builder_mock = MagicMock()
             graph_builder_mock.get_entity_relationships.return_value = [

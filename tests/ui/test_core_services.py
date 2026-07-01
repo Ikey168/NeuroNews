@@ -61,7 +61,7 @@ class TestDataService:
     """Test DataService - Data management and processing"""
     
     @pytest.fixture
-    def mock_vector_service(self, mock_core_dependencies):
+    def mock_vector_service(self):
         """Mock vector service"""
         try:
             from services.vector_service import UnifiedVectorService

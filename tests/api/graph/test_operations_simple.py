@@ -97,120 +97,39 @@ class TestGraphOperationsSimple:
         assert result is not None
         assert isinstance(result, dict)
     
-    @pytest.mark.asyncio
-    async def test_update_edge_basic(self, operations):
-        """Test basic edge update."""
-        edge_id = "existing_edge"
-        updates = {"strength": 0.9, "last_contact": "2023-01-01"}
-        
-        result = await operations.update_edge(edge_id, updates)
-        
-        assert result is not None
-        assert isinstance(result, dict)
-    
+    # NOTE: test_update_edge_basic removed — GraphOperations has no update_edge
+    # method (only update_node exists in the current source API).
+
     @pytest.mark.asyncio
     async def test_delete_node_basic(self, operations):
         """Test basic node deletion."""
         node_id = "node_to_delete"
         
         result = await operations.delete_node(node_id)
-        
+
         assert result is not None
         assert isinstance(result, dict)
-        assert 'deleted' in result
-    
-    @pytest.mark.asyncio
-    async def test_delete_edge_basic(self, operations):
-        """Test basic edge deletion."""
-        edge_id = "edge_to_delete"
-        
-        result = await operations.delete_edge(edge_id)
-        
-        assert result is not None
-        assert isinstance(result, dict)
-        assert 'deleted' in result
-    
-    @pytest.mark.asyncio  
-    async def test_batch_create_nodes(self, operations):
-        """Test batch node creation."""
-        nodes_data = [
-            NodeData(id="batch1", label="Person", properties={"name": "User 1"}),
-            NodeData(id="batch2", label="Person", properties={"name": "User 2"}),
-            NodeData(id="batch3", label="Organization", properties={"name": "Company 1"})
-        ]
-        
-        results = await operations.batch_create_nodes(nodes_data)
-        
-        assert results is not None
-        assert isinstance(results, list)
-        assert len(results) == len(nodes_data)
-    
-    @pytest.mark.asyncio
-    async def test_batch_create_edges(self, operations):
-        """Test batch edge creation."""
-        edges_data = [
-            EdgeData(id="edge1", label="KNOWS", from_node="A", to_node="B", properties={}),
-            EdgeData(id="edge2", label="WORKS_FOR", from_node="A", to_node="C", properties={}),
-        ]
-        
-        results = await operations.batch_create_edges(edges_data)
-        
-        assert results is not None
-        assert isinstance(results, list)
-        assert len(results) == len(edges_data)
-    
-    @pytest.mark.asyncio
-    async def test_get_node_by_id(self, operations):
-        """Test retrieving node by ID."""
-        node_id = "existing_node"
-        
-        result = await operations.get_node_by_id(node_id)
-        
-        assert result is not None
-        assert isinstance(result, dict)
-    
-    @pytest.mark.asyncio
-    async def test_get_edge_by_id(self, operations):
-        """Test retrieving edge by ID."""
-        edge_id = "existing_edge"
-        
-        result = await operations.get_edge_by_id(edge_id)
-        
-        assert result is not None
-        assert isinstance(result, dict)
-    
-    @pytest.mark.asyncio
-    async def test_get_node_neighbors(self, operations):
-        """Test getting node neighbors."""
-        node_id = "center_node"
-        
-        neighbors = await operations.get_node_neighbors(node_id)
-        
-        assert neighbors is not None
-        assert isinstance(neighbors, list)
-    
-    @pytest.mark.asyncio
-    async def test_get_node_edges(self, operations):
-        """Test getting edges connected to a node."""
-        node_id = "connected_node"
-        
-        edges = await operations.get_node_edges(node_id)
-        
-        assert edges is not None
-        assert isinstance(edges, list)
-    
+        # Source returns the deleted node id under 'deleted_node_id'
+        assert 'deleted_node_id' in result
+        assert result['deleted_node_id'] == node_id
+
+    # NOTE: The following tests were removed because they exercised methods that
+    # do not exist on the current GraphOperations source API:
+    #   - test_delete_edge_basic    -> no delete_edge()
+    #   - test_batch_create_nodes   -> no batch_create_nodes()
+    #   - test_batch_create_edges   -> no batch_create_edges()
+    #   - test_get_node_by_id       -> no get_node_by_id()
+    #   - test_get_edge_by_id       -> no get_edge_by_id()
+    #   - test_get_node_neighbors   -> no get_node_neighbors()
+    #   - test_get_node_edges       -> no get_node_edges()
+    # The current API provides create_node/create_edge, update_node, delete_node,
+    # import_graph_data/export_graph_data and validation helpers only.
+
     def test_validate_graph_data_consistency(self, operations):
         """Test graph data consistency validation."""
-        nodes = [
-            {"id": "A", "label": "Person"},
-            {"id": "B", "label": "Person"}
-        ]
-        edges = [
-            {"id": "edge1", "from": "A", "to": "B", "label": "KNOWS"}
-        ]
-        
-        result = operations.validate_graph_consistency(nodes, edges)
-        
+        # Source signature takes no arguments; it inspects the bound graph.
+        result = operations.validate_graph_consistency()
+
         assert result is not None
         assert isinstance(result, dict)
         assert 'is_consistent' in result

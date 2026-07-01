@@ -24,7 +24,7 @@ class TestDataValidationPipeline:
         assert hasattr(pipeline, 'html_cleaner')
         assert hasattr(pipeline, 'content_validator')
         assert hasattr(pipeline, 'duplicate_detector')
-        assert hasattr(pipeline, 'source_reputation_analyzer')
+        assert hasattr(pipeline, 'source_analyzer')
     
     def test_process_article_comprehensive(self):
         """Test comprehensive article processing scenarios"""
@@ -141,7 +141,7 @@ class TestHTMLCleaner:
         from src.database.data_validation_pipeline import HTMLCleaner
         
         cleaner = HTMLCleaner()
-        assert hasattr(cleaner, 'clean_html')
+        assert hasattr(cleaner, 'clean_content')
     
     def test_clean_html_comprehensive(self):
         """Test HTML cleaning with various content types"""
@@ -217,7 +217,7 @@ class TestHTMLCleaner:
         </div>
         '''
         
-        cleaned = cleaner.clean_html(content_with_scripts)
+        cleaned = cleaner.clean_content(content_with_scripts)
         assert 'maliciousFunction' not in cleaned
         assert 'malicious-style' not in cleaned
         assert 'This content should remain' in cleaned
@@ -374,7 +374,7 @@ class TestDuplicateDetector:
         from src.database.data_validation_pipeline import DuplicateDetector
         
         detector = DuplicateDetector()
-        assert hasattr(detector, 'check_duplicate')
+        assert hasattr(detector, 'is_duplicate')
     
     def test_check_duplicate_scenarios(self):
         """Test duplicate detection with various scenarios"""
@@ -512,8 +512,18 @@ class TestSourceReputationAnalyzer:
             SourceReputationAnalyzer, SourceReputationConfig
         )
         
-        # Test with default configuration
-        config = SourceReputationConfig()
+        # Test with an explicit configuration
+        config = SourceReputationConfig(
+            trusted_domains=['bbc.com', 'reuters.com'],
+            questionable_domains=['tabloid.com'],
+            banned_domains=['fake-news.com'],
+            reputation_thresholds={
+                'trusted': 0.9,
+                'reliable': 0.7,
+                'questionable': 0.4,
+                'unreliable': 0.2,
+            },
+        )
         analyzer = SourceReputationAnalyzer(config)
         assert hasattr(analyzer, 'analyze_source')
         assert analyzer.config == config
@@ -665,7 +675,13 @@ class TestSourceReputationAnalyzer:
         config = SourceReputationConfig(
             trusted_domains=['trusted.com'],
             questionable_domains=['questionable.com'],
-            banned_domains=['banned.com']
+            banned_domains=['banned.com'],
+            reputation_thresholds={
+                'trusted': 0.9,
+                'reliable': 0.7,
+                'questionable': 0.4,
+                'unreliable': 0.2,
+            }
         )
         
         analyzer = SourceReputationAnalyzer(config)

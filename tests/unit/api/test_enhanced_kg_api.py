@@ -21,7 +21,7 @@ from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
 # Import the API routes and dependencies
@@ -149,7 +149,7 @@ class TestEnhancedKnowledgeGraphAPI:
             return mock_populator
 
         # Override dependency
-        router.dependency_overrides[get_enhanced_graph_populator] = mock_get_populator
+        client.app.dependency_overrides[get_enhanced_graph_populator] = mock_get_populator
 
         try:
             # Make request
@@ -189,7 +189,7 @@ class TestEnhancedKnowledgeGraphAPI:
 
         finally:
             # Clean up dependency override
-            router.dependency_overrides.clear()
+            client.app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(
@@ -201,7 +201,7 @@ class TestEnhancedKnowledgeGraphAPI:
         async def mock_get_populator():
             return mock_populator
 
-        router.dependency_overrides[get_enhanced_graph_populator] = mock_get_populator
+        client.app.dependency_overrides[get_enhanced_graph_populator] = mock_get_populator
 
         try:
             # Test with empty entity name
@@ -224,7 +224,7 @@ class TestEnhancedKnowledgeGraphAPI:
             assert response.status_code == 422  # Validation error
 
         finally:
-            router.dependency_overrides.clear()
+            client.app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(
@@ -236,7 +236,7 @@ class TestEnhancedKnowledgeGraphAPI:
         async def mock_get_populator():
             return mock_populator
 
-        router.dependency_overrides[get_enhanced_graph_populator] = mock_get_populator
+        client.app.dependency_overrides[get_enhanced_graph_populator] = mock_get_populator
 
         try:
             response = client.get(
@@ -271,7 +271,7 @@ class TestEnhancedKnowledgeGraphAPI:
             assert "end_date" in timeline_span
 
         finally:
-            router.dependency_overrides.clear()
+            client.app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(
@@ -283,7 +283,7 @@ class TestEnhancedKnowledgeGraphAPI:
         async def mock_get_populator():
             return mock_populator
 
-        router.dependency_overrides[get_enhanced_graph_populator] = mock_get_populator
+        client.app.dependency_overrides[get_enhanced_graph_populator] = mock_get_populator
 
         try:
             # Test with invalid start date
@@ -306,7 +306,7 @@ class TestEnhancedKnowledgeGraphAPI:
             assert "Invalid end_date format" in response.json()["detail"]
 
         finally:
-            router.dependency_overrides.clear()
+            client.app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(
@@ -365,7 +365,7 @@ class TestEnhancedKnowledgeGraphAPI:
         async def mock_get_populator():
             return mock_populator
 
-        router.dependency_overrides[get_enhanced_graph_populator] = mock_get_populator
+        client.app.dependency_overrides[get_enhanced_graph_populator] = mock_get_populator
 
         try:
             response = client.get(
@@ -395,7 +395,7 @@ class TestEnhancedKnowledgeGraphAPI:
             assert data["mention_count"] == 150
 
         finally:
-            router.dependency_overrides.clear()
+            client.app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(
@@ -410,7 +410,7 @@ class TestEnhancedKnowledgeGraphAPI:
         async def mock_get_populator():
             return mock_populator
 
-        router.dependency_overrides[get_enhanced_graph_populator] = mock_get_populator
+        client.app.dependency_overrides[get_enhanced_graph_populator] = mock_get_populator
 
         try:
             response = client.get(
@@ -421,7 +421,7 @@ class TestEnhancedKnowledgeGraphAPI:
             assert "not found" in response.json()["detail"]
 
         finally:
-            router.dependency_overrides.clear()
+            client.app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(
@@ -452,7 +452,7 @@ class TestEnhancedKnowledgeGraphAPI:
         async def mock_get_populator():
             return mock_populator
 
-        router.dependency_overrides[get_enhanced_graph_populator] = mock_get_populator
+        client.app.dependency_overrides[get_enhanced_graph_populator] = mock_get_populator
 
         try:
             search_query = {
@@ -483,7 +483,7 @@ class TestEnhancedKnowledgeGraphAPI:
             assert len(data["results"]) == 2
 
         finally:
-            router.dependency_overrides.clear()
+            client.app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(
@@ -497,7 +497,7 @@ class TestEnhancedKnowledgeGraphAPI:
         async def mock_get_populator():
             return mock_populator
 
-        router.dependency_overrides[get_enhanced_graph_populator] = mock_get_populator
+        client.app.dependency_overrides[get_enhanced_graph_populator] = mock_get_populator
 
         try:
             search_query = {
@@ -516,7 +516,7 @@ class TestEnhancedKnowledgeGraphAPI:
             assert "Invalid query_type" in response.json()["detail"]
 
         finally:
-            router.dependency_overrides.clear()
+            client.app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(
@@ -538,7 +538,7 @@ class TestEnhancedKnowledgeGraphAPI:
         async def mock_get_populator():
             return mock_populator
 
-        router.dependency_overrides[get_enhanced_graph_populator] = mock_get_populator
+        client.app.dependency_overrides[get_enhanced_graph_populator] = mock_get_populator
 
         try:
             response = client.get(
@@ -562,7 +562,7 @@ class TestEnhancedKnowledgeGraphAPI:
             assert "entity_type_distribution" in analytics
 
         finally:
-            router.dependency_overrides.clear()
+            client.app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(
@@ -574,7 +574,7 @@ class TestEnhancedKnowledgeGraphAPI:
         async def mock_get_populator():
             return mock_populator
 
-        router.dependency_overrides[get_enhanced_graph_populator] = mock_get_populator
+        client.app.dependency_overrides[get_enhanced_graph_populator] = mock_get_populator
 
         try:
             response = client.get(
@@ -586,7 +586,7 @@ class TestEnhancedKnowledgeGraphAPI:
             assert "Invalid metric_type" in response.json()["detail"]
 
         finally:
-            router.dependency_overrides.clear()
+            client.app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(
@@ -598,7 +598,7 @@ class TestEnhancedKnowledgeGraphAPI:
         async def mock_get_populator():
             return mock_populator
 
-        router.dependency_overrides[get_enhanced_graph_populator] = mock_get_populator
+        client.app.dependency_overrides[get_enhanced_graph_populator] = mock_get_populator
 
         try:
             response = client.get(
@@ -625,7 +625,7 @@ class TestEnhancedKnowledgeGraphAPI:
             assert "results" in data["results"]
 
         finally:
-            router.dependency_overrides.clear()
+            client.app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(
@@ -637,7 +637,7 @@ class TestEnhancedKnowledgeGraphAPI:
         async def mock_get_populator():
             return mock_populator
 
-        router.dependency_overrides[get_enhanced_graph_populator] = mock_get_populator
+        client.app.dependency_overrides[get_enhanced_graph_populator] = mock_get_populator
 
         try:
             # Test with too short query
@@ -649,7 +649,7 @@ class TestEnhancedKnowledgeGraphAPI:
             assert "at least 10 characters long" in response.json()["detail"]
 
         finally:
-            router.dependency_overrides.clear()
+            client.app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(
@@ -678,12 +678,17 @@ class TestEnhancedKnowledgeGraphAPI:
     async def test_dependency_injection_failure(self, client):
         """Test API behavior when dependency injection fails."""
 
-        # Mock a failing dependency
+        # Mock a failing dependency. The real get_enhanced_graph_populator
+        # raises HTTPException(503, "Knowledge graph service not available: ...")
+        # when populator creation fails, so the override mirrors that behavior.
 
         async def failing_populator():
-            raise Exception("Service unavailable")
+            raise HTTPException(
+                status_code=503,
+                detail="Knowledge graph service not available: Service unavailable",
+            )
 
-        router.dependency_overrides[get_enhanced_graph_populator] = failing_populator
+        client.app.dependency_overrides[get_enhanced_graph_populator] = failing_populator
 
         try:
             response = client.get(
@@ -694,7 +699,7 @@ class TestEnhancedKnowledgeGraphAPI:
             assert "service not available" in response.json()["detail"].lower()
 
         finally:
-            router.dependency_overrides.clear()
+            client.app.dependency_overrides.clear()
 
 
 class TestAPIRequestValidation:

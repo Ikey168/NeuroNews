@@ -5,10 +5,22 @@ Uses an in-memory DuckDB database seeded with realistic fixture data.
 """
 from __future__ import annotations
 
+from datetime import date, datetime, timedelta
 from typing import Any
 
 import duckdb
 import pytest
+
+# The source queries use rolling, relative-to-now windows:
+#   - _fetch_coverage        filters news_articles.publish_date >= now - 90 days
+#   - list_source_trustworthiness (default) filters
+#     outlet_scores.computed_at >= now - 30 days
+# Hard-coded fixture dates therefore drift out of these windows as the clock
+# advances. Anchor the fixture data to "recent" dates computed at collection
+# time so the tests are stable on any run date.
+_TODAY = date.today()
+_RECENT_TS = (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d %H:%M:%S")
+_RECENT_DAY = (_TODAY - timedelta(days=2)).isoformat()
 
 
 # ---------------------------------------------------------------------------
@@ -67,34 +79,34 @@ CREATE TABLE source_stances (
 """
 
 _ARTICLES = [
-    # AI regulation articles — various sources
-    ("a1", "AI Regulation tightens globally", "http://bbc.example/1", "Governments across the world discuss AI Regulation policy.", "2026-06-01 10:00:00", "BBC World", "Technology", 0.1, "neutral"),
-    ("a2", "AI Regulation: what it means for you", "http://bbc.example/2", "A look at AI Regulation impacts.", "2026-06-02 10:00:00", "BBC World", "Technology", 0.3, "positive"),
-    ("a3", "AI Regulation threatens innovation", "http://nyt.example/1", "Critics of AI Regulation speak out.", "2026-06-03 10:00:00", "NYT Technology", "Technology", -0.4, "negative"),
-    ("a4", "AI Regulation: new rules incoming", "http://nyt.example/2", "AI Regulation in the US is advancing.", "2026-06-04 10:00:00", "NYT Technology", "Technology", -0.2, "negative"),
-    ("a5", "AI Regulation welcomed by experts", "http://guardian.example/1", "Experts praise AI Regulation steps.", "2026-06-05 10:00:00", "Guardian Technology", "Technology", 0.6, "positive"),
-    ("a6", "AI Regulation passes committee", "http://guardian.example/2", "AI Regulation bill passes.", "2026-06-06 10:00:00", "Guardian Technology", "Technology", 0.4, "positive"),
-    ("a7", "AI Regulation update", "http://guardian.example/3", "Latest AI Regulation news.", "2026-06-07 10:00:00", "Guardian Technology", "Technology", 0.2, "positive"),
+    # AI regulation articles — various sources (all within the 90-day window)
+    ("a1", "AI Regulation tightens globally", "http://bbc.example/1", "Governments across the world discuss AI Regulation policy.", _RECENT_TS, "BBC World", "Technology", 0.1, "neutral"),
+    ("a2", "AI Regulation: what it means for you", "http://bbc.example/2", "A look at AI Regulation impacts.", _RECENT_TS, "BBC World", "Technology", 0.3, "positive"),
+    ("a3", "AI Regulation threatens innovation", "http://nyt.example/1", "Critics of AI Regulation speak out.", _RECENT_TS, "NYT Technology", "Technology", -0.4, "negative"),
+    ("a4", "AI Regulation: new rules incoming", "http://nyt.example/2", "AI Regulation in the US is advancing.", _RECENT_TS, "NYT Technology", "Technology", -0.2, "negative"),
+    ("a5", "AI Regulation welcomed by experts", "http://guardian.example/1", "Experts praise AI Regulation steps.", _RECENT_TS, "Guardian Technology", "Technology", 0.6, "positive"),
+    ("a6", "AI Regulation passes committee", "http://guardian.example/2", "AI Regulation bill passes.", _RECENT_TS, "Guardian Technology", "Technology", 0.4, "positive"),
+    ("a7", "AI Regulation update", "http://guardian.example/3", "Latest AI Regulation news.", _RECENT_TS, "Guardian Technology", "Technology", 0.2, "positive"),
     # Unrelated article
-    ("a8", "Football results", "http://bbc.example/9", "Weekend football scores.", "2026-06-01 10:00:00", "BBC Sport", "Sports", 0.5, "positive"),
+    ("a8", "Football results", "http://bbc.example/9", "Weekend football scores.", _RECENT_TS, "BBC Sport", "Sports", 0.5, "positive"),
 ]
 
 _SCORES = [
-    ("BBC World", "news", "2026-06-01", 0.85, 0.90, 0.80, 0.85, 20, 5, "2026-06-01"),
-    ("NYT Technology", "news", "2026-06-01", 0.65, 0.70, 0.60, 0.65, 15, 3, "2026-06-01"),
-    ("Guardian Technology", "news", "2026-06-01", 0.78, 0.82, 0.74, 0.78, 18, 4, "2026-06-01"),
+    ("BBC World", "news", _RECENT_DAY, 0.85, 0.90, 0.80, 0.85, 20, 5, _RECENT_DAY),
+    ("NYT Technology", "news", _RECENT_DAY, 0.65, 0.70, 0.60, 0.65, 15, 3, _RECENT_DAY),
+    ("Guardian Technology", "news", _RECENT_DAY, 0.78, 0.82, 0.74, 0.78, 18, 4, _RECENT_DAY),
 ]
 
 _CLUSTERS = [
-    ("BBC World", "news", 1, "centrist", 0.1, 0.2, "policy", 20, "2026-06-01"),
-    ("NYT Technology", "news", 2, "market-focused", -0.3, 0.1, "economic", 15, "2026-06-01"),
-    ("Guardian Technology", "news", 1, "centrist", 0.2, 0.3, "policy", 18, "2026-06-01"),
+    ("BBC World", "news", 1, "centrist", 0.1, 0.2, "policy", 20, _RECENT_DAY),
+    ("NYT Technology", "news", 2, "market-focused", -0.3, 0.1, "economic", 15, _RECENT_DAY),
+    ("Guardian Technology", "news", 1, "centrist", 0.2, 0.3, "policy", 18, _RECENT_DAY),
 ]
 
 _STANCES = [
-    ("BBC World", "news", "AI Regulation", "neutral", 0.72, 2, "2026-05-01", "2026-06-01", "2026-06-01"),
-    ("NYT Technology", "news", "AI Regulation", "skeptical", 0.68, 2, "2026-05-01", "2026-06-01", "2026-06-01"),
-    ("Guardian Technology", "news", "AI Regulation", "supportive", 0.81, 3, "2026-05-01", "2026-06-01", "2026-06-01"),
+    ("BBC World", "news", "AI Regulation", "neutral", 0.72, 2, _RECENT_DAY, _RECENT_DAY, _RECENT_DAY),
+    ("NYT Technology", "news", "AI Regulation", "skeptical", 0.68, 2, _RECENT_DAY, _RECENT_DAY, _RECENT_DAY),
+    ("Guardian Technology", "news", "AI Regulation", "supportive", 0.81, 3, _RECENT_DAY, _RECENT_DAY, _RECENT_DAY),
 ]
 
 

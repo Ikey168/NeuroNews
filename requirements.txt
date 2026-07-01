@@ -28,6 +28,8 @@ fastavro>=1.12.0
 # NLP & Named Entity Recognition
 torch>=2.0.0
 transformers>=4.30.0
+# Required by transformers Trainer (PyTorch backend) used in fake-news fine-tuning
+accelerate>=1.1.0
 tokenizers>=0.13.0
 sentencepiece>=0.1.99
 sentence-transformers>=2.0.0

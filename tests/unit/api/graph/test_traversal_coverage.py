@@ -33,29 +33,24 @@ class TestTraversalCoverage:
     async def test_breadth_first_search_comprehensive(self):
         """Test BFS with various scenarios."""
         traversal = GraphTraversal()
-        
-        # Test without graph
+
+        # Test without graph (mock path). The mock BFS result populates
+        # ``visited_nodes`` with up to 10 synthetic node ids.
         result = await traversal.breadth_first_search("start_node")
         assert isinstance(result, TraversalResult)
-        assert result.nodes == ["start_node"]  # Should contain at least start node
-        
-        # Test with mock graph and neighbors
+        assert isinstance(result.visited_nodes, list)
+        assert len(result.visited_nodes) > 0
+
+        # Test with mock graph. The real BFS traverses ``g.V(id).both()``; the
+        # chained Mock cannot be awaited so neighbour expansion is skipped, and
+        # only the start node ends up visited.
         traversal.graph = Mock()
         traversal.graph.g = Mock()
-        
-        # Mock get_node_neighbors to return some neighbors
-        mock_neighbors_query = Mock()
-        mock_neighbors_query.valueMap = Mock()
-        mock_neighbors_query.valueMap.return_value.toList = AsyncMock(return_value=[
-            {"id": "neighbor1", "name": "Neighbor 1"},
-            {"id": "neighbor2", "name": "Neighbor 2"}
-        ])
-        traversal.graph.g.V.return_value.out.return_value = mock_neighbors_query
-        
+
         result = await traversal.breadth_first_search("start_node")
         assert isinstance(result, TraversalResult)
-        assert "start_node" in result.nodes
-        
+        assert "start_node" in result.visited_nodes
+
         # Test with custom config
         config = TraversalConfig(max_depth=2, max_results=10)
         result = await traversal.breadth_first_search("start_node", config=config)
@@ -65,48 +60,48 @@ class TestTraversalCoverage:
     async def test_depth_first_search_comprehensive(self):
         """Test DFS with various scenarios."""
         traversal = GraphTraversal()
-        
-        # Test without graph
+
+        # Test without graph (mock path). The mock DFS result populates
+        # ``visited_nodes`` with synthetic node ids.
         result = await traversal.depth_first_search("start_node")
         assert isinstance(result, TraversalResult)
-        assert result.nodes == ["start_node"]
-        
-        # Test with mock graph
+        assert isinstance(result.visited_nodes, list)
+        assert len(result.visited_nodes) > 0
+
+        # Test with mock graph. The chained Mock cannot be awaited so neighbour
+        # expansion is skipped and only the start node is visited.
         traversal.graph = Mock()
         traversal.graph.g = Mock()
-        mock_neighbors_query = Mock()
-        mock_neighbors_query.valueMap = Mock()
-        mock_neighbors_query.valueMap.return_value.toList = AsyncMock(return_value=[])
-        traversal.graph.g.V.return_value.out.return_value = mock_neighbors_query
-        
+
         result = await traversal.depth_first_search("start_node")
         assert isinstance(result, TraversalResult)
+        assert "start_node" in result.visited_nodes
         
     @pytest.mark.asyncio
     async def test_pathfinding_algorithms(self):
         """Test pathfinding methods."""
         traversal = GraphTraversal()
-        
-        # Test shortest path without graph
+
+        # Without a graph backend, the mock path returns a synthetic PathResult.
         result = await traversal.find_shortest_path("start", "end")
-        assert result is None
-        
-        # Test find all paths without graph
+        assert isinstance(result, PathResult)
+        assert result.start_node == "start"
+        assert result.end_node == "end"
+
+        # find_all_paths mock path returns up to ``max_paths`` synthetic paths.
         result = await traversal.find_all_paths("start", "end", max_paths=5)
-        assert result == []
-        
-        # Test with mock graph that has no connections
+        assert isinstance(result, list)
+        assert all(isinstance(p, PathResult) for p in result)
+        assert len(result) > 0
+
+        # Test with a mock graph whose neighbour expansion fails: the source
+        # logs the per-node error and finds no connections.
         traversal.graph = Mock()
         traversal.graph.g = Mock()
-        
-        mock_neighbors_query = Mock()
-        mock_neighbors_query.valueMap = Mock()
-        mock_neighbors_query.valueMap.return_value.toList = AsyncMock(return_value=[])
-        traversal.graph.g.V.return_value.out.return_value = mock_neighbors_query
-        
+
         result = await traversal.find_shortest_path("start", "end")
         assert result is None
-        
+
         result = await traversal.find_all_paths("start", "end", max_paths=3)
         assert result == []
         
@@ -114,37 +109,36 @@ class TestTraversalCoverage:
     async def test_neighbor_operations(self):
         """Test neighbor retrieval operations."""
         traversal = GraphTraversal()
-        
-        # Test without graph
+
+        # Without a graph backend, the mock path returns synthetic neighbours.
         neighbors = await traversal.get_node_neighbors("test_node")
-        assert neighbors == []
-        
-        # Test with graph but query error
+        assert isinstance(neighbors, list)
+        assert len(neighbors) > 0
+
+        # With a graph but a failing query, the source re-raises the error.
         traversal.graph = Mock()
         traversal.graph.g = Mock()
         mock_query = Mock()
         mock_query.valueMap = Mock()
         mock_query.valueMap.return_value.toList = AsyncMock(side_effect=Exception("Query error"))
-        traversal.graph.g.V.return_value.out.return_value = mock_query
-        
-        neighbors = await traversal.get_node_neighbors("test_node")
-        assert neighbors == []
-        
-        # Test get neighbors by relationship
-        neighbors = await traversal.get_neighbors_by_relationship("test_node", "KNOWS")
-        assert neighbors == []
-        
-        # Test with successful neighbors query
+        # Source uses ``g.V(id).both()`` for the default "both" direction.
+        traversal.graph.g.V.return_value.both.return_value = mock_query
+
+        with pytest.raises(Exception) as exc_info:
+            await traversal.get_node_neighbors("test_node")
+        assert "Query error" in str(exc_info.value)
+
+        # Test with a successful neighbours query (default "both" direction).
         traversal.graph = Mock()
         traversal.graph.g = Mock()
         mock_successful_query = Mock()
         mock_successful_query.valueMap = Mock()
         mock_successful_query.valueMap.return_value.toList = AsyncMock(return_value=[
-            {"id": "neighbor1", "name": "Alice"},
-            {"id": "neighbor2", "name": "Bob"}
+            {"id": "neighbor1", "name": ["Alice"]},
+            {"id": "neighbor2", "name": ["Bob"]},
         ])
-        traversal.graph.g.V.return_value.out.return_value = mock_successful_query
-        
+        traversal.graph.g.V.return_value.both.return_value = mock_successful_query
+
         neighbors = await traversal.get_node_neighbors("test_node")
         assert len(neighbors) == 2
         assert neighbors[0]["id"] == "neighbor1"
@@ -181,26 +175,30 @@ class TestTraversalCoverage:
     async def test_error_handling_scenarios(self):
         """Test error handling in various scenarios."""
         traversal = GraphTraversal()
-        
-        # Test with mock graph that raises exceptions
+
+        # Test with mock graph that raises exceptions during neighbour fetch.
         traversal.graph = Mock()
         traversal.graph.g = Mock()
-        
-        # Mock graph operations that fail
+
         mock_failing_query = Mock()
         mock_failing_query.valueMap = Mock()
         mock_failing_query.valueMap.return_value.toList = AsyncMock(side_effect=Exception("Graph connection error"))
-        traversal.graph.g.V.return_value.out.return_value = mock_failing_query
-        
-        # Test that errors are handled gracefully
+        traversal.graph.g.V.return_value.both.return_value = mock_failing_query
+
+        # BFS/DFS catch per-node neighbour errors and still return a result with
+        # the start node visited.
         result = await traversal.breadth_first_search("start")
         assert isinstance(result, TraversalResult)
-        
+        assert "start" in result.visited_nodes
+
         result = await traversal.depth_first_search("start")
         assert isinstance(result, TraversalResult)
-        
-        neighbors = await traversal.get_node_neighbors("test")
-        assert neighbors == []
+        assert "start" in result.visited_nodes
+
+        # get_node_neighbors propagates the error (it logs and re-raises).
+        with pytest.raises(Exception) as exc_info:
+            await traversal.get_node_neighbors("test")
+        assert "Graph connection error" in str(exc_info.value)
         
     @pytest.mark.asyncio
     async def test_result_creation_and_formatting(self):
@@ -278,17 +276,21 @@ class TestTraversalCoverage:
         assert path_result.path_length == 2
         assert path_result.total_weight == 1.5
         
-        # Test TraversalResult creation
+        # Test TraversalResult creation. The current dataclass exposes
+        # ``visited_nodes`` / ``traversal_depth`` / ``total_nodes`` (no
+        # ``nodes`` / ``edges`` fields).
         traversal_result = TraversalResult(
             start_node="A",
-            nodes=["A", "B", "C"],
-            edges=[("A", "B"), ("B", "C")],
+            visited_nodes=["A", "B", "C"],
+            traversal_depth=2,
+            total_nodes=3,
             execution_time=0.15,
             paths=[]  # Required parameter
         )
         assert traversal_result.start_node == "A"
-        assert traversal_result.nodes == ["A", "B", "C"]
-        assert traversal_result.edges == [("A", "B"), ("B", "C")]
+        assert traversal_result.visited_nodes == ["A", "B", "C"]
+        assert traversal_result.traversal_depth == 2
+        assert traversal_result.total_nodes == 3
         assert traversal_result.execution_time == 0.15
 
 

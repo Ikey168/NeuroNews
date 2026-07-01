@@ -34,19 +34,14 @@ class TestLightweightCoverage:
         except ImportError:
             pass
     
-    @patch('src.database.neo4j_connector.Neo4jConnector')
-    @patch('src.database.redshift_connector.RedshiftConnector')
-    def test_route_initialization_mocked(self, mock_redshift, mock_neo4j):
-        """Test route initialization with mocked dependencies."""
+    def test_route_initialization_mocked(self):
+        """Test route initialization for a route module."""
         try:
-            # Mock the heavy dependencies
-            mock_neo4j.return_value = Mock()
-            mock_redshift.return_value = Mock()
-            
-            # Test importing specific route modules
+            # Test importing specific route modules. api_key_routes is a
+            # lightweight router that does not pull heavy ML dependencies.
             from src.api.routes.api_key_routes import router as api_key_router
             assert api_key_router is not None
-            
+
         except ImportError as e:
             pytest.skip(f"Route import failed: {e}")
     
@@ -227,45 +222,30 @@ class TestOptimizedApiCoverage:
         except ImportError:
             pytest.skip("Optimized API module not available")
     
-    @patch('src.database.neo4j_connector.Neo4jConnector')
-    def test_optimized_api_functionality(self, mock_neo4j):
-        """Test optimized API functionality with mocked dependencies."""
+    def test_optimized_api_functionality(self):
+        """Test optimized API functionality with a mocked graph builder."""
         try:
             from src.api.graph.optimized_api import OptimizedGraphAPI
-            
-            # Mock Neo4j connector
-            mock_connector = Mock()
-            mock_neo4j.return_value = mock_connector
-            
-            # Create API instance
-            api = OptimizedGraphAPI()
-            
-            # Mock query results
-            mock_connector.run_query.return_value = [
-                {"entity": "Apple", "type": "ORGANIZATION"},
-                {"entity": "iPhone", "type": "PRODUCT"}
+
+            # OptimizedGraphAPI wraps a gremlin graph builder (its only
+            # required constructor argument), not a neo4j connector.
+            graph_builder = Mock()
+            api = OptimizedGraphAPI(graph_builder=graph_builder)
+            assert api.graph is graph_builder
+
+            # The async query methods that exist on the current API.
+            async_methods = [
+                "get_related_entities_optimized",
+                "search_entities_optimized",
+                "get_event_timeline_optimized",
             ]
-            
-            # Test various methods if they exist
-            methods_to_test = [
-                "get_related_entities",
-                "search_entities", 
-                "get_shortest_path",
-                "get_entity_neighbors",
-                "optimize_query"
-            ]
-            
-            for method_name in methods_to_test:
-                if hasattr(api, method_name):
-                    method = getattr(api, method_name)
-                    try:
-                        # Try calling with minimal parameters
-                        result = method("test_entity")
-                        assert result is not None
-                    except Exception:
-                        # Method might require specific parameters or be async
-                        pass
-            
+
+            import asyncio as _asyncio
+            for method_name in async_methods:
+                assert hasattr(api, method_name)
+                method = getattr(api, method_name)
+                assert _asyncio.iscoroutinefunction(method)
+
         except ImportError:
             pytest.skip("Optimized API module not available")
 
@@ -385,39 +365,32 @@ class TestAuthModuleCoverage:
             from src.api.auth.api_key_manager import APIKeyManager
             
             # Mock dependencies
+            import asyncio as _asyncio
+
             with patch('boto3.resource') as mock_boto:
                 mock_dynamodb = Mock()
                 mock_table = Mock()
                 mock_boto.return_value = mock_dynamodb
                 mock_dynamodb.Table.return_value = mock_table
-                
-                # Test manager initialization
-                manager = APIKeyManager(table_name="test_keys")
+
+                # Test manager initialization. The current APIKeyManager reads
+                # its table name from the API_KEYS_DYNAMODB_TABLE env var and
+                # takes no constructor arguments.
+                manager = APIKeyManager()
                 assert manager is not None
-                
-                # Mock table responses
-                mock_table.put_item.return_value = {}
-                mock_table.get_item.return_value = {
-                    "Item": {
-                        "api_key": "test-key",
-                        "user_id": "test-user",
-                        "created_at": "2024-01-01T00:00:00Z"
-                    }
-                }
-                mock_table.query.return_value = {"Items": []}
-                
-                # Test key operations
-                try:
-                    api_key = manager.generate_api_key("test-user")
-                    assert api_key is not None
-                    
-                    manager.validate_api_key("test-key")
-                    manager.revoke_api_key("test-key")
-                    manager.get_user_keys("test-user")
-                except AttributeError:
-                    # Methods might not exist or have different signatures
-                    pass
-            
+
+                # The key-management operations exposed by the current API, all
+                # implemented as async coroutines.
+                async_methods = [
+                    "generate_api_key",
+                    "verify_api_key",
+                    "revoke_api_key",
+                    "get_user_api_keys",
+                ]
+                for method_name in async_methods:
+                    assert hasattr(manager, method_name)
+                    assert _asyncio.iscoroutinefunction(getattr(manager, method_name))
+
         except ImportError:
             pytest.skip("API key manager not available")
     

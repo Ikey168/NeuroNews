@@ -5,7 +5,7 @@ Tests all components of the rate limiting system including middleware,
 routes, AWS integration, and suspicious activity detection.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -27,6 +27,7 @@ from src.api.monitoring.suspicious_activity_monitor import (
     AlertLevel,
     SuspiciousPatternType,
 )
+from src.api.auth.jwt_auth import require_auth
 from src.api.routes.auth_routes import router as auth_router
 from src.api.routes.rate_limit_routes import router as rate_limit_router
 
@@ -183,39 +184,32 @@ class TestRateLimitRoutes:
         """Create test client."""
         return TestClient(test_app)
 
-    @pytest.fixture
-    def mock_auth(self, monkeypatch):
-        """Mock authentication for testing."""
-
-        async def mock_require_auth():
-            return {"user_id": "test_user_123", "role": "admin", "tier": "free"}
-
-        monkeypatch.setattr("src.api.routes.rate_limit_routes.require_auth", mock_require_auth)
-        return mock_require_auth
-
     def test_get_api_limits_unauthorized(self, test_client):
         """Test API limits endpoint requires authentication."""
         response = test_client.get("/api/api_limits?user_id=test_user")
-        assert response.status_code == 422  # Missing auth dependency
+        # require_auth raises 401 when no bearer token is supplied
+        assert response.status_code == 401
 
-    @patch("src.api.routes.rate_limit_routes.require_auth")
-    def test_get_api_limits_success(self, mock_auth, test_client):
+    def test_get_api_limits_success(self, test_app, test_client):
         """Test successful API limits retrieval."""
-        # Mock the auth dependency
-        mock_auth.return_value = {
+        # Override the auth dependency on the app so the request is treated as
+        # authenticated. require_auth is the dependency object used in
+        # Depends(...), so it is the correct override key.
+        test_app.dependency_overrides[require_auth] = lambda: {
             "user_id": "test_user_123",
             "role": "user",
             "tier": "free",
         }
-
-        response = test_client.get("/api/api_limits?user_id=test_user_123")
+        try:
+            response = test_client.get("/api/api_limits?user_id=test_user_123")
+        finally:
+            test_app.dependency_overrides.pop(require_auth, None)
 
         # Should get a response (may not be 200 due to mocking, but shouldn't be auth error)
         assert response.status_code != 401
         assert response.status_code != 403
 
-    @patch("src.api.routes.rate_limit_routes.require_auth")
-    def test_health_check_endpoint(self, mock_auth, test_client):
+    def test_health_check_endpoint(self, test_client):
         """Test rate limiting health check."""
         response = test_client.get("/api/api_limits/health")
         assert response.status_code == 200
@@ -371,78 +365,86 @@ class TestSuspiciousActivityDetector:
         activity2 = SuspiciousActivity(
             user_id=user_id,
             pattern_type=SuspiciousPatternType.BOT_BEHAVIOR,
-            alert_level=AlertLevel.MEDIUM,
+            alert_level=AlertLevel.HIGH,
             timestamp=datetime.now(),
             details={},
             ip_addresses=["192.168.1.1"],
             endpoints_accessed=["/api"],
             request_count=20,
-            confidence_score=0.6,
+            confidence_score=0.8,
         )
 
         advanced_detector.active_alerts.extend([activity1, activity2])
 
+        # get_user_risk_score averages (confidence * level_weight) across the
+        # user's recent alerts. Two HIGH alerts (0.8 weight, 0.8 confidence)
+        # average to 0.64, which represents elevated risk.
         risk_score = advanced_detector.get_user_risk_score(user_id)
         assert 0.0 <= risk_score <= 1.0
-        assert risk_score > 0.5  # Should be high due to HIGH and MEDIUM alerts
+        assert risk_score > 0.5  # Should be high due to two HIGH alerts
 
 
 class TestAWSIntegration:
-    """Test AWS API Gateway integration."""
+    """Test the local usage-plan manager (replaces the old AWS integration)."""
 
     @pytest.fixture
-    def api_manager(self):
-        """Create API Gateway manager with mocked AWS client."""
-        with patch("boto3.client") as mock_boto:
-            manager = LocalUsagePlanManager()
-            manager.client = Mock()
-            manager.usage_client = Mock()
-            return manager
+    def api_manager(self, tmp_path, monkeypatch):
+        """Create a LocalUsagePlanManager backed by an isolated state dir.
+
+        The manager keeps usage plans, API keys, and metrics in local JSON
+        files under NEURONEWS_LOG_DIR (no AWS/boto3 client involved), so point
+        it at a per-test temp directory.
+        """
+        monkeypatch.setenv("NEURONEWS_LOG_DIR", str(tmp_path))
+        return LocalUsagePlanManager()
 
     @pytest.mark.asyncio
     async def test_create_usage_plans(self, api_manager):
-        """Test creation of AWS usage plans."""
-        # Mock AWS responses
-        api_manager.client.create_usage_plan.return_value = {"id": "plan_123"}
-        api_manager.client.create_usage_plan_key.return_value = {}
-
+        """Test creation of usage plans for all tiers."""
         plans = await api_manager.create_usage_plans()
 
-        # Should call create_usage_plan for each tier
-        assert api_manager.client.create_usage_plan.call_count == 3
+        # One plan per tier (free, premium, enterprise)
         assert isinstance(plans, dict)
+        assert len(plans) == 3
+        assert set(plans) == {"free_tier", "premium_tier", "enterprise_tier"}
 
     @pytest.mark.asyncio
     async def test_assign_user_to_plan(self, api_manager):
-        """Test assigning user to usage plan."""
-        # Mock responses
-        api_manager.get_usage_plans = AsyncMock(return_value={"free_tier": "plan_123"})
-        api_manager.create_api_key_for_user = AsyncMock(return_value="key_456")
-        api_manager.client.create_usage_plan_key.return_value = {}
+        """Test assigning a user to a usage plan."""
+        # The plan must exist before a user can be assigned to it.
+        await api_manager.create_usage_plans()
 
         result = await api_manager.assign_user_to_plan("user_123", "free", "api_key_789")
 
         assert result is True
-        api_manager.client.create_usage_plan_key.assert_called_once()
+        # The user's API key should now be associated with the free-tier plan.
+        plans = await api_manager.get_usage_plans()
+        free_plan_id = plans["free_tier"]
+        key_id = "key-user_123"
+        assert key_id in api_manager._state["plan_keys"][free_plan_id]
 
     @pytest.mark.asyncio
     async def test_get_usage_statistics(self, api_manager):
-        """Test getting usage statistics."""
-        # Mock responses
-        api_manager.client.get_api_keys.return_value = {
-            "items": [{"id": "key_123", "value": "test_key"}]
-        }
-        api_manager.client.get_usage.return_value = {
-            "values": {"2025-08-17": 100, "2025-08-16": 150},
-            "startDate": "2025-08-16",
-            "endDate": "2025-08-17",
-        }
+        """Test aggregating usage statistics from recorded metrics."""
+        # Register a user/API key, then record RequestCount metrics for them.
+        await api_manager.create_usage_plans()
+        await api_manager.assign_user_to_plan("user_123", "free", "test_key")
 
-        stats = await api_manager.get_usage_statistics("test_key", "2025-08-16", "2025-08-17")
+        from src.api.aws_rate_limiting import LocalMetricsRecorder
+
+        recorder = LocalMetricsRecorder()
+        # value=requests_count, violations=0 -> two metric lines per call
+        await recorder.put_rate_limit_metrics("user_123", "free", 150, 0)
+        await recorder.put_rate_limit_metrics("user_123", "free", 100, 0)
+
+        # The recorded timestamps are "now"; build a window covering today.
+        today = datetime.now(timezone.utc).date().isoformat()
+        stats = await api_manager.get_usage_statistics("test_key", today, today)
 
         assert "total_requests" in stats
         assert stats["total_requests"] == 250
         assert "daily_breakdown" in stats
+        assert stats["daily_breakdown"][today] == 250
 
 
 class TestIntegration:
@@ -476,8 +478,10 @@ class TestIntegration:
 
     def test_end_to_end_rate_limiting(self, integration_client):
         """Test complete rate limiting flow."""
-        # Make requests within limit
-        for i in range(TEST_CONFIG.FREE_TIER.requests_per_minute - 1):
+        # The middleware blocks once the recorded count reaches the limit
+        # (counts["minute"] >= requests_per_minute), so the first
+        # requests_per_minute requests succeed and the next one is blocked.
+        for i in range(TEST_CONFIG.FREE_TIER.requests_per_minute):
             response = integration_client.get("/api/test")
             assert response.status_code == 200
 

@@ -290,7 +290,7 @@ class FakeNewsDetector:
             warmup_steps=500,
             weight_decay=0.01,
             logging_dir="{0}/logs".format(output_dir),
-            evaluation_strategy="epoch",
+            eval_strategy="epoch",
             save_strategy="epoch",
             load_best_model_at_end=True,
             metric_for_best_model="accuracy",
