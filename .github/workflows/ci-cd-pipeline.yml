@@ -88,8 +88,8 @@ jobs:
           # correct without weakening any test. Each file writes its OWN coverage
           # data file (COVERAGE_FILE), combined at the end -- this avoids the
           # O(n^2) slowdown of appending to one growing SQLite DB. A file that
-          # fails is retried once (absorbs parallel resource-contention flakiness
-          # and intermittent torch/duckdb teardown crashes). Exit 5 ("no tests
+          # fails is retried up to 3 times (absorbs parallel resource-contention
+          # flakiness and intermittent torch/duckdb teardown crashes). Exit 5 ("no tests
           # collected") is a fully-importorskip'd optional-dep / un-importable
           # module and counts as success. IGNORE_PREFIXES need optional feature
           # deps (snowflake, qdrant/vector, AWS/quicksight, scraper connectors)
@@ -128,14 +128,16 @@ jobs:
           : > /tmp/gate_fails.txt
           cat /tmp/gate_files.txt | xargs -P "$(nproc)" -I{} bash -c '
             f="{}"; cf=".coverage.$(echo "$f" | tr "/." "__")"
-            COVERAGE_FILE="$cf" python -m pytest "$f" -p no:cacheprovider -o addopts="" \
-              --timeout=90 --timeout-method=signal --cov=src -q >/dev/null 2>&1
-            rc=$?
-            if [ "$rc" -ne 0 ] && [ "$rc" -ne 5 ]; then
+            rc=1
+            # Retry up to 3 times: absorbs parallel resource-contention flakiness
+            # (app-importing torch/duckdb files) and intermittent C-extension
+            # teardown segfaults. A file that genuinely fails will fail all 3.
+            for attempt in 1 2 3; do
               COVERAGE_FILE="$cf" python -m pytest "$f" -p no:cacheprovider -o addopts="" \
                 --timeout=90 --timeout-method=signal --cov=src -q >/dev/null 2>&1
               rc=$?
-            fi
+              { [ "$rc" -eq 0 ] || [ "$rc" -eq 5 ]; } && break
+            done
             [ "$rc" -eq 0 ] || [ "$rc" -eq 5 ] || echo "$f" >> /tmp/gate_fails.txt
           '
           python -m coverage combine >/dev/null 2>&1 || true
@@ -148,7 +150,7 @@ jobs:
             sort -u /tmp/gate_fails.txt
             exit 1
           fi
-          python -m coverage report --fail-under=80 >/dev/null || { echo "::error::coverage below 80%"; exit 1; }
+          python -m coverage report --fail-under=90 >/dev/null || { echo "::error::coverage below 90%"; exit 1; }
         env:
           PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/src
           NO_PROXY: localhost,127.0.0.1

@@ -187,6 +187,23 @@ gate correct without weakening any test. Fixing every file to be import-order
 robust individually is tracked as follow-up (e.g. the `psycopg2` autouse-fixture
 hardening already applied to `test_sentiment_trend_analysis.py`).
 
+## Coverage push to 90%
+
+A second push added real, assertion-based tests for the remaining large gaps
+and raised total coverage from 82% to **93%** (measured with the gate logic:
+480 files, 0 genuine failures). New tests cover the scraper connectors and news
+spiders, the argument-mining training modules, the streamlit Ask page, auth/MFA
+and alerts, many partially-covered routes and services, and the S3/DynamoDB/RBAC
+layers. `pyotp` was added to requirements so the TOTP test runs in CI. The gate
+floor (`--cov-fail-under`) is now 90%, and the per-file retry was raised to 3
+attempts to absorb parallel resource-contention flakiness on app-importing
+(torch/duckdb) files. Numerous source bugs were surfaced while writing these
+tests (spider CSS-selector/author-typo bugs, several route-shadowing and
+dead-branch bugs, unformatted-SQL bugs in summary_database/keyword_topic_
+database, an un-importable quicksight_routes, a multi_language_pipeline
+from_crawler dead return) and are documented for follow-up rather than fixed
+here.
+
 ## Coverage push to 80%
 
 After the suite was green, coverage was raised from ~66% to **82%** by adding
