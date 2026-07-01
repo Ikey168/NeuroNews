@@ -1,113 +1,75 @@
 #!/usr/bin/env python3
-"""
-Simple test to verify DoD requirements for the tracking helper.
+"""Verify DoD requirements for the MLflow tracking helper.
 
-This script tests that:
-1. mlrun context manager works
-2. Standard tags are applied
-3. Run is visible in MLflow UI
+This exercises a live MLflow tracking server (the ``mlrun`` context manager
+logs a run and reads it back via ``MlflowClient``). It requires:
+  * the ``mlflow`` package -- skipped if absent, and
+  * a reachable MLflow tracking server -- skipped via a connectivity probe if
+    genuinely unreachable (an external service is an absent dependency).
 """
 
-import sys
+import importlib.util
 import os
+import socket
+import sys
 from pathlib import Path
 
-# Add project root to path
-project_root = Path(__file__).parent
-sys.path.insert(0, str(project_root))
+import pytest
 
-try:
-    from services.mlops.tracking import mlrun, setup_mlflow_env
-except ImportError as _e:  # stale or optional dependency
-    import pytest
-    pytest.skip("module import failed: {0}".format(_e), allow_module_level=True)
-import mlflow
+# Repo root is two levels up: <repo>/tests/unit/<file>
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+TRACKING_URI = os.environ.get("MLFLOW_TRACKING_URI", "http://localhost:5001")
+
+_HAS_MLFLOW = importlib.util.find_spec("mlflow") is not None
 
 
-def test_dod_requirements():
-    """Test DoD requirements."""
-    print("🧪 Testing DoD requirements...")
-    
-    # Setup MLflow environment
-    setup_mlflow_env("http://localhost:5001", "dod-test")
-    
+def _mlflow_server_available(uri: str) -> bool:
+    """Probe the MLflow tracking server; report False if unreachable."""
+    from urllib.parse import urlparse
+
+    parsed = urlparse(uri)
+    host = parsed.hostname or "localhost"
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(1.0)
     try:
-        # Test mlrun context manager with standard tags
-        with mlrun("dod-test-run", tags={"test": "dod"}) as run:
-            # Log a parameter and metric
-            mlflow.log_param("test_param", "dod_value")
-            mlflow.log_metric("test_metric", 0.95)
-            
-            print(f"✅ Run created with ID: {run.info.run_id}")
-            
-            # Verify standard tags are set
-            from mlflow.tracking import MlflowClient
-            client = MlflowClient()
-            run_data = client.get_run(run.info.run_id)
-            
-            expected_tags = ["git.sha", "git.branch", "env", "hostname", "code_version"]
-            missing_tags = []
-            
-            for tag in expected_tags:
-                if tag not in run_data.data.tags:
-                    missing_tags.append(tag)
-            
-            if missing_tags:
-                print(f"❌ Missing standard tags: {missing_tags}")
-                return False
-            else:
-                print("✅ All standard tags present")
-            
-            # Verify custom tag
-            if "test" not in run_data.data.tags or run_data.data.tags["test"] != "dod":
-                print("❌ Custom tag not set correctly")
-                return False
-            else:
-                print("✅ Custom tag set correctly")
-            
-            # Verify parameters and metrics
-            if "test_param" not in run_data.data.params:
-                print("❌ Parameter not logged")
-                return False
-            else:
-                print("✅ Parameter logged correctly")
-            
-            if "test_metric" not in run_data.data.metrics:
-                print("❌ Metric not logged")
-                return False
-            else:
-                print("✅ Metric logged correctly")
-            
-            print("\n📊 Run details:")
-            print(f"  Experiment: {run_data.info.experiment_id}")
-            print(f"  Run ID: {run_data.info.run_id}")
-            print(f"  Status: {run_data.info.status}")
-            print(f"  Standard tags: {[tag for tag in expected_tags if tag in run_data.data.tags]}")
-            print(f"  MLflow UI: http://localhost:5001/#/experiments/{run_data.info.experiment_id}/runs/{run_data.info.run_id}")
-            
-            return True
-            
-    except Exception as e:
-        print(f"❌ Test failed: {e}")
-        return False
+        return sock.connect_ex((host, int(port))) == 0
+    finally:
+        sock.close()
 
 
-def main():
-    """Main test function."""
-    print("🎯 DoD Requirements Test")
-    print("=" * 40)
-    
-    success = test_dod_requirements()
-    
-    print("\n" + "=" * 40)
-    if success:
-        print("🎉 All DoD requirements satisfied!")
-        print("📊 Check MLflow UI: http://localhost:5001")
-        sys.exit(0)
-    else:
-        print("❌ DoD requirements not satisfied")
-        sys.exit(1)
+@pytest.mark.skipif(not _HAS_MLFLOW, reason="MLflow tracking helper requires mlflow")
+@pytest.mark.skipif(
+    not _mlflow_server_available(TRACKING_URI),
+    reason=f"MLflow tracking server not reachable at {TRACKING_URI}; DoD "
+    "tracking test requires a live MLflow server",
+)
+def test_dod_requirements():
+    """Standard tags, custom tag, params and metrics are recorded for a run."""
+    from services.mlops.tracking import mlrun, setup_mlflow_env
+    import mlflow
+    from mlflow.tracking import MlflowClient
 
+    setup_mlflow_env(TRACKING_URI, "dod-test")
 
-if __name__ == "__main__":
-    main()
+    with mlrun("dod-test-run", tags={"test": "dod"}) as run:
+        mlflow.log_param("test_param", "dod_value")
+        mlflow.log_metric("test_metric", 0.95)
+
+        client = MlflowClient()
+        run_data = client.get_run(run.info.run_id)
+
+        # Standard tags applied by the tracking helper.
+        expected_tags = ["git.sha", "git.branch", "env", "hostname", "code_version"]
+        missing_tags = [t for t in expected_tags if t not in run_data.data.tags]
+        assert not missing_tags, f"Missing standard tags: {missing_tags}"
+
+        # Custom tag passed through.
+        assert run_data.data.tags.get("test") == "dod"
+
+        # Parameter and metric recorded.
+        assert "test_param" in run_data.data.params
+        assert "test_metric" in run_data.data.metrics

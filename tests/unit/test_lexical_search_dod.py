@@ -37,12 +37,14 @@ def _postgres_available() -> bool:
         sock.close()
 
 
-if not _postgres_available():
-    pytest.skip(
-        "PostgreSQL FTS backend not reachable; lexical search integration tests require a live DB",
-        allow_module_level=True,
-    )
+requires_postgres = pytest.mark.skipif(
+    not _postgres_available(),
+    reason="PostgreSQL FTS backend not reachable; lexical search integration "
+    "tests require a live DB",
+)
 
+
+@requires_postgres
 def test_dod_requirement():
     """Test the specific DoD requirement."""
     print("🎯 DoD Verification: lexical_topk('ECJ ruling on AI', k=10) returns sensible titles")
@@ -85,6 +87,7 @@ def test_dod_requirement():
             else:
                 print("❌ No results found")
 
+@requires_postgres
 def test_feature_completeness():
     """Test all required features."""
     print("\n🔧 Feature Completeness Test")
