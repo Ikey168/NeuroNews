@@ -108,6 +108,8 @@ jobs:
             "tests/api/test_import_coverage.py"
             "tests/api/test_phase_1_4_fastapi_app_core.py"
             "tests/api/test_app_coverage_demo.py"
+            "tests/unit/api/test_app_additional_coverage.py"
+            "tests/unit/api/test_app_complete_coverage.py"
           )
           rm -f .coverage .coverage.* coverage.xml
           FAILED=()
