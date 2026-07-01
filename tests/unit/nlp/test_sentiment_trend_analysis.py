@@ -213,19 +213,29 @@ def trend_analyzer(mock_redshift_config, mock_sentiment_analyzer, mock_topic_ext
 
 @pytest.fixture(autouse=True)
 def ensure_clean_database_mock():
-    """Autouse fixture to ensure database mock is clean for each test."""
+    """Autouse fixture to ensure database mock is clean for each test.
+
+    Another test module importing the real ``psycopg2`` (e.g. via
+    ``src.database.setup``) can replace our module-level mock in ``sys.modules``,
+    after which ``.connect`` is a real function with no ``reset_mock``. Re-install
+    a fresh mock when that has happened so this file is independent of
+    collection/import order.
+    """
     import sys
-    psycopg2_mock = sys.modules["psycopg2"]
-    
-    # Store original state
-    original_side_effect = getattr(psycopg2_mock.connect, 'side_effect', None)
-    
+    psycopg2_mock = sys.modules.get("psycopg2")
+    if not isinstance(getattr(psycopg2_mock, "connect", None), (Mock, MagicMock)):
+        psycopg2_mock = MagicMock()
+        psycopg2_mock.connect = MagicMock(return_value=MagicMock())
+        psycopg2_mock.extras = MagicMock()
+        sys.modules["psycopg2"] = psycopg2_mock
+        sys.modules["psycopg2.extras"] = psycopg2_mock.extras
+
     # Reset to clean state before test
     psycopg2_mock.connect.side_effect = None
     psycopg2_mock.connect.reset_mock()
-    
+
     yield
-    
+
     # Reset after test to prevent interference
     psycopg2_mock.connect.side_effect = None
     psycopg2_mock.connect.reset_mock()
