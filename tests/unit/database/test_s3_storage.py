@@ -83,13 +83,15 @@ class TestS3ArticleStorage:
         assert storage.config == s3_config
         assert storage.bucket_name == s3_config.bucket_name
         # The storage layer creates clients via src.utils.local_cloud.get_client,
-        # which injects local emulator credentials and resolves the region.
-        mock_boto3.assert_called_once_with(
-            "s3",
-            region_name=s3_config.region,
-            aws_access_key_id="local",
-            aws_secret_access_key="local",
-        )
+        # which injects local emulator credentials and resolves the region. It
+        # also passes a fail-fast botocore Config object we deliberately do not
+        # pin here, so assert on the meaningful kwargs instead of the exact set.
+        mock_boto3.assert_called_once()
+        call_args, call_kwargs = mock_boto3.call_args
+        assert call_args == ("s3",)
+        assert call_kwargs["region_name"] == s3_config.region
+        assert call_kwargs["aws_access_key_id"] == "local"
+        assert call_kwargs["aws_secret_access_key"] == "local"
 
     @patch("boto3.client")
     def test_generate_s3_key_raw_article(
