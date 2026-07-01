@@ -1,128 +1,105 @@
 """
-Test script for Streamlit Ask the News UI
+Test suite for the Streamlit "Ask the News" UI.
 Issue #234: Streamlit "Ask the News" debug UI
 
-This script verifies that the Streamlit app can be imported and basic
-functionality works without actually running the full Streamlit server.
+These tests verify that the Streamlit app can be imported and that its file
+structure and UI components match the Issue #234 specification, without
+actually running the full Streamlit server.
+
+The whole module is guarded by ``pytest.importorskip`` for the genuinely
+optional ``streamlit`` / visualisation dependencies. Every test sets up its
+own state and does not rely on state leaked by other test modules.
 """
 
 import sys
-import os
-
-import pytest
 from pathlib import Path
 
-# Add the project root to the path
-project_root = Path(__file__).parent
-sys.path.append(str(project_root))
+import pytest
 
-print("Issue #234 Streamlit App Test")
-print("=" * 50)
+# Optional dependencies required by the Streamlit app under test. If any are
+# genuinely absent, skip the whole module (importorskip is allowed for real
+# optional deps).
+pytest.importorskip("streamlit")
+pytest.importorskip("pandas")
+pytest.importorskip("plotly")
 
-# Test 1: Check if Streamlit is available
-try:
+# Locate the real Streamlit app. The app lives at <repo_root>/apps/streamlit,
+# not next to this test file, so walk up from here to the repository root.
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+APP_ROOT = _REPO_ROOT / "apps" / "streamlit"
+
+
+def test_streamlit_importable():
+    """Streamlit itself imports (guards the rest of the suite)."""
     import streamlit as st
-    print("✅ Streamlit imported successfully")
-except ImportError as e:
-    print(f"❌ Streamlit import failed: {e}")
-    pytest.skip("Required dependencies unavailable", allow_module_level=True)
 
-# Test 2: Check if required dependencies are available
-try:
-    import pandas as pd
-    import plotly.express as px
-    print("✅ Data visualization dependencies imported")
-except ImportError as e:
-    print(f"❌ Visualization dependencies failed: {e}")
-    pytest.skip("Required dependencies unavailable", allow_module_level=True)
+    assert hasattr(st, "set_page_config")
 
-# Test 3: Check if our services can be imported
-try:
-    # Add the main project directory to path
-    main_project = project_root / ".." / ".."
-    sys.path.append(str(main_project))
-    
+
+def test_visualization_dependencies_importable():
+    """Data-visualisation dependencies used by the app import."""
+    import pandas as pd  # noqa: F401
+    import plotly.express as px  # noqa: F401
+
+    assert pd is not None
+    assert px is not None
+
+
+def test_ask_service_models_importable():
+    """The Ask service request/response models can be imported."""
+    if str(_REPO_ROOT) not in sys.path:
+        sys.path.insert(0, str(_REPO_ROOT))
+
     from services.api.routes.ask import AskRequest, AskResponse
-    print("✅ Ask service models imported")
-except ImportError as e:
-    print(f"⚠️ Ask service import failed (expected in CI): {e}")
 
-# Test 4: Check file structure
-app_files = [
-    "Home.py",
-    "pages/02_Ask_the_News.py", 
-    "requirements.txt",
-    "README.md"
-]
+    # Pydantic models expose model_fields; confirm they are real model classes.
+    assert hasattr(AskRequest, "model_fields")
+    assert hasattr(AskResponse, "model_fields")
 
-for file_path in app_files:
-    full_path = project_root / file_path
-    if full_path.exists():
-        print(f"✅ {file_path} exists")
-    else:
-        print(f"❌ {file_path} missing")
 
-# Test 5: Validate app structure
-try:
-    # Read and validate the main app file
-    home_file = project_root / "Home.py"
-    with open(home_file, 'r') as f:
-        home_content = f.read()
-    
-    # Check for required Streamlit components
-    required_components = [
-        "st.set_page_config",
-        "st.title",
-        "st.sidebar"
-    ]
-    
-    for component in required_components:
-        if component in home_content:
-            print(f"✅ {component} found in Home.py")
-        else:
-            print(f"❌ {component} missing from Home.py")
-    
-    # Read and validate the Ask the News page
-    ask_file = project_root / "pages" / "02_Ask_the_News.py"
-    with open(ask_file, 'r') as f:
-        ask_content = f.read()
-    
-    # Check for required components from Issue #234
-    issue_requirements = [
+def test_streamlit_app_directory_exists():
+    """The Streamlit app directory is present in the repository."""
+    assert APP_ROOT.is_dir(), f"Streamlit app dir missing: {APP_ROOT}"
+
+
+@pytest.mark.parametrize(
+    "rel_path",
+    [
+        "Home.py",
+        "pages/02_Ask_the_News.py",
+        "requirements.txt",
+        "README.md",
+    ],
+)
+def test_required_app_files_exist(rel_path):
+    """Each file required by the Issue #234 spec exists."""
+    full_path = APP_ROOT / rel_path
+    assert full_path.exists(), f"Required app file missing: {rel_path}"
+
+
+@pytest.mark.parametrize("component", ["st.set_page_config", "st.title", "st.sidebar"])
+def test_home_page_contains_required_components(component):
+    """Home.py wires up the core page-level Streamlit components."""
+    home_content = (APP_ROOT / "Home.py").read_text(encoding="utf-8")
+    assert component in home_content, f"{component} missing from Home.py"
+
+
+@pytest.mark.parametrize(
+    "component",
+    [
         "text_area",  # Query input
         "date_input",  # Date range
-        "selectbox",   # Language
-        "slider",      # K value
-        "checkbox",    # Rerank toggle
-        "button",      # Ask button
-        "st.header",   # Panels
-        "plotly_chart" # Visualizations
-    ]
-    
-    for req in issue_requirements:
-        if req in ask_content:
-            print(f"✅ {req} found in Ask the News page")
-        else:
-            print(f"❌ {req} missing from Ask the News page")
-
-except Exception as e:
-    print(f"❌ Error validating app structure: {e}")
-
-print()
-print("DoD Requirements Check:")
-print("✅ Inputs: query, date range, lang, K, rerank toggle")
-print("✅ Panels: final answer, citations list, retrieval debug")  
-print("✅ Button: 'Show chunks' to preview matched text")
-print("✅ File structure matches Issue #234 specification")
-
-print()
-print("🎉 Streamlit Ask the News UI verification complete!")
-print()
-print("To run the app:")
-print("1. cd apps/streamlit")
-print("2. pip install -r requirements.txt")
-print("3. streamlit run Home.py")
-print("4. Navigate to 'Ask the News' page")
-
-# Return success
-print("\n✅ All tests passed - ready for commit!")
+        "selectbox",  # Language
+        "slider",  # K value
+        "checkbox",  # Rerank toggle
+        "button",  # Ask button
+        "st.header",  # Panels
+        "plotly_chart",  # Visualizations
+    ],
+)
+def test_ask_page_contains_issue_234_components(component):
+    """The Ask the News page exposes every Issue #234 input/panel component."""
+    ask_content = (APP_ROOT / "pages" / "02_Ask_the_News.py").read_text(
+        encoding="utf-8"
+    )
+    assert component in ask_content, f"{component} missing from Ask the News page"

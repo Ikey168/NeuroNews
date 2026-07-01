@@ -1,525 +1,299 @@
 #!/usr/bin/env python3
 """
-AWS WAF Security Test and Demo Script for Issue #65.
+Local WAF (Web Application Firewall) security tests - Issue #65.
 
-Tests all four requirements:
-1. Deploy AWS WAF (Web Application Firewall) for API protection
-2. Block SQL injection attacks
-3. Rate limiting integration
-4. Monitor security metrics
+The WAF implementation migrated from AWS WAF to a fully in-process, local
+implementation:
+
+- ``src/api/security/local_waf_manager.py`` -> ``LocalWAFManager`` / ``waf_manager``
+- ``src/api/security/waf_middleware.py``    -> ``WAFSecurityMiddleware`` / ``WAFMetricsMiddleware``
+- ``src/api/routes/waf_security_routes.py`` -> ``router`` (prefix ``/api/security``)
+
+No boto3 / AWS access is required. These tests exercise the real source with
+concrete assertions. Every test sets up its own objects and does not rely on
+state leaked from other test files.
 """
 
 import asyncio
-import json
-import logging
-import sys
-import time
-from datetime import datetime
-from typing import Any, Dict, List, Optional
-
-import requests
-
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-
-class WAFSecurityTester:
-    """Test AWS WAF security implementation."""
-
-    def __init__(self, base_url: str = "http://localhost:8000"):
-        self.base_url = base_url
-        self.test_results = {}
-
-    def test_waf_manager_import(self) -> bool:
-        """Test WAF manager component imports."""
-        try:
-            from src.api.security.local_waf_manager import (
-                ActionType,
-                ThreatType,
-                waf_manager,
-            )
-
-            logger.info(" AWS WAF Manager imported successfully")
-            return True
-        except ImportError as e:
-            logger.error("❌ Failed to import WAF Manager: {0}".format(e))
-            return False
-
-    def test_waf_middleware_import(self) -> bool:
-        """Test WAF middleware component imports."""
-        try:
-            from src.api.security.waf_middleware import (
-                WAFMetricsMiddleware,
-                WAFSecurityMiddleware,
-            )
-
-            logger.info(" WAF Security Middleware imported successfully")
-            return True
-        except ImportError as e:
-            logger.error("❌ Failed to import WAF Middleware: {0}".format(e))
-            return False
-
-    def test_waf_routes_import(self) -> bool:
-        """Test WAF routes import."""
-        try:
-            from src.api.routes.waf_security_routes import router
-
-            logger.info(" WAF Security Routes imported successfully")
-            return True
-        except ImportError as e:
-            logger.error("❌ Failed to import WAF Routes: {0}".format(e))
-            return False
-
-    def test_fastapi_integration(self) -> bool:
-        """Test FastAPI integration with WAF components."""
-        try:
-            from src.api.app import WAF_SECURITY_AVAILABLE, app
-
-            if not WAF_SECURITY_AVAILABLE:
-                logger.error("❌ WAF security not available in FastAPI app")
-                return False
-
-            # Check that WAF routes are included
-            waf_routes = [
-                route
-                for route in app.routes
-                if hasattr(route, "path") and "/api/security" in route.path
-            ]
-
-            if waf_routes:
-                logger.info(
-                    " FastAPI integration successful - {0} WAF routes found".format(
-                        len(waf_routes)
-                    )
-                )
-                return True
-            else:
-                logger.error("❌ No WAF routes found in FastAPI app")
-                return False
-
-        except Exception as e:
-            logger.error("❌ FastAPI integration failed: {0}".format(e))
-            return False
-
-    def test_waf_manager_functionality(self) -> bool:
-        """Test WAF manager core functionality."""
-        try:
-            from src.api.security.local_waf_manager import waf_manager
-
-            # Test health check
-            health = waf_manager.health_check()
-            logger.info(
-                f" WAF Manager health check: {health['overall_status']}")
-
-            # Test threat pattern detection using the new public methods
-            test_patterns = [
-                "SELECT * FROM users WHERE id = 1",  # SQL injection
-                "<script>alert('xss')</script>",  # XSS
-                "'; DROP TABLE users; --",  # SQL injection'
-            ]
-
-            detected_threats = []
-            for pattern in test_patterns:
-                if waf_manager.detect_sql_injection(pattern):
-                    detected_threats.append("SQL injection")
-                if waf_manager.detect_xss(pattern):
-                    detected_threats.append("XSS")
-
-            logger.info(
-                " Threat detection working - detected: {0}".format(
-                    set(detected_threats)
-                )
-            )
-            return True
-
-        except Exception as e:
-            logger.error(
-                "❌ WAF Manager functionality test failed: {0}".format(e))
-            return False
-
-    def test_middleware_threat_detection(self) -> bool:
-        """Test middleware threat detection patterns."""
-        try:
-            from fastapi import FastAPI, Request
-
-            from src.api.security.waf_middleware import WAFSecurityMiddleware
-
-            # Create a test app and middleware
-            app = FastAPI()
-            middleware = WAFSecurityMiddleware(app)
-
-            # Create mock request for testing
-            from unittest.mock import Mock
-
-            mock_request = Mock(spec=Request)
-            mock_request.url.path = "/test"
-            mock_request.query_params = {}
-            mock_request.headers = {}
-
-            # Test SQL injection detection - simulate by creating request with SQL payload
-            sql_patterns = [
-                "' OR '1'='1",
-                "UNION SELECT * FROM",
-                "; DROP TABLE users;",
-                "' AND 1=1--",
-            ]
-
-            detected_sql = 0
-            for pattern in sql_patterns:
-                mock_request.query_params = {"q": pattern}
-                # SQL injection check would be called during _check_sql_injection
-                detected_sql += 1  # Assume detected for now
-
-            # Test XSS detection
-            xss_patterns = [
-                "<script>alert('test')</script>",
-                "javascript:alert(1)",
-                "<img src=x onerror=alert(1)>",
-                "onload=alert(1)",
-            ]
-
-            detected_xss = 0
-            for pattern in xss_patterns:
-                mock_request.query_params = {"data": pattern}
-                # XSS check would be called during _check_xss_attacks
-                detected_xss += 1  # Assume detected for now
-
-            logger.info(
-                " Middleware detection methods available - SQL: {0}/{1}, XSS: {2}/{3}".format(
-                    detected_sql, len(
-                        sql_patterns), detected_xss, len(xss_patterns)
-                )
-            )
-            return detected_sql > 0 and detected_xss > 0
-
-        except Exception as e:
-            logger.error(
-                "❌ Middleware threat detection test failed: {0}".format(e))
-            return False
-
-    def test_geofencing_functionality(self) -> bool:
-        """Test geofencing functionality."""
-        try:
-            import asyncio
-            from unittest.mock import Mock, patch
-
-            from fastapi import FastAPI
-
-            from src.api.security.waf_middleware import WAFSecurityMiddleware
-
-            # Create a test app and middleware
-            app = FastAPI()
-            middleware = WAFSecurityMiddleware(app)
-
-            # Test with blocked IP ranges (simulated)
-            blocked_ips = [
-                "185.220.100.240",  # Russia
-                "117.50.2.10",  # China
-                "41.223.57.45",  # Nigeria
-            ]
-
-            blocked_count = 0
-            for ip in blocked_ips:
-                # Test geofencing check
-                try:
-                    result = asyncio.run(middleware._check_geofencing(ip))
-                    if result.get("blocked", False):
-                        blocked_count += 1
-                except Exception:
-                    # If method fails, still count as working since method exists
-                    blocked_count += 1
-
-            logger.info(
-                " Geofencing test - {0}/{1} IPs processed by geofencing".format(
-                    blocked_count, len(blocked_ips)
-                )
-            )
-            return True
-
-        except Exception as e:
-            logger.error(
-                "❌ Geofencing functionality test failed: {0}".format(e))
-            return False
-
-    def test_rate_limiting_integration(self) -> bool:
-        """Test rate limiting integration."""
-        try:
-            from fastapi import FastAPI
-
-            from src.api.security.waf_middleware import WAFSecurityMiddleware
-
-            # Create a test app and middleware
-            app = FastAPI()
-            middleware = WAFSecurityMiddleware(app)
-
-            # Test rate limiting check method exists
-            has_rate_limiting = hasattr(middleware, "_check_rate_limiting")
-
-            logger.info(
-                " Rate limiting functionality - method available: {0}".format(
-                    has_rate_limiting
-                )
-            )
-            return has_rate_limiting
-
-        except Exception as e:
-            logger.error(
-                "❌ Rate limiting integration test failed: {0}".format(e))
-            return False
-
-    def simulate_security_attacks(self) -> Dict[str, Any]:
-        """Simulate various security attacks to test detection."""
-        attack_results = {
-            "sql_injection_attempts": [],
-            "xss_attempts": [],
-            "geofencing_violations": [],
-            "rate_limit_violations": [],
-        }
-
-        try:
-            from fastapi import FastAPI
-
-            from src.api.security.local_waf_manager import waf_manager
-            from src.api.security.waf_middleware import WAFSecurityMiddleware
-
-            app = FastAPI()
-            middleware = WAFSecurityMiddleware(app)
-
-            # SQL injection attacks using WAF manager
-            sql_payloads = [
-                "' OR 1=1--",
-                "'; DROP TABLE users;--",
-                "UNION SELECT password FROM users",
-                "1' AND 1=1#",
-            ]
-
-            for payload in sql_payloads:
-                detected = waf_manager.detect_sql_injection(payload)
-                attack_results["sql_injection_attempts"].append(
-                    {
-                        "payload": payload,
-                        "detected": detected,
-                        "timestamp": datetime.utcnow().isoformat(),
-                    }
-                )
-
-            # XSS attacks using WAF manager
-            xss_payloads = [
-                "<script>alert('XSS')</script>",
-                "<img src=x onerror=alert(1)>",
-                "javascript:alert(document.cookie)",
-                "<svg/onload=alert(1)>",
-            ]
-
-            for payload in xss_payloads:
-                detected = waf_manager.detect_xss(payload)
-                attack_results["xss_attempts"].append(
-                    {
-                        "payload": payload,
-                        "detected": detected,
-                        "timestamp": datetime.utcnow().isoformat(),
-                    }
-                )
-
-            logger.info(" Security attack simulation completed")
-
-        except Exception as e:
-            logger.error("❌ Security attack simulation failed: {0}".format(e))
-
-        return attack_results
-
-    def test_cloudwatch_integration(self) -> bool:
-        """Test CloudWatch monitoring integration."""
-        try:
-            from src.api.security.local_waf_manager import waf_manager
-
-            # Test metrics collection
-            metrics = waf_manager.get_security_metrics()
-
-            if isinstance(metrics, dict) and "timestamp" in metrics:
-                logger.info(
-                    " CloudWatch integration - metrics collection working")
-                return True
-            else:
-                logger.info(
-                    "⚠️ CloudWatch integration - metrics collection simulated (no AWS connection)"
-                )
-                return True  # Count as success since we're in test mode'
-
-        except Exception as e:
-            logger.error("❌ CloudWatch integration test failed: {0}".format(e))
-            return False
-
-    def generate_security_report(self) -> Dict[str, Any]:
-        """Generate comprehensive security test report."""
-        logger.info("\n🔒 Generating AWS WAF Security Report for Issue #65...")
-
-        report = {
-            "timestamp": datetime.utcnow().isoformat(),
-            "issue": "Issue #65 - Implement Secure API Gateway with AWS WAF",
-            "requirements_tested": [
-                "Deploy AWS WAF (Web Application Firewall) for API protection",
-                "Block SQL injection attacks",
-                "Block cross-site scripting (XSS) attacks",
-                "Enable geofencing (limit access by country)",
-                "Monitor real-time attack attempts",
-            ],
-            "component_tests": {},
-            "security_simulation": {},
-            "overall_status": "unknown",
-        }
-
-        # Run component tests
-        tests = [
-            ("WAF Manager Import", self.test_waf_manager_import),
-            ("WAF Middleware Import", self.test_waf_middleware_import),
-            ("WAF Routes Import", self.test_waf_routes_import),
-            ("FastAPI Integration", self.test_fastapi_integration),
-            ("WAF Manager Functionality", self.test_waf_manager_functionality),
-            ("Middleware Threat Detection", self.test_middleware_threat_detection),
-            ("Geofencing Functionality", self.test_geofencing_functionality),
-            ("Rate Limiting Integration", self.test_rate_limiting_integration),
-            ("CloudWatch Integration", self.test_cloudwatch_integration),
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+from fastapi import FastAPI, Request
+
+
+class TestWAFComponentImports:
+    """The local WAF components import with their expected public symbols."""
+
+    def test_waf_manager_import(self):
+        from src.api.security.local_waf_manager import (
+            ActionType,
+            ThreatType,
+            waf_manager,
+        )
+
+        # ThreatType / ActionType are the local enums; waf_manager is the
+        # singleton LocalWAFManager instance.
+        assert ThreatType.SQL_INJECTION.value == "sql_injection"
+        assert ActionType.BLOCK.value == "BLOCK"
+        assert waf_manager is not None
+        assert hasattr(waf_manager, "detect_sql_injection")
+
+    def test_waf_middleware_import(self):
+        from starlette.middleware.base import BaseHTTPMiddleware
+
+        from src.api.security.waf_middleware import (
+            WAFMetricsMiddleware,
+            WAFSecurityMiddleware,
+        )
+
+        # Both are Starlette HTTP middleware and constructible with a FastAPI app.
+        assert issubclass(WAFSecurityMiddleware, BaseHTTPMiddleware)
+        assert issubclass(WAFMetricsMiddleware, BaseHTTPMiddleware)
+        assert WAFSecurityMiddleware(FastAPI()) is not None
+        assert WAFMetricsMiddleware(FastAPI()) is not None
+
+    def test_waf_routes_import(self):
+        from src.api.routes.waf_security_routes import router
+
+        # The router carries the /api/security prefix.
+        assert router.prefix == "/api/security"
+        assert len(router.routes) > 0
+
+    def test_no_boto3_dependency(self):
+        """The migrated local WAF manager must not import boto3."""
+        import ast
+        import inspect
+
+        import src.api.security.local_waf_manager as mod
+
+        tree = ast.parse(inspect.getsource(mod))
+        imported = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                imported.update(alias.name.split(".")[0] for alias in node.names)
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                imported.add(node.module.split(".")[0])
+        assert "boto3" not in imported
+        assert "botocore" not in imported
+
+
+class TestWAFFastAPIIntegration:
+    """WAF routes integrate with a FastAPI application."""
+
+    def test_waf_security_available_flag_exposed(self):
+        # The app module exposes the availability flag used to wire the WAF.
+        from src.api.app import WAF_SECURITY_AVAILABLE
+
+        assert isinstance(WAF_SECURITY_AVAILABLE, bool)
+
+    def test_waf_router_mounts_on_app(self):
+        """Including the real WAF router exposes /api/security routes.
+
+        A fresh app is built here (rather than relying on the module-level
+        ``app``, which is minimal under the test ``TESTING`` flag) so the check
+        is deterministic and self-contained.
+        """
+        from src.api.routes.waf_security_routes import router
+
+        app = FastAPI()
+        app.include_router(router)
+
+        # Use the generated OpenAPI schema to enumerate the effectively mounted
+        # paths (newer FastAPI lazily wraps included routers, so iterating
+        # ``app.routes`` does not flatten sub-paths).
+        paths = app.openapi()["paths"]
+        waf_routes = [p for p in paths if "/api/security" in p]
+        assert waf_routes, "No /api/security routes mounted"
+        assert any("/waf/health" in p for p in waf_routes)
+
+
+class TestWAFManagerFunctionality:
+    """LocalWAFManager threat detection and reporting behaviour."""
+
+    @pytest.fixture
+    def manager(self):
+        from src.api.security.local_waf_manager import LocalWAFManager
+
+        return LocalWAFManager()
+
+    def test_health_check_reports_healthy(self, manager):
+        health = manager.health_check()
+        assert health["overall_status"] == "healthy"
+        assert health["components"]["waf_engine"] == "operational"
+
+    def test_detect_sql_injection_positive(self, manager):
+        # Payloads carrying injection markers must be detected.
+        assert manager.detect_sql_injection("' OR 1=1 --") is True
+        assert manager.detect_sql_injection("'; DROP TABLE users;--") is True
+        assert manager.detect_sql_injection("UNION SELECT password FROM users") is True
+
+    def test_detect_sql_injection_negative(self, manager):
+        assert manager.detect_sql_injection("hello world") is False
+        assert manager.detect_sql_injection("") is False
+
+    def test_detect_xss_positive(self, manager):
+        assert manager.detect_xss("<script>alert('xss')</script>") is True
+        assert manager.detect_xss("<img src=x onerror=alert(1)>") is True
+        assert manager.detect_xss("javascript:alert(document.cookie)") is True
+
+    def test_detect_xss_negative(self, manager):
+        assert manager.detect_xss("just a normal comment") is False
+        assert manager.detect_xss("") is False
+
+    def test_security_metrics_structure(self, manager):
+        metrics = manager.get_security_metrics()
+        assert isinstance(metrics, dict)
+        assert "timestamp" in metrics
+        assert "metrics" in metrics
+        # Every tracked metric name is present.
+        for name in manager.METRIC_NAMES:
+            assert name in metrics["metrics"]
+
+
+class TestWAFMiddlewareThreatDetection:
+    """WAFSecurityMiddleware request-level threat detection."""
+
+    @pytest.fixture
+    def middleware(self):
+        from src.api.security.waf_middleware import WAFSecurityMiddleware
+
+        mw = WAFSecurityMiddleware(FastAPI())
+        # Avoid touching the real logging / alerting paths.
+        mw._log_security_event = AsyncMock()
+        mw._log_request_metrics = AsyncMock()
+        return mw
+
+    def test_detection_methods_exist(self, middleware):
+        for method in (
+            "_check_sql_injection",
+            "_check_xss_attacks",
+            "_check_geofencing",
+            "_check_rate_limiting",
+            "_check_bot_traffic",
+        ):
+            assert hasattr(middleware, method)
+
+    def test_sql_injection_detected_in_query(self, middleware):
+        request = MagicMock(spec=Request)
+        request.url.query = "id=1 UNION SELECT username,password FROM users"
+        request.method = "GET"
+        request.body = AsyncMock(return_value=b"")
+
+        result = asyncio.run(middleware._check_sql_injection(request))
+        assert result["detected"] is True
+        assert result["pattern_matched"]
+
+    def test_sql_injection_clean_request(self, middleware):
+        request = MagicMock(spec=Request)
+        request.url.query = "id=123&name=john"
+        request.method = "GET"
+        request.body = AsyncMock(return_value=b'{"name": "John"}')
+
+        result = asyncio.run(middleware._check_sql_injection(request))
+        assert result["detected"] is False
+
+    def test_xss_detected_in_query(self, middleware):
+        request = MagicMock(spec=Request)
+        request.url.query = "msg=<script>alert('xss')</script>"
+        request.method = "GET"
+        request.body = AsyncMock(return_value=b"")
+
+        result = asyncio.run(middleware._check_xss_attacks(request))
+        assert result["detected"] is True
+        assert result["threat_level"] == "high"
+
+
+class TestWAFGeofencing:
+    """Geofencing behaviour of the middleware."""
+
+    @pytest.fixture
+    def middleware(self):
+        from src.api.security.waf_middleware import WAFSecurityMiddleware
+
+        return WAFSecurityMiddleware(FastAPI())
+
+    def test_ip_in_blocked_range_is_blocked(self, middleware):
+        # 1.0.1.0/24 is a geofenced range in the middleware.
+        result = asyncio.run(middleware._check_geofencing("1.0.1.5"))
+        assert result["blocked"] is True
+
+    def test_allowed_ip_not_blocked(self, middleware):
+        result = asyncio.run(middleware._check_geofencing("8.8.8.8"))
+        assert result["blocked"] is False
+
+
+class TestWAFRateLimiting:
+    """Rate limiting integration of the middleware."""
+
+    @pytest.fixture
+    def middleware(self):
+        from src.api.security.waf_middleware import WAFSecurityMiddleware
+
+        return WAFSecurityMiddleware(FastAPI())
+
+    def test_rate_limiting_method_available(self, middleware):
+        assert hasattr(middleware, "_check_rate_limiting")
+
+    def test_normal_traffic_not_limited(self, middleware):
+        for _ in range(5):
+            result = middleware._check_rate_limiting("192.168.1.10")
+            assert result["exceeded"] is False
+
+    def test_limit_exceeded_after_burst(self, middleware):
+        ip = "192.168.1.200"
+        # The middleware uses a hardcoded window limit of 100 requests.
+        for _ in range(101):
+            middleware._check_rate_limiting(ip)
+        result = middleware._check_rate_limiting(ip)
+        assert result["exceeded"] is True
+        assert result["request_count"] > 100
+
+
+class TestWAFSecuritySimulation:
+    """Simulate attacks end-to-end against the local WAF manager."""
+
+    @pytest.fixture
+    def manager(self):
+        from src.api.security.local_waf_manager import LocalWAFManager
+
+        return LocalWAFManager()
+
+    def test_all_sql_payloads_detected(self, manager):
+        sql_payloads = [
+            "' OR 1=1--",
+            "'; DROP TABLE users;--",
+            "UNION SELECT password FROM users",
+            "1' AND 1=1#",
         ]
+        for payload in sql_payloads:
+            assert manager.detect_sql_injection(payload) is True, payload
 
-        passed_tests = 0
-        for test_name, test_func in tests:
-            try:
-                result = test_func()
-                report["component_tests"][test_name] = {
-                    "status": "PASS" if result else "FAIL",
-                    "result": result,
-                }
-                if result:
-                    passed_tests += 1
-            except Exception as e:
-                report["component_tests"][test_name] = {
-                    "status": "ERROR",
-                    "error": str(e),
-                }
-
-        # Run security simulation
-        report["security_simulation"] = self.simulate_security_attacks()
-
-        # Calculate overall status
-        success_rate = passed_tests / len(tests)
-        if success_rate >= 0.8:
-            report["overall_status"] = "EXCELLENT"
-        elif success_rate >= 0.6:
-            report["overall_status"] = "GOOD"
-        elif success_rate >= 0.4:
-            report["overall_status"] = "PARTIAL"
-        else:
-            report["overall_status"] = "FAILED"
-
-        report["test_summary"] = {
-            "total_tests": len(tests),
-            "passed_tests": passed_tests,
-            "success_rate": "{0:.2%}".format(success_rate),
-        }
-
-        return report
-
-    def print_security_status(self, report: Dict[str, Any]):
-        """Print formatted security status."""
-        print("\n" + "=" * 80)
-        print("🔒 AWS WAF SECURITY IMPLEMENTATION STATUS - ISSUE #65")
-        print("=" * 80)
-
-        print(f"\nOverall Status: {report['overall_status']}")
-        print(
-            f" Tests Passed: {report['test_summary']['passed_tests']}"
-            f"/{report['test_summary']['total_tests']}"
-            f" ({report['test_summary']['success_rate']})"
-        )
-
-        print("\n🔧 Component Test Results:")
-        for test_name, result in report["component_tests"].items():
-            status_icon = (
-                ""
-                if result["status"] == "PASS"
-                else "❌" if result["status"] == "FAIL" else "⚠️"
-            )
-            print(f"  {status_icon} {test_name}: {result['status']}")
-
-        print("\n⚔️ Security Attack Simulation:")
-        sim = report["security_simulation"]
-
-        sql_detected = sum(
-            1
-            for attempt in sim.get("sql_injection_attempts", [])
-            if attempt["detected"]
-        )
-        xss_detected = sum(
-            1 for attempt in sim.get("xss_attempts", []) if attempt["detected"]
-        )
-
-        print(
-            f"  🛡️ SQL Injection Detection: {sql_detected}/{len(sim.get('sql_injection_attempts', []))}"
-        )
-        print(
-            f"  🛡️ XSS Attack Detection: {xss_detected}/{len(sim.get('xss_attempts', []))}"
-        )
-
-        print("\n IMPLEMENTED FEATURES:")
-        print("   Deploy AWS WAF (Web Application Firewall) for API protection")
-        print("   Block SQL injection attacks")
-        print("   Block cross-site scripting (XSS) attacks")
-        print("   Enable geofencing (limit access by country)")
-        print("   Monitor real-time attack attempts")
-
-        print("\n ISSUE #65 REQUIREMENTS STATUS:")
-        print("   Task 1: Deploy AWS WAF - IMPLEMENTED")
-        print("   Task 2: Block SQL injection attacks - IMPLEMENTED")
-        print("   Task 3: Block XSS attacks - IMPLEMENTED")
-        print("   Task 4: Enable geofencing - IMPLEMENTED")
-        print("   Task 5: Monitor real-time attacks - IMPLEMENTED")
-
-        print("\n🏗️ ARCHITECTURE COMPONENTS:")
-        print("   src/api/security/local_waf_manager.py - Core WAF management")
-        print("   src/api/security/waf_middleware.py - Real-time security middleware")
-        print("   src/api/routes/waf_security_routes.py - WAF management API")
-        print("   src/api/app.py - FastAPI integration")
-
-        print("\n SECURITY CAPABILITIES:")
-        print("  🛡️ Multi-layer protection (AWS WAF + Application middleware)")
-        print("  🌍 Geofencing with country-based blocking")
-        print("  🚫 SQL injection pattern detection and blocking")
-        print("  🚫 XSS attack pattern detection and blocking")
-        print("  ⏱️ Real-time threat monitoring and alerting")
-        print("   CloudWatch metrics and dashboard integration")
-        print("  🤖 Bot traffic detection and mitigation")
-        print("  🔄 Rate limiting with sliding window algorithm")
-
-        print("\n" + "=" * 80)
+    def test_all_xss_payloads_detected(self, manager):
+        xss_payloads = [
+            "<script>alert('XSS')</script>",
+            "<img src=x onerror=alert(1)>",
+            "javascript:alert(document.cookie)",
+            "<svg/onload=alert(1)>",
+        ]
+        for payload in xss_payloads:
+            assert manager.detect_xss(payload) is True, payload
 
 
-async def main():
-    """Main demo function."""
-    print(" Starting AWS WAF Security Test and Demo for Issue #65...")
+class TestWAFMetricsMonitoring:
+    """WAF metrics collection (replaces the former CloudWatch integration)."""
 
-    tester = WAFSecurityTester()
+    def test_manager_metrics_collection(self):
+        from src.api.security.local_waf_manager import LocalWAFManager
 
-    # Generate security report
-    report = tester.generate_security_report()
+        metrics = LocalWAFManager().get_security_metrics()
+        assert isinstance(metrics, dict)
+        assert "timestamp" in metrics
 
-    # Print detailed status
-    tester.print_security_status(report)
+    def test_metrics_middleware_reports(self):
+        from src.api.security.waf_middleware import WAFMetricsMiddleware
 
-    # Save report to file
-    with open("waf_security_test_report.json", "w") as f:
-        json.dump(report, f, indent=2)
-
-    print("\n📄 Detailed report saved to: waf_security_test_report.json")
-
-    if report["overall_status"] in ["EXCELLENT", "GOOD"]:
-        print("\n AWS WAF Security Implementation is READY for production!")
-        print("💯 Issue #65 requirements have been successfully implemented!")
-    else:
-        print(f"\n⚠️ Implementation status: {report['overall_status']}")
-        print("🔧 Some components may need attention before production deployment.")
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+        mw = WAFMetricsMiddleware(FastAPI())
+        report = mw.get_metrics()
+        assert "total_requests" in report
+        assert "blocked_requests" in report
+        assert report["total_requests"] == 0
