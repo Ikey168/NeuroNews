@@ -5,23 +5,72 @@ Issue #228: Embedding provider (local + cloud pluggable)
 Tests the unified API, backend consistency, and deterministic behavior.
 """
 
+import hashlib
+
 import os
 import pytest
 import numpy as np
 from unittest.mock import patch, MagicMock
 
+import services.embeddings.backends.local_sentence_transformers as _local_mod
 from services.embeddings import EmbeddingProvider, get_embedding_provider
 from services.embeddings.backends.local_sentence_transformers import LocalSentenceTransformersBackend
 
-# These tests exercise a real sentence-transformers model; skip the module
-# when the model cannot be loaded (e.g. no network access to Hugging Face).
-try:
-    LocalSentenceTransformersBackend(model_name="all-MiniLM-L6-v2")
-except Exception as _e:
-    pytest.skip(
-        "sentence-transformers model unavailable: {0}".format(_e),
-        allow_module_level=True,
-    )
+
+# ---------------------------------------------------------------------------
+# Fake sentence-transformers model.
+#
+# The real model download hits Hugging Face (403 in the sandbox / offline CI),
+# so we patch ``SentenceTransformer`` with a deterministic stand-in. The stand-in
+# reproduces the contract the backend relies on: a fixed embedding dimension
+# (384 for all-MiniLM-L6-v2), and ``encode`` that returns L2-normalized,
+# text-dependent float32 vectors. This keeps every assertion in this file
+# meaningful (normalization, determinism, batch-invariance, distinctness)
+# while removing the network dependency.
+# ---------------------------------------------------------------------------
+
+_MODEL_DIMS = {
+    "all-MiniLM-L6-v2": 384,
+    "all-mpnet-base-v2": 768,
+}
+
+
+def _text_vector(text: str, dim: int) -> np.ndarray:
+    """Deterministic, text-dependent, L2-normalized vector of length ``dim``."""
+    seed = int.from_bytes(hashlib.sha256(text.encode("utf-8")).digest()[:8], "big")
+    rng = np.random.RandomState(seed % (2 ** 32))
+    vec = rng.standard_normal(dim).astype(np.float32)
+    norm = np.linalg.norm(vec)
+    if norm > 0:
+        vec = vec / norm
+    return vec
+
+
+class _FakeSentenceTransformer:
+    """Minimal deterministic stand-in for sentence_transformers.SentenceTransformer."""
+
+    def __init__(self, model_name, **kwargs):
+        self.model_name = model_name
+        self._dim = _MODEL_DIMS.get(model_name, 384)
+        self.device = kwargs.get("device", "cpu")
+        self.max_seq_length = 256
+
+    def get_sentence_embedding_dimension(self):
+        return self._dim
+
+    def encode(self, texts, convert_to_numpy=True, show_progress_bar=False,
+               normalize_embeddings=True, **kwargs):
+        if isinstance(texts, str):
+            texts = [texts]
+        arr = np.vstack([_text_vector(t, self._dim) for t in texts]).astype(np.float32)
+        return arr
+
+
+@pytest.fixture(autouse=True)
+def _patch_sentence_transformer(monkeypatch):
+    """Patch the model so backends load instantly and offline."""
+    monkeypatch.setattr(_local_mod, "SentenceTransformer", _FakeSentenceTransformer)
+    yield
 
 
 class TestEmbeddingProvider:
