@@ -14,6 +14,11 @@ graph_search_routes = pytest.importorskip(
         "SOURCE BUG: graph_search_routes imports GraphBasedSearchService which "
         "does not exist (only GraphSearchService does)."
     ),
+    # The routes module IS found on disk but raises ImportError at import time
+    # (the GraphBasedSearchService name is missing). exc_type=ImportError tells
+    # importorskip to treat that as a skip rather than re-raising, and silences
+    # the pytest>=8 deprecation warning about the default ImportError handling.
+    exc_type=ImportError,
 )
 
 
