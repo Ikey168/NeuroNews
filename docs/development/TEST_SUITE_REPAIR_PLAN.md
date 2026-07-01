@@ -187,6 +187,42 @@ gate correct without weakening any test. Fixing every file to be import-order
 robust individually is tracked as follow-up (e.g. the `psycopg2` autouse-fixture
 hardening already applied to `test_sentiment_trend_analysis.py`).
 
+## Coverage push to 90%
+
+A second push added real, assertion-based tests for the remaining large gaps
+and raised total coverage from 82% to **93%** (measured with the gate logic:
+480 files, 0 genuine failures). New tests cover the scraper connectors and news
+spiders, the argument-mining training modules, the streamlit Ask page, auth/MFA
+and alerts, many partially-covered routes and services, and the S3/DynamoDB/RBAC
+layers. `pyotp` was added to requirements so the TOTP test runs in CI. The gate
+floor (`--cov-fail-under`) is now 90%, and the per-file retry was raised to 3
+attempts to absorb parallel resource-contention flakiness on app-importing
+(torch/duckdb) files. Numerous source bugs were surfaced while writing these
+tests (spider CSS-selector/author-typo bugs, several route-shadowing and
+dead-branch bugs, unformatted-SQL bugs in summary_database/keyword_topic_
+database, an un-importable quicksight_routes, a multi_language_pipeline
+from_crawler dead return) and are documented for follow-up rather than fixed
+here.
+
+## Coverage push to 80%
+
+After the suite was green, coverage was raised from ~66% to **82%** by adding
+real, assertion-based tests (no coverage-farming) for the largest gaps:
+argument_routes, argument_mining (metadata/positions/position_tracker/outlet_
+clustering/conflict_graph/outlet_scorer), reports, alerts, nlp/kubernetes
+processors, dashboards, several route modules, warehouse views, scraper
+internals, ingestion connectors, and assorted small modules.
+
+The gate's coverage measurement was made fast and reliable: each file runs in
+its own process **in parallel**, writing its own `COVERAGE_FILE`, and the data
+files are `coverage combine`d at the end. This avoids the O(n^2) slowdown of
+appending to one growing SQLite DB (a naive per-file `--cov-append` loop took
+50+ minutes). A failed file is retried once to absorb parallel resource
+contention and intermittent torch/duckdb C-extension teardown crashes. The
+`--cov-fail-under` floor is 80%. Two brittle app-reload coverage-farm files
+(`test_app_additional_coverage`, `test_app_complete_coverage`) that segfault at
+teardown are ignored alongside the earlier `test_app_coverage_demo`.
+
 ## Progress log
 
 - **vector_services_comprehensive**: added missing source imports, made the

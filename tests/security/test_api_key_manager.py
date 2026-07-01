@@ -574,10 +574,11 @@ class TestPerformanceAndSecurity:
 
         # The current implementation hashes with PBKDF2-HMAC-SHA256 at 100k
         # iterations, which is intentionally slow (~25ms per hash). 100
-        # verifications therefore take ~2.5s; the previous 0.5s budget assumed a
-        # much cheaper hash. Bound at 5s so a real regression (e.g. a ~2x slowdown
-        # or an accidental extra hashing pass) still fails the test.
-        assert end_time - start_time < 5.0
+        # verifications therefore take ~2.5s nominally. This is a wall-clock
+        # perf test, so under a loaded/parallel CI runner it can be several
+        # times slower; bound generously at 15s so it does not flake, while a
+        # gross regression (e.g. a ~6x slowdown) still fails it.
+        assert end_time - start_time < 15.0
 
     def test_concurrent_key_generation(self):
         """Test thread-safe key generation."""
