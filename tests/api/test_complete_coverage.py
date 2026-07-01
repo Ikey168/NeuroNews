@@ -178,12 +178,19 @@ print("Success paths test passed")
             temp_script = f.name
         
         try:
+            # Derive the repo root from this test file's location instead of a
+            # hardcoded absolute path (this file lives at <repo>/tests/api/).
+            repo_root = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), os.pardir, os.pardir)
+            )
+            src_root = os.path.join(repo_root, "src")
+
             env = os.environ.copy()
-            env['PYTHONPATH'] = '/workspaces/NeuroNews'
-            
+            env['PYTHONPATH'] = os.pathsep.join([repo_root, src_root])
+
             result = subprocess.run([
                 sys.executable, temp_script
-            ], capture_output=True, text=True, env=env, cwd='/workspaces/NeuroNews')
+            ], capture_output=True, text=True, env=env, cwd=repo_root)
             
             print(f"Script {script_name} output:", result.stdout)
             if result.stderr:

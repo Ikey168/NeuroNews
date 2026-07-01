@@ -59,36 +59,31 @@ class TestIsolatedAPICoverage:
         response = isolated_test_client.put("/health")
         assert response.status_code in [405, 422]
     
-    @patch('src.api.aws_rate_limiting.RateLimiter')
-    def test_rate_limiting_module(self, mock_rate_limiter):
-        """Test rate limiting module without AWS dependencies."""
-        try:
-            from src.api.aws_rate_limiting import RateLimiter
-            
-            # Mock the rate limiter
-            mock_instance = Mock()
-            mock_rate_limiter.return_value = mock_instance
-            
-            # Test various rate limiter methods
-            rate_limiter = RateLimiter(table_name="test")
-            
-            # Mock methods
-            mock_instance.check_rate_limit.return_value = True
-            mock_instance.update_count.return_value = None
-            mock_instance.reset_count.return_value = None
-            
-            # Test calls
-            rate_limiter.check_rate_limit("test_key")
-            rate_limiter.update_count("test_key")
-            rate_limiter.reset_count("test_key")
-            
-            # Verify calls were made
-            mock_instance.check_rate_limit.assert_called()
-            mock_instance.update_count.assert_called()
-            mock_instance.reset_count.assert_called()
-            
-        except ImportError:
-            pytest.skip("Rate limiting module not available")
+    @patch('src.api.aws_rate_limiting.LocalUsagePlanManager')
+    def test_rate_limiting_module(self, mock_manager_cls):
+        """Test the local rate-limiting usage-plan manager without AWS.
+
+        The module was migrated from an AWS ``RateLimiter`` to a local,
+        std-lib-only implementation whose public entry point is
+        ``LocalUsagePlanManager`` (returned by ``get_api_gateway_manager``).
+        Patch that real symbol and verify the accessor uses it.
+        """
+        from src.api.aws_rate_limiting import (
+            get_api_gateway_manager,
+            LocalUsagePlanManager,
+        )
+
+        # The patched class is the real symbol in the module.
+        assert mock_manager_cls is LocalUsagePlanManager or callable(mock_manager_cls)
+
+        mock_instance = Mock()
+        mock_manager_cls.return_value = mock_instance
+
+        # The accessor should construct a LocalUsagePlanManager.
+        manager = get_api_gateway_manager()
+
+        mock_manager_cls.assert_called_once()
+        assert manager is mock_instance
     
     @patch('src.api.error_handlers.configure_error_handlers')
     def test_error_handlers_module(self, mock_configure):

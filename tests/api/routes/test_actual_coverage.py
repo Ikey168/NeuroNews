@@ -5,16 +5,35 @@ Focus on improving test coverage for real, accessible endpoints.
 
 import pytest
 from unittest.mock import Mock, patch, AsyncMock
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-# Import the actual app
+# Import the app module. Under the test harness ``conftest.py`` sets
+# ``TESTING=true`` which makes the module-level ``src.api.app.app`` a minimal
+# app that only serves ``/`` and ``/health`` (every other path -> 404). The
+# module-level ``root``/``health_check`` handlers are attached to it, so it is
+# fine for the root/health assertions below. Individual routers are mounted on
+# fresh apps by helper fixtures where a test needs a specific real route.
 from src.api.app import app
 
 
 @pytest.fixture
 def test_client():
-    """Create a test client using the actual app."""
+    """Create a test client using the actual (minimal, test-mode) app."""
     return TestClient(app)
+
+
+def _client_with_router(router):
+    """Return a TestClient for a fresh app with a single real router mounted.
+
+    Used by tests that must exercise a genuine route which the test-mode
+    module-level ``app`` does not mount. No security middleware is added, so the
+    router returns its real business-logic status (its own auth ``Depends`` may
+    still yield 401).
+    """
+    fresh = FastAPI()
+    fresh.include_router(router)
+    return TestClient(fresh, raise_server_exceptions=False)
 
 
 class TestActualMountedRoutes:
@@ -197,19 +216,30 @@ class TestExistingRoutesCoverage:
             # Should return valid HTTP status codes (including 503 for service unavailable)
             assert response.status_code in [200, 404, 422, 500, 503]
 
-    def test_news_with_database_mock(self, test_client):
-        """Test news routes with database connection mocked."""
-        # Skip this test for now as the database module structure is complex
-        response = test_client.get("/news/articles")
-        # Just verify it returns a valid HTTP status
-        assert response.status_code in [200, 422, 500, 503]
+    def test_news_with_database_mock(self):
+        """Test the real news /articles route.
 
-    def test_graph_with_database_mock(self, test_client):
-        """Test graph routes with database connection mocked."""
-        # Skip this test for now as the database module structure is complex
-        response = test_client.get("/graph/related_entities")
-        # Just verify it returns a valid HTTP status
-        assert response.status_code in [200, 422, 500, 503]
+        The test-mode module-level app is minimal, so mount the real
+        news router on a fresh app. ``/news/articles`` requires auth
+        (``Depends(require_auth)``) and returns 401 when unauthenticated.
+        """
+        from src.api.routes import news_routes
+        client = _client_with_router(news_routes.router)
+        response = client.get("/news/articles")
+        # Real behaviour: 401 (auth required) or a backend error / success.
+        assert response.status_code in [200, 401, 422, 500, 503]
+
+    def test_graph_with_database_mock(self):
+        """Test the real graph /related_entities route.
+
+        Mount the real graph router on a fresh app. The graph store is
+        unavailable in the test environment, so the route returns 503.
+        """
+        from src.api.routes import graph_routes
+        client = _client_with_router(graph_routes.router)
+        response = client.get("/graph/related_entities")
+        # Real behaviour: 503 (graph unavailable) or success / error.
+        assert response.status_code in [200, 401, 422, 500, 503]
 
 
 class TestEdgeCasesForCoverage:
