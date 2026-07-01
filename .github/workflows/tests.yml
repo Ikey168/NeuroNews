@@ -1,11 +1,9 @@
-
-# name: Tests
-#
-# on:
-#   pull_request:
-#     branches: [ main ]
-#   push:
-#     branches: [ main ]
+name: Tests
+# Auto-run disabled: superseded by the main CI/CD pipeline (ci-cd-pipeline.yml).
+# Kept as a valid, manual-dispatch-only workflow so it no longer produces
+# startup-failure runs on every push and pull request.
+on:
+  workflow_dispatch:
 
 jobs:
   test:

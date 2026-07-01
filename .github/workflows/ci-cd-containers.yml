@@ -1,10 +1,9 @@
 # name: CI/CD Pipeline with Containers
-
-# on:
-#   push:
-#     branches: [ main, develop, 31-cluster-related-articles-event-detection ]
-#   pull_request:
-#     branches: [ main, develop ]
+# Auto-run disabled: superseded by the main CI/CD pipeline (ci-cd-pipeline.yml).
+# Kept as a valid, manual-dispatch-only workflow so it no longer produces
+# startup-failure runs on every push and pull request.
+on:
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
