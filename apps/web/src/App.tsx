@@ -19,7 +19,6 @@ export default function App() {
         canvases={manager.canvases}
         activeId={manager.active.id}
         onSelect={manager.setActive}
-        onOpen={manager.open}
         onRemove={manager.remove}
         ingestRate="64"
       />

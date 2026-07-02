@@ -6,6 +6,7 @@
 import { RotateCcw } from "lucide-react";
 import SpecRenderer from "./SpecRenderer";
 import Composer from "./Composer";
+import { usePackStatus } from "../lib/queries";
 import { useUiSpec } from "./useUiSpec";
 import { useAdaptiveSignals, hasSignals } from "./signals";
 import { PANEL_DEFS } from "./spec";
@@ -31,15 +32,27 @@ const PLANNER_BADGE: Record<string, { label: string; className: string; hint: st
   },
 };
 
-const SUGGESTIONS = [
+// Example intents on the empty canvas — the only "navigation" left. The
+// news-specific ones follow the domain pack, mirroring how the planner
+// gates news panels via ui_flags.
+const CORE_SUGGESTIONS = [
   "Daily briefing",
   "Compare outlet framing on climate policy",
   "Who disagrees about AI regulation?",
   "Fact-check claims about the economy",
+  "Library documents",
+  "Entity network connections",
+];
+
+const NEWS_SUGGESTIONS = [
   "Sentiment trend for technology this month",
+  "Breaking event clusters",
+  "Watchlist alerts",
 ];
 
 function EmptyState({ onIntent }: { onIntent: (intent: string) => void }) {
+  const { newsPack } = usePackStatus();
+  const suggestions = newsPack ? [...CORE_SUGGESTIONS, ...NEWS_SUGGESTIONS] : CORE_SUGGESTIONS;
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center">
       <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary shadow-[0_0_28px_-4px_hsl(var(--primary)/0.6)]">
@@ -56,7 +69,7 @@ function EmptyState({ onIntent }: { onIntent: (intent: string) => void }) {
         </p>
       </div>
       <div className="flex max-w-xl flex-wrap items-center justify-center gap-2">
-        {SUGGESTIONS.map((s) => (
+        {suggestions.map((s) => (
           <Button
             key={s}
             variant="outline"

@@ -17,8 +17,8 @@ screen is planned from a natural-language intent) and a FastAPI backend.
   intent ("compare outlet framing on climate policy") as a validated
   `ui-spec-v1` document — heuristically or by an LLM when a key is
   configured — and adapted to warehouse data availability, domain packs,
-  and the operator's pins/mutes. The sidebar manages canvases and
-  generative presets instead of routes. See [docs/genui.md](docs/genui.md).
+  and the operator's pins/mutes. The sidebar only manages open canvases —
+  all navigation is the prompt. See [docs/genui.md](docs/genui.md).
 - **Argument mining** — detects claims, classifies stances, identifies frames
   (economic / security / humanitarian / legal / political / scientific / other),
   extracts actor/entity mentions, and tracks how policy positions evolve over
@@ -196,11 +196,10 @@ positions, conflicts, stance drift, outlet ranking/clusters, watchlist,
 story timeline, and more.
 
 Startup is an empty surface with a prompt composer at the bottom — nothing
-is generated until asked. The sidebar manages canvases instead of routes:
-open canvases persist in localStorage, and generative suggestions
-("Sentiment", "Claims & facts", "Outlets & framing", …) plan a matching
-layout instead of navigating to a hardcoded page. The surface is built
-with Tailwind + shadcn/ui. Layouts adapt to warehouse data availability, enabled
+is generated until asked. The sidebar only manages open canvases (persisted
+in localStorage); example intents on the empty canvas, gated by the enabled
+domain packs, are the sole shortcuts. The surface is built with Tailwind +
+shadcn/ui. Layouts adapt to warehouse data availability, enabled
 domain packs, and the operator's pins/mutes/interaction history. See
 [docs/genui.md](docs/genui.md).
 

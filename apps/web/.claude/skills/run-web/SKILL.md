@@ -6,10 +6,10 @@ description: Run, launch, start, build, screenshot, or smoke-test the NeuroNews 
 # Run the NeuroNews web frontend (Intelligence Terminal)
 
 `apps/web` is a React 18 + Vite + TypeScript single-page app — a dark
-"terminal" generative canvas: every screen is planned from an intent (the
-sidebar lists open canvases plus generative suggestions — Library, Sentiment,
-Event clusters, Trending, Watchlists, Story timeline, …). Startup is an
-empty canvas with only the bottom prompt composer; layouts appear on ask.
+"terminal" generative canvas: every screen is planned from an intent typed
+into the bottom prompt composer (the sidebar only manages open canvases).
+Startup is an empty canvas; layouts appear on ask. The driver types each
+intent into the composer like an operator would.
 It fetches from the FastAPI backend (`services/api` / `src/api`) on every view
 and **transparently falls back to a baked-in design dataset** when the backend
 is unreachable (see `src/lib/queries.ts`), so it always renders standalone — no

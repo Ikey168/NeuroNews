@@ -9,10 +9,9 @@ behaviour. Startup is intentionally empty: a bare surface with a prompt composer
 anchored at the bottom. Nothing is generated until an intent is submitted;
 panels then assemble above the composer, fitted to the request (spec spans
 are hints — the renderer stretches each row to fill the grid). The sidebar
-is a canvas manager: open canvases (persisted in localStorage) plus
-generative suggestions that replace the old navigation — clicking
-"Sentiment" *plans a sentiment layout* rather than routing to a hardcoded
-page. The surface is styled with Tailwind + shadcn/ui components
+is only a canvas manager: open canvases persisted in localStorage —
+there is no navigation to replace, and the example intents on the empty
+canvas (news ones gated by the domain pack) are the sole shortcuts. The surface is styled with Tailwind + shadcn/ui components
 (`apps/web/src/components/ui/`), themed to the terminal palette.
 
 ## Architecture
