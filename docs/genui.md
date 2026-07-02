@@ -5,10 +5,15 @@ screen is generated at runtime from a natural-language intent — *"compare
 outlet framing on climate policy"*, *"who disagrees about AI regulation?"*
 — as a validated **`ui-spec-v1`** document rendered from a panel registry,
 so every generated panel keeps the terminal's live/demo fallback
-behaviour. The sidebar is a canvas manager: open canvases (persisted in
-localStorage) plus generative presets that replace the old navigation —
-clicking "Sentiment" *plans a sentiment layout* rather than routing to a
-hardcoded page.
+behaviour. Startup is intentionally empty: a bare surface with a prompt composer
+anchored at the bottom. Nothing is generated until an intent is submitted;
+panels then assemble above the composer, fitted to the request (spec spans
+are hints — the renderer stretches each row to fill the grid). The sidebar
+is a canvas manager: open canvases (persisted in localStorage) plus
+generative suggestions that replace the old navigation — clicking
+"Sentiment" *plans a sentiment layout* rather than routing to a hardcoded
+page. The surface is styled with Tailwind + shadcn/ui components
+(`apps/web/src/components/ui/`), themed to the terminal palette.
 
 ## Architecture
 
@@ -43,8 +48,9 @@ feature-flag pattern in `src/api/app.py`):
 ### Frontend (`apps/web/src/genui/`)
 
 - `spec.ts` — ui-spec-v1 types + client mirror of the catalog.
-- `Canvas.tsx` / `canvases.ts` — the app's only surface and the canvas
-  manager (open/activate/close canvases, persisted per browser).
+- `Canvas.tsx` / `Composer.tsx` / `canvases.ts` — the app's only surface
+  (empty state + bottom prompt composer) and the canvas manager
+  (open/activate/close canvases, persisted per browser).
 - `registry.tsx` — panel type → renderer (~20 types incl. library documents,
   watchlist and story timeline), reusing `lib/queries.ts` hooks and the SVG
   charts; unknown types render a stub, never crash.

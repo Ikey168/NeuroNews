@@ -77,10 +77,11 @@ function findChromium() {
 }
 
 // Every sidebar entry: button label -> screenshot slug. The sidebar is a
-// canvas manager: "Briefing" is the always-present default canvas; the rest
-// are generative presets. Labels must match src/components/Sidebar.tsx.
+// canvas manager: "New canvas" is the always-present empty canvas (prompt
+// composer only); the rest are generative suggestions. Labels must match
+// src/components/Sidebar.tsx.
 const VIEWS = [
-  ["Briefing", "briefing"],
+  ["New canvas", "home"],
   ["Library", "library"],
   ["Entity network", "entities"],
   ["Claims & facts", "claims"],

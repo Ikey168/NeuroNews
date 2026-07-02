@@ -47,7 +47,7 @@ screen is planned from a natural-language intent) and a FastAPI backend.
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 18, Vite, TypeScript, React Query |
+| Frontend | React 18, Vite, TypeScript, React Query, Tailwind CSS + shadcn/ui |
 | Backend | FastAPI, uvicorn |
 | Analytics warehouse | DuckDB (local file; single-writer) |
 | Argument mining | distilbert / heuristic fallback, scikit-learn, spaCy |
@@ -195,10 +195,12 @@ clusters, sentiment heatmap, entity graph, claims, stance, framing, actor
 positions, conflicts, stance drift, outlet ranking/clusters, watchlist,
 story timeline, and more.
 
-The sidebar manages canvases instead of routes: open canvases persist in
-localStorage, and generative presets ("Sentiment", "Claims & facts",
-"Outlets & framing", …) plan a matching layout instead of navigating to a
-hardcoded page. Layouts adapt to warehouse data availability, enabled
+Startup is an empty surface with a prompt composer at the bottom — nothing
+is generated until asked. The sidebar manages canvases instead of routes:
+open canvases persist in localStorage, and generative suggestions
+("Sentiment", "Claims & facts", "Outlets & framing", …) plan a matching
+layout instead of navigating to a hardcoded page. The surface is built
+with Tailwind + shadcn/ui. Layouts adapt to warehouse data availability, enabled
 domain packs, and the operator's pins/mutes/interaction history. See
 [docs/genui.md](docs/genui.md).
 

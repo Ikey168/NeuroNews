@@ -1,13 +1,38 @@
-* {
-  box-sizing: border-box;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-html,
-body,
-#root {
-  margin: 0;
-  padding: 0;
-  height: 100%;
+/* shadcn-style design tokens, mapped 1:1 from the terminal palette
+   (theme.ts). Dark-only: the terminal has no light mode. */
+@layer base {
+  :root {
+    --background: 220 29% 5%; /* #0a0d12 */
+    --foreground: 216 25% 92%; /* #e6eaf0 */
+    --card: 218 24% 9%; /* #11151c */
+    --card-foreground: 216 25% 92%;
+    --primary: 0 100% 71%; /* #FF6B6B */
+    --primary-foreground: 220 29% 5%;
+    --secondary: 217 29% 12%; /* #161d28 */
+    --secondary-foreground: 216 25% 92%;
+    --muted: 217 29% 12%;
+    --muted-foreground: 219 14% 60%; /* #8a94a6 */
+    --accent: 217 29% 12%;
+    --accent-foreground: 216 25% 92%;
+    --border: 219 26% 15%; /* #1c2330 */
+    --input: 218 28% 17%; /* #232a36 */
+    --ring: 0 100% 71%;
+    --radius: 0.625rem;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
 }
 
 ::-webkit-scrollbar {

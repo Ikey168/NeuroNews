@@ -1,14 +1,15 @@
 ---
 name: run-web
-description: Run, launch, start, build, screenshot, or smoke-test the NeuroNews Intelligence Terminal web frontend (apps/web — React + Vite + TypeScript SPA). Use when asked to see the web UI working, capture screenshots of a canvas (briefing, sentiment, claims, outlets, entity network, etc.), or verify a frontend change renders.
+description: Run, launch, start, build, screenshot, or smoke-test the NeuroNews Intelligence Terminal web frontend (apps/web — React + Vite + TypeScript SPA). Use when asked to see the web UI working, capture screenshots of a canvas (home, sentiment, claims, outlets, entity network, etc.), or verify a frontend change renders.
 ---
 
 # Run the NeuroNews web frontend (Intelligence Terminal)
 
 `apps/web` is a React 18 + Vite + TypeScript single-page app — a dark
 "terminal" generative canvas: every screen is planned from an intent (the
-sidebar lists open canvases plus generative presets — Briefing, Library,
-Sentiment, Event clusters, Trending, Watchlists, Story timeline, …).
+sidebar lists open canvases plus generative suggestions — Library, Sentiment,
+Event clusters, Trending, Watchlists, Story timeline, …). Startup is an
+empty canvas with only the bottom prompt composer; layouts appear on ask.
 It fetches from the FastAPI backend (`services/api` / `src/api`) on every view
 and **transparently falls back to a baked-in design dataset** when the backend
 is unreachable (see `src/lib/queries.ts`), so it always renders standalone — no

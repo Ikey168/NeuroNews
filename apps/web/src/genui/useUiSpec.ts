@@ -22,12 +22,15 @@ function signalsKey(s: UsageSignals): string {
   return JSON.stringify([s.pinned, s.dismissed]);
 }
 
-export function useUiSpec(intent: string, signals: UsageSignals): UiSpecResult {
+export function useUiSpec(intent: string, signals: UsageSignals, enabled = true): UiSpecResult {
   // The backend contract caps intent at 500 chars; over-long input must
   // degrade by truncation, not by a 422 that silently downgrades to the
   // client planner.
   const bounded = intent.slice(0, 500);
   const q = useQuery({
+    // Empty canvases generate nothing: the query only runs once an intent
+    // is submitted (the startup surface stays blank by design).
+    enabled,
     queryKey: ["uiSpec", bounded, signalsKey(signals)],
     queryFn: async (): Promise<{ spec: UISpec; source: Source }> => {
       try {

@@ -1,12 +1,12 @@
-import type { CSSProperties } from "react";
-import { ACCENT, accentSoft, accentGlow, fonts } from "../theme";
-import { usePackStatus } from "../lib/queries";
-import Hover from "./Hover";
-import { BRIEFING, type CanvasDef } from "../genui/canvases";
-
 // The sidebar is a canvas manager, not a view switch: every entry either
-// activates an open canvas or generates a new one from a preset intent.
-// Presets route through the same planner as free-typed intents.
+// activates an open canvas or generates a new one from a suggested intent.
+// Suggestions route through the same planner as composer-typed intents.
+
+import { Plus, Sparkles, X } from "lucide-react";
+import { usePackStatus } from "../lib/queries";
+import { HOME, type CanvasDef } from "../genui/canvases";
+import { Button } from "./ui/button";
+import { cn } from "../lib/utils";
 
 interface PresetDef {
   label: string;
@@ -40,213 +40,127 @@ interface Props {
   ingestRate: string;
 }
 
+const sectionLabel = "px-2.5 pb-1.5 pt-2 font-mono text-[9.5px] tracking-[0.16em] text-muted-foreground/60";
+
+function NavButton({
+  active,
+  onClick,
+  glyph,
+  icon,
+  label,
+  title,
+  trailing,
+}: {
+  active?: boolean;
+  onClick: () => void;
+  glyph?: string;
+  icon?: React.ReactNode;
+  label: string;
+  title?: string;
+  trailing?: React.ReactNode;
+}) {
+  return (
+    <Button
+      variant="ghost"
+      onClick={onClick}
+      title={title}
+      className={cn(
+        "h-auto w-full justify-start gap-2.5 px-2.5 py-2 text-[13px] font-medium text-muted-foreground",
+        active && "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary",
+      )}
+    >
+      <span className="w-[18px] shrink-0 text-center text-[13px]">{icon ?? glyph}</span>
+      <span className="min-w-0 flex-1 truncate text-left">{label}</span>
+      {trailing}
+    </Button>
+  );
+}
+
 export default function Sidebar({ canvases, activeId, onSelect, onOpen, onRemove, ingestRate }: Props) {
   const { newsPack } = usePackStatus();
 
-  const navBtn = (active: boolean): CSSProperties => ({
-    display: "flex",
-    alignItems: "center",
-    gap: 11,
-    width: "100%",
-    padding: "9px 10px",
-    border: "none",
-    borderRadius: 7,
-    cursor: "pointer",
-    fontFamily: fonts.sans,
-    fontSize: 13,
-    fontWeight: 500,
-    transition: "background .12s",
-    background: active ? accentSoft(ACCENT) : "transparent",
-    color: active ? ACCENT : "#9aa4b2",
-  });
-
-  const sectionLabel: CSSProperties = {
-    fontFamily: fonts.mono,
-    fontSize: 9.5,
-    color: "#4b5563",
-    letterSpacing: "0.16em",
-    padding: "8px 10px 6px",
-  };
-
   return (
-    <aside
-      style={{
-        width: 236,
-        flex: "none",
-        background: "#0c1016",
-        borderRight: "1px solid #1c2330",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
+    <aside className="flex w-60 shrink-0 flex-col border-r bg-[#0c1016]">
       {/* Brand */}
-      <div
-        style={{
-          padding: "20px 18px 18px",
-          borderBottom: "1px solid #1c2330",
-          display: "flex",
-          alignItems: "center",
-          gap: 11,
-        }}
-      >
-        <div
-          style={{
-            width: 34,
-            height: 34,
-            flex: "none",
-            borderRadius: 8,
-            background: ACCENT,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            boxShadow: `0 0 18px -2px ${accentGlow(ACCENT)}`,
-          }}
-        >
-          <span style={{ fontFamily: fonts.grotesk, fontWeight: 700, fontSize: 19, color: "#0a0d12" }}>N</span>
+      <div className="flex items-center gap-3 border-b px-4 py-4">
+        <div className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-lg bg-primary shadow-[0_0_18px_-2px_hsl(var(--primary)/0.5)]">
+          <span className="font-grotesk text-[19px] font-bold text-primary-foreground">N</span>
         </div>
-        <div style={{ lineHeight: 1.1 }}>
-          <div style={{ fontFamily: fonts.grotesk, fontWeight: 700, fontSize: 16, letterSpacing: "-0.01em" }}>
-            Noesis
-          </div>
-          <div style={{ fontFamily: fonts.mono, fontSize: 9.5, color: "#5b6675", letterSpacing: "0.16em", marginTop: 2 }}>
+        <div className="leading-tight">
+          <div className="font-grotesk text-base font-bold tracking-tight">Noesis</div>
+          <div className="mt-0.5 font-mono text-[9.5px] tracking-[0.16em] text-muted-foreground/60">
             GENERATIVE CANVAS
           </div>
         </div>
       </div>
 
-      <nav
-        style={{
-          flex: 1,
-          padding: "12px 10px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 2,
-          overflowY: "auto",
-        }}
-      >
-        <div style={sectionLabel}>CANVASES</div>
+      <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-2.5">
+        <div className={sectionLabel}>CANVASES</div>
         {canvases.map((c) => (
-          <Hover
+          <NavButton
             key={c.id}
-            as="button"
+            active={c.id === activeId}
             onClick={() => onSelect(c.id)}
-            style={navBtn(c.id === activeId)}
-            hoverStyle={c.id === activeId ? {} : { background: "#161d28", color: "#e6eaf0" }}
-            title={c.intent || "Adaptive overview briefing"}
-          >
-            <span style={{ width: 18, flex: "none", textAlign: "center", fontSize: 13 }}>
-              {c.id === BRIEFING.id ? "✦" : "◈"}
-            </span>
-            <span
-              style={{
-                flex: 1,
-                textAlign: "left",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {c.label}
-            </span>
-            {c.id !== BRIEFING.id ? (
-              <span
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRemove(c.id);
-                }}
-                title="Close canvas"
-                style={{ fontFamily: fonts.mono, fontSize: 11, color: "#4b5563", padding: "0 2px" }}
-              >
-                ✕
-              </span>
-            ) : null}
-          </Hover>
+            icon={c.id === HOME.id ? <Plus className="size-3.5" /> : <Sparkles className="size-3.5" />}
+            label={c.label}
+            title={c.intent || "Empty canvas — describe what you want to see"}
+            trailing={
+              c.id !== HOME.id ? (
+                <span
+                  role="button"
+                  title="Close canvas"
+                  className="rounded p-0.5 text-muted-foreground/50 hover:bg-secondary hover:text-foreground"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemove(c.id);
+                  }}
+                >
+                  <X className="size-3" />
+                </span>
+              ) : undefined
+            }
+          />
         ))}
 
-        <div style={{ ...sectionLabel, padding: "18px 10px 6px" }}>GENERATE</div>
+        <div className={cn(sectionLabel, "pt-4")}>SUGGESTIONS</div>
         {corePresets.map((p) => (
-          <Hover
+          <NavButton
             key={p.label}
-            as="button"
             onClick={() => onOpen(p.intent, p.label)}
-            style={navBtn(false)}
-            hoverStyle={{ background: "#161d28", color: "#e6eaf0" }}
+            glyph={p.glyph}
+            label={p.label}
             title={`Generate: “${p.intent}”`}
-          >
-            <span style={{ width: 18, flex: "none", textAlign: "center", fontSize: 13 }}>{p.glyph}</span>
-            <span style={{ flex: 1, textAlign: "left" }}>{p.label}</span>
-          </Hover>
+          />
         ))}
 
         {newsPack ? (
           <>
-            <div
-              style={{
-                ...sectionLabel,
-                padding: "18px 10px 6px",
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
+            <div className={cn(sectionLabel, "flex items-center gap-1.5 pt-4")}>
               NEWS PACK
-              <span
-                style={{
-                  fontFamily: fonts.mono,
-                  fontSize: 8.5,
-                  color: "#3DD68C",
-                  background: "#3DD68C18",
-                  border: "1px solid #3DD68C44",
-                  borderRadius: 4,
-                  padding: "1px 5px",
-                  letterSpacing: "0.08em",
-                }}
-              >
+              <span className="rounded border border-emerald-400/30 bg-emerald-400/10 px-1 py-px font-mono text-[8.5px] tracking-wider text-emerald-400">
                 ON
               </span>
             </div>
             {newsPresets.map((p) => (
-              <Hover
+              <NavButton
                 key={p.label}
-                as="button"
                 onClick={() => onOpen(p.intent, p.label)}
-                style={navBtn(false)}
-                hoverStyle={{ background: "#161d28", color: "#e6eaf0" }}
+                glyph={p.glyph}
+                label={p.label}
                 title={`Generate: “${p.intent}”`}
-              >
-                <span style={{ width: 18, flex: "none", textAlign: "center", fontSize: 13 }}>{p.glyph}</span>
-                <span style={{ flex: 1, textAlign: "left" }}>{p.label}</span>
-              </Hover>
+              />
             ))}
           </>
         ) : null}
       </nav>
 
       {/* Footer */}
-      <div
-        style={{
-          padding: "14px 16px",
-          borderTop: "1px solid #1c2330",
-          display: "flex",
-          flexDirection: "column",
-          gap: 9,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span
-            style={{ width: 7, height: 7, borderRadius: "50%", background: "#3DD68C", animation: "blink 2s infinite" }}
-          />
-          <span style={{ fontFamily: fonts.mono, fontSize: 10.5, color: "#8a94a6" }}>PIPELINE LIVE</span>
+      <div className="flex flex-col gap-2 border-t px-4 py-3.5">
+        <div className="flex items-center gap-2">
+          <span className="h-[7px] w-[7px] rounded-full bg-emerald-400" style={{ animation: "blink 2s infinite" }} />
+          <span className="font-mono text-[10.5px] text-muted-foreground">PIPELINE LIVE</span>
         </div>
-        <div
-          style={{
-            fontFamily: fonts.mono,
-            fontSize: 10.5,
-            color: "#5b6675",
-            display: "flex",
-            justifyContent: "space-between",
-          }}
-        >
+        <div className="flex justify-between font-mono text-[10.5px] text-muted-foreground/60">
           <span>142 sources</span>
           <span>{ingestRate}/min</span>
         </div>

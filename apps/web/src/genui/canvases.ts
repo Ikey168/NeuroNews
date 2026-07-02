@@ -11,9 +11,11 @@ export interface CanvasDef {
   intent: string;
 }
 
-export const BRIEFING: CanvasDef = { id: "briefing", label: "Briefing", intent: "" };
+// The home canvas is intentionally empty: startup shows a bare surface
+// with just the prompt composer — nothing is generated until asked.
+export const HOME: CanvasDef = { id: "home", label: "New canvas", intent: "" };
 
-const STORAGE_KEY = "noesis.genui.canvases.v1";
+const STORAGE_KEY = "noesis.genui.canvases.v2";
 
 interface Stored {
   canvases: CanvasDef[];
@@ -26,7 +28,7 @@ function normalizeIntent(intent: string): string {
 
 export function labelForIntent(intent: string): string {
   const trimmed = intent.trim().replace(/\s+/g, " ");
-  if (!trimmed) return BRIEFING.label;
+  if (!trimmed) return HOME.label;
   const capped = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
   return capped.length > 30 ? capped.slice(0, 29) + "…" : capped;
 }
@@ -38,16 +40,16 @@ function load(): Stored {
       const parsed = JSON.parse(raw) as Partial<Stored>;
       const rest = (Array.isArray(parsed.canvases) ? parsed.canvases : []).filter(
         (c): c is CanvasDef =>
-          !!c && typeof c.id === "string" && typeof c.label === "string" && typeof c.intent === "string" && c.id !== BRIEFING.id,
+          !!c && typeof c.id === "string" && typeof c.label === "string" && typeof c.intent === "string" && c.id !== HOME.id,
       );
-      const canvases = [BRIEFING, ...rest];
-      const activeId = canvases.some((c) => c.id === parsed.activeId) ? (parsed.activeId as string) : BRIEFING.id;
+      const canvases = [HOME, ...rest];
+      const activeId = canvases.some((c) => c.id === parsed.activeId) ? (parsed.activeId as string) : HOME.id;
       return { canvases, activeId };
     }
   } catch {
     // Corrupt storage — start fresh.
   }
-  return { canvases: [BRIEFING], activeId: BRIEFING.id };
+  return { canvases: [HOME], activeId: HOME.id };
 }
 
 function save(state: Stored): void {
@@ -87,7 +89,7 @@ export function useCanvases(): CanvasManager {
     (intent: string, label?: string) =>
       update((s) => {
         const normalized = normalizeIntent(intent);
-        if (!normalized) return { ...s, activeId: BRIEFING.id };
+        if (!normalized) return { ...s, activeId: HOME.id };
         const existing = s.canvases.find((c) => c.intent === normalized);
         if (existing) return { ...s, activeId: existing.id };
         const canvas: CanvasDef = {
@@ -103,13 +105,13 @@ export function useCanvases(): CanvasManager {
   const remove = useCallback(
     (id: string) =>
       update((s) => {
-        if (id === BRIEFING.id) return s;
+        if (id === HOME.id) return s;
         const canvases = s.canvases.filter((c) => c.id !== id);
-        return { canvases, activeId: s.activeId === id ? BRIEFING.id : s.activeId };
+        return { canvases, activeId: s.activeId === id ? HOME.id : s.activeId };
       }),
     [update],
   );
 
-  const active = state.canvases.find((c) => c.id === state.activeId) ?? BRIEFING;
+  const active = state.canvases.find((c) => c.id === state.activeId) ?? HOME;
   return { canvases: state.canvases, active, setActive, open, remove };
 }
