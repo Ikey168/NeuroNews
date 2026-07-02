@@ -39,7 +39,7 @@ export interface PanelProps {
   onTouch: () => void;
 }
 
-const mono: CSSProperties = { fontFamily: fonts.mono, fontSize: 10.5, color: "#5b6675" };
+const mono: CSSProperties = { fontFamily: fonts.mono, fontSize: 10.5, color: "#5f7580" };
 const rowTitle: CSSProperties = { fontSize: 12.5, fontWeight: 500, lineHeight: 1.35 };
 
 function chip(color: string): CSSProperties {
@@ -63,7 +63,7 @@ function Empty({ text }: { text: string }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        color: "#5b6675",
+        color: "#5f7580",
         fontFamily: fonts.mono,
         fontSize: 11.5,
       }}
@@ -93,7 +93,7 @@ function daysParam(panel: PanelSpec): number | undefined {
 function NotePanel(props: PanelProps) {
   return (
     <GenPanel {...props}>
-      <div style={{ fontFamily: fonts.mono, fontSize: 12, color: "#9aa4b2", lineHeight: 1.6 }}>
+      <div style={{ fontFamily: fonts.mono, fontSize: 12, color: "#9ab3bb", lineHeight: 1.6 }}>
         {props.panel.body || "—"}
       </div>
     </GenPanel>
@@ -139,7 +139,7 @@ function ArticlesPanel(props: PanelProps) {
       ) : (
         <div style={{ display: "flex", flexDirection: "column" }}>
           {rows.map((a, i) => (
-            <div key={i} style={{ display: "flex", gap: 11, padding: "8px 0", borderBottom: i < rows.length - 1 ? "1px solid #161d28" : "none" }}>
+            <div key={i} style={{ display: "flex", gap: 11, padding: "8px 0", borderBottom: i < rows.length - 1 ? "1px solid #12242e" : "none" }}>
               <span style={{ width: 6, height: 6, flex: "none", borderRadius: "50%", background: sentColor(a.sent), marginTop: 6 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={rowTitle}>{a.title}</div>
@@ -177,7 +177,7 @@ function DocumentsPanel(props: PanelProps) {
       ) : (
         <div style={{ display: "flex", flexDirection: "column" }}>
           {rows.map((d, i) => (
-            <div key={d.document_id} style={{ display: "flex", gap: 11, alignItems: "baseline", padding: "8px 0", borderBottom: i < rows.length - 1 ? "1px solid #161d28" : "none" }}>
+            <div key={d.document_id} style={{ display: "flex", gap: 11, alignItems: "baseline", padding: "8px 0", borderBottom: i < rows.length - 1 ? "1px solid #12242e" : "none" }}>
               <span style={chip(SOURCE_TYPE_COLORS[d.source_type] ?? palette.neu)}>{d.source_type.toUpperCase()}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={rowTitle}>{d.title ?? d.document_id}</div>
@@ -246,7 +246,7 @@ function TimelinePanel(props: PanelProps) {
       ) : (
         <div style={{ display: "flex", flexDirection: "column" }}>
           {events.slice(0, 5).map((e, i) => (
-            <div key={i} style={{ display: "flex", gap: 11, padding: "7px 0", borderBottom: i < Math.min(events.length, 5) - 1 ? "1px solid #161d28" : "none" }}>
+            <div key={i} style={{ display: "flex", gap: 11, padding: "7px 0", borderBottom: i < Math.min(events.length, 5) - 1 ? "1px solid #12242e" : "none" }}>
               <span style={{ ...mono, width: 52, flex: "none" }}>{e.date}</span>
               <span style={{ width: 6, height: 6, flex: "none", borderRadius: "50%", background: sentColor(e.sent), marginTop: 5 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -279,7 +279,7 @@ function TrendingPanel(props: PanelProps) {
               <span style={{ ...mono, width: 16 }}>{i + 1}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 12.5, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.topic}</div>
-                <div style={{ height: 3, background: "#1c2330", borderRadius: 2, marginTop: 5, overflow: "hidden" }}>
+                <div style={{ height: 3, background: "#193039", borderRadius: 2, marginTop: 5, overflow: "hidden" }}>
                   <div style={{ height: "100%", width: `${Math.round((t.mentions / maxM) * 100)}%`, background: ACCENT }} />
                 </div>
               </div>
@@ -306,7 +306,7 @@ function ClustersPanel(props: PanelProps) {
           {rows.map((c, i) => {
             const sc = sentColor(c.sent);
             return (
-              <div key={i} style={{ border: "1px solid #1c2330", borderRadius: 8, padding: "10px 12px", background: "#0e131a" }}>
+              <div key={i} style={{ border: "1px solid #193039", borderRadius: 8, padding: "10px 12px", background: "#0a121a" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
                   <span style={chip(sc)}>{sentLabel(c.sent)}</span>
                   <span style={mono}>
@@ -347,7 +347,7 @@ function TopicSentimentPanel(props: PanelProps) {
             return (
               <div key={t.topic} style={{ display: "flex", alignItems: "center", gap: 11 }}>
                 <div style={{ width: 110, flex: "none", fontSize: 12, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.topic}</div>
-                <div style={{ flex: 1, height: 5, background: "#1c2330", borderRadius: 3, overflow: "hidden" }}>
+                <div style={{ flex: 1, height: 5, background: "#193039", borderRadius: 3, overflow: "hidden" }}>
                   <div style={{ height: "100%", width: `${Math.max(4, width)}%`, background: color }} />
                 </div>
                 <span style={{ fontFamily: fonts.mono, fontSize: 11, color, width: 44, textAlign: "right" }}>
@@ -385,7 +385,7 @@ function ClaimsPanel(props: PanelProps) {
       ) : (
         <div style={{ display: "flex", flexDirection: "column" }}>
           {rows.map((c, i) => (
-            <div key={i} style={{ padding: "8px 0", borderBottom: i < rows.length - 1 ? "1px solid #161d28" : "none" }}>
+            <div key={i} style={{ padding: "8px 0", borderBottom: i < rows.length - 1 ? "1px solid #12242e" : "none" }}>
               <div style={rowTitle}>{c.text}</div>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 5 }}>
                 <span style={chip(verdictColor(c.factcheck_verdict))}>{(c.factcheck_verdict ?? "unchecked").toUpperCase()}</span>
@@ -431,7 +431,7 @@ function StancePanel(props: PanelProps) {
                   <span style={{ fontSize: 12, fontWeight: 500 }}>{s.topic}</span>
                   <span style={mono}>{s.total} stances</span>
                 </div>
-                <div style={{ display: "flex", height: 7, borderRadius: 4, overflow: "hidden", background: "#1c2330" }}>
+                <div style={{ display: "flex", height: 7, borderRadius: 4, overflow: "hidden", background: "#193039" }}>
                   {segments.map((seg) =>
                     seg.frac > 0 ? (
                       <div key={seg.key} style={{ width: `${seg.frac * 100}%`, background: STANCE_COLORS[seg.key] }} />
@@ -484,13 +484,13 @@ function PositionsPanel(props: PanelProps) {
       ) : (
         <div style={{ display: "flex", flexDirection: "column" }}>
           {rows.map((p, i) => (
-            <div key={i} style={{ padding: "8px 0", borderBottom: i < rows.length - 1 ? "1px solid #161d28" : "none" }}>
+            <div key={i} style={{ padding: "8px 0", borderBottom: i < rows.length - 1 ? "1px solid #12242e" : "none" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: 12.5, fontWeight: 600 }}>{p.actor}</span>
                 <span style={chip(stanceColor(p.stance))}>{p.stance.toUpperCase()}</span>
                 <span style={mono}>{p.topic}</span>
               </div>
-              <div style={{ fontSize: 12, color: "#9aa4b2", marginTop: 4, lineHeight: 1.4 }}>{p.position}</div>
+              <div style={{ fontSize: 12, color: "#9ab3bb", marginTop: 4, lineHeight: 1.4 }}>{p.position}</div>
             </div>
           ))}
         </div>
@@ -519,7 +519,7 @@ function ControversyPanel(props: PanelProps) {
                 </span>
                 <span style={mono}>{c.topic}</span>
               </div>
-              <div style={{ height: 4, background: "#1c2330", borderRadius: 2, overflow: "hidden" }}>
+              <div style={{ height: 4, background: "#193039", borderRadius: 2, overflow: "hidden" }}>
                 <div style={{ height: "100%", width: `${Math.round((c.intensity / maxI) * 100)}%`, background: palette.neg }} />
               </div>
             </div>
@@ -542,13 +542,13 @@ function DriftPanel(props: PanelProps) {
       ) : (
         <div style={{ display: "flex", flexDirection: "column" }}>
           {rows.map((e, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: i < rows.length - 1 ? "1px solid #161d28" : "none" }}>
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: i < rows.length - 1 ? "1px solid #12242e" : "none" }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 12.5, fontWeight: 500 }}>{e.source}</div>
                 <div style={{ ...mono, marginTop: 2 }}>{e.topic}</div>
               </div>
               <span style={chip(STANCE_COLORS[e.from_stance] ?? palette.neu)}>{e.from_stance.toUpperCase()}</span>
-              <span style={{ color: "#5b6675" }}>→</span>
+              <span style={{ color: "#5f7580" }}>→</span>
               <span style={chip(STANCE_COLORS[e.to_stance] ?? palette.neu)}>{e.to_stance.toUpperCase()}</span>
             </div>
           ))}
@@ -619,7 +619,7 @@ function OutletClustersPanel(props: PanelProps) {
               fill={CLUSTER_COLORS[Math.abs(o.cluster_id) % CLUSTER_COLORS.length]}
               fillOpacity={0.75}
             />
-            <text x={px(o.pca_x) + 8} y={py(o.pca_y) + 3} fontSize={8.5} fill="#8a94a6" fontFamily={fonts.mono}>
+            <text x={px(o.pca_x) + 8} y={py(o.pca_y) + 3} fontSize={8.5} fill="#8ca5af" fontFamily={fonts.mono}>
               {o.source}
             </text>
           </g>

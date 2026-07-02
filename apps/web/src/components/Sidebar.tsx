@@ -18,14 +18,17 @@ interface Props {
 
 export default function Sidebar({ canvases, activeId, onSelect, onRemove, ingestRate }: Props) {
   return (
-    <aside className="flex w-60 shrink-0 flex-col border-r bg-[#0c1016]">
+    <aside className="flex w-60 shrink-0 flex-col border-r bg-[#070d13]">
       {/* Brand */}
       <div className="flex items-center gap-3 border-b px-4 py-4">
-        <div className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-lg bg-primary shadow-[0_0_18px_-2px_hsl(var(--primary)/0.5)]">
+        <div
+          className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-lg bg-primary shadow-[0_0_22px_-2px_hsl(var(--primary)/0.65)]"
+          style={{ animation: "flicker 7s infinite" }}
+        >
           <span className="font-grotesk text-[19px] font-bold text-primary-foreground">N</span>
         </div>
         <div className="leading-tight">
-          <div className="font-grotesk text-base font-bold tracking-tight">Noesis</div>
+          <div className="glow-text font-grotesk text-base font-bold tracking-tight">Noesis</div>
           <div className="mt-0.5 font-mono text-[9.5px] tracking-[0.16em] text-muted-foreground/60">
             GENERATIVE CANVAS
           </div>

@@ -104,7 +104,7 @@ function EmptyState({ onIntent }: { onIntent: (intent: string) => void }) {
 
         <div className="text-center">
           <p className="font-mono text-[11px] text-muted-foreground">
-            <kbd className="rounded border border-[#2a3340] bg-secondary px-1.5 py-0.5 text-[10px]">⌘K</kbd>{" "}
+            <kbd className="rounded border border-[#26485a] bg-secondary px-1.5 py-0.5 text-[10px]">⌘K</kbd>{" "}
             describe the view you need — panels assemble to fit
           </p>
           <p className="mt-2 font-mono text-[10.5px] text-muted-foreground/50">

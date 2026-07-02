@@ -35,7 +35,7 @@ export default function GenPanel({
   const adjustable = panel.type !== "note";
   return (
     <Card
-      className="flex h-full min-w-0 flex-col"
+      className="hud-corners flex h-full min-w-0 flex-col transition-shadow duration-300 hover:shadow-[0_0_28px_-10px_hsl(var(--primary)/0.45)]"
       onClick={adjustable ? onTouch : undefined}
       title={panel.rationale || undefined}
     >

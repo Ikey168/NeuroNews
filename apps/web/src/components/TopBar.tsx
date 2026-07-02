@@ -66,7 +66,7 @@ export default function TopBar({ onIntent }: Props) {
     .toUpperCase();
 
   return (
-    <header className="flex h-[54px] shrink-0 items-center gap-4 border-b bg-[#0c1016] px-4">
+    <header className="flex h-[54px] shrink-0 items-center gap-4 border-b bg-[#070d13] px-4">
       <CommandBar onIntent={onIntent} />
       <div className="flex-1" />
       <div className="flex items-center gap-4">
@@ -75,7 +75,7 @@ export default function TopBar({ onIntent }: Props) {
           <div className="font-mono text-sm font-medium text-primary">{clock}</div>
           <div className="font-mono text-[9px] tracking-widest text-muted-foreground/60">UTC · {dateStr}</div>
         </div>
-        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-[#2a3340] bg-secondary font-mono text-[11px] text-muted-foreground">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-[#26485a] bg-secondary font-mono text-[11px] text-muted-foreground">
           AK
         </div>
       </div>

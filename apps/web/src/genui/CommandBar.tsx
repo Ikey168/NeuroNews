@@ -60,8 +60,8 @@ export default function CommandBar({ onIntent }: Props) {
     <div className="relative min-w-0 max-w-xl flex-1">
       <div
         className={cn(
-          "flex items-center gap-2.5 rounded-lg border border-input bg-[#10151d] px-3 py-2 transition-colors",
-          focused && "border-primary/50",
+          "flex items-center gap-2.5 rounded-lg border border-input bg-[#0a141d] px-3 py-2 transition-all",
+          focused && "border-primary/60 shadow-[0_0_22px_-6px_hsl(var(--primary)/0.5)]",
         )}
       >
         <ScanSearch className="size-4 shrink-0 text-muted-foreground/60" />
@@ -87,7 +87,7 @@ export default function CommandBar({ onIntent }: Props) {
             <CornerDownLeft className="size-3" /> generate
           </span>
         ) : (
-          <span className="shrink-0 rounded border border-[#2a3340] px-1.5 py-px font-mono text-[9.5px] text-muted-foreground/50">
+          <span className="shrink-0 rounded border border-[#26485a] px-1.5 py-px font-mono text-[9.5px] text-muted-foreground/50">
             ⌘K
           </span>
         )}
