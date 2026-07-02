@@ -1,25 +1,15 @@
-import { useState } from "react";
 import { fonts } from "./theme";
-import type { ViewKey } from "./types";
 import { useTicker } from "./lib/queries";
+import { useCanvases } from "./genui/canvases";
 import Sidebar from "./components/Sidebar";
 import TopBar from "./components/TopBar";
 import BreakingTicker from "./components/BreakingTicker";
-import Dashboard from "./views/Dashboard";
-import Library from "./views/Library";
-import EntityGraphView from "./views/EntityGraphView";
-import DocumentReader from "./views/DocumentReader";
-import Sentiment from "./views/Sentiment";
-import Clusters from "./views/Clusters";
-import Trending from "./views/Trending";
-import Workspaces from "./views/Workspaces";
-import Watchlists from "./views/Watchlists";
-import Timeline from "./views/Timeline";
-import Arguments from "./views/Arguments";
-import Noesis from "./views/Noesis";
+import Canvas from "./genui/Canvas";
 
+// The app is a single generative surface: every screen is a canvas planned
+// from an intent (sidebar presets or free text) — there are no fixed views.
 export default function App() {
-  const [view, setView] = useState<ViewKey>("noesis");
+  const manager = useCanvases();
   const { data: ticker } = useTicker();
 
   return (
@@ -34,24 +24,20 @@ export default function App() {
         overflow: "hidden",
       }}
     >
-      <Sidebar view={view} setView={setView} ingestRate="64" />
+      <Sidebar
+        canvases={manager.canvases}
+        activeId={manager.active.id}
+        onSelect={manager.setActive}
+        onOpen={manager.open}
+        onRemove={manager.remove}
+        ingestRate="64"
+      />
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         <TopBar />
         <BreakingTicker text={ticker} />
         <main style={{ flex: 1, overflowY: "auto", padding: "22px 24px 40px" }}>
-          {view === "noesis" && <Noesis />}
-          {view === "dashboard" && <Dashboard setView={setView} />}
-          {view === "library" && <Library />}
-          {view === "knowledge" && <EntityGraphView />}
-          {view === "reader" && <DocumentReader />}
-          {view === "sentiment" && <Sentiment />}
-          {view === "clusters" && <Clusters />}
-          {view === "trending" && <Trending />}
-          {view === "workspaces" && <Workspaces />}
-          {view === "watchlists" && <Watchlists />}
-          {view === "timeline" && <Timeline />}
-          {view === "arguments" && <Arguments />}
+          <Canvas key={manager.active.id} canvas={manager.active} onIntent={manager.open} />
         </main>
       </div>
     </div>

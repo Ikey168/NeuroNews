@@ -8,12 +8,10 @@ import {
   adaptArticles,
   adaptClusters,
   adaptTrending,
-  adaptInfluencers,
   adaptTopicSentiment,
   adaptEntityGraph,
   adaptHeatmap,
   adaptDocuments,
-  adaptFrameDistribution,
 } from "./adapters";
 import {
   mockArticles,
@@ -27,7 +25,6 @@ import {
   mockStance,
   mockPositions,
   mockConflicts,
-  mockFrameDistribution,
   mockControversyGraph,
   mockSourceStances,
   mockDriftEvents,
@@ -35,14 +32,13 @@ import {
   mockOutletRanking,
   mockOutletClusters,
 } from "../data/mock";
-import type { RawClaim, RawStanceSummary, RawActorPosition, RawPositionUpdate, RawSourceStance, RawDriftEvent, RawFrameSource, RawActor, RawActorSummary, RawOutletCluster, RawOutletScore } from "./api";
+import type { RawClaim, RawStanceSummary, RawActorPosition, RawPositionUpdate, RawSourceStance, RawDriftEvent, RawFrameSource, RawActorSummary, RawOutletCluster, RawOutletScore } from "./api";
 import { palette, ACCENT } from "../theme";
 import type {
   Article,
   Cluster,
   KnowledgeDocument,
   TrendingTopic,
-  TopEntity,
   TopicSentiment,
   LiveGraph,
   Heatmap,
@@ -51,13 +47,11 @@ import type {
   ActorPosition,
   PositionUpdate,
   ConflictPair,
-  FrameDistribution,
   FrameSource,
   SourceType,
   ControversyGraph,
   SourceStance,
   StanceDriftEvent,
-  DocumentActor,
   ActorSummary,
   OutletCluster,
   OutletScore,
@@ -130,22 +124,6 @@ export function useTrending(params?: { days?: number }): Result<TrendingTopic[]>
     `trending-${params?.days ?? "default"}`,
     async () => adaptTrending(await api.trendingTopics(params?.days ? { days: params.days } : undefined)),
     mockTrending,
-  );
-}
-
-const mockTopEntities: TopEntity[] = [
-  { name: "Federal Reserve", color: ACCENT, links: 42 },
-  { name: "Nvidia", color: ACCENT, links: 38 },
-  { name: "European Union", color: ACCENT, links: 31 },
-  { name: "Microsoft", color: ACCENT, links: 27 },
-  { name: "AI", color: palette.amber, links: 24 },
-];
-
-export function useTopEntities(): Result<TopEntity[]> {
-  return useWithFallback(
-    "topEntities",
-    async () => adaptInfluencers(await api.topInfluencers({ limit: 5 })),
-    mockTopEntities,
   );
 }
 
@@ -431,26 +409,6 @@ export function useArgumentFramesBySource(params?: { source?: string; source_typ
   );
 }
 
-export function useArgumentActors(params?: { document_id?: string; source_type?: string; role?: string; actor_name?: string; limit?: number }): Result<DocumentActor[]> {
-  const key = `argumentActors-${params?.document_id ?? ""}-${params?.source_type ?? "all"}-${params?.role ?? ""}-${params?.actor_name ?? ""}`;
-  return useWithFallback(
-    key,
-    async (): Promise<DocumentActor[]> => {
-      const res = await api.argumentActors(params);
-      return res.actors.map((r: RawActor) => ({
-        document_id:  r.document_id,
-        source_type:  r.source_type as SourceType,
-        actor_name:   r.actor_name,
-        entity_id:    r.entity_id,
-        role:         r.role,
-        confidence:   r.confidence,
-        extracted_at: r.extracted_at,
-      }));
-    },
-    [],
-  );
-}
-
 export function useOutletRanking(params?: { source_type?: string; sort_by?: string }): Result<OutletScore[]> {
   const key = `outletRanking-${params?.source_type ?? "all"}-${params?.sort_by ?? "composite_score"}`;
   const fallback = params?.source_type && params.source_type !== "all"
@@ -523,16 +481,3 @@ export function useArgumentActorsSummary(params?: { source_type?: string; role?:
   );
 }
 
-export function useArgumentFrames(sourceType?: string): Result<FrameDistribution> {
-  return useWithFallback(
-    `argumentFrames-${sourceType ?? "all"}`,
-    async () => {
-      const raw = await api.argumentFrames(sourceType ? { source_type: sourceType } : undefined);
-      if (!raw.distribution || Object.keys(raw.distribution).length === 0) throw new Error("empty");
-      return adaptFrameDistribution(raw);
-    },
-    sourceType && sourceType !== "all"
-      ? { ...mockFrameDistribution, distribution: mockFrameDistribution.distribution, source_type_filter: sourceType }
-      : mockFrameDistribution,
-  );
-}

@@ -5,8 +5,11 @@ export type PanelType =
   | "note"
   | "kpi_row"
   | "articles"
+  | "documents"
   | "trending"
   | "clusters"
+  | "watchlists"
+  | "timeline"
   | "sentiment_heatmap"
   | "topic_sentiment"
   | "entity_graph"
@@ -30,7 +33,8 @@ export type Facet =
   | "conflict"
   | "sources"
   | "entities"
-  | "events";
+  | "events"
+  | "library";
 
 export type GeneratedBy = "heuristic" | "llm" | "client";
 
@@ -83,8 +87,11 @@ export interface PanelDef {
 export const PANEL_CATALOG: PanelDef[] = [
   { type: "kpi_row", title: "Signal summary", facets: ["overview"], defaultSpan: 12 },
   { type: "articles", title: "Latest documents", facets: ["overview", "sentiment"], defaultSpan: 6 },
+  { type: "documents", title: "Library", facets: ["library", "overview"], defaultSpan: 6, sourceTypeParam: true },
   { type: "trending", title: "Trending topics", facets: ["overview", "trend", "events"], defaultSpan: 6, daysParam: true, maxDays: 30 },
   { type: "clusters", title: "Event clusters", facets: ["overview", "events"], defaultSpan: 6 },
+  { type: "watchlists", title: "Watchlist", facets: ["events", "trend"], defaultSpan: 6 },
+  { type: "timeline", title: "Story timeline", facets: ["events"], defaultSpan: 6, topicParam: true },
   { type: "sentiment_heatmap", title: "Sentiment heatmap", facets: ["sentiment", "trend"], defaultSpan: 6, daysParam: true, maxDays: 60 },
   { type: "topic_sentiment", title: "Sentiment by topic", facets: ["sentiment"], defaultSpan: 6, daysParam: true, maxDays: 90 },
   { type: "entity_graph", title: "Entity graph", facets: ["entities", "actors", "overview"], defaultSpan: 6, daysParam: true, maxDays: 30 },

@@ -33,7 +33,7 @@
       "type": "array",
       "items": {
         "type": "string",
-        "enum": ["overview", "trend", "sentiment", "claims", "stance", "actors", "conflict", "sources", "entities", "events"]
+        "enum": ["overview", "trend", "sentiment", "claims", "stance", "actors", "conflict", "sources", "entities", "events", "library"]
       },
       "description": "Intent facets the planner detected"
     },
@@ -60,7 +60,7 @@
           },
           "type": {
             "type": "string",
-            "enum": ["note", "kpi_row", "articles", "trending", "clusters", "sentiment_heatmap", "topic_sentiment", "entity_graph", "claims", "stance", "frames", "positions", "controversy", "drift", "outlet_ranking", "outlet_clusters", "actors"],
+            "enum": ["note", "kpi_row", "articles", "documents", "trending", "clusters", "watchlists", "timeline", "sentiment_heatmap", "topic_sentiment", "entity_graph", "claims", "stance", "frames", "positions", "controversy", "drift", "outlet_ranking", "outlet_clusters", "actors"],
             "description": "Renderer key in the frontend panel registry"
           },
           "title": {

@@ -1,20 +1,17 @@
+// The generative canvas — the app's only surface. Renders the layout the
+// planner generates for this canvas's intent; typing a new intent opens a
+// new canvas (App remounts this component per canvas via key={canvas.id}).
+
 import { useState, type CSSProperties } from "react";
 import { ACCENT, palette, accentSoft, accentBorder, fonts } from "../theme";
 import PageHeader from "../components/PageHeader";
 import SourceBadge from "../components/SourceBadge";
 import Hover from "../components/Hover";
-import SpecRenderer from "../genui/SpecRenderer";
-import { useUiSpec } from "../genui/useUiSpec";
-import { useAdaptiveSignals, hasSignals } from "../genui/signals";
-import { PANEL_DEFS } from "../genui/spec";
-
-const SUGGESTIONS = [
-  "Daily briefing",
-  "Compare outlet framing on climate policy",
-  "Who disagrees about AI regulation?",
-  "Fact-check claims about the economy",
-  "Sentiment trend for technology this month",
-];
+import SpecRenderer from "./SpecRenderer";
+import { useUiSpec } from "./useUiSpec";
+import { useAdaptiveSignals, hasSignals } from "./signals";
+import { PANEL_DEFS } from "./spec";
+import type { CanvasDef } from "./canvases";
 
 const PLANNER_LABELS: Record<string, { label: string; color: string; hint: string }> = {
   llm: { label: "LLM PLAN", color: palette.violet, hint: "Layout composed by the configured LLM planner" },
@@ -35,53 +32,41 @@ const inputStyle: CSSProperties = {
   outline: "none",
 };
 
-const chipStyle: CSSProperties = {
-  fontFamily: fonts.mono,
-  fontSize: 10.5,
-  padding: "4px 11px",
-  borderRadius: 6,
-  cursor: "pointer",
-  background: "#11151c",
-  color: "#8a94a6",
-  border: "1px solid #232a36",
-  whiteSpace: "nowrap",
-};
+interface Props {
+  canvas: CanvasDef;
+  onIntent: (intent: string) => void;
+}
 
-export default function Noesis() {
-  const [draft, setDraft] = useState("");
-  const [intent, setIntent] = useState("");
+export default function Canvas({ canvas, onIntent }: Props) {
+  const [draft, setDraft] = useState(canvas.intent);
   const adaptive = useAdaptiveSignals();
-  const { spec, source, isLoading } = useUiSpec(intent, adaptive.signals);
-
-  const submit = (value: string) => {
-    setDraft(value);
-    setIntent(value.trim());
-  };
+  const { spec, source, isLoading } = useUiSpec(canvas.intent, adaptive.signals);
 
   const planner = PLANNER_LABELS[spec.generated_by] ?? PLANNER_LABELS.heuristic;
 
   return (
     <div>
       <PageHeader
-        title="Noesis Canvas"
-        subtitle="Adaptive generative interface — describe what you want to see and the canvas assembles itself"
+        title={canvas.label}
+        subtitle="Generative canvas — describe what you want to see and the layout assembles itself"
         right={<SourceBadge source={source} isLoading={isLoading} />}
       />
 
       {/* Intent bar */}
-      <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+      <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") submit(draft);
+            if (e.key === "Enter") onIntent(draft);
           }}
           placeholder="e.g. compare outlet framing on climate policy · who disagrees about AI regulation? · fact-check claims about vaccines"
+          maxLength={500}
           style={inputStyle}
         />
         <Hover
           as="button"
-          onClick={() => submit(draft)}
+          onClick={() => onIntent(draft)}
           style={{
             fontFamily: fonts.mono,
             fontSize: 11.5,
@@ -97,21 +82,6 @@ export default function Noesis() {
         >
           GENERATE
         </Hover>
-      </div>
-
-      {/* Suggestions */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-        {SUGGESTIONS.map((s) => (
-          <Hover
-            key={s}
-            as="button"
-            onClick={() => submit(s === "Daily briefing" ? "" : s)}
-            style={chipStyle}
-            hoverStyle={{ background: "#161d28", color: "#e6eaf0" }}
-          >
-            {s}
-          </Hover>
-        ))}
       </div>
 
       {/* Plan provenance strip */}

@@ -52,6 +52,7 @@ FACETS: Tuple[str, ...] = (
     "sources",
     "entities",
     "events",
+    "library",
 )
 
 PANEL_CATALOG: Tuple[PanelDef, ...] = (
@@ -82,6 +83,15 @@ PANEL_CATALOG: Tuple[PanelDef, ...] = (
         default_span=6,
     ),
     PanelDef(
+        type="documents",
+        title="Library",
+        description="Ingested documents across all source types (books, papers, transcripts, …).",
+        endpoint="/api/v1/documents",
+        facets=("library", "overview"),
+        default_span=6,
+        source_type_param="source_type",
+    ),
+    PanelDef(
         type="trending",
         title="Trending topics",
         description="Topics ranked by mention velocity.",
@@ -102,6 +112,25 @@ PANEL_CATALOG: Tuple[PanelDef, ...] = (
         tables=("news_articles",),
         ui_flag="clusters",
         default_span=6,
+    ),
+    PanelDef(
+        type="watchlists",
+        title="Watchlist",
+        description="Tracked entities and topics with mention velocity and alerts.",
+        endpoint=None,
+        facets=("events", "trend"),
+        ui_flag="watchlists",
+        default_span=6,
+    ),
+    PanelDef(
+        type="timeline",
+        title="Story timeline",
+        description="Chronological development of a tracked story.",
+        endpoint=None,
+        facets=("events",),
+        ui_flag="timeline",
+        default_span=6,
+        topic_param="topic",
     ),
     PanelDef(
         type="sentiment_heatmap",

@@ -5,19 +5,20 @@
 
 Noesis (formerly NeuroNews) is a full-stack news intelligence platform that
 ingests articles, blog posts, papers, and transcripts, mines arguments from
-them, and surfaces insights through an interactive React dashboard and a
-FastAPI backend.
+them, and surfaces insights through a fully generative React canvas (every
+screen is planned from a natural-language intent) and a FastAPI backend.
 
 ---
 
 ## What it does
 
-- **Adaptive generative UI** — the Noesis Canvas turns a natural-language
-  intent ("compare outlet framing on climate policy") into a dashboard
-  layout at runtime: a validated `ui-spec-v1` document planned heuristically
-  (or by an LLM when a key is configured) and adapted to warehouse data
-  availability, domain packs, and the operator's pins/mutes. See
-  [docs/genui.md](docs/genui.md).
+- **Adaptive generative UI** — the entire frontend is a generative canvas:
+  there are no fixed views. Every screen is planned from a natural-language
+  intent ("compare outlet framing on climate policy") as a validated
+  `ui-spec-v1` document — heuristically or by an LLM when a key is
+  configured — and adapted to warehouse data availability, domain packs,
+  and the operator's pins/mutes. The sidebar manages canvases and
+  generative presets instead of routes. See [docs/genui.md](docs/genui.md).
 - **Argument mining** — detects claims, classifies stances, identifies frames
   (economic / security / humanitarian / legal / political / scientific / other),
   extracts actor/entity mentions, and tracks how policy positions evolve over
@@ -184,20 +185,22 @@ docker compose -f docker-compose.test-minimal.yml up --build --abort-on-containe
 
 ---
 
-## Dashboard views
+## Generative canvas
 
-| View | What it shows |
-|---|---|
-| Dashboard | Sentiment overview, top topics, trending entities |
-| Arguments | Claim list, stance drift, conflict graph, outlet ranking, outlet clustering |
-| Sentiment | Source-level sentiment breakdown and timeline |
-| Timeline | Chronological article and event viewer |
-| Trending | Keyword and topic velocity |
-| NewsFeed | Live article feed with filters |
-| Watchlists | Blog/feed subscriptions and digest matches |
-| Clusters | Topic and source clustering visualisations |
-| Library | Document library for papers, books, transcripts |
-| Workspaces | Saved analysis sessions |
+The frontend has no fixed views. Each screen is a **canvas**: a `ui-spec-v1`
+layout generated from an intent by `POST /api/v1/ui/generate` (or by a
+client-side planner when the backend is unreachable) and rendered from a
+registry of ~20 panel types — articles, library documents, trending, event
+clusters, sentiment heatmap, entity graph, claims, stance, framing, actor
+positions, conflicts, stance drift, outlet ranking/clusters, watchlist,
+story timeline, and more.
+
+The sidebar manages canvases instead of routes: open canvases persist in
+localStorage, and generative presets ("Sentiment", "Claims & facts",
+"Outlets & framing", …) plan a matching layout instead of navigating to a
+hardcoded page. Layouts adapt to warehouse data availability, enabled
+domain packs, and the operator's pins/mutes/interaction history. See
+[docs/genui.md](docs/genui.md).
 
 ---
 

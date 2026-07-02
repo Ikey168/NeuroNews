@@ -66,7 +66,12 @@ FACET_KEYWORDS: Dict[str, Tuple[str, ...]] = {
     ),
     "events": (
         "event", "events", "cluster", "clusters", "story", "stories",
-        "breaking", "timeline", "happening", "developments",
+        "breaking", "timeline", "happening", "developments", "watchlist",
+        "watchlists", "alert", "alerts",
+    ),
+    "library": (
+        "library", "document", "documents", "docs", "archive", "reading",
+        "publications", "ingested", "corpus",
     ),
 }
 

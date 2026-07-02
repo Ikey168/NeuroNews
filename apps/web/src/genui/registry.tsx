@@ -9,6 +9,7 @@ import { sentColor, sentLabel } from "../lib/sentiment";
 import {
   useArticles,
   useClusters,
+  useDocuments,
   useTrending,
   useTopicSentiment,
   useSentimentHeatmap,
@@ -23,6 +24,7 @@ import {
   useOutletRanking,
   useOutletClusters,
 } from "../lib/queries";
+import { mockStories, mockTimeline, mockWatchlist } from "../data/mock";
 import Heatmap from "../components/charts/Heatmap";
 import EntityGraph from "../components/charts/EntityGraph";
 import Sparkline from "../components/charts/Sparkline";
@@ -143,6 +145,115 @@ function ArticlesPanel(props: PanelProps) {
                 <div style={rowTitle}>{a.title}</div>
                 <div style={{ ...mono, marginTop: 3 }}>
                   {a.source} · {a.time}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </GenPanel>
+  );
+}
+
+const SOURCE_TYPE_COLORS: Record<string, string> = {
+  news: ACCENT,
+  blog: palette.teal,
+  paper: palette.blue,
+  book: palette.violet,
+  transcript: palette.amber,
+  web: palette.neu,
+  note: palette.pos,
+};
+
+function DocumentsPanel(props: PanelProps) {
+  const st = props.panel.params?.source_type;
+  const sourceType = typeof st === "string" ? st : undefined;
+  const { data: documents, source, isLoading } = useDocuments(sourceType);
+  const rows = documents.slice(0, 5);
+  return (
+    <GenPanel {...props} source={source} isLoading={isLoading}>
+      {rows.length === 0 ? (
+        <Empty text="No documents ingested yet" />
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          {rows.map((d, i) => (
+            <div key={d.document_id} style={{ display: "flex", gap: 11, alignItems: "baseline", padding: "8px 0", borderBottom: i < rows.length - 1 ? "1px solid #161d28" : "none" }}>
+              <span style={chip(SOURCE_TYPE_COLORS[d.source_type] ?? palette.neu)}>{d.source_type.toUpperCase()}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={rowTitle}>{d.title ?? d.document_id}</div>
+                <div style={{ ...mono, marginTop: 3 }}>
+                  {d.authors.length ? d.authors.join(", ") : (d.source_id ?? "unknown source")}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </GenPanel>
+  );
+}
+
+const WATCH_TYPE_COLORS: Record<string, string> = {
+  Entity: ACCENT,
+  Topic: palette.amber,
+  Person: palette.blue,
+};
+
+function WatchlistsPanel(props: PanelProps) {
+  const rows = mockWatchlist.slice(0, 6);
+  return (
+    <GenPanel {...props} source="demo">
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {rows.map((w) => (
+          <div key={w.name} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {w.alert ? (
+              <span title="Alert threshold crossed" style={{ width: 6, height: 6, flex: "none", borderRadius: "50%", background: palette.neg, animation: "blink 2s infinite" }} />
+            ) : (
+              <span style={{ width: 6, flex: "none" }} />
+            )}
+            <div style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{w.name}</div>
+            <span style={chip(WATCH_TYPE_COLORS[w.type] ?? palette.neu)}>{w.type.toUpperCase()}</span>
+            <Sparkline values={w.spark} color={w.change >= 0 ? palette.pos : palette.neg} />
+            <span style={{ fontFamily: fonts.mono, fontSize: 11, color: w.change >= 0 ? palette.pos : palette.neg, width: 44, textAlign: "right" }}>
+              {(w.change >= 0 ? "+" : "") + w.change}%
+            </span>
+          </div>
+        ))}
+      </div>
+    </GenPanel>
+  );
+}
+
+const TIMELINE_KIND_COLORS: Record<string, string> = {
+  Origin: palette.blue,
+  Development: palette.teal,
+  Reaction: palette.amber,
+  Milestone: ACCENT,
+};
+
+function TimelinePanel(props: PanelProps) {
+  const topic = props.panel.params?.topic;
+  const story =
+    (typeof topic === "string" && topic
+      ? mockStories.find((s) => topicMatch(topic, s.label))
+      : undefined) ?? mockStories[0];
+  const events = story ? (mockTimeline[story.id] ?? []) : [];
+  return (
+    <GenPanel {...props} source="demo">
+      <div style={{ ...mono, marginBottom: 8 }}>{story?.label ?? "No tracked stories"}</div>
+      {events.length === 0 ? (
+        <Empty text="No timeline events" />
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          {events.slice(0, 5).map((e, i) => (
+            <div key={i} style={{ display: "flex", gap: 11, padding: "7px 0", borderBottom: i < Math.min(events.length, 5) - 1 ? "1px solid #161d28" : "none" }}>
+              <span style={{ ...mono, width: 52, flex: "none" }}>{e.date}</span>
+              <span style={{ width: 6, height: 6, flex: "none", borderRadius: "50%", background: sentColor(e.sent), marginTop: 5 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={rowTitle}>{e.title}</div>
+                <div style={{ display: "flex", gap: 8, marginTop: 3, alignItems: "center" }}>
+                  <span style={chip(TIMELINE_KIND_COLORS[e.kind] ?? palette.neu)}>{e.kind.toUpperCase()}</span>
+                  <span style={mono}>{e.source}</span>
                 </div>
               </div>
             </div>
@@ -554,8 +665,11 @@ const REGISTRY: Record<PanelType, ComponentType<PanelProps>> = {
   note: NotePanel,
   kpi_row: KpiRowPanel,
   articles: ArticlesPanel,
+  documents: DocumentsPanel,
   trending: TrendingPanel,
   clusters: ClustersPanel,
+  watchlists: WatchlistsPanel,
+  timeline: TimelinePanel,
   sentiment_heatmap: SentimentHeatmapPanel,
   topic_sentiment: TopicSentimentPanel,
   entity_graph: EntityGraphPanel,

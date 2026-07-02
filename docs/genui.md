@@ -1,12 +1,14 @@
-# Noesis Canvas — adaptive, generative UI
+# Noesis Canvas — the fully generative, adaptive UI
 
-The Noesis Canvas (`apps/web` → sidebar → **Noesis Canvas**) turns a
-natural-language intent — *"compare outlet framing on climate policy"*,
-*"who disagrees about AI regulation?"* — into a dashboard layout at
-runtime. The layout is a validated **`ui-spec-v1`** document; the frontend
-renders it from a panel registry built on the app's existing hooks and
-charts, so every generated panel keeps the terminal's live/demo fallback
-behaviour.
+The frontend **is** the canvas: there are no fixed views or routes. Every
+screen is generated at runtime from a natural-language intent — *"compare
+outlet framing on climate policy"*, *"who disagrees about AI regulation?"*
+— as a validated **`ui-spec-v1`** document rendered from a panel registry,
+so every generated panel keeps the terminal's live/demo fallback
+behaviour. The sidebar is a canvas manager: open canvases (persisted in
+localStorage) plus generative presets that replace the old navigation —
+clicking "Sentiment" *plans a sentiment layout* rather than routing to a
+hardcoded page.
 
 ## Architecture
 
@@ -14,7 +16,7 @@ behaviour.
 intent ──► POST /api/v1/ui/generate ──► ui-spec-v1 ──► SpecRenderer
               │                                            │
               ├─ LLM planner (optional, key-gated)         ├─ panel registry
-              ├─ heuristic planner (always available)      │  (17 renderers over
+              ├─ heuristic planner (always available)      │  (20 renderers over
               └─ adaptivity:                               │   existing hooks/charts)
                   · warehouse data availability            └─ GenPanel chrome
                   · domain-pack ui_flags                       (pin / mute / badge)
@@ -41,8 +43,11 @@ feature-flag pattern in `src/api/app.py`):
 ### Frontend (`apps/web/src/genui/`)
 
 - `spec.ts` — ui-spec-v1 types + client mirror of the catalog.
-- `registry.tsx` — panel type → renderer, reusing `lib/queries.ts` hooks and
-  the SVG charts; unknown types render a stub, never crash.
+- `Canvas.tsx` / `canvases.ts` — the app's only surface and the canvas
+  manager (open/activate/close canvases, persisted per browser).
+- `registry.tsx` — panel type → renderer (~20 types incl. library documents,
+  watchlist and story timeline), reusing `lib/queries.ts` hooks and the SVG
+  charts; unknown types render a stub, never crash.
 - `useUiSpec.ts` — asks the backend planner, falls back to `planner.ts`
   (a slim TS mirror of the heuristic rules) when unreachable.
 - `signals.ts` — localStorage usage signals: pin (always include + boost),

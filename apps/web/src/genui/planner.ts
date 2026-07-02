@@ -18,7 +18,8 @@ const FACET_KEYWORDS: Record<Facet, string[]> = {
   conflict: ["conflict", "conflicts", "controversy", "controversial", "contradict", "contradicts", "contradiction", "contradictions", "dispute", "disputes", "disagreement", "clash", "debate"],
   sources: ["outlet", "outlets", "source", "sources", "bias", "biased", "framing", "frame", "frames", "coverage", "compare", "comparison", "transparency", "media", "publisher", "publishers"],
   entities: ["entity", "entities", "network", "graph", "connection", "connections", "related", "relationship", "relationships", "influence"],
-  events: ["event", "events", "cluster", "clusters", "story", "stories", "breaking", "timeline", "happening", "developments"],
+  events: ["event", "events", "cluster", "clusters", "story", "stories", "breaking", "timeline", "happening", "developments", "watchlist", "watchlists", "alert", "alerts"],
+  library: ["library", "document", "documents", "docs", "archive", "reading", "publications", "ingested", "corpus"],
 };
 
 const SOURCE_TYPE_WORDS: Record<string, string> = {

@@ -84,7 +84,7 @@ def test_generate_signals_dismissed_removed_pinned_added(client):
 # ---------------------------------------------------------------------------
 # POST /generate — data availability
 # ---------------------------------------------------------------------------
-def test_generate_availability_all_false_uses_fallback_overview(client, monkeypatch):
+def test_generate_availability_all_false_keeps_only_tableless_panels(client, monkeypatch):
     monkeypatch.setattr(
         mod, "data_availability", lambda: {t: False for t in ALL_TABLES}
     )
@@ -94,6 +94,21 @@ def test_generate_availability_all_false_uses_fallback_overview(client, monkeypa
     panels = body["spec"]["panels"]
     assert panels  # never an empty canvas
     assert body["meta"]["availability_known"] is True
+    # Every warehouse-backed panel is dropped; survivors need no tables.
+    tableless = {p.type for p in PANEL_CATALOG if not p.tables}
+    assert all(p["type"] in tableless for p in panels)
+
+
+def test_generate_availability_all_false_falls_back_for_warehouse_only_facet(client, monkeypatch):
+    monkeypatch.setattr(
+        mod, "data_availability", lambda: {t: False for t in ALL_TABLES}
+    )
+    # A stance/conflict intent selects only warehouse-backed panels, so the
+    # fallback-overview path fires when every table is empty.
+    resp = client.post("/api/v1/ui/generate", json={"intent": "stance conflicts"})
+    assert resp.status_code == 200
+    panels = resp.json()["spec"]["panels"]
+    assert panels
     assert any(
         p["rationale"] == "fallback overview (no live data detected)" for p in panels
     )

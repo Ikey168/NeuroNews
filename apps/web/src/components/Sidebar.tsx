@@ -1,44 +1,46 @@
 import type { CSSProperties } from "react";
 import { ACCENT, accentSoft, accentGlow, fonts } from "../theme";
-import type { ViewKey } from "../types";
 import { usePackStatus } from "../lib/queries";
 import Hover from "./Hover";
+import { BRIEFING, type CanvasDef } from "../genui/canvases";
 
-interface NavDef {
-  key: ViewKey;
+// The sidebar is a canvas manager, not a view switch: every entry either
+// activates an open canvas or generates a new one from a preset intent.
+// Presets route through the same planner as free-typed intents.
+
+interface PresetDef {
   label: string;
+  intent: string;
   glyph: string;
-  badge?: string;
 }
 
-const coreNav: NavDef[] = [
-  { key: "noesis", label: "Noesis Canvas", glyph: "✦", badge: "GEN" },
-  { key: "dashboard", label: "Overview", glyph: "◧" },
-  { key: "library", label: "Library", glyph: "≣" },
-  { key: "knowledge", label: "Knowledge Graph", glyph: "⬡" },
-  { key: "reader", label: "Document Reader", glyph: "◈" },
+const corePresets: PresetDef[] = [
+  { label: "Library", intent: "library documents", glyph: "≣" },
+  { label: "Entity network", intent: "entity network connections", glyph: "⬡" },
+  { label: "Claims & facts", intent: "fact-check claims and evidence", glyph: "◫" },
+  { label: "Stance & conflicts", intent: "stance conflicts and disagreements", glyph: "◮" },
+  { label: "Outlets & framing", intent: "compare outlet framing and transparency", glyph: "◭" },
+  { label: "Key actors", intent: "who are the key actors and stakeholders", glyph: "◉" },
 ];
 
-const researchNav: NavDef[] = [
-  { key: "workspaces",  label: "Workspaces",       glyph: "◳", badge: "4" },
-  { key: "arguments",   label: "Arguments",         glyph: "◫" },
-];
-
-const newsOnlyNav: NavDef[] = [
-  { key: "sentiment", label: "Sentiment", glyph: "◑" },
-  { key: "clusters", label: "Event Clusters", glyph: "⊞", badge: "18" },
-  { key: "trending", label: "Trending", glyph: "↗" },
-  { key: "watchlists", label: "Watchlists", glyph: "☆", badge: "6" },
-  { key: "timeline", label: "Story Timeline", glyph: "⤳" },
+const newsPresets: PresetDef[] = [
+  { label: "Sentiment", intent: "sentiment overview this week", glyph: "◑" },
+  { label: "Event clusters", intent: "breaking event clusters", glyph: "⊞" },
+  { label: "Trending", intent: "trending topics this week", glyph: "↗" },
+  { label: "Watchlists", intent: "watchlist alerts", glyph: "☆" },
+  { label: "Story timeline", intent: "story timeline developments", glyph: "⤳" },
 ];
 
 interface Props {
-  view: ViewKey;
-  setView: (v: ViewKey) => void;
+  canvases: CanvasDef[];
+  activeId: string;
+  onSelect: (id: string) => void;
+  onOpen: (intent: string, label?: string) => void;
+  onRemove: (id: string) => void;
   ingestRate: string;
 }
 
-export default function Sidebar({ view, setView, ingestRate }: Props) {
+export default function Sidebar({ canvases, activeId, onSelect, onOpen, onRemove, ingestRate }: Props) {
   const { newsPack } = usePackStatus();
 
   const navBtn = (active: boolean): CSSProperties => ({
@@ -65,30 +67,6 @@ export default function Sidebar({ view, setView, ingestRate }: Props) {
     letterSpacing: "0.16em",
     padding: "8px 10px 6px",
   };
-
-  const badge: CSSProperties = {
-    fontFamily: fonts.mono,
-    fontSize: 10,
-    background: "#1c2330",
-    color: "#8a94a6",
-    padding: "1px 6px",
-    borderRadius: 10,
-  };
-
-  const renderNav = (items: NavDef[]) =>
-    items.map((n) => (
-      <Hover
-        key={n.key}
-        as="button"
-        onClick={() => setView(n.key)}
-        style={navBtn(view === n.key)}
-        hoverStyle={view === n.key ? {} : { background: "#161d28", color: "#e6eaf0" }}
-      >
-        <span style={{ width: 18, flex: "none", textAlign: "center", fontSize: 13 }}>{n.glyph}</span>
-        <span style={{ flex: 1, textAlign: "left" }}>{n.label}</span>
-        {n.badge ? <span style={badge}>{n.badge}</span> : null}
-      </Hover>
-    ));
 
   return (
     <aside
@@ -131,7 +109,7 @@ export default function Sidebar({ view, setView, ingestRate }: Props) {
             Noesis
           </div>
           <div style={{ fontFamily: fonts.mono, fontSize: 9.5, color: "#5b6675", letterSpacing: "0.16em", marginTop: 2 }}>
-            KNOWLEDGE ENGINE
+            GENERATIVE CANVAS
           </div>
         </div>
       </div>
@@ -146,11 +124,59 @@ export default function Sidebar({ view, setView, ingestRate }: Props) {
           overflowY: "auto",
         }}
       >
-        <div style={sectionLabel}>LIBRARY</div>
-        {renderNav(coreNav)}
+        <div style={sectionLabel}>CANVASES</div>
+        {canvases.map((c) => (
+          <Hover
+            key={c.id}
+            as="button"
+            onClick={() => onSelect(c.id)}
+            style={navBtn(c.id === activeId)}
+            hoverStyle={c.id === activeId ? {} : { background: "#161d28", color: "#e6eaf0" }}
+            title={c.intent || "Adaptive overview briefing"}
+          >
+            <span style={{ width: 18, flex: "none", textAlign: "center", fontSize: 13 }}>
+              {c.id === BRIEFING.id ? "✦" : "◈"}
+            </span>
+            <span
+              style={{
+                flex: 1,
+                textAlign: "left",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {c.label}
+            </span>
+            {c.id !== BRIEFING.id ? (
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemove(c.id);
+                }}
+                title="Close canvas"
+                style={{ fontFamily: fonts.mono, fontSize: 11, color: "#4b5563", padding: "0 2px" }}
+              >
+                ✕
+              </span>
+            ) : null}
+          </Hover>
+        ))}
 
-        <div style={{ ...sectionLabel, padding: "18px 10px 6px" }}>RESEARCH</div>
-        {renderNav(researchNav)}
+        <div style={{ ...sectionLabel, padding: "18px 10px 6px" }}>GENERATE</div>
+        {corePresets.map((p) => (
+          <Hover
+            key={p.label}
+            as="button"
+            onClick={() => onOpen(p.intent, p.label)}
+            style={navBtn(false)}
+            hoverStyle={{ background: "#161d28", color: "#e6eaf0" }}
+            title={`Generate: “${p.intent}”`}
+          >
+            <span style={{ width: 18, flex: "none", textAlign: "center", fontSize: 13 }}>{p.glyph}</span>
+            <span style={{ flex: 1, textAlign: "left" }}>{p.label}</span>
+          </Hover>
+        ))}
 
         {newsPack ? (
           <>
@@ -179,7 +205,19 @@ export default function Sidebar({ view, setView, ingestRate }: Props) {
                 ON
               </span>
             </div>
-            {renderNav(newsOnlyNav)}
+            {newsPresets.map((p) => (
+              <Hover
+                key={p.label}
+                as="button"
+                onClick={() => onOpen(p.intent, p.label)}
+                style={navBtn(false)}
+                hoverStyle={{ background: "#161d28", color: "#e6eaf0" }}
+                title={`Generate: “${p.intent}”`}
+              >
+                <span style={{ width: 18, flex: "none", textAlign: "center", fontSize: 13 }}>{p.glyph}</span>
+                <span style={{ flex: 1, textAlign: "left" }}>{p.label}</span>
+              </Hover>
+            ))}
           </>
         ) : null}
       </nav>

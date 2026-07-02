@@ -76,21 +76,22 @@ function findChromium() {
   return null;
 }
 
-// Every sidebar view: nav button label -> screenshot slug. Labels must match
-// the text rendered in src/components/Sidebar.tsx.
+// Every sidebar entry: button label -> screenshot slug. The sidebar is a
+// canvas manager: "Briefing" is the always-present default canvas; the rest
+// are generative presets. Labels must match src/components/Sidebar.tsx.
 const VIEWS = [
-  ["Noesis Canvas", "noesis"],
-  ["Overview", "dashboard"],
+  ["Briefing", "briefing"],
   ["Library", "library"],
-  ["Knowledge Graph", "knowledge"],
-  ["Document Reader", "reader"],
+  ["Entity network", "entities"],
+  ["Claims & facts", "claims"],
+  ["Stance & conflicts", "stance"],
+  ["Outlets & framing", "outlets"],
+  ["Key actors", "actors"],
   ["Sentiment", "sentiment"],
-  ["Event Clusters", "clusters"],
+  ["Event clusters", "clusters"],
   ["Trending", "trending"],
-  ["Workspaces", "workspaces"],
   ["Watchlists", "watchlists"],
-  ["Story Timeline", "timeline"],
-  ["Arguments", "arguments"],
+  ["Story timeline", "timeline"],
 ];
 
 function parseArgs(argv) {

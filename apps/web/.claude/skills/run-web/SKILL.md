@@ -1,13 +1,14 @@
 ---
 name: run-web
-description: Run, launch, start, build, screenshot, or smoke-test the NeuroNews Intelligence Terminal web frontend (apps/web — React + Vite + TypeScript SPA). Use when asked to see the web UI working, capture screenshots of a view (dashboard, news feed, entity graph, sentiment, clusters, trending, etc.), or verify a frontend change renders.
+description: Run, launch, start, build, screenshot, or smoke-test the NeuroNews Intelligence Terminal web frontend (apps/web — React + Vite + TypeScript SPA). Use when asked to see the web UI working, capture screenshots of a canvas (briefing, sentiment, claims, outlets, entity network, etc.), or verify a frontend change renders.
 ---
 
 # Run the NeuroNews web frontend (Intelligence Terminal)
 
 `apps/web` is a React 18 + Vite + TypeScript single-page app — a dark
-"terminal" dashboard with nine views (Overview, News Feed, Entity Graph,
-Sentiment, Event Clusters, Trending, Workspaces, Watchlists, Story Timeline).
+"terminal" generative canvas: every screen is planned from an intent (the
+sidebar lists open canvases plus generative presets — Briefing, Library,
+Sentiment, Event clusters, Trending, Watchlists, Story timeline, …).
 It fetches from the FastAPI backend (`services/api` / `src/api`) on every view
 and **transparently falls back to a baked-in design dataset** when the backend
 is unreachable (see `src/lib/queries.ts`), so it always renders standalone — no
@@ -15,7 +16,7 @@ backend, no API keys, no network required.
 
 The agent path is the driver at `.claude/skills/run-web/driver.mjs`: it drives
 the running app with headless Chromium (Playwright), clicks through every
-sidebar view, writes one screenshot per view, and reports page console errors.
+sidebar entry, writes one screenshot per canvas, and reports page console errors.
 
 **All paths below are relative to `apps/web/`.** `cd` there first.
 
