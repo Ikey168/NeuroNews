@@ -279,8 +279,10 @@ by source type, article length, and per-class metrics.
 - Phase 8: MCP rearchitecture — MCP as the capability plane
   ([plan](docs/architecture/MCP_REARCHITECTURE_PLAN.md), staged):
   catalog-from-discovery, grounded LLM planning, MCP-backed panel data,
-  Noesis-as-MCP-server, and **Track P** — agent-provisioned knowledge
-  graphs with quality-driven source selection — proposed
+  Noesis-as-MCP-server, **Track P** — agent-provisioned knowledge graphs
+  with quality-driven source selection — and **Track DS** — data-science
+  techniques (anomaly detection, lead-lag, narrative clustering, graph
+  science, significance testing) as planner-composable tools — proposed
 - Also upcoming: trained model checkpoints; cross-dataset generalisation
   (FEVER / LIAR / AVeriTeC); predictive analytics; real-time fact-checking
 

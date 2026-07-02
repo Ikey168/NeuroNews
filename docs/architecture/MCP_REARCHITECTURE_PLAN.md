@@ -23,7 +23,10 @@ directly. Migration is staged so every stage ships value independently
 and stage N never blocks on stage N+1. Track P extends the plan from
 read/compose to **provisioning**: MCP tools that deploy new knowledge
 graphs and select the sources that feed them, with the canvas growing
-panels for new domains via discovery alone.
+panels for new domains via discovery alone. Track DS applies the same
+pattern to **analytics**: data-science techniques (anomaly detection,
+lead-lag analysis, narrative clustering, graph science, significance
+testing) exposed as annotated tools the planner can compose into layouts.
 
 ## Current state
 
@@ -192,6 +195,61 @@ approval). It does not depend on Stage 3.
 *Effort: large (namespacing + routing are the real work). Risk: RW agent
 surface — mitigated by the guardrail table above.*
 
+## Track DS — the analytics plane: data-science techniques as MCP tools
+
+The same discovery pattern that turns servers into panels turns
+**analytical techniques into canvas capabilities**: an `analytics_mcp`
+server (or tools added to `kg_mcp` / `argument_mcp` / `monitoring_mcp`)
+whose annotated tools the planner can select for matching intents —
+"anything unusual in climate coverage this month?" plans an anomaly
+panel the same way "sentiment for energy" plans a heatmap today. The
+stack already carries scikit-learn, embeddings + Qdrant/pgvector,
+transformers, MLflow and dbt; Track DS is about *exposing* techniques,
+mostly not inventing them.
+
+Candidate tools, ordered by value-for-mission (source transparency and
+argument analysis), not by novelty:
+
+| Tool | Technique | Canvas panel | Why it earns its keep |
+|---|---|---|---|
+| `detect_anomalies(topic?, metric)` | Changepoint / robust z-score / seasonal-ESD on coverage volume & sentiment series | Anomaly timeline with flagged windows | Cheap, statistically honest, and the single most useful "what should I look at?" signal for a news terminal |
+| `lead_lag(topic, outlets?)` | Cross-correlation / Granger-style lead-lag on per-outlet coverage series | "Who leads, who follows" matrix | Unique to the transparency mission: distinguishes agenda-setters from followers |
+| `score_confidence(outlet)` / `stance_significance(a, b, topic)` | Bootstrap CIs on outlet scores; permutation / χ² tests on stance splits | Ranking panels grow error bars & significance badges | Makes the published transparency rankings *defensible* instead of point estimates |
+| `cluster_narratives(topic?, window?)` | HDBSCAN over document embeddings (already computed for RAG/vector search) | Narrative-thread panel: competing storylines per topic | Upgrades event clustering from "same event" to "same narrative"; also powers claim dedup |
+| `kg_communities(kg?)` / `kg_centrality(kg?)` / `kg_link_predict(kg?)` | Louvain/Leiden, PageRank/betweenness, link prediction | Community-colored entity graph; "likely next connections" | The KG exists; graph science is the cheapest deepening — and Track P KGs inherit it via the `kg` namespace param |
+| `semantic_drift(term, window)` | Embedding drift of a term/entity over time windows | Drift trajectory panel | Complements stance drift: *meaning* shift, not just position shift |
+| `forecast_topic(topic, horizon)` | Exponential smoothing / lightweight ARIMA on velocity | Forecast band on trend panels | Flashy but noisiest for news; ship last, always with intervals |
+| `model_drift_report()` | PSI/KS data-drift + score-drift vs benchmark baselines | Model-health panel | Ties the existing `monitoring_mcp` + benchmark gate into the canvas |
+
+Integration rules (inherited from the rest of the plan):
+
+- **Precompute heavy, serve light.** Fits run as batch jobs (existing
+  `trigger_*` / APScheduler / Airflow patterns) writing result tables
+  (like `outlet_scores` today); the MCP tools *read* results and only
+  compute on-demand when cheap (<~1s on the warehouse). MLflow logs every
+  fit for reproducibility.
+- **Statistical honesty is part of the contract.** Tools must return
+  sample sizes, intervals, and test assumptions in `outputSchema`; panels
+  render them (no naked point estimates). The planner's note explains
+  which analysis ran and on how much data — same transparency norm as
+  "Hidden for now…".
+- **Heuristic-fallback house style applies.** Every tool has a
+  dependency-light statistical implementation (numpy/scipy/scikit-learn,
+  already required); no GPU or network model needed for the default path.
+- **Grounded planning composes.** A Stage-2 planner can chain: intent
+  mentions "unusual" → `detect_anomalies` → if a window flags, add the
+  claims/stance panels scoped to it. Track P composes too: every tool
+  takes an optional KG namespace, so provisioned domains get the full
+  analytics plane for free.
+
+Sequencing: after Stage 1 (tools-as-panels is the delivery mechanism);
+pairs naturally with Stage 2. Start with `detect_anomalies` +
+`score_confidence` (highest value, lowest risk), then `lead_lag` and
+`cluster_narratives`; treat forecasting as the deliberate caboose.
+*Effort: incremental per tool (that is the point). Risk: statistical
+misuse at scale — mitigated by the honesty contract and precompute-first
+rule.*
+
 ## What deliberately does not change
 
 - `ui-spec-v1` contract, validators, and fixtures.
@@ -247,3 +305,9 @@ creation itself becomes an agent operation. Sequence it after Stage 1
 lands (discovery is its delivery mechanism) and prototype it first as a
 dry-run planner suggestion ("deploy a KG for X fed by these sources?")
 before enabling real writes behind the approval gate.
+
+Track DS is the cheapest way to keep shipping visible value while the
+plumbing lands: each tool is an independent increment, the first two
+(`detect_anomalies`, `score_confidence`) need nothing but Stage 1 and
+libraries already in the stack, and every tool automatically benefits
+Track P domains later.
