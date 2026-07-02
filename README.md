@@ -1,12 +1,22 @@
 ![Airflow DAG Check](https://github.com/Ikey168/NeuroNews/actions/workflows/airflow-dag-check.yml/badge.svg)
 ![MLflow CI](https://github.com/Ikey168/NeuroNews/actions/workflows/mlops-ci.yml/badge.svg)
 
-# Noesis — News Intelligence Platform
+# Noesis — Generative Knowledge Engine
 
-Noesis (formerly NeuroNews) is a full-stack news intelligence platform that
-ingests articles, blog posts, papers, and transcripts, mines arguments from
-them, and surfaces insights through a fully generative React canvas (every
-screen is planned from a natural-language intent) and a FastAPI backend.
+Noesis (formerly NeuroNews) is a knowledge engine that ingests articles,
+blog posts, papers, and transcripts, mines arguments from them, and surfaces
+everything through a **fully generative UI**: there are no fixed pages —
+every screen is a layout planned at runtime from a natural-language intent,
+adapted to the data that actually exists, the enabled knowledge domains, and
+the operator's habits.
+
+The architecture is converging on **MCP as the capability plane**: the
+platform's subsystems are already exposed as MCP servers, and the
+[rearchitecture plan](docs/architecture/MCP_REARCHITECTURE_PLAN.md) takes
+this to its end state — agents that don't just compose views over existing
+knowledge, but **provision new knowledge domains**: deploying knowledge
+graphs and selecting the sources that feed them, with the UI growing panels
+for new domains through tool discovery alone.
 
 ---
 
@@ -71,10 +81,17 @@ NEPTUNE_ENDPOINT       ws://localhost:8182/gremlin
 NEURONEWS_DB_PATH      data/local_warehouse.duckdb  # DuckDB warehouse path
 ```
 
-### MCP dev servers
+### MCP servers
 
-Token-efficient MCP stdio servers for development tooling (each reads the
-warehouse read-only so they never conflict with the API writer):
+Every subsystem is exposed as a FastMCP stdio server. Today they serve
+development agents (token-efficient, read-only against the warehouse so
+they never conflict with the API writer) — and, per the
+[MCP rearchitecture plan](docs/architecture/MCP_REARCHITECTURE_PLAN.md),
+they are the basis of the future capability plane: the generative-UI panel
+catalog derived from tool discovery, domain packs as connected servers,
+LLM planning grounded in tool calls, and provisioning tools
+(`kg_deploy` / `kg_attach_sources`) that stand up new knowledge graphs at
+runtime.
 
 | Server | Tools |
 |---|---|
@@ -240,6 +257,8 @@ by source type, article length, and per-class metrics.
 ## Documentation
 
 - [Documentation index](docs/index.md) — full doc map by topic
+- [Generative UI](docs/genui.md) — the canvas, planners, adaptivity, ui-spec-v1
+- [MCP rearchitecture plan](docs/architecture/MCP_REARCHITECTURE_PLAN.md) — capability plane + agent-provisioned knowledge graphs
 - [Project structure](docs/PROJECT_STRUCTURE.md)
 - [Model benchmarks](docs/model_benchmarks.md)
 - [Exactly-once delivery design](docs/EXACTLY_ONCE_DESIGN.md)
@@ -254,7 +273,16 @@ by source type, article length, and per-class metrics.
 - Phase 4: Interactive dashboards and REST API — complete
 - Phase 5: Argument mining pipeline (claims, stances, frames, positions, conflicts, actors) — complete
 - Phase 6: Outlet analysis (clustering, transparency scoring, conflict graph) — complete
-- Upcoming: trained model checkpoints; cross-dataset generalisation (FEVER / LIAR / AVeriTeC); predictive analytics; real-time fact-checking
+- Phase 7: Fully generative adaptive UI — fixed views replaced by the
+  intent-planned canvas (`ui-spec-v1`, heuristic + optional LLM planner,
+  ⌘K command bar with live plan preview, usage-signal adaptivity) — complete
+- Phase 8: MCP rearchitecture — MCP as the capability plane
+  ([plan](docs/architecture/MCP_REARCHITECTURE_PLAN.md), staged):
+  catalog-from-discovery, grounded LLM planning, MCP-backed panel data,
+  Noesis-as-MCP-server, and **Track P** — agent-provisioned knowledge
+  graphs with quality-driven source selection — proposed
+- Also upcoming: trained model checkpoints; cross-dataset generalisation
+  (FEVER / LIAR / AVeriTeC); predictive analytics; real-time fact-checking
 
 ---
 
