@@ -125,10 +125,10 @@ export function useClusters(): Result<Cluster[]> {
   return useWithFallback("clusters", async () => adaptClusters(await api.eventClusters()), mockClusters);
 }
 
-export function useTrending(): Result<TrendingTopic[]> {
+export function useTrending(params?: { days?: number }): Result<TrendingTopic[]> {
   return useWithFallback(
-    "trending",
-    async () => adaptTrending(await api.trendingTopics()),
+    `trending-${params?.days ?? "default"}`,
+    async () => adaptTrending(await api.trendingTopics(params?.days ? { days: params.days } : undefined)),
     mockTrending,
   );
 }
@@ -171,11 +171,12 @@ const mockEntityGraph: LiveGraph = {
   edgeCount: 10,
 };
 
-export function useEntityGraph(): Result<LiveGraph> {
+export function useEntityGraph(params?: { days?: number }): Result<LiveGraph> {
+  const days = params?.days ?? 7;
   return useWithFallback(
-    "entityGraph",
+    `entityGraph-${days}`,
     async () => {
-      const g = adaptEntityGraph(await api.entityGraph({ days: 7, max_nodes: 16 }));
+      const g = adaptEntityGraph(await api.entityGraph({ days, max_nodes: 16 }));
       if (!g.nodes.length) throw new Error("empty");
       return g;
     },
@@ -183,10 +184,11 @@ export function useEntityGraph(): Result<LiveGraph> {
   );
 }
 
-export function useTopicSentiment(): Result<TopicSentiment[]> {
+export function useTopicSentiment(params?: { days?: number }): Result<TopicSentiment[]> {
+  const days = params?.days ?? 7;
   return useWithFallback(
-    "topicSentiment",
-    async () => adaptTopicSentiment(await api.sentimentTopics({ days: 7 })),
+    `topicSentiment-${days}`,
+    async () => adaptTopicSentiment(await api.sentimentTopics({ days })),
     mockTopicSentiment,
   );
 }
@@ -200,11 +202,12 @@ const mockSentimentHeatmap: Heatmap = {
   seed: mockHeatmap.seed,
 };
 
-export function useSentimentHeatmap(): Result<Heatmap> {
+export function useSentimentHeatmap(params?: { days?: number }): Result<Heatmap> {
+  const days = params?.days ?? 14;
   return useWithFallback(
-    "sentimentHeatmap",
+    `sentimentHeatmap-${days}`,
     async () => {
-      const hm = adaptHeatmap(await api.sentimentHeatmap({ days: 14 }));
+      const hm = adaptHeatmap(await api.sentimentHeatmap({ days }));
       if (!hm.topics.length) throw new Error("empty");
       return hm;
     },

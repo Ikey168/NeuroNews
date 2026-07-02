@@ -152,6 +152,7 @@ export interface TimelineEvent {
 }
 
 export type ViewKey =
+  | "noesis"
   | "dashboard"
   | "library"
   | "knowledge"

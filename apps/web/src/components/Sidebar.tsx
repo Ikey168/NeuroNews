@@ -12,6 +12,7 @@ interface NavDef {
 }
 
 const coreNav: NavDef[] = [
+  { key: "noesis", label: "Noesis Canvas", glyph: "✦", badge: "GEN" },
   { key: "dashboard", label: "Overview", glyph: "◧" },
   { key: "library", label: "Library", glyph: "≣" },
   { key: "knowledge", label: "Knowledge Graph", glyph: "⬡" },

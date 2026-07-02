@@ -79,6 +79,7 @@ function findChromium() {
 // Every sidebar view: nav button label -> screenshot slug. Labels must match
 // the text rendered in src/components/Sidebar.tsx.
 const VIEWS = [
+  ["Noesis Canvas", "noesis"],
   ["Overview", "dashboard"],
   ["Library", "library"],
   ["Knowledge Graph", "knowledge"],

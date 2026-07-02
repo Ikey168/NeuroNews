@@ -1,10 +1,10 @@
-import { useState, type CSSProperties, type ReactNode, type ElementType } from "react";
+import { useState, type CSSProperties, type MouseEvent, type ReactNode, type ElementType } from "react";
 
 interface HoverProps {
   as?: ElementType;
   style: CSSProperties;
   hoverStyle?: CSSProperties;
-  onClick?: () => void;
+  onClick?: (e: MouseEvent) => void;
   children?: ReactNode;
   title?: string;
 }

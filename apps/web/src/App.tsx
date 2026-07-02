@@ -16,9 +16,10 @@ import Workspaces from "./views/Workspaces";
 import Watchlists from "./views/Watchlists";
 import Timeline from "./views/Timeline";
 import Arguments from "./views/Arguments";
+import Noesis from "./views/Noesis";
 
 export default function App() {
-  const [view, setView] = useState<ViewKey>("dashboard");
+  const [view, setView] = useState<ViewKey>("noesis");
   const { data: ticker } = useTicker();
 
   return (
@@ -39,6 +40,7 @@ export default function App() {
         <TopBar />
         <BreakingTicker text={ticker} />
         <main style={{ flex: 1, overflowY: "auto", padding: "22px 24px 40px" }}>
+          {view === "noesis" && <Noesis />}
           {view === "dashboard" && <Dashboard setView={setView} />}
           {view === "library" && <Library />}
           {view === "knowledge" && <EntityGraphView />}

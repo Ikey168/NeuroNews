@@ -12,6 +12,12 @@ FastAPI backend.
 
 ## What it does
 
+- **Adaptive generative UI** — the Noesis Canvas turns a natural-language
+  intent ("compare outlet framing on climate policy") into a dashboard
+  layout at runtime: a validated `ui-spec-v1` document planned heuristically
+  (or by an LLM when a key is configured) and adapted to warehouse data
+  availability, domain packs, and the operator's pins/mutes. See
+  [docs/genui.md](docs/genui.md).
 - **Argument mining** — detects claims, classifies stances, identifies frames
   (economic / security / humanitarian / legal / political / scientific / other),
   extracts actor/entity mentions, and tracks how policy positions evolve over
