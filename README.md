@@ -195,11 +195,12 @@ clusters, sentiment heatmap, entity graph, claims, stance, framing, actor
 positions, conflicts, stance drift, outlet ranking/clusters, watchlist,
 story timeline, and more.
 
-Startup is an empty surface with a prompt composer at the bottom — nothing
-is generated until asked. The sidebar only manages open canvases (persisted
-in localStorage); example intents on the empty canvas, gated by the enabled
-domain packs, are the sole shortcuts. The surface is built with Tailwind +
-shadcn/ui. Layouts adapt to warehouse data availability, enabled
+The single control is a ⌘K command bar: the planner runs as you type,
+showing parsed intent tokens and a live ghost of the layout before ⏎
+commits it. An empty canvas shows the live pipeline signal (entity
+constellation, moving topics that generate coverage views) instead of a
+greeting. The sidebar only manages open canvases (persisted in
+localStorage). The surface is built with Tailwind + shadcn/ui. Layouts adapt to warehouse data availability, enabled
 domain packs, and the operator's pins/mutes/interaction history. See
 [docs/genui.md](docs/genui.md).
 

@@ -24,7 +24,7 @@ export default function App() {
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar />
+        <TopBar onIntent={manager.open} />
         {hasIntent ? <BreakingTicker text={ticker} /> : null}
         <main className="min-h-0 flex-1">
           <Canvas key={manager.active.id} canvas={manager.active} onIntent={manager.open} />

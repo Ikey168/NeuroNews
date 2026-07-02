@@ -11,8 +11,9 @@ const MIN = 3;
 const MAX = 12;
 
 // Walk the panels row by row and stretch each row's last panel so every row
-// fills the 12-column grid — no dangling half-empty rows.
-function fitSpans(panels: PanelSpec[]): number[] {
+// fills the 12-column grid — no dangling half-empty rows. Exported for the
+// command bar's live ghost preview, which mirrors the real layout.
+export function fitSpans(panels: PanelSpec[]): number[] {
   const spans = panels.map((p) => Math.max(MIN, Math.min(MAX, p.span || 6)));
   let i = 0;
   while (i < spans.length) {
