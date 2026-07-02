@@ -20,6 +20,9 @@ canvas (news ones gated by the domain pack) are the sole shortcuts. The surface 
 
 ## Architecture
 
+> A proposal to derive this catalog/planner layer from the repo's MCP
+> servers is in [architecture/MCP_REARCHITECTURE_PLAN.md](architecture/MCP_REARCHITECTURE_PLAN.md).
+
 ```
 intent ──► POST /api/v1/ui/generate ──► ui-spec-v1 ──► SpecRenderer
               │                                            │
